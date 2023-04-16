@@ -1,4 +1,4 @@
-package eu.europa.ec.euidw.verifier
+package eu.europa.ec.euidw.verifier.domain
 
 import java.time.Instant
 import java.util.*

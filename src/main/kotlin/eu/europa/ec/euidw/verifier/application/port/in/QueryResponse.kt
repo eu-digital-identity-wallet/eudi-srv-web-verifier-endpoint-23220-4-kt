@@ -1,4 +1,4 @@
-package eu.europa.ec.euidw.verifier.port.`in`
+package eu.europa.ec.euidw.verifier.application.port.`in`
 
 sealed interface QueryResponse<out T : Any> {
     object NotFound : QueryResponse<Nothing>

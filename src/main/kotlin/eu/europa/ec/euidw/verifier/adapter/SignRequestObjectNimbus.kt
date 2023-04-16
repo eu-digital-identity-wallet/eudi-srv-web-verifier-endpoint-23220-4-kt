@@ -13,9 +13,9 @@ import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
-import eu.europa.ec.euidw.verifier.Jwt
-import eu.europa.ec.euidw.verifier.port.`in`.RequestObject
-import eu.europa.ec.euidw.verifier.port.out.SignRequestObject
+import eu.europa.ec.euidw.verifier.domain.Jwt
+import eu.europa.ec.euidw.verifier.application.port.`in`.RequestObject
+import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 
 
 class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {

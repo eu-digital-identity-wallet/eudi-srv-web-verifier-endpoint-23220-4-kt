@@ -1,8 +1,8 @@
-package eu.europa.ec.euidw.verifier.port.`in`
+package eu.europa.ec.euidw.verifier.application.port.`in`
 
-import eu.europa.ec.euidw.verifier.*
-import eu.europa.ec.euidw.verifier.port.out.LoadPresentationById
-import eu.europa.ec.euidw.verifier.port.out.SignRequestObject
+import eu.europa.ec.euidw.verifier.domain.*
+import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
+import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import java.net.URL
 
 data class RequestObject(

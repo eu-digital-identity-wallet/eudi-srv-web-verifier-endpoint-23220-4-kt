@@ -1,9 +1,9 @@
-package eu.europa.ec.euidw.verifier.port.`in`
+package eu.europa.ec.euidw.verifier.application.port.`in`
 
-import eu.europa.ec.euidw.verifier.Presentation
-import eu.europa.ec.euidw.verifier.PresentationDefinition
-import eu.europa.ec.euidw.verifier.PresentationId
-import eu.europa.ec.euidw.verifier.port.out.LoadPresentationById
+import eu.europa.ec.euidw.verifier.domain.Presentation
+import eu.europa.ec.euidw.verifier.domain.PresentationDefinition
+import eu.europa.ec.euidw.verifier.domain.PresentationId
+import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
 
 fun interface GetPresentationDefinition {
     suspend fun invoke(presentationProcessId: PresentationId): QueryResponse<PresentationDefinition>

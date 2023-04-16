@@ -1,6 +1,6 @@
-package eu.europa.ec.euidw.verifier.port.`in`
+package eu.europa.ec.euidw.verifier.application.port.`in`
 
-import eu.europa.ec.euidw.verifier.PresentationId
+import eu.europa.ec.euidw.verifier.domain.PresentationId
 import java.net.URL
 
 

@@ -1,6 +1,6 @@
-package eu.europa.ec.euidw.verifier.port.out
+package eu.europa.ec.euidw.verifier.application.port.out
 
-import eu.europa.ec.euidw.verifier.PresentationId
+import eu.europa.ec.euidw.verifier.domain.PresentationId
 import java.util.*
 
 fun interface GeneratePresentationId {
