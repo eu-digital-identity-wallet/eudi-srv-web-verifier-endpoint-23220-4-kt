@@ -13,7 +13,11 @@ java.sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
 	mavenCentral()
+	mavenLocal()
 }
+
+val presentationExchangeVersion = "1.0-SNAPSHOT"
+val nimbusSdkVersion = "10.7.1"
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -21,7 +25,8 @@ dependencies {
 	implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
-	implementation("com.nimbusds:oauth2-oidc-sdk:10.7.1")
+	implementation("eu.europa.ec.euidw:presentation-exchange-kt:$presentationExchangeVersion")
+	implementation("com.nimbusds:oauth2-oidc-sdk:$nimbusSdkVersion")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")
 }

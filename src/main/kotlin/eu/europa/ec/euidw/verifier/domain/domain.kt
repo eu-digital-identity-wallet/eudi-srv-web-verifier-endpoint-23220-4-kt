@@ -1,13 +1,14 @@
 package eu.europa.ec.euidw.verifier.domain
 
+import eu.europa.ec.euidw.prex.PresentationDefinition
 import java.time.Instant
 import java.util.*
+
 
 
 @JvmInline
 value class PresentationId(val value: UUID)
 
-interface PresentationDefinition
 
 typealias Jwt = String
 
