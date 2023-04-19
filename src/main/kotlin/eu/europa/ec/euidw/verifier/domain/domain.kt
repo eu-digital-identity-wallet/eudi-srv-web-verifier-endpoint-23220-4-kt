@@ -17,10 +17,16 @@ enum class IdTokenType {
     AttesterSigned
 }
 sealed interface PresentationType {
-    data class IdTokenRequest(val idTokenType: List<IdTokenType>) : PresentationType
-    data class VpTokenRequest(val presentationDefinition: PresentationDefinition) : PresentationType
-    data class IdAndVpToken(val idTokenType: List<IdTokenType>, val presentationDefinition: PresentationDefinition) :
-        PresentationType
+    data class IdTokenRequest(
+        val idTokenType: List<IdTokenType>
+    ) : PresentationType
+    data class VpTokenRequest(
+        val presentationDefinition: PresentationDefinition
+    ) : PresentationType
+    data class IdAndVpToken(
+        val idTokenType: List<IdTokenType>,
+        val presentationDefinition: PresentationDefinition
+    ) : PresentationType
 }
 
 

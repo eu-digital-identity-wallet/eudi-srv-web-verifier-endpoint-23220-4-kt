@@ -5,18 +5,23 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresenta
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.PresentationId
 
-fun interface GetPresentationDefinition {
+interface GetPresentationDefinition {
     suspend fun invoke(presentationProcessId: PresentationId): QueryResponse<PresentationDefinition>
 
     companion object {
+        fun live( loadPresentationById: LoadPresentationById): GetPresentationDefinition =
+            GetPresentationDefinitionLive(loadPresentationById)
+    }
+}
 
-        fun live(loadPresentationById: LoadPresentationById): GetPresentationDefinition =
-            GetPresentationDefinition { presentationProcessId ->
-                when (val presentationProcess = loadPresentationById(presentationProcessId)) {
-                    null -> QueryResponse.NotFound
-                    is Presentation.Requested -> QueryResponse.Found(TODO("Implement this"))
-                    else -> QueryResponse.InvalidState
-                }
-            }
+
+internal class GetPresentationDefinitionLive(private val loadPresentationById: LoadPresentationById) :
+    GetPresentationDefinition {
+    override suspend fun invoke(presentationProcessId: PresentationId): QueryResponse<PresentationDefinition> {
+        return when (val presentationProcess = loadPresentationById(presentationProcessId)) {
+            null -> QueryResponse.NotFound
+            is Presentation.Requested -> QueryResponse.Found(TODO("Implement this"))
+            else -> QueryResponse.InvalidState
+        }
     }
 }

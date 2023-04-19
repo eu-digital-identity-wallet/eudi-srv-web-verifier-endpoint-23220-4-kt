@@ -3,8 +3,6 @@ package eu.europa.ec.euidw.verifier.application.port.`in`
 import eu.europa.ec.euidw.verifier.domain.PresentationId
 import java.net.URL
 
-
-
 fun interface PresentationRelatedUrlBuilder {
     fun build(presentationId: PresentationId): URL
 }

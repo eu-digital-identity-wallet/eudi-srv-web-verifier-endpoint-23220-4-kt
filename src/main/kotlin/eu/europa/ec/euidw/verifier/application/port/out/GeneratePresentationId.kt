@@ -4,7 +4,7 @@ import eu.europa.ec.euidw.verifier.domain.PresentationId
 import java.util.*
 
 fun interface GeneratePresentationId {
-    suspend fun invoke(): PresentationId
+    suspend operator fun invoke(): PresentationId
 
     companion object {
         val live: GeneratePresentationId by lazy {

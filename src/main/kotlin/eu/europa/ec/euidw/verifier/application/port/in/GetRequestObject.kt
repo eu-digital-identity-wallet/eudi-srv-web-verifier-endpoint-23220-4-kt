@@ -1,8 +1,8 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
-import eu.europa.ec.euidw.verifier.domain.*
-import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
+import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
+import eu.europa.ec.euidw.verifier.domain.*
 import java.net.URL
 
 data class RequestObject(
@@ -20,13 +20,26 @@ data class RequestObject(
 )
 
 
-class GetRequestObject(
+interface GetRequestObject {
+    suspend operator fun invoke(presentationId: PresentationId): QueryResponse<Jwt>
+
+    companion object {
+        fun live(
+            loadPresentationById: LoadPresentationById,
+            signRequestObject: SignRequestObject,
+            verifierConfig: VerifierConfig
+        ): GetRequestObject =
+            GetRequestObjectLive(loadPresentationById, signRequestObject, verifierConfig)
+    }
+}
+
+internal class GetRequestObjectLive(
     private val loadPresentationById: LoadPresentationById,
     private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig
-) {
+) : GetRequestObject {
 
-    suspend operator fun invoke(presentationId: PresentationId): QueryResponse<Jwt> =
+    override suspend operator fun invoke(presentationId: PresentationId): QueryResponse<Jwt> =
         when (val presentation = loadPresentationById(presentationId)) {
             null -> QueryResponse.NotFound
             is Presentation.Requested ->
