@@ -1,4 +1,4 @@
-package eu.europa.ec.euidw.verifier.adapter
+package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 
 import com.nimbusds.jose.JWSAlgorithm
@@ -13,9 +13,9 @@ import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
-import eu.europa.ec.euidw.verifier.domain.Jwt
 import eu.europa.ec.euidw.verifier.application.port.`in`.RequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
+import eu.europa.ec.euidw.verifier.domain.Jwt
 
 
 class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
@@ -33,24 +33,26 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
     private fun asClaimSet(r: RequestObject): JWTClaimsSet {
         val builder = AuthorizationRequest.Builder(
-            ResponseType(*r.requestType.map { ResponseType.Value(it) }.toTypedArray()),
+            ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray()),
             ClientID(r.clientId)
         )
 
-        return with(builder){
-            state(State(r.state))
+        return with(builder) {
+            r.state?.let { state(State(it)) }
+            customParameter("nonce", r.nonce)
             scope(Scope(*r.scope.map { Scope.Value(it) }.toTypedArray()))
             responseMode(ResponseMode(r.responseMode))
             customParameter("client_id_scheme", r.clientIdScheme)
-            customParameter("response_uri", r.responseUri?.toExternalForm())
-            customParameter("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
-            customParameter("aud", r.aud)
+            r.responseUri?.let { customParameter("response_uri", it.toExternalForm()) }
+            r.presentationDefinitionUri?.let {
+                customParameter("presentation_definition_uri", it.toExternalForm())
+            }
+            r.aud?.let { customParameter("aud", it) }
             customParameter("id_token_type", *r.idTokenType.toTypedArray())
             build()
         }.toJWTClaimsSet()
 
     }
-  
 
-    
+
 }

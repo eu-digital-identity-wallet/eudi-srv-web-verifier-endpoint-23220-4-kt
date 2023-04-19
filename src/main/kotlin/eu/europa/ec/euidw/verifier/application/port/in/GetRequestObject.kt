@@ -8,7 +8,7 @@ import java.net.URL
 data class RequestObject(
     val clientId: String,
     val clientIdScheme: String,
-    val requestType: List<String>,
+    val responseType: List<String>,
     val presentationDefinitionUri: URL?,
     val scope: List<String>,
     val idTokenType: List<String>,
@@ -75,7 +75,7 @@ internal class GetRequestObjectLive(
                 is PresentationType.IdTokenRequest -> null
                 else -> verifierConfig.presentationDefinitionUriBuilder.build(presentation.id)
             },
-            requestType = when (type) {
+            responseType = when (type) {
                 is PresentationType.IdTokenRequest -> listOf("id_token")
                 is PresentationType.VpTokenRequest -> listOf("vp_token")
                 is PresentationType.IdAndVpToken -> listOf("vp_token", "id_token")
