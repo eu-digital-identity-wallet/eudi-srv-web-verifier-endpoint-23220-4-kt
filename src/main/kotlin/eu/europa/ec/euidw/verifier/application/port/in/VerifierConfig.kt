@@ -14,6 +14,6 @@ data class VerifierConfig(
     val clientId: String = "verifier-app",
     val clientIdScheme: String ="pre-registered",
     val requestUriBuilder: PresentationRelatedUrlBuilder,
-    val presentationDefinitionUriBuilder : PresentationRelatedUrlBuilder,
+    val presentationDefinitionUriBuilder : PresentationRelatedUrlBuilder?,
     val responseUriBuilder: PresentationRelatedUrlBuilder
 )

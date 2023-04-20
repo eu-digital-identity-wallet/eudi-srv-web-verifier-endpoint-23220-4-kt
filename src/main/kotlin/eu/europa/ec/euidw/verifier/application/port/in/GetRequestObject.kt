@@ -1,15 +1,19 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
+import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
+import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.*
 import java.net.URL
+import java.time.Instant
 
 data class RequestObject(
     val clientId: String,
     val clientIdScheme: String,
     val responseType: List<String>,
     val presentationDefinitionUri: URL?,
+    val presentationDefinition: String? = null,
     val scope: List<String>,
     val idTokenType: List<String>,
     val nonce: String,
@@ -26,15 +30,17 @@ interface GetRequestObject {
     companion object {
         fun live(
             loadPresentationById: LoadPresentationById,
+            storePresentation: StorePresentation,
             signRequestObject: SignRequestObject,
             verifierConfig: VerifierConfig
         ): GetRequestObject =
-            GetRequestObjectLive(loadPresentationById, signRequestObject, verifierConfig)
+            GetRequestObjectLive(loadPresentationById, storePresentation,signRequestObject, verifierConfig)
     }
 }
 
 internal class GetRequestObjectLive(
     private val loadPresentationById: LoadPresentationById,
+    private val storePresentation: StorePresentation,
     private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig
 ) : GetRequestObject {
@@ -44,12 +50,17 @@ internal class GetRequestObjectLive(
             null -> QueryResponse.NotFound
             is Presentation.Requested -> {
                 val jwt = signedRequestObjectOf(presentation).getOrThrow()
+                markAsRequestObjectRetrieved(presentation, Instant.now())
                 QueryResponse.Found(jwt)
             }
 
             else -> QueryResponse.InvalidState
         }
 
+    private suspend fun markAsRequestObjectRetrieved(presentation: Presentation.Requested, at: Instant) {
+        val updatedPresentation = presentation.requestObjectRetrieved(at).getOrThrow()
+        storePresentation(updatedPresentation)
+    }
 
     private fun signedRequestObjectOf(presentation: Presentation.Requested): Result<Jwt> {
         val requestObject = requestObjectOf(presentation)
@@ -72,7 +83,16 @@ internal class GetRequestObjectLive(
             }.map { it.asString() },
             presentationDefinitionUri = when (presentation.type) {
                 is PresentationType.IdTokenRequest -> null
-                else -> verifierConfig.presentationDefinitionUriBuilder.build(presentation.id)
+                else -> verifierConfig.presentationDefinitionUriBuilder?.build(presentation.id)
+            },
+            presentationDefinition = when (val type = presentation.type) {
+                is PresentationType.IdTokenRequest -> null
+                is PresentationType.VpTokenRequest ->
+                    if (verifierConfig.presentationDefinitionUriBuilder == null) with(PresentationExchange.jsonParser){type.presentationDefinition.encode()}
+                    else null
+                is PresentationType.IdAndVpToken ->
+                    if (verifierConfig.presentationDefinitionUriBuilder == null) with(PresentationExchange.jsonParser){type.presentationDefinition.encode()}
+                    else null
             },
             responseType = when (presentation.type) {
                 is PresentationType.IdTokenRequest -> listOf("id_token")

@@ -47,6 +47,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
         return with(AuthorizationRequest.Builder(responseType, clientId)) {
 
+            fun String.urlEncoded() =URLEncoder.encode(this, "UTF-8")
 
 
             fun customParameter(s: String, ts: Collection<String>) =
@@ -54,7 +55,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
             fun customOptionalURI(s: String, url: URL?): AuthorizationRequest.Builder? {
                 return url?.let {
-                    val encoded =  URLEncoder.encode(it.toExternalForm(), "UTF-8")
+                    val encoded =  it.toExternalForm().urlEncoded()
                     customParameter(s, encoded)
                 }
             }
@@ -62,6 +63,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             maybeState?.let { state(it) }
             customParameter("nonce", r.nonce)
             scope(scope)
+            r.presentationDefinition?.let { customParameter("presentation_definition", it.urlEncoded()) }
             responseMode(ResponseMode(r.responseMode))
             customParameter("client_id_scheme", r.clientIdScheme)
             customOptionalURI("response_uri", r.responseUri)

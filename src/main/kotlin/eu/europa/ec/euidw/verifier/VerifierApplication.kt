@@ -46,9 +46,10 @@ class VerifierApplication {
     fun getRequestObject(
         loadPresentationById: LoadPresentationById,
         signRequestObject: SignRequestObject,
+        storePresentation: StorePresentation,
         verifierConfig: VerifierConfig
     ): GetRequestObject =
-        GetRequestObject.live(loadPresentationById, signRequestObject, verifierConfig)
+        GetRequestObject.live(loadPresentationById, storePresentation,signRequestObject, verifierConfig)
 
     @Bean
     fun getPresentationDefinition(loadPresentationById: LoadPresentationById): GetPresentationDefinition =

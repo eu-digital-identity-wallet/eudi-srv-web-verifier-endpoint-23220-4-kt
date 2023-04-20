@@ -41,22 +41,42 @@ sealed interface Presentation {
         override val type: PresentationType,
     ) : Presentation
 
+    class RequestObjectRetrieved private constructor(
+        override val id: PresentationId,
+        override val initiatedAt: Instant,
+        override val type: PresentationType,
+        val requestObjectRetrievedAt: Instant
+    ): Presentation {
+        companion object {
+            fun requestObjectRetrieved(requested: Requested, at: Instant): Result<RequestObjectRetrieved> = runCatching {
+                require(requested.initiatedAt.isBefore(at))
+                RequestObjectRetrieved(requested.id, requested.initiatedAt, requested.type, at)
+            }
+        }
+    }
 
     class TimedOut private constructor(
         override val id: PresentationId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
+        val requestObjectRetrievedAt: Instant?=null,
         val timedOutAt: Instant
     ) : Presentation {
         companion object {
-            fun timeOut(requested: Requested, at: Instant): Result<TimedOut> = runCatching {
-                require(requested.initiatedAt.isBefore(at))
-                TimedOut(requested.id, requested.initiatedAt, requested.type, at)
+            fun timeOut(presentation: Requested, at: Instant): Result<TimedOut> = runCatching {
+                require(presentation.initiatedAt.isBefore(at))
+                TimedOut(presentation.id, presentation.initiatedAt, presentation.type, null, at)
+            }
+            fun timeOut(presentation: RequestObjectRetrieved, at: Instant): Result<TimedOut> = runCatching {
+                require(presentation.initiatedAt.isBefore(at))
+                TimedOut(presentation.id, presentation.initiatedAt, presentation.type, presentation.requestObjectRetrievedAt, at)
             }
         }
     }
 }
 
+fun Presentation.Requested.requestObjectRetrieved(at: Instant): Result<Presentation.RequestObjectRetrieved> =
+    Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, at)
 fun Presentation.Requested.timedOut(at: Instant): Result<Presentation.TimedOut> =
     Presentation.TimedOut.timeOut(this, at)
 
