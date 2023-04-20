@@ -9,6 +9,7 @@ import eu.europa.ec.euidw.verifier.application.port.`in`.RequestObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.net.URL
+import java.net.URLEncoder
 import java.util.*
 
 
@@ -60,13 +61,15 @@ class SignRequestObjectNimbusTest {
         assertEquals(r.clientId, c.getStringClaim("client_id"))
         assertEquals(r.clientIdScheme, c.getStringClaim("client_id_scheme"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
-        assertEquals(r.presentationDefinitionUri?.toExternalForm(), c.getStringClaim("presentation_definition_uri"))
+        assertEquals(r.presentationDefinitionUri?.urlEncoded(), c.getStringClaim("presentation_definition_uri"))
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
         assertEquals(r.idTokenType.joinToString(separator = " "), c.getStringClaim("id_token_type"))
         assertEquals(r.nonce, c.getStringClaim("nonce"))
         assertEquals(r.responseMode, c.getStringClaim("response_mode"))
-        assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim("response_uri"))
+        assertEquals(r.responseUri?.urlEncoded(), c.getStringClaim("response_uri"))
         assertEquals(r.state, c.getStringClaim("state"))
 
     }
+
+    private fun URL.urlEncoded() = URLEncoder.encode(toExternalForm(), "UTF-8")
 }

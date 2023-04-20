@@ -17,6 +17,7 @@ import eu.europa.ec.euidw.verifier.application.port.`in`.RequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.domain.Jwt
 import java.net.URL
+import java.net.URLEncoder
 
 /**
  * An implementation of [SignRequestObject] that uses Nimbus SDK
@@ -27,10 +28,10 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
     override fun invoke(requestObject: RequestObject): Result<Jwt> = runCatching {
         val header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.keyID).build()
         val claimSet = asClaimSet(requestObject)
-        val jar = SignedJWT(header, claimSet)
-        jar.sign(RSASSASigner(rsaJWK))
-        val jwt = jar.serialize()
-        jwt
+        with(SignedJWT(header, claimSet)){
+            sign(RSASSASigner(rsaJWK))
+            serialize()
+        }
     }
 
 
@@ -46,11 +47,17 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
         return with(AuthorizationRequest.Builder(responseType, clientId)) {
 
+
+
             fun customParameter(s: String, ts: Collection<String>) =
                 customParameter(s, *ts.toTypedArray())
 
-            fun customOptionalURI(s: String, url: URL?) =
-                url?.let { customParameter(s, it.toExternalForm()) }
+            fun customOptionalURI(s: String, url: URL?): AuthorizationRequest.Builder? {
+                return url?.let {
+                    val encoded =  URLEncoder.encode(it.toExternalForm(), "UTF-8")
+                    customParameter(s, encoded)
+                }
+            }
 
             maybeState?.let { state(it) }
             customParameter("nonce", r.nonce)
@@ -66,6 +73,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         }.toJWTClaimsSet()
 
     }
+
 
 
 }

@@ -7,7 +7,7 @@ fun interface GeneratePresentationId {
     suspend operator fun invoke(): PresentationId
 
     companion object {
-        val live: GeneratePresentationId by lazy {
+        val random: GeneratePresentationId by lazy {
             GeneratePresentationId { PresentationId(UUID.randomUUID()) }
         }
     }
