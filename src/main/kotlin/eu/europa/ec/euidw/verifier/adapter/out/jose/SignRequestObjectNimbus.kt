@@ -16,8 +16,11 @@ import com.nimbusds.oauth2.sdk.id.State
 import eu.europa.ec.euidw.verifier.application.port.`in`.RequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.domain.Jwt
+import java.net.URL
 
-
+/**
+ * An implementation of [SignRequestObject] that uses Nimbus SDK
+ */
 class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
 
@@ -31,25 +34,35 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
     }
 
 
+    /**
+     * Maps a [RequestObject] into a Nimbus [JWTClaimsSet]
+     */
     private fun asClaimSet(r: RequestObject): JWTClaimsSet {
-        val builder = AuthorizationRequest.Builder(
-            ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray()),
-            ClientID(r.clientId)
-        )
 
-        return with(builder) {
-            r.state?.let { state(State(it)) }
+        val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
+        val clientId = ClientID(r.clientId)
+        val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
+        val maybeState = r.state?.let { State(it) }
+
+        return with(AuthorizationRequest.Builder(responseType, clientId)) {
+
+            fun customParameter(s: String, ts: Collection<String>) =
+                customParameter(s, *ts.toTypedArray())
+
+            fun customOptionalURI(s: String, url: URL?) =
+                url?.let { customParameter(s, it.toExternalForm()) }
+
+            maybeState?.let { state(it) }
             customParameter("nonce", r.nonce)
-            scope(Scope(*r.scope.map { Scope.Value(it) }.toTypedArray()))
+            scope(scope)
             responseMode(ResponseMode(r.responseMode))
             customParameter("client_id_scheme", r.clientIdScheme)
-            r.responseUri?.let { customParameter("response_uri", it.toExternalForm()) }
-            r.presentationDefinitionUri?.let {
-                customParameter("presentation_definition_uri", it.toExternalForm())
-            }
-            r.aud?.let { customParameter("aud", it) }
-            customParameter("id_token_type", *r.idTokenType.toTypedArray())
+            customOptionalURI("response_uri", r.responseUri)
+            customOptionalURI("presentation_definition_uri", r.presentationDefinitionUri)
+            customParameter("aud", r.aud)
+            customParameter("id_token_type", r.idTokenType)
             build()
+
         }.toJWTClaimsSet()
 
     }

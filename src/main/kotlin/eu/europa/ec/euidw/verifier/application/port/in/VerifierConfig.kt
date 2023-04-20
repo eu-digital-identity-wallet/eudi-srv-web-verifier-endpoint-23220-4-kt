@@ -7,6 +7,9 @@ fun interface PresentationRelatedUrlBuilder {
     fun build(presentationId: PresentationId): URL
 }
 
+/**
+ * Verifier configuration options
+ */
 data class VerifierConfig(
     val clientId: String = "verifier-app",
     val clientIdScheme: String ="pre-registered",

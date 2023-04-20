@@ -29,15 +29,15 @@ class SignRequestObjectNimbusTest {
         val requestObject = RequestObject(
             clientId = "client",
             clientIdScheme = "pre-registered",
-            responseType = listOf("id_token"),
-            presentationDefinitionUri = null,
+            responseType = listOf("vp_token", "id_token"),
+            presentationDefinitionUri = URL("https://foobar"),
             scope = listOf("openid"),
             idTokenType = listOf("subject_signed_id_token"),
             nonce = UUID.randomUUID().toString(),
             responseMode = "direct_post.jwt",
             responseUri = URL("https://foo"),
             state = null,
-            aud = null
+            aud = emptyList()
         )
 
         val jwt = signRequestObject(requestObject).getOrThrow().also { println(it) }

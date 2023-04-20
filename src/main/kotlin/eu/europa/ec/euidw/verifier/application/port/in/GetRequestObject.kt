@@ -15,7 +15,7 @@ data class RequestObject(
     val nonce: String,
     val responseMode: String,
     val responseUri: URL?,
-    val aud: String?,
+    val aud: List<String>,
     val state: String?
 )
 
@@ -42,8 +42,10 @@ internal class GetRequestObjectLive(
     override suspend operator fun invoke(presentationId: PresentationId): QueryResponse<Jwt> =
         when (val presentation = loadPresentationById(presentationId)) {
             null -> QueryResponse.NotFound
-            is Presentation.Requested ->
-                signedRequestObjectOf(presentation).map { QueryResponse.Found(it) }.getOrThrow()
+            is Presentation.Requested -> {
+                val jwt = signedRequestObjectOf(presentation).getOrThrow()
+                QueryResponse.Found(jwt)
+            }
 
             else -> QueryResponse.InvalidState
         }
@@ -54,43 +56,38 @@ internal class GetRequestObjectLive(
         return signRequestObject(requestObject)
     }
 
-    private fun requestObjectOf(presentation: Presentation.Requested): RequestObject {
-
-        val type = presentation.type
-
-        return RequestObject(
+    private fun requestObjectOf(presentation: Presentation.Requested): RequestObject =
+        RequestObject(
             clientId = verifierConfig.clientId,
             clientIdScheme = verifierConfig.clientIdScheme,
-            scope = when (type) {
+            scope = when (presentation.type) {
                 is PresentationType.IdTokenRequest -> listOf("openid")
                 is PresentationType.VpTokenRequest -> emptyList()
                 is PresentationType.IdAndVpToken -> listOf("openid")
             },
-            idTokenType = when (type) {
-                is PresentationType.IdTokenRequest -> type.idTokenType
+            idTokenType = when (presentation.type) {
+                is PresentationType.IdTokenRequest -> presentation.type.idTokenType
                 is PresentationType.VpTokenRequest -> emptyList()
-                is PresentationType.IdAndVpToken -> type.idTokenType
+                is PresentationType.IdAndVpToken -> presentation.type.idTokenType
             }.map { it.asString() },
-            presentationDefinitionUri = when (type) {
+            presentationDefinitionUri = when (presentation.type) {
                 is PresentationType.IdTokenRequest -> null
                 else -> verifierConfig.presentationDefinitionUriBuilder.build(presentation.id)
             },
-            responseType = when (type) {
+            responseType = when (presentation.type) {
                 is PresentationType.IdTokenRequest -> listOf("id_token")
                 is PresentationType.VpTokenRequest -> listOf("vp_token")
                 is PresentationType.IdAndVpToken -> listOf("vp_token", "id_token")
             },
-            aud = when (type) {
-                is PresentationType.IdTokenRequest -> null
-                else -> "https://self-issued.me/v2"
+            aud = when (presentation.type) {
+                is PresentationType.IdTokenRequest -> emptyList()
+                else -> listOf("https://self-issued.me/v2")
             },
             nonce = presentation.id.value.toString(),
             state = null,
             responseMode = "direct_post.jwt",
             responseUri = verifierConfig.responseUriBuilder.build(presentation.id)
         )
-
-    }
 
     private fun IdTokenType.asString(): String = when (this) {
         IdTokenType.AttesterSigned -> "attester_signed_id_token"

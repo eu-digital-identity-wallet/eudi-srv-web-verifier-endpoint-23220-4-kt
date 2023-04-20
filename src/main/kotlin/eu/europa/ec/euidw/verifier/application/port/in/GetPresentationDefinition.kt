@@ -15,7 +15,7 @@ interface GetPresentationDefinition {
 }
 
 
-internal class GetPresentationDefinitionLive(private val loadPresentationById: LoadPresentationById) :
+private class GetPresentationDefinitionLive(private val loadPresentationById: LoadPresentationById) :
     GetPresentationDefinition {
     override suspend fun invoke(presentationProcessId: PresentationId): QueryResponse<PresentationDefinition> {
         return when (val presentationProcess = loadPresentationById(presentationProcessId)) {

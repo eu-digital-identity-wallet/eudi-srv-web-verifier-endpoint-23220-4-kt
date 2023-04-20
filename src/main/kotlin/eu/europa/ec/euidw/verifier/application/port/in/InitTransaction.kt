@@ -38,6 +38,14 @@ data class ValidationException(val error: ValidationError) : RuntimeException()
 
 interface InitTransaction {
     suspend fun invoke(initTransactionTO: InitTransactionTO)
+
+    companion object {
+        fun live(
+            generatePresentationId: GeneratePresentationId,
+            storePresentation: StorePresentation
+        ): InitTransaction =
+            InitTransactionLive(generatePresentationId, storePresentation)
+    }
 }
 
 internal class InitTransactionLive(
@@ -47,7 +55,7 @@ internal class InitTransactionLive(
 ) : InitTransaction {
     override suspend fun invoke(initTransactionTO: InitTransactionTO) {
 
-        val presentation : Presentation = Presentation.Requested(
+        val presentation: Presentation = Presentation.Requested(
             id = generatePresentationId(),
             initiatedAt = initTransactionTO.timestamp,
             type = initTransactionTO.toDomain().getOrThrow()
