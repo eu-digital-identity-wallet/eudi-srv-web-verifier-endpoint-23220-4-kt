@@ -6,6 +6,8 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresent
 import eu.europa.ec.euidw.verifier.domain.IdTokenType
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.PresentationType
+import java.net.URL
+import java.time.Clock
 import java.time.Instant
 
 
@@ -23,8 +25,7 @@ enum class IdTokenTypeTO {
 data class InitTransactionTO(
     val type: PresentationTypeTO,
     val idTokenType: List<IdTokenTypeTO>,
-    val presentationDefinition: String?,
-    val timestamp: Instant
+    val presentationDefinition: String?
 )
 
 
@@ -35,34 +36,46 @@ enum class ValidationError {
 
 data class ValidationException(val error: ValidationError) : RuntimeException()
 
+data class RequestTO(
+    val clientId: String,
+    val requestJwt: String? = null,
+    val requestUri: URL?
+)
 
 interface InitTransaction {
-    suspend fun invoke(initTransactionTO: InitTransactionTO)
+    suspend fun invoke(initTransactionTO: InitTransactionTO): Result<RequestTO>
 
     companion object {
         fun live(
             generatePresentationId: GeneratePresentationId,
-            storePresentation: StorePresentation
+            storePresentation: StorePresentation,
+            verifierConfig: VerifierConfig,
+            clock: Clock
         ): InitTransaction =
-            InitTransactionLive(generatePresentationId, storePresentation)
+            InitTransactionLive(generatePresentationId, storePresentation, verifierConfig, clock)
     }
 }
 
 internal class InitTransactionLive(
     private val generatePresentationId: GeneratePresentationId,
-    private val storePresentation: StorePresentation
+    private val storePresentation: StorePresentation,
+    private val verifierConfig: VerifierConfig,
+    private val clock: Clock
 
 ) : InitTransaction {
-    override suspend fun invoke(initTransactionTO: InitTransactionTO) {
+    override suspend fun invoke(initTransactionTO: InitTransactionTO) : Result<RequestTO> = runCatching{
 
-        val presentation: Presentation = Presentation.Requested(
+        val presentation = Presentation.Requested(
             id = generatePresentationId(),
-            initiatedAt = initTransactionTO.timestamp,
+            initiatedAt = clock.instant(),
             type = initTransactionTO.toDomain().getOrThrow()
         )
         storePresentation(presentation)
+        fromDomain(presentation)
     }
 }
+
+private fun fromDomain(presentation: Presentation.Requested): RequestTO = TODO()
 
 private fun InitTransactionTO.toDomain(): Result<PresentationType> {
 

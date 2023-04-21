@@ -6,10 +6,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.GetRequestObjectEndPoint
 import eu.europa.ec.euidw.verifier.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.euidw.verifier.adapter.out.persistence.PresentationInMemoryRepo
-import eu.europa.ec.euidw.verifier.application.port.`in`.GetPresentationDefinition
-import eu.europa.ec.euidw.verifier.application.port.`in`.GetRequestObject
-import eu.europa.ec.euidw.verifier.application.port.`in`.InitTransaction
-import eu.europa.ec.euidw.verifier.application.port.`in`.VerifierConfig
+import eu.europa.ec.euidw.verifier.application.port.`in`.*
 import eu.europa.ec.euidw.verifier.application.port.out.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
@@ -19,6 +16,7 @@ import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Lazy
 import java.net.URL
+import java.time.Clock
 import java.util.*
 
 @SpringBootApplication
@@ -32,24 +30,29 @@ class VerifierApplication {
     @Bean
     fun getRequestObjectEndPoint(getRequestObject: GetRequestObject): GetRequestObjectEndPoint =
         GetRequestObjectEndPoint(getRequestObject)
+
     //
     // Use cases
     //
+
     @Bean
     fun initTransaction(
         generatePresentationId: GeneratePresentationId,
-        storePresentation: StorePresentation
+        storePresentation: StorePresentation,
+        verifierConfig: VerifierConfig,
+        clock: Clock
     ): InitTransaction =
-        InitTransaction.live(generatePresentationId, storePresentation)
+        InitTransaction.live(generatePresentationId, storePresentation, verifierConfig, clock)
 
     @Bean
     fun getRequestObject(
         loadPresentationById: LoadPresentationById,
         signRequestObject: SignRequestObject,
         storePresentation: StorePresentation,
-        verifierConfig: VerifierConfig
+        verifierConfig: VerifierConfig,
+        clock: Clock
     ): GetRequestObject =
-        GetRequestObject.live(loadPresentationById, storePresentation,signRequestObject, verifierConfig)
+        GetRequestObject.live(loadPresentationById, storePresentation, signRequestObject, verifierConfig, clock)
 
     @Bean
     fun getPresentationDefinition(loadPresentationById: LoadPresentationById): GetPresentationDefinition =
@@ -61,7 +64,7 @@ class VerifierApplication {
             clientId = "Verifier",
             clientIdScheme = "pre-registered",
             requestUriBuilder = { pid -> URL("https://foo") },
-            presentationDefinitionUriBuilder = { pid -> URL("https://foo") },
+            presentationDefinitionOption = EncodeOption.byReference { pid -> URL("https://foo") },
             responseUriBuilder = { pid -> URL("https://foo") },
         )
     }
@@ -103,6 +106,11 @@ class VerifierApplication {
     @Bean
     fun presentationInMemoryRepo(): PresentationInMemoryRepo =
         PresentationInMemoryRepo()
+
+    @Bean
+    fun clock(): Clock {
+        return Clock.systemDefaultZone()
+    }
 }
 
 fun main(args: Array<String>) {
