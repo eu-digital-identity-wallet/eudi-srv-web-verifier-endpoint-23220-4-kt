@@ -1,4 +1,4 @@
-package eu.europa.ec.euidw.verifier.application.port.out.jose
+package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.`in`.EmbedOption
@@ -8,7 +8,7 @@ import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.PresentationType
 import java.net.URL
 
-data class RequestObject(
+internal data class RequestObject(
     val clientId: String,
     val clientIdScheme: String,
     val responseType: List<String>,
@@ -23,7 +23,7 @@ data class RequestObject(
     val state: String?
 )
 
-fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentation: Presentation.Requested): RequestObject {
+internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentation: Presentation.Requested): RequestObject {
     val type = presentation.type
     val scope = when (type) {
         is PresentationType.IdTokenRequest -> listOf("openid")

@@ -6,7 +6,7 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresent
 import eu.europa.ec.euidw.verifier.domain.Jwt
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.PresentationId
-import eu.europa.ec.euidw.verifier.domain.requestObjectRetrieved
+import eu.europa.ec.euidw.verifier.domain.retrieveRequestObject
 import java.time.Clock
 import java.time.Instant
 
@@ -43,7 +43,7 @@ internal class GetRequestObjectLive(
 
     private suspend fun requestObjectOf(presentation: Presentation.Requested, at: Instant): Jwt {
         val jwt = signRequestObject(verifierConfig, presentation).getOrThrow()
-        val updatedPresentation = presentation.requestObjectRetrieved(at).getOrThrow()
+        val updatedPresentation = presentation.retrieveRequestObject(at).getOrThrow()
         storePresentation(updatedPresentation)
         return jwt
     }

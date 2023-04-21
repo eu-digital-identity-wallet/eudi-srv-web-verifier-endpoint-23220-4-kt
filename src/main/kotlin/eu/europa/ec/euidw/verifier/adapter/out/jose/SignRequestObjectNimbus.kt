@@ -13,9 +13,10 @@ import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
+import eu.europa.ec.euidw.verifier.application.port.`in`.VerifierConfig
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
-import eu.europa.ec.euidw.verifier.application.port.out.jose.RequestObject
 import eu.europa.ec.euidw.verifier.domain.Jwt
+import eu.europa.ec.euidw.verifier.domain.Presentation
 import java.net.URL
 import java.net.URLEncoder
 
@@ -24,11 +25,15 @@ import java.net.URLEncoder
  */
 class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
+    override fun invoke(verifierConfig: VerifierConfig, presentation: Presentation.Requested): Result<Jwt> {
+        val requestObject = requestObjectFromDomain(verifierConfig, presentation)
+        return sign(requestObject)
+    }
 
-    override fun invoke(requestObject: RequestObject): Result<Jwt> = runCatching {
+    internal fun sign(requestObject: RequestObject): Result<Jwt> = runCatching {
         val header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.keyID).build()
         val claimSet = asClaimSet(requestObject)
-        with(SignedJWT(header, claimSet)){
+        with(SignedJWT(header, claimSet)) {
             sign(RSASSASigner(rsaJWK))
             serialize()
         }
@@ -47,7 +52,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
         return with(AuthorizationRequest.Builder(responseType, clientId)) {
 
-            fun String.urlEncoded() =URLEncoder.encode(this, "UTF-8")
+            fun String.urlEncoded() = URLEncoder.encode(this, "UTF-8")
 
 
             fun customParameter(s: String, ts: Collection<String>) =
@@ -55,7 +60,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
             fun customOptionalURI(s: String, url: URL?): AuthorizationRequest.Builder? {
                 return url?.let {
-                    val encoded =  it.toExternalForm().urlEncoded()
+                    val encoded = it.toExternalForm().urlEncoded()
                     customParameter(s, encoded)
                 }
             }
@@ -75,7 +80,6 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         }.toJWTClaimsSet()
 
     }
-
 
 
 }

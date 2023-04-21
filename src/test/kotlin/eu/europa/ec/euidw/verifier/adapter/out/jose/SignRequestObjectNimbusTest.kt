@@ -3,8 +3,7 @@ package eu.europa.ec.euidw.verifier.adapter.out.jose
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.euidw.verifier.TestContext
-import eu.europa.ec.euidw.verifier.application.port.out.jose.RequestObject
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.net.URL
 import java.net.URLEncoder
@@ -13,19 +12,18 @@ import java.util.*
 
 class SignRequestObjectNimbusTest {
 
-    // Generate 2048-bit RSA key pair in JWK format, attach some metadata
-
-
     private val signRequestObject = TestContext.singRequestObject
     private val verifier = TestContext.singRequestObjectVerifier
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
+
+
         val requestObject = RequestObject(
-            clientId = "client",
+            clientId = "client-id",
             clientIdScheme = "pre-registered",
             responseType = listOf("vp_token", "id_token"),
-            presentationDefinitionUri = URL("https://foobar"),
+            presentationDefinitionUri = null,
             scope = listOf("openid"),
             idTokenType = listOf("subject_signed_id_token"),
             nonce = UUID.randomUUID().toString(),
@@ -35,7 +33,7 @@ class SignRequestObjectNimbusTest {
             aud = emptyList()
         )
 
-        val jwt = signRequestObject(requestObject).getOrThrow().also { println(it) }
+        val jwt = signRequestObject.sign(requestObject).getOrThrow().also { println(it) }
         val claimSet = decode(jwt).getOrThrow().also { println(it) }
 
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)
@@ -50,7 +48,7 @@ class SignRequestObjectNimbusTest {
         }
     }
 
-    private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c : JWTClaimsSet) {
+    private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c: JWTClaimsSet) {
 
         assertEquals(r.clientId, c.getStringClaim("client_id"))
         assertEquals(r.clientIdScheme, c.getStringClaim("client_id_scheme"))

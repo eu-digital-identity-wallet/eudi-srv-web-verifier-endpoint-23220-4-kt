@@ -7,17 +7,25 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresent
 import eu.europa.ec.euidw.verifier.domain.IdTokenType
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.PresentationType
-import eu.europa.ec.euidw.verifier.domain.requestObjectRetrieved
+import eu.europa.ec.euidw.verifier.domain.retrieveRequestObject
 import java.net.URL
 import java.time.Clock
 
-
+/**
+ * Represent the kind of [Presentation] process
+ * a caller wants to initiate
+ * It could be either a request (to the wallet) to present
+ * a id_token, a vp_token or both
+ */
 enum class PresentationTypeTO {
     IdTokenRequest,
     VpTokenRequest,
     IdAndVpTokenRequest
 }
 
+/**
+ * Specifies what kind of id_token to request
+ */
 enum class IdTokenTypeTO {
     SubjectSigned,
     AttesterSigned
@@ -29,23 +37,45 @@ data class InitTransactionTO(
     val presentationDefinition: String?
 )
 
+/**
+ * Possible validation errors of caller's input
+ */
 enum class ValidationError {
     MissingPresentationDefinition,
     InvalidPresentationDefinition
 }
 
+/**
+ * Carrier of [ValidationError]
+ */
 data class ValidationException(val error: ValidationError) : RuntimeException()
 
+/**
+ * The return value of successfully [initializing][InitTransaction] a [Presentation]
+ *
+ */
 data class JwtSecuredAuthorizationRequestTO(
     val clientId: String,
     val request: String? = null,
     val requestUri: URL?
 )
 
+/**
+ * This is a use case that initializes the [Presentation] process.
+ *
+ * The caller may define via [InitTransactionTO] what kind of transaction wants to initiate
+ * This is represented by [PresentationTypeTO].
+ *
+ * Use case will initialize a [Presentation] process
+ */
 interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO>
 
     companion object {
+
+        /**
+         * Factory method to obtain the implementation of the use case
+         */
         fun live(
             generatePresentationId: GeneratePresentationId,
             storePresentation: StorePresentation,
@@ -57,6 +87,9 @@ interface InitTransaction {
     }
 }
 
+/**
+ * The default implementation of the use case
+ */
 internal class InitTransactionLive(
     private val generatePresentationId: GeneratePresentationId,
     private val storePresentation: StorePresentation,
@@ -88,7 +121,7 @@ internal class InitTransactionLive(
             is EmbedOption.ByValue -> {
                 val jwt = signRequestObject(verifierConfig, requestedPresentation).getOrThrow()
                 val requestObjectRetrieved =
-                    requestedPresentation.requestObjectRetrieved(requestedPresentation.initiatedAt).getOrThrow()
+                    requestedPresentation.retrieveRequestObject(requestedPresentation.initiatedAt).getOrThrow()
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, jwt, null)
             }
 

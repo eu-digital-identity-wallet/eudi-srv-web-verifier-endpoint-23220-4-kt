@@ -5,12 +5,8 @@ import eu.europa.ec.euidw.verifier.domain.Jwt
 import eu.europa.ec.euidw.verifier.domain.Presentation
 
 /**
- * An out port that signs a [RequestObject] in form of a [Jwt]
+ * An out port that signs a [Presentation.Requested]
  */
 fun interface SignRequestObject {
-    operator fun invoke(requestObject: RequestObject): Result<Jwt>
-
-    operator fun invoke(verifierConfig: VerifierConfig, presentation: Presentation.Requested): Result<Jwt> =
-        invoke(requestObjectFromDomain(verifierConfig, presentation))
-
+    operator fun invoke(verifierConfig: VerifierConfig, presentation: Presentation.Requested): Result<Jwt>
 }
