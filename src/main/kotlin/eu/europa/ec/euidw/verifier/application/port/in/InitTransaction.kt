@@ -98,24 +98,33 @@ internal class InitTransactionLive(
     private val clock: Clock
 
 ) : InitTransaction {
-    override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> = runCatching {
+    override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> =
+        runCatching {
 
-        // validate input
-        val type = initTransactionTO.toDomain().getOrThrow()
+            // validate input
+            val type = initTransactionTO.toDomain().getOrThrow()
 
-        // Initialize presentation
-        val requestedPresentation = Presentation.Requested(
-            id = generatePresentationId(),
-            initiatedAt = clock.instant(),
-            type = type
-        )
-        // create request, which may update presentation
-        val (updatedPresentation, request) = createRequest(requestedPresentation)
+            // Initialize presentation
+            val requestedPresentation = Presentation.Requested(
+                id = generatePresentationId(),
+                initiatedAt = clock.instant(),
+                type = type
+            )
+            // create request, which may update presentation
+            val (updatedPresentation, request) = createRequest(requestedPresentation)
 
-        storePresentation(updatedPresentation)
-        request
-    }
+            storePresentation(updatedPresentation)
+            request
+        }
 
+    /**
+     * Creates a request and depending on the case updates also the [requestedPresentation]
+     *
+     * If the verifier has been configured to use request parameter then
+     * presentation will be updated to [Presentation.RequestObjectRetrieved].
+     *
+     * Otherwise, [requestedPresentation] will remain as is
+     */
     private fun createRequest(requestedPresentation: Presentation.Requested): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
         when (val requestJarOption = verifierConfig.requestJarOption) {
             is EmbedOption.ByValue -> {
@@ -126,7 +135,7 @@ internal class InitTransactionLive(
             }
 
             is EmbedOption.ByReference -> {
-                val requestUri = requestJarOption.urlBuilder.build(requestedPresentation.id)
+                val requestUri = requestJarOption.buildUrl(requestedPresentation.id)
                 requestedPresentation to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, null, requestUri)
             }
         }

@@ -48,7 +48,7 @@ internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentatio
     val presentationDefinitionUri = maybePresentationDefinition?.let {
         when (val option = verifierConfig.presentationDefinitionEmbedOption) {
             is EmbedOption.ByValue -> null
-            is EmbedOption.ByReference -> option.urlBuilder.build(presentation.id)
+            is EmbedOption.ByReference -> option.buildUrl(presentation.id)
         }
     }
     val presentationDefinition = maybePresentationDefinition?.let { presentationDefinition ->
@@ -80,7 +80,7 @@ internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentatio
         nonce = presentation.id.value.toString(),
         state = null,
         responseMode = "direct_post.jwt",
-        responseUri = verifierConfig.responseUriBuilder.build(presentation.id)
+        responseUri = verifierConfig.responseUriBuilder(presentation.id)
     )
 }
 
