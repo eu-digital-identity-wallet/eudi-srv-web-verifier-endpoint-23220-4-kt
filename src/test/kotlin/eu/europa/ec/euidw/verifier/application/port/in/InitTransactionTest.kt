@@ -32,7 +32,7 @@ class InitTransactionTest {
 
             val request = useCase(input).getOrThrow()
             Assertions.assertEquals(request.clientId, verifierConfig.clientId)
-            Assertions.assertNotNull(request.requestJwt)
+            Assertions.assertNotNull(request.request)
             Assertions.assertTrue(
                 loadPresentationById(testPresentationId)?.let { it is Presentation.RequestObjectRetrieved } ?: false)
         }

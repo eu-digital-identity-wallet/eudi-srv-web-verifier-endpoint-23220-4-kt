@@ -36,14 +36,14 @@ enum class ValidationError {
 
 data class ValidationException(val error: ValidationError) : RuntimeException()
 
-data class RequestTO(
+data class JwtSecuredAuthorizationRequestTO(
     val clientId: String,
-    val requestJwt: String? = null,
+    val request: String? = null,
     val requestUri: URL?
 )
 
 interface InitTransaction {
-    suspend operator fun invoke(initTransactionTO: InitTransactionTO): Result<RequestTO>
+    suspend operator fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO>
 
     companion object {
         fun live(
@@ -65,7 +65,7 @@ internal class InitTransactionLive(
     private val clock: Clock
 
 ) : InitTransaction {
-    override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<RequestTO> = runCatching {
+    override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> = runCatching {
 
         // validate input
         val type = initTransactionTO.toDomain().getOrThrow()
@@ -83,18 +83,18 @@ internal class InitTransactionLive(
         request
     }
 
-    private fun createRequest(requestedPresentation: Presentation.Requested): Pair<Presentation, RequestTO> =
+    private fun createRequest(requestedPresentation: Presentation.Requested): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
         when (val requestJarOption = verifierConfig.requestJarOption) {
             is EmbedOption.ByValue -> {
                 val jwt = signRequestObject(verifierConfig, requestedPresentation).getOrThrow()
                 val requestObjectRetrieved =
                     requestedPresentation.requestObjectRetrieved(requestedPresentation.initiatedAt).getOrThrow()
-                requestObjectRetrieved to RequestTO(verifierConfig.clientId, jwt, null)
+                requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, jwt, null)
             }
 
             is EmbedOption.ByReference -> {
                 val requestUri = requestJarOption.urlBuilder.build(requestedPresentation.id)
-                requestedPresentation to RequestTO(verifierConfig.clientId, null, requestUri)
+                requestedPresentation to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, null, requestUri)
             }
         }
 }
