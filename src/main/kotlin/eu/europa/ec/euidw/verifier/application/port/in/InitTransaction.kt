@@ -32,8 +32,8 @@ enum class IdTokenTypeTO {
 }
 
 data class InitTransactionTO(
-    val type: PresentationTypeTO,
-    val idTokenType: List<IdTokenTypeTO>,
+    val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
+    val idTokenType: List<IdTokenTypeTO> = listOf(IdTokenTypeTO.SubjectSigned),
     val presentationDefinition: String?
 )
 

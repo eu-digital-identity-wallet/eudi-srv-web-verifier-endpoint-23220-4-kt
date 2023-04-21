@@ -8,6 +8,9 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import java.net.URL
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.Charset
 
 class InitTransactionTest {
 
@@ -28,11 +31,11 @@ class InitTransactionTest {
                 null
             )
 
-            val useCase = TestContext.initTransaction(verifierConfig)
+            val useCase : InitTransaction = TestContext.initTransaction(verifierConfig)
 
-            val request = useCase(input).getOrThrow()
-            Assertions.assertEquals(request.clientId, verifierConfig.clientId)
-            Assertions.assertNotNull(request.request)
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
             Assertions.assertTrue(
                 loadPresentationById(testPresentationId)?.let { it is Presentation.RequestObjectRetrieved } ?: false)
         }
@@ -40,8 +43,9 @@ class InitTransactionTest {
     @Test
     fun `when request option is embed by ref, request_uri should be present and presentation should be Requested`() =
         runBlocking {
+            val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
-                requestJarOption = EmbedOption.ByReference { pid -> URL("https://foo") },
+                requestJarOption = EmbedOption.ByReference { pid -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { pid -> URL("https://foo") }
             )
@@ -54,9 +58,9 @@ class InitTransactionTest {
 
             val useCase = TestContext.initTransaction(verifierConfig)
 
-            val request = useCase(input).getOrThrow()
-            Assertions.assertEquals(request.clientId, verifierConfig.clientId)
-            Assertions.assertNotNull(request.requestUri)
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertEquals(uri, jwtSecuredAuthorizationRequest.requestUri)
             Assertions.assertTrue(
                 loadPresentationById(testPresentationId)?.let { it is Presentation.Requested } ?: false
             )

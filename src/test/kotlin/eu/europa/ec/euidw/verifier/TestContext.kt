@@ -25,7 +25,7 @@ object TestContext {
         .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
         .issueTime(Date()) // issued-at timestamp (optional)
         .generate()
-    val singRequestObject : SignRequestObjectNimbus = SignRequestObjectNimbus(rsaJwk)
+    val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus(rsaJwk)
     val singRequestObjectVerifier = RSASSAVerifier(rsaJwk.toRSAPublicKey())
     private val repo = PresentationInMemoryRepo()
     val loadPresentationById = repo.loadPresentationById

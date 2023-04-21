@@ -24,6 +24,13 @@ Clean up
 ./grandlew clean
 ```
 
+## Build OCI Image
+
+```bash
+./gradlew bootBuildImage
+```
+
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct,

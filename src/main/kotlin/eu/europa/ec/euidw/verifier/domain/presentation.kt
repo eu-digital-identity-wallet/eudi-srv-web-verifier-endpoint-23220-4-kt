@@ -6,7 +6,12 @@ import java.util.*
 
 
 @JvmInline
-value class PresentationId(val value: UUID)
+value class PresentationId(val value: UUID){
+
+    companion object{
+        fun parse(s: String): PresentationId? = runCatching { PresentationId(UUID.fromString(s)) }.getOrNull()
+    }
+}
 
 
 typealias Jwt = String
