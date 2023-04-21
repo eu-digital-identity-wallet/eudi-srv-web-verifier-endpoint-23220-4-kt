@@ -3,16 +3,25 @@ Web application (backend Restful service) that would allow somebody to trigger t
 
 ## Build
 
-Generate the derived files
+
+Project depends on [Presentation Exchange](https://github.com/niscy-eudiw/presentation-exchange-kt)
+Thus, you need to firstly clone this project, build it and publish the library to 
+local maven repo. To do so, from within the cloned directory run
 
 ```bash
-mvn package
+./grandlew clean build publishToMavenLocal
+```
+
+Then switch to this project folder and run
+
+```bash
+./grandlew build
 ```
 
 Clean up
 
 ```bash
-mvn clean
+./grandlew clean
 ```
 
 ## Contributing
