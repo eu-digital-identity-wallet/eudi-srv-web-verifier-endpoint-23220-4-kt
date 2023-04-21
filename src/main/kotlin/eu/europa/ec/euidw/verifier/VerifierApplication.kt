@@ -39,10 +39,11 @@ class VerifierApplication {
     fun initTransaction(
         generatePresentationId: GeneratePresentationId,
         storePresentation: StorePresentation,
+        signRequestObject: SignRequestObject,
         verifierConfig: VerifierConfig,
         clock: Clock
     ): InitTransaction =
-        InitTransaction.live(generatePresentationId, storePresentation, verifierConfig, clock)
+        InitTransaction.live(generatePresentationId, storePresentation, signRequestObject, verifierConfig, clock)
 
     @Bean
     fun getRequestObject(
@@ -63,8 +64,8 @@ class VerifierApplication {
         return VerifierConfig(
             clientId = "Verifier",
             clientIdScheme = "pre-registered",
-            requestUriBuilder = { pid -> URL("https://foo") },
-            presentationDefinitionOption = EncodeOption.byReference { pid -> URL("https://foo") },
+            requestJarOption = EmbedOption.byReference { pid -> URL("https://foo") },
+            presentationDefinitionEmbedOption = EmbedOption.byReference { pid -> URL("https://foo") },
             responseUriBuilder = { pid -> URL("https://foo") },
         )
     }

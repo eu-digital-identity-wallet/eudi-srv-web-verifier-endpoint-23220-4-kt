@@ -10,5 +10,7 @@ fun interface GeneratePresentationId {
         val random: GeneratePresentationId by lazy {
             GeneratePresentationId { PresentationId(UUID.randomUUID()) }
         }
+        fun fixed(id: PresentationId) : GeneratePresentationId =
+            GeneratePresentationId { id }
     }
 }

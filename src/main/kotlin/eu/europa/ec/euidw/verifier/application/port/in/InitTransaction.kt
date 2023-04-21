@@ -2,13 +2,14 @@ package eu.europa.ec.euidw.verifier.application.port.`in`
 
 import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.out.GeneratePresentationId
+import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.IdTokenType
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.PresentationType
+import eu.europa.ec.euidw.verifier.domain.requestObjectRetrieved
 import java.net.URL
 import java.time.Clock
-import java.time.Instant
 
 
 enum class PresentationTypeTO {
@@ -28,7 +29,6 @@ data class InitTransactionTO(
     val presentationDefinition: String?
 )
 
-
 enum class ValidationError {
     MissingPresentationDefinition,
     InvalidPresentationDefinition
@@ -43,50 +43,75 @@ data class RequestTO(
 )
 
 interface InitTransaction {
-    suspend fun invoke(initTransactionTO: InitTransactionTO): Result<RequestTO>
+    suspend operator fun invoke(initTransactionTO: InitTransactionTO): Result<RequestTO>
 
     companion object {
         fun live(
             generatePresentationId: GeneratePresentationId,
             storePresentation: StorePresentation,
+            signRequestObject: SignRequestObject,
             verifierConfig: VerifierConfig,
             clock: Clock
         ): InitTransaction =
-            InitTransactionLive(generatePresentationId, storePresentation, verifierConfig, clock)
+            InitTransactionLive(generatePresentationId, storePresentation, signRequestObject, verifierConfig, clock)
     }
 }
 
 internal class InitTransactionLive(
     private val generatePresentationId: GeneratePresentationId,
     private val storePresentation: StorePresentation,
+    private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig,
     private val clock: Clock
 
 ) : InitTransaction {
-    override suspend fun invoke(initTransactionTO: InitTransactionTO) : Result<RequestTO> = runCatching{
+    override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<RequestTO> = runCatching {
 
-        val presentation = Presentation.Requested(
+        // validate input
+        val type = initTransactionTO.toDomain().getOrThrow()
+
+        // Initialize presentation
+        val requestedPresentation = Presentation.Requested(
             id = generatePresentationId(),
             initiatedAt = clock.instant(),
-            type = initTransactionTO.toDomain().getOrThrow()
+            type = type
         )
-        storePresentation(presentation)
-        fromDomain(presentation)
+        // create request, which may update presentation
+        val (updatedPresentation, request) = createRequest(requestedPresentation)
+
+        storePresentation(updatedPresentation)
+        request
     }
+
+    private fun createRequest(requestedPresentation: Presentation.Requested): Pair<Presentation, RequestTO> =
+        when (val requestJarOption = verifierConfig.requestJarOption) {
+            is EmbedOption.ByValue -> {
+                val jwt = signRequestObject(verifierConfig, requestedPresentation).getOrThrow()
+                val requestObjectRetrieved =
+                    requestedPresentation.requestObjectRetrieved(requestedPresentation.initiatedAt).getOrThrow()
+                requestObjectRetrieved to RequestTO(verifierConfig.clientId, jwt, null)
+            }
+
+            is EmbedOption.ByReference -> {
+                val requestUri = requestJarOption.urlBuilder.build(requestedPresentation.id)
+                requestedPresentation to RequestTO(verifierConfig.clientId, null, requestUri)
+            }
+        }
 }
 
-private fun fromDomain(presentation: Presentation.Requested): RequestTO = TODO()
 
-private fun InitTransactionTO.toDomain(): Result<PresentationType> {
+internal fun InitTransactionTO.toDomain(): Result<PresentationType> {
 
     fun getIdTokenType() = Result.success(idTokenType.map { it.toDomain() })
     fun getPd() = when {
         presentationDefinition.isNullOrEmpty() -> Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
-        else -> PresentationExchange.jsonParser.decodePresentationDefinition(presentationDefinition)
-            .fold(
-                onSuccess = { Result.success(it) },
-                onFailure = { Result.failure(ValidationException(ValidationError.InvalidPresentationDefinition)) }
-            )
+        else -> runCatching {
+            try {
+                PresentationExchange.jsonParser.decodePresentationDefinition(presentationDefinition!!).getOrThrow()
+            } catch (t: Throwable) {
+                throw ValidationException(ValidationError.InvalidPresentationDefinition)
+            }
+        }
     }
 
     return runCatching {

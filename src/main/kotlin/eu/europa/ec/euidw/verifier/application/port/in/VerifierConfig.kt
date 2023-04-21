@@ -7,15 +7,16 @@ fun interface PresentationRelatedUrlBuilder {
     fun build(presentationId: PresentationId): URL
 }
 
-sealed interface EncodeOption {
-    object ByValue: EncodeOption
-    data class ByReference(val urlBuilder: PresentationRelatedUrlBuilder): EncodeOption
+sealed interface EmbedOption {
+    object ByValue: EmbedOption
+    data class ByReference(val urlBuilder: PresentationRelatedUrlBuilder): EmbedOption
 
     companion object {
-        fun byReference(urlBuilder: PresentationRelatedUrlBuilder): EncodeOption.ByReference =
-            ByReference(urlBuilder)
+        fun byReference(urlBuilder: PresentationRelatedUrlBuilder): ByReference = ByReference(urlBuilder)
     }
 }
+
+
 
 /**
  * Verifier configuration options
@@ -23,7 +24,7 @@ sealed interface EncodeOption {
 data class VerifierConfig(
     val clientId: String = "verifier-app",
     val clientIdScheme: String ="pre-registered",
-    val requestUriBuilder: PresentationRelatedUrlBuilder,
-    val presentationDefinitionOption: EncodeOption,
+    val requestJarOption: EmbedOption,
+    val presentationDefinitionEmbedOption: EmbedOption,
     val responseUriBuilder: PresentationRelatedUrlBuilder
 )

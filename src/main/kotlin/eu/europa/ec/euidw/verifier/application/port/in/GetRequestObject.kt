@@ -1,7 +1,6 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
-import eu.europa.ec.euidw.verifier.application.port.out.jose.requestObjectFromDomain
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.Jwt
@@ -43,8 +42,7 @@ internal class GetRequestObjectLive(
         }
 
     private suspend fun requestObjectOf(presentation: Presentation.Requested, at: Instant): Jwt {
-        val requestObject = requestObjectFromDomain(verifierConfig, presentation)
-        val jwt = signRequestObject(requestObject).getOrThrow()
+        val jwt = signRequestObject(verifierConfig, presentation).getOrThrow()
         val updatedPresentation = presentation.requestObjectRetrieved(at).getOrThrow()
         storePresentation(updatedPresentation)
         return jwt

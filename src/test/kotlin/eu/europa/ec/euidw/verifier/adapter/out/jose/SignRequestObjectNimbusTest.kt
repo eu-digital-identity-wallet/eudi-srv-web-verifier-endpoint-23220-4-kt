@@ -1,10 +1,8 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
-import com.nimbusds.jose.crypto.RSASSAVerifier
-import com.nimbusds.jose.jwk.KeyUse
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import eu.europa.ec.euidw.verifier.TestContext
 import eu.europa.ec.euidw.verifier.application.port.out.jose.RequestObject
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -16,14 +14,10 @@ import java.util.*
 class SignRequestObjectNimbusTest {
 
     // Generate 2048-bit RSA key pair in JWK format, attach some metadata
-    private val jwk = RSAKeyGenerator(2048)
-        .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
-        .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-        .issueTime(Date()) // issued-at timestamp (optional)
-        .generate()
 
-    private val signRequestObject = SignRequestObjectNimbus(jwk.toRSAKey())
-    private val verifier = RSASSAVerifier(jwk.toRSAPublicKey())
+
+    private val signRequestObject = TestContext.singRequestObject
+    private val verifier = TestContext.singRequestObjectVerifier
 
     @Test
     fun `given a request object, it should be signed and decoded`() {

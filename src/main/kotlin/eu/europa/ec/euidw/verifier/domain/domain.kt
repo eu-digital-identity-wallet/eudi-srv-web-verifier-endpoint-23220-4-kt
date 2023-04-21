@@ -5,7 +5,6 @@ import java.time.Instant
 import java.util.*
 
 
-
 @JvmInline
 value class PresentationId(val value: UUID)
 
@@ -16,13 +15,16 @@ enum class IdTokenType {
     SubjectSigned,
     AttesterSigned
 }
+
 sealed interface PresentationType {
     data class IdTokenRequest(
         val idTokenType: List<IdTokenType>
     ) : PresentationType
+
     data class VpTokenRequest(
         val presentationDefinition: PresentationDefinition
     ) : PresentationType
+
     data class IdAndVpToken(
         val idTokenType: List<IdTokenType>,
         val presentationDefinition: PresentationDefinition
@@ -46,12 +48,15 @@ sealed interface Presentation {
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestObjectRetrievedAt: Instant
-    ): Presentation {
+    ) : Presentation {
+        init {
+            require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
+        }
         companion object {
-            fun requestObjectRetrieved(requested: Requested, at: Instant): Result<RequestObjectRetrieved> = runCatching {
-                require(requested.initiatedAt.isBefore(at))
-                RequestObjectRetrieved(requested.id, requested.initiatedAt, requested.type, at)
-            }
+            fun requestObjectRetrieved(requested: Requested, at: Instant): Result<RequestObjectRetrieved> =
+                runCatching {
+                    RequestObjectRetrieved(requested.id, requested.initiatedAt, requested.type, at)
+                }
         }
     }
 
@@ -59,7 +64,7 @@ sealed interface Presentation {
         override val id: PresentationId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
-        val requestObjectRetrievedAt: Instant?=null,
+        val requestObjectRetrievedAt: Instant? = null,
         val timedOutAt: Instant
     ) : Presentation {
         companion object {
@@ -67,9 +72,16 @@ sealed interface Presentation {
                 require(presentation.initiatedAt.isBefore(at))
                 TimedOut(presentation.id, presentation.initiatedAt, presentation.type, null, at)
             }
+
             fun timeOut(presentation: RequestObjectRetrieved, at: Instant): Result<TimedOut> = runCatching {
                 require(presentation.initiatedAt.isBefore(at))
-                TimedOut(presentation.id, presentation.initiatedAt, presentation.type, presentation.requestObjectRetrievedAt, at)
+                TimedOut(
+                    presentation.id,
+                    presentation.initiatedAt,
+                    presentation.type,
+                    presentation.requestObjectRetrievedAt,
+                    at
+                )
             }
         }
     }
@@ -77,6 +89,7 @@ sealed interface Presentation {
 
 fun Presentation.Requested.requestObjectRetrieved(at: Instant): Result<Presentation.RequestObjectRetrieved> =
     Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, at)
+
 fun Presentation.Requested.timedOut(at: Instant): Result<Presentation.TimedOut> =
     Presentation.TimedOut.timeOut(this, at)
 
