@@ -1,13 +1,18 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonValue
+import com.fasterxml.jackson.databind.ObjectMapper
 import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.*
-import java.net.URL
+import kotlinx.serialization.Serializable
+import java.net.URLEncoder
 import java.time.Clock
 
 /**
@@ -16,25 +21,26 @@ import java.time.Clock
  * It could be either a request (to the wallet) to present
  * a id_token, a vp_token or both
  */
-enum class PresentationTypeTO {
-    IdTokenRequest,
-    VpTokenRequest,
-    IdAndVpTokenRequest
+enum class PresentationTypeTO(@get:JsonValue val jsonValue: String) {
+    IdTokenRequest("id_token"),
+    VpTokenRequest("vp_token"),
+    IdAndVpTokenRequest("vp_token id_token")
 }
 
 /**
  * Specifies what kind of id_token to request
  */
-enum class IdTokenTypeTO {
-    SubjectSigned,
-    AttesterSigned
+enum class IdTokenTypeTO(@get:JsonValue val jsonValue: String) {
+    SubjectSigned("subject_signed_id_token"),
+    AttesterSigned("attester_signed_id_token")
 }
 
 
+@Serializable
 data class InitTransactionTO(
     @JsonProperty("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
-    @JsonProperty("id_token_type") val idTokenType:IdTokenTypeTO? = null,
-    @JsonProperty("presentation_definition") val presentationDefinition: String?
+    @JsonProperty("id_token_type") val idTokenType: IdTokenTypeTO? = null,
+    @JsonProperty("presentation_definition") val presentationDefinition: Any?
 )
 
 /**
@@ -54,10 +60,11 @@ data class ValidationException(val error: ValidationError) : RuntimeException()
  * The return value of successfully [initializing][InitTransaction] a [Presentation]
  *
  */
+@JsonInclude(Include.NON_NULL)
 data class JwtSecuredAuthorizationRequestTO(
-    val clientId: String,
-    val request: String? = null,
-    val requestUri: URL?
+    @JsonProperty("client_id") val clientId: String,
+    @JsonProperty("request") val request: String? = null,
+    @JsonProperty("request_uri") val requestUri: String?
 )
 
 /**
@@ -145,7 +152,8 @@ internal class InitTransactionLive(
 
             is EmbedOption.ByReference -> {
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
-                requestedPresentation to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, null, requestUri)
+                val encoded = URLEncoder.encode(requestUri.toExternalForm(), "UTF-8")
+                requestedPresentation to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, null, encoded)
             }
         }
 
@@ -155,11 +163,12 @@ internal class InitTransactionLive(
 internal fun InitTransactionTO.toDomain(): Result<PresentationType> {
 
     fun getIdTokenType() = Result.success(idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList())
-    fun getPd() = when {
-        presentationDefinition.isNullOrEmpty() -> Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
+    fun getPd() = when (presentationDefinition) {
+        null -> Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
         else -> runCatching {
             try {
-                PresentationExchange.jsonParser.decodePresentationDefinition(presentationDefinition!!).getOrThrow()
+                val str = ObjectMapper().writeValueAsString(presentationDefinition)
+                PresentationExchange.jsonParser.decodePresentationDefinition(str!!).getOrThrow()
             } catch (t: Throwable) {
                 throw ValidationException(ValidationError.InvalidPresentationDefinition)
             }

@@ -20,6 +20,7 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresenta
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.EmbedOption
 import eu.europa.ec.euidw.verifier.domain.VerifierConfig
+import org.springframework.boot.autoconfigure.jms.artemis.ArtemisProperties.Embedded
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Lazy
@@ -151,11 +152,12 @@ class VerifierContext(environment: Environment) {
 
 private fun Environment.verifierConfig(): VerifierConfig {
 
+    val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
     return VerifierConfig(
-        clientId = getProperty("verifier.clientId") ?: "verifier",
-        clientIdScheme = getProperty("verifier.clientIdScheme") ?: "pre-registered",
-        requestJarOption = EmbedOption.byReference { _ -> URL("https://foo") },
-        presentationDefinitionEmbedOption = EmbedOption.byReference { _ -> URL("https://foo") },
+        clientId = getProperty("verifier.clientId", "verifier"),
+        clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered"),
+        requestJarOption = EmbedOption.byReference(WalletApi.requestJwtUrlBuilder(publicUrl)),
+        presentationDefinitionEmbedOption = EmbedOption.byReference(WalletApi.presentationDefinitionUrlBuilder(publicUrl)),
         responseUriBuilder = { _ -> URL("https://foo") },
     )
 

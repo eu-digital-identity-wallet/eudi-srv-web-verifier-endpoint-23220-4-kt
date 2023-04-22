@@ -26,7 +26,7 @@ class InitTransactionTest {
 
             val input = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
-                listOf(IdTokenTypeTO.SubjectSigned),
+                IdTokenTypeTO.SubjectSigned,
                 null
             )
 
@@ -51,7 +51,7 @@ class InitTransactionTest {
 
             val input = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
-                listOf(IdTokenTypeTO.SubjectSigned),
+                IdTokenTypeTO.SubjectSigned,
                 null
             )
 
@@ -72,7 +72,7 @@ class InitTransactionTest {
         //  Misses presentation definition
         val input = InitTransactionTO(
             PresentationTypeTO.VpTokenRequest,
-            listOf(),
+            null,
             null
         )
         testWithInvalidInput(input, ValidationError.MissingPresentationDefinition)
@@ -85,7 +85,7 @@ class InitTransactionTest {
         //  Invalid presentation definition
         val input = InitTransactionTO(
             PresentationTypeTO.VpTokenRequest,
-            listOf(),
+            null,
             "invalid presentation definition json"
         )
         testWithInvalidInput(input, ValidationError.InvalidPresentationDefinition)
