@@ -1,5 +1,6 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
@@ -29,10 +30,11 @@ enum class IdTokenTypeTO {
     AttesterSigned
 }
 
+
 data class InitTransactionTO(
-    val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
-    val idTokenType: List<IdTokenTypeTO> = listOf(IdTokenTypeTO.SubjectSigned),
-    val presentationDefinition: String?
+    @JsonProperty("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
+    @JsonProperty("id_token_type") val idTokenType:IdTokenTypeTO? = null,
+    @JsonProperty("presentation_definition") val presentationDefinition: String?
 )
 
 /**
@@ -152,7 +154,7 @@ internal class InitTransactionLive(
 
 internal fun InitTransactionTO.toDomain(): Result<PresentationType> {
 
-    fun getIdTokenType() = Result.success(idTokenType.map { it.toDomain() })
+    fun getIdTokenType() = Result.success(idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList())
     fun getPd() = when {
         presentationDefinition.isNullOrEmpty() -> Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
         else -> runCatching {
