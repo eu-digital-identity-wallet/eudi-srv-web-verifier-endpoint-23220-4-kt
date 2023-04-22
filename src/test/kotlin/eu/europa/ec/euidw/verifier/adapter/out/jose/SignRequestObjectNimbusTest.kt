@@ -29,7 +29,7 @@ class SignRequestObjectNimbusTest {
             nonce = UUID.randomUUID().toString(),
             responseMode = "direct_post.jwt",
             responseUri = URL("https://foo"),
-            state = null,
+            state = TestContext.testRequestId.value,
             aud = emptyList()
         )
 

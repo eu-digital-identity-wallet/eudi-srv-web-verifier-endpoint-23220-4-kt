@@ -1,13 +1,11 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
 import eu.europa.ec.euidw.prex.PresentationExchange
-import eu.europa.ec.euidw.verifier.application.port.out.GeneratePresentationId
+import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
+import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
-import eu.europa.ec.euidw.verifier.domain.IdTokenType
-import eu.europa.ec.euidw.verifier.domain.Presentation
-import eu.europa.ec.euidw.verifier.domain.PresentationType
-import eu.europa.ec.euidw.verifier.domain.retrieveRequestObject
+import eu.europa.ec.euidw.verifier.domain.*
 import java.net.URL
 import java.time.Clock
 
@@ -78,12 +76,19 @@ interface InitTransaction {
          */
         fun live(
             generatePresentationId: GeneratePresentationId,
+            generateRequestId: GenerateRequestId,
             storePresentation: StorePresentation,
             signRequestObject: SignRequestObject,
             verifierConfig: VerifierConfig,
             clock: Clock
-        ): InitTransaction =
-            InitTransactionLive(generatePresentationId, storePresentation, signRequestObject, verifierConfig, clock)
+        ): InitTransaction = InitTransactionLive(
+            generatePresentationId,
+            generateRequestId,
+            storePresentation,
+            signRequestObject,
+            verifierConfig,
+            clock
+        )
     }
 }
 
@@ -92,6 +97,7 @@ interface InitTransaction {
  */
 internal class InitTransactionLive(
     private val generatePresentationId: GeneratePresentationId,
+    private val generateRequestId: GenerateRequestId,
     private val storePresentation: StorePresentation,
     private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig,
@@ -108,6 +114,7 @@ internal class InitTransactionLive(
             val requestedPresentation = Presentation.Requested(
                 id = generatePresentationId(),
                 initiatedAt = clock.instant(),
+                requestId = generateRequestId(),
                 type = type
             )
             // create request, which may update presentation
@@ -135,10 +142,11 @@ internal class InitTransactionLive(
             }
 
             is EmbedOption.ByReference -> {
-                val requestUri = requestJarOption.buildUrl(requestedPresentation.id)
+                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
                 requestedPresentation to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, null, requestUri)
             }
         }
+
 }
 
 

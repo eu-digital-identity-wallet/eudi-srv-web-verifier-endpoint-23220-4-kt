@@ -6,12 +6,17 @@ import java.util.*
 
 
 @JvmInline
-value class PresentationId(val value: UUID){
+value class PresentationId(val value: String)
 
-    companion object{
-        fun parse(s: String): PresentationId? = runCatching { PresentationId(UUID.fromString(s)) }.getOrNull()
-    }
-}
+
+/**
+ * This is a identifier of the [Presentation]
+ * which is communicated to the wallet as <em>state</em>.
+ * As such, it is being used to correlate an authorization response
+ * send from wallet with a [Presentation]
+ */
+@JvmInline
+value class RequestId(val value: String)
 
 
 typealias Jwt = String
@@ -55,6 +60,7 @@ sealed interface Presentation {
         override val id: PresentationId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
+        val requestId: RequestId
     ) : Presentation
 
     /**
@@ -67,6 +73,7 @@ sealed interface Presentation {
         override val id: PresentationId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
+        val requestId: RequestId,
         val requestObjectRetrievedAt: Instant
     ) : Presentation {
         init {
@@ -75,7 +82,7 @@ sealed interface Presentation {
         companion object {
             fun requestObjectRetrieved(requested: Requested, at: Instant): Result<RequestObjectRetrieved> =
                 runCatching {
-                    RequestObjectRetrieved(requested.id, requested.initiatedAt, requested.type, at)
+                    RequestObjectRetrieved(requested.id, requested.initiatedAt, requested.type, requested.requestId, at)
                 }
         }
     }

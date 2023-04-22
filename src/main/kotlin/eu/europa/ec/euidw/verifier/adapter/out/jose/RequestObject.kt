@@ -1,8 +1,8 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 import eu.europa.ec.euidw.prex.PresentationExchange
-import eu.europa.ec.euidw.verifier.application.port.`in`.EmbedOption
-import eu.europa.ec.euidw.verifier.application.port.`in`.VerifierConfig
+import eu.europa.ec.euidw.verifier.domain.EmbedOption
+import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import eu.europa.ec.euidw.verifier.domain.IdTokenType
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.PresentationType
@@ -20,7 +20,7 @@ internal data class RequestObject(
     val responseMode: String,
     val responseUri: URL?,
     val aud: List<String>,
-    val state: String?
+    val state: String
 )
 
 internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentation: Presentation.Requested): RequestObject {
@@ -48,7 +48,7 @@ internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentatio
     val presentationDefinitionUri = maybePresentationDefinition?.let {
         when (val option = verifierConfig.presentationDefinitionEmbedOption) {
             is EmbedOption.ByValue -> null
-            is EmbedOption.ByReference -> option.buildUrl(presentation.id)
+            is EmbedOption.ByReference -> option.buildUrl(presentation.requestId)
         }
     }
     val presentationDefinition = maybePresentationDefinition?.let { presentationDefinition ->
@@ -78,9 +78,9 @@ internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentatio
         responseType = responseType,
         aud = aud,
         nonce = presentation.id.value.toString(),
-        state = null,
+        state = presentation.requestId.value,
         responseMode = "direct_post.jwt",
-        responseUri = verifierConfig.responseUriBuilder(presentation.id)
+        responseUri = verifierConfig.responseUriBuilder(presentation.requestId)
     )
 }
 

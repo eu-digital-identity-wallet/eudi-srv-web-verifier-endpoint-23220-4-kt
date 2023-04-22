@@ -1,16 +1,15 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
 import eu.europa.ec.euidw.verifier.TestContext
+import eu.europa.ec.euidw.verifier.domain.EmbedOption
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.PresentationId
+import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import java.net.URL
-import java.net.URLDecoder
-import java.net.URLEncoder
-import java.nio.charset.Charset
 
 class InitTransactionTest {
 
@@ -22,7 +21,7 @@ class InitTransactionTest {
             val verifierConfig = VerifierConfig(
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { pid -> URL("https://foo") }
+                responseUriBuilder = { _ -> URL("https://foo") }
             )
 
             val input = InitTransactionTO(
@@ -31,7 +30,7 @@ class InitTransactionTest {
                 null
             )
 
-            val useCase : InitTransaction = TestContext.initTransaction(verifierConfig)
+            val useCase: InitTransaction = TestContext.initTransaction(verifierConfig)
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
             Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
@@ -45,9 +44,9 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
-                requestJarOption = EmbedOption.ByReference { pid -> uri },
+                requestJarOption = EmbedOption.ByReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { pid -> URL("https://foo") }
+                responseUriBuilder = { _ -> URL("https://foo") }
             )
 
             val input = InitTransactionTO(

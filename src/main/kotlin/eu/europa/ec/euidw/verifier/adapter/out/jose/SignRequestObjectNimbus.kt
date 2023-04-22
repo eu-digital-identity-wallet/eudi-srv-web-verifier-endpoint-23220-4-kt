@@ -13,7 +13,7 @@ import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
-import eu.europa.ec.euidw.verifier.application.port.`in`.VerifierConfig
+import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.domain.Jwt
 import eu.europa.ec.euidw.verifier.domain.Presentation
