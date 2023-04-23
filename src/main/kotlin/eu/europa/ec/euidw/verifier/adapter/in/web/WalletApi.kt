@@ -26,11 +26,7 @@ class WalletApi(
     private suspend fun handleGetRequestObject(req: ServerRequest): ServerResponse {
 
 
-        suspend fun requestObjectFound(jwt: String) =
-            ok()
-                .contentType(MediaType.TEXT_PLAIN)
-                //.contentType(MediaType.parseMediaType("application/oauth-authz-req+jwt"))
-                .bodyValueAndAwait(jwt)
+        suspend fun requestObjectFound(jwt: String) = ok().contentType(requestJwtMediaType).bodyValueAndAwait(jwt)
 
         val requestId = req.requestId()
 
@@ -56,6 +52,7 @@ class WalletApi(
     private fun ServerRequest.requestId() = RequestId(pathVariable("requestId"))
 
     companion object {
+        val requestJwtMediaType = MediaType.parseMediaType("application/oauth-authz-req+jwt")
         const val requestJwtPath = "/wallet/request.jwt/{requestId}"
 
         fun requestJwtUrlBuilder(baseUrl: String): EmbedOption.ByReference<RequestId> =
