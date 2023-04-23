@@ -9,12 +9,12 @@ import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
 
-class UIApi(private val initTransaction: InitTransaction) {
+class VerifierApi(private val initTransaction: InitTransaction) {
 
 
     val route = coRouter {
         "/ui/presentations".nest {
-            POST("", contentType(APPLICATION_JSON) and accept(APPLICATION_JSON), this@UIApi::handleInitTransaction)
+            POST("", contentType(APPLICATION_JSON) and accept(APPLICATION_JSON), this@VerifierApi::handleInitTransaction)
         }
     }
 

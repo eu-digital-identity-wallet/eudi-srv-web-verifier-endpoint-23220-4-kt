@@ -11,22 +11,32 @@ import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
 
-
+/**
+ * The WEB API available to the wallet
+ */
 class WalletApi(
     private val getRequestObject: GetRequestObject,
     private val getPresentationDefinition: GetPresentationDefinition
 ) {
 
-
+    /**
+     * The routes available to the wallet
+     */
     val route = coRouter {
         GET(requestJwtPath, this@WalletApi::handleGetRequestObject)
         GET(presentationDefinitionPath, this@WalletApi::handleGetPresentationDefinition)
     }
 
+    /**
+     * Handles a request placed by the wallet, in order to obtain
+     * the Request Object of the presentation.
+     * If found, the Request Object will be returned as JWT
+     */
     private suspend fun handleGetRequestObject(req: ServerRequest): ServerResponse {
 
-
-        suspend fun requestObjectFound(jwt: String) = ok().contentType(requestJwtMediaType).bodyValueAndAwait(jwt)
+        suspend fun requestObjectFound(jwt: String) =
+            ok().contentType(MediaType.parseMediaType("application/oauth-authz-req+jwt"))
+                .bodyValueAndAwait(jwt)
 
         val requestId = req.requestId()
 
@@ -37,10 +47,16 @@ class WalletApi(
         }
     }
 
-
+    /**
+     * Handles a request placed by wallet, in order to obtain
+     * the [PresentationDefinition] of the presentation
+     */
     private suspend fun handleGetPresentationDefinition(req: ServerRequest): ServerResponse {
+
         suspend fun pdFound(pd: PresentationDefinition) = ok().json().bodyValueAndAwait(pd)
+
         val requestId = req.requestId()
+
         return when (val result = getPresentationDefinition(requestId)) {
             is NotFound -> notFound().buildAndAwait()
             is InvalidState -> badRequest().buildAndAwait()
@@ -49,27 +65,39 @@ class WalletApi(
 
     }
 
-    private fun ServerRequest.requestId() = RequestId(pathVariable("requestId"))
-
     companion object {
-        val requestJwtMediaType = MediaType.parseMediaType("application/oauth-authz-req+jwt")
+        /**
+         * Path template for the route for
+         * getting the presentation's request object
+         */
         const val requestJwtPath = "/wallet/request.jwt/{requestId}"
 
-        fun requestJwtUrlBuilder(baseUrl: String): EmbedOption.ByReference<RequestId> =
-            EmbedOption.byReference { requestId ->
-                DefaultUriBuilderFactory(baseUrl)
-                    .uriString(requestJwtPath)
-                    .build(requestId.value).toURL()
-            }
-
+        /**
+         * Path template for the route for
+         * getting the presentation definition
+         */
         const val presentationDefinitionPath = "/wallet/pd/{requestId}"
 
-        fun presentationDefinitionUrlBuilder(baseUrl: String): EmbedOption.ByReference<RequestId> =
-            EmbedOption.byReference { requestId ->
-                DefaultUriBuilderFactory(baseUrl)
-                    .uriString(presentationDefinitionPath)
-                    .build(requestId.value).toURL()
-            }
+        /**
+         * Extracts from the request the [RequestId]
+         */
+        private fun ServerRequest.requestId() = RequestId(pathVariable("requestId"))
+
+        fun requestJwtByReference(baseUrl: String): EmbedOption.ByReference<RequestId> =
+            urlBuilder(baseUrl = baseUrl, pathTemplate = requestJwtPath)
+
+        fun presentationDefinitionByReference(baseUrl: String): EmbedOption.ByReference<RequestId> =
+            urlBuilder(baseUrl = baseUrl, pathTemplate = presentationDefinitionPath)
+
+        private fun urlBuilder(
+            baseUrl: String,
+            pathTemplate: String
+        ) = EmbedOption.byReference<RequestId> { requestId ->
+            DefaultUriBuilderFactory(baseUrl)
+                .uriString(pathTemplate)
+                .build(requestId.value)
+                .toURL()
+        }
     }
 }
 

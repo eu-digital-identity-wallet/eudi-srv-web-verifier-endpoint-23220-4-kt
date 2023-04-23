@@ -3,7 +3,7 @@ package eu.europa.ec.euidw.verifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
-import eu.europa.ec.euidw.verifier.adapter.`in`.web.UIApi
+import eu.europa.ec.euidw.verifier.adapter.`in`.web.VerifierApi
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.WalletApi
 import eu.europa.ec.euidw.verifier.adapter.out.cfg.GeneratePresentationIdNimbus
 import eu.europa.ec.euidw.verifier.adapter.out.cfg.GenerateRequestIdNimbus
@@ -33,11 +33,9 @@ import java.util.*
 @Configuration
 @EnableWebFlux
 class MyConfig : WebFluxConfigurer {
-
     override fun configureHttpMessageCodecs(configurer: ServerCodecConfigurer) {
         configurer.defaultCodecs().enableLoggingRequestDetails(true)
     }
-
 
 }
 
@@ -51,14 +49,18 @@ class VerifierContext(environment: Environment) {
     //
 
     @Bean
-    fun route(webApi: WalletApi, uiApi: UIApi): RouterFunction<*> = webApi.route.and(uiApi.route)
+    fun route(webApi: WalletApi, verifierApi: VerifierApi): RouterFunction<*> =
+        webApi.route.and(verifierApi.route)
 
     @Bean
-    fun webApi(getRequestObject: GetRequestObject, getPresentationDefinition: GetPresentationDefinition): WalletApi =
+    fun webApi(
+        getRequestObject: GetRequestObject,
+        getPresentationDefinition: GetPresentationDefinition
+    ): WalletApi =
         WalletApi(getRequestObject, getPresentationDefinition)
 
     @Bean
-    fun uiApi(initTransaction: InitTransaction): UIApi = UIApi(initTransaction)
+    fun verifierApi(initTransaction: InitTransaction): VerifierApi = VerifierApi(initTransaction)
 
     //
     // Use cases
@@ -86,11 +88,18 @@ class VerifierContext(environment: Environment) {
         signRequestObject: SignRequestObject,
         storePresentation: StorePresentation,
         clock: Clock
-    ): GetRequestObject =
-        GetRequestObjectLive(loadPresentationByRequestId, storePresentation, signRequestObject, verifierConfig, clock)
+    ): GetRequestObject = GetRequestObjectLive(
+        loadPresentationByRequestId,
+        storePresentation,
+        signRequestObject,
+        verifierConfig,
+        clock
+    )
 
     @Bean
-    fun getPresentationDefinition(loadPresentationByRequestId: LoadPresentationByRequestId): GetPresentationDefinition =
+    fun getPresentationDefinition(
+        loadPresentationByRequestId: LoadPresentationByRequestId
+    ): GetPresentationDefinition =
         GetPresentationDefinitionLive(loadPresentationByRequestId)
 
 
@@ -100,11 +109,11 @@ class VerifierContext(environment: Environment) {
 
 
     @Bean
-    fun rsaJwk(): RSAKey =
+    fun rsaJwk(clock: Clock): RSAKey =
         RSAKeyGenerator(2048)
             .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
             .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-            .issueTime(Date()) // issued-at timestamp (optional)
+            .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
             .generate()
 
     @Lazy
@@ -149,8 +158,8 @@ class VerifierContext(environment: Environment) {
 private fun Environment.verifierConfig(): VerifierConfig {
 
     val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
-    fun requestJarByRef() = WalletApi.requestJwtUrlBuilder(publicUrl)
-    fun presentationDefByRef() = WalletApi.presentationDefinitionUrlBuilder(publicUrl)
+    fun requestJarByRef() = WalletApi.requestJwtByReference(publicUrl)
+    fun presentationDefByRef() = WalletApi.presentationDefinitionByReference(publicUrl)
 
     return VerifierConfig(
         clientId = getProperty("verifier.clientId", "verifier"),

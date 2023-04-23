@@ -6,7 +6,11 @@ import java.time.Instant
 
 
 @JvmInline
-value class PresentationId(val value: String)
+value class PresentationId(val value: String){
+    init {
+        require(value.isNotBlank())
+    }
+}
 
 
 /**
@@ -16,7 +20,11 @@ value class PresentationId(val value: String)
  * send from wallet with a [Presentation]
  */
 @JvmInline
-value class RequestId(val value: String)
+value class RequestId(val value: String){
+    init {
+        require(value.isNotBlank())
+    }
+}
 
 
 typealias Jwt = String
@@ -44,6 +52,13 @@ sealed interface PresentationType {
         val presentationDefinition: PresentationDefinition
     ) : PresentationType
 }
+
+val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
+    get() = when (this) {
+        is PresentationType.IdTokenRequest -> null
+        is PresentationType.VpTokenRequest -> presentationDefinition
+        is PresentationType.IdAndVpToken -> presentationDefinition
+    }
 
 /**
  * The entity that represents the presentation process
@@ -115,12 +130,7 @@ sealed interface Presentation {
     }
 }
 
-val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
-    get() = when (this) {
-        is PresentationType.IdTokenRequest -> null
-        is PresentationType.VpTokenRequest -> presentationDefinition
-        is PresentationType.IdAndVpToken -> presentationDefinition
-    }
+
 
 fun Presentation.Requested.retrieveRequestObject(clock: Clock): Result<Presentation.RequestObjectRetrieved> =
     Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, clock.instant())
