@@ -1,6 +1,8 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.RSASSASigner
@@ -13,10 +15,12 @@ import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
-import eu.europa.ec.euidw.verifier.domain.VerifierConfig
+import eu.europa.ec.euidw.prex.PresentationDefinition
+import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.domain.Jwt
 import eu.europa.ec.euidw.verifier.domain.Presentation
+import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import java.net.URL
 import java.net.URLEncoder
 
@@ -48,9 +52,9 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
         val clientId = ClientID(r.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
-        val maybeState = r.state?.let { State(it) }
+        val state = State(r.state)
 
-        return with(AuthorizationRequest.Builder(responseType, clientId)) {
+        val cs = with(AuthorizationRequest.Builder(responseType, clientId)) {
 
             fun String.urlEncoded() = URLEncoder.encode(this, "UTF-8")
 
@@ -65,10 +69,9 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
                 }
             }
 
-            maybeState?.let { state(it) }
+            state(state)
             customParameter("nonce", r.nonce)
             scope(scope)
-            r.presentationDefinition?.let { customParameter("presentation_definition", it.urlEncoded()) }
             responseMode(ResponseMode(r.responseMode))
             customParameter("client_id_scheme", r.clientIdScheme)
             customOptionalURI("response_uri", r.responseUri)
@@ -79,7 +82,13 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
         }.toJWTClaimsSet()
 
+        return r.presentationDefinition?.let { cs.addPresentationDefinition(it) } ?: cs
+
     }
 
+    private fun JWTClaimsSet.addPresentationDefinition(pd: PresentationDefinition) : JWTClaimsSet {
+        val jacksonPD = PresentationDefinitionJackson.toJsonObject(pd)
+        return JWTClaimsSet.Builder(this).claim("presentation_definition", jacksonPD).build()
+    }
 
 }

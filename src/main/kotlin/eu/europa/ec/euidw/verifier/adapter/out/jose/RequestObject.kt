@@ -1,5 +1,7 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import eu.europa.ec.euidw.prex.PresentationDefinition
 import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.domain.EmbedOption
 import eu.europa.ec.euidw.verifier.domain.VerifierConfig
@@ -13,7 +15,7 @@ internal data class RequestObject(
     val clientIdScheme: String,
     val responseType: List<String>,
     val presentationDefinitionUri: URL?,
-    val presentationDefinition: String? = null,
+    val presentationDefinition: PresentationDefinition? = null,
     val scope: List<String>,
     val idTokenType: List<String>,
     val nonce: String,
@@ -53,7 +55,7 @@ internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentatio
     }
     val presentationDefinition = maybePresentationDefinition?.let { presentationDefinition ->
         when (verifierConfig.presentationDefinitionEmbedOption) {
-            is EmbedOption.ByValue -> with(PresentationExchange.jsonParser) { presentationDefinition.encode() }
+            is EmbedOption.ByValue -> presentationDefinition
             is EmbedOption.ByReference -> null
         }
     }
@@ -77,7 +79,7 @@ internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentatio
         presentationDefinition = presentationDefinition,
         responseType = responseType,
         aud = aud,
-        nonce = presentation.id.value.toString(),
+        nonce = presentation.id.value,
         state = presentation.requestId.value,
         responseMode = "direct_post.jwt",
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId)

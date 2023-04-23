@@ -149,11 +149,14 @@ class VerifierContext(environment: Environment) {
 private fun Environment.verifierConfig(): VerifierConfig {
 
     val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
+    fun requestJarByRef() = EmbedOption.byReference(WalletApi.requestJwtUrlBuilder(publicUrl))
+    fun presentationDefByRef() = EmbedOption.byReference(WalletApi.presentationDefinitionUrlBuilder(publicUrl))
+
     return VerifierConfig(
         clientId = getProperty("verifier.clientId", "verifier"),
         clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered"),
-        requestJarOption = EmbedOption.byReference(WalletApi.requestJwtUrlBuilder(publicUrl)),
-        presentationDefinitionEmbedOption = EmbedOption.byReference(WalletApi.presentationDefinitionUrlBuilder(publicUrl)),
+        requestJarOption = requestJarByRef(),
+        presentationDefinitionEmbedOption = EmbedOption.ByValue,
         responseUriBuilder = { _ -> URL("https://foo") },
     )
 

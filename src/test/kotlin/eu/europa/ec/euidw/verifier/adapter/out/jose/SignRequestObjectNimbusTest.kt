@@ -1,9 +1,16 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
+import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import eu.europa.ec.euidw.prex.PresentationDefinition
+import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.TestContext
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.net.URL
 import java.net.URLEncoder
@@ -24,6 +31,7 @@ class SignRequestObjectNimbusTest {
             clientIdScheme = "pre-registered",
             responseType = listOf("vp_token", "id_token"),
             presentationDefinitionUri = null,
+            presentationDefinition = PresentationExchange.jsonParser.decodePresentationDefinition(pd).getOrThrow(),
             scope = listOf("openid"),
             idTokenType = listOf("subject_signed_id_token"),
             nonce = UUID.randomUUID().toString(),
@@ -54,6 +62,7 @@ class SignRequestObjectNimbusTest {
         assertEquals(r.clientIdScheme, c.getStringClaim("client_id_scheme"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
         assertEquals(r.presentationDefinitionUri?.urlEncoded(), c.getStringClaim("presentation_definition_uri"))
+        assertEquals(r.presentationDefinition, c.getJSONObjectClaim("presentation_definition"))
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
         assertEquals(r.idTokenType.joinToString(separator = " "), c.getStringClaim("id_token_type"))
         assertEquals(r.nonce, c.getStringClaim("nonce"))
@@ -63,5 +72,40 @@ class SignRequestObjectNimbusTest {
 
     }
 
+    private fun assertEquals(pd: PresentationDefinition?, c: MutableMap<String, Any?>?) {
+
+        val pd2 = c?.let { PresentationDefinitionJackson.fromJsonObject(c).getOrThrow() }
+        assertTrue(pd == pd2)
+
+    }
+
     private fun URL.urlEncoded() = URLEncoder.encode(toExternalForm(), "UTF-8")
+
+
+    val pd = """{
+  "type": "vp_token id_token",
+  "id_token_type": "subject_signed_id_token",
+  "presentation_definition": {
+    "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
+    "input_descriptors": [
+      {
+        "id": "wa_driver_license",
+        "name": "Washington State Business License",
+        "purpose": "We can only allow licensed Washington State business representatives into the WA Business Conference",
+        "constraints": {
+          "fields": [
+            {
+              "path": [
+                "${'$'}.credentialSubject.dateOfBirth",
+                "${'$'}.credentialSubject.dob",
+                "${'$'}.vc.credentialSubject.dateOfBirth",
+                "${'$'}.vc.credentialSubject.dob"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}"""
 }
