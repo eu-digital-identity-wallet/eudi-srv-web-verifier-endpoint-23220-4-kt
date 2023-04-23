@@ -6,7 +6,9 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import eu.europa.ec.euidw.verifier.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.euidw.verifier.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.euidw.verifier.application.port.`in`.GetRequestObject
+import eu.europa.ec.euidw.verifier.application.port.`in`.GetRequestObjectLive
 import eu.europa.ec.euidw.verifier.application.port.`in`.InitTransaction
+import eu.europa.ec.euidw.verifier.application.port.`in`.InitTransactionLive
 import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
@@ -40,7 +42,7 @@ object TestContext {
 
 
     fun initTransaction(verifierConfig: VerifierConfig): InitTransaction =
-        InitTransaction.live(
+        InitTransactionLive(
             generatedPresentationId,
             generateRequestId,
             storePresentation,
@@ -49,7 +51,7 @@ object TestContext {
             testClock
         )
     fun getRequestObject(verifierConfig: VerifierConfig, presentationInitiatedAt: Instant): GetRequestObject =
-        GetRequestObject.live(
+        GetRequestObjectLive(
             loadPresentationByRequestId,
             storePresentation,
             singRequestObject,

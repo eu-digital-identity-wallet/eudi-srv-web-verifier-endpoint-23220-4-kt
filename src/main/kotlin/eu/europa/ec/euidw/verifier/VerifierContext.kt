@@ -9,9 +9,7 @@ import eu.europa.ec.euidw.verifier.adapter.out.cfg.GeneratePresentationIdNimbus
 import eu.europa.ec.euidw.verifier.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.euidw.verifier.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.euidw.verifier.adapter.out.persistence.PresentationInMemoryRepo
-import eu.europa.ec.euidw.verifier.application.port.`in`.GetPresentationDefinition
-import eu.europa.ec.euidw.verifier.application.port.`in`.GetRequestObject
-import eu.europa.ec.euidw.verifier.application.port.`in`.InitTransaction
+import eu.europa.ec.euidw.verifier.application.port.`in`.*
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
@@ -20,7 +18,6 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresenta
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.EmbedOption
 import eu.europa.ec.euidw.verifier.domain.VerifierConfig
-import org.springframework.boot.autoconfigure.jms.artemis.ArtemisProperties.Embedded
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Lazy
@@ -74,15 +71,14 @@ class VerifierContext(environment: Environment) {
         storePresentation: StorePresentation,
         signRequestObject: SignRequestObject,
         clock: Clock
-    ): InitTransaction =
-        InitTransaction.live(
-            generatePresentationId,
-            generateRequestId,
-            storePresentation,
-            signRequestObject,
-            verifierConfig,
-            clock
-        )
+    ): InitTransaction = InitTransactionLive(
+        generatePresentationId,
+        generateRequestId,
+        storePresentation,
+        signRequestObject,
+        verifierConfig,
+        clock
+    )
 
     @Bean
     fun getRequestObject(
@@ -91,11 +87,11 @@ class VerifierContext(environment: Environment) {
         storePresentation: StorePresentation,
         clock: Clock
     ): GetRequestObject =
-        GetRequestObject.live(loadPresentationByRequestId, storePresentation, signRequestObject, verifierConfig, clock)
+        GetRequestObjectLive(loadPresentationByRequestId, storePresentation, signRequestObject, verifierConfig, clock)
 
     @Bean
     fun getPresentationDefinition(loadPresentationByRequestId: LoadPresentationByRequestId): GetPresentationDefinition =
-        GetPresentationDefinition.live(loadPresentationByRequestId)
+        GetPresentationDefinitionLive(loadPresentationByRequestId)
 
 
     //

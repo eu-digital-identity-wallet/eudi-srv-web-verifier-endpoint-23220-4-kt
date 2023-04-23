@@ -1,5 +1,6 @@
 package eu.europa.ec.euidw.verifier.adapter.`in`.web
 
+import eu.europa.ec.euidw.prex.PresentationDefinition
 import eu.europa.ec.euidw.verifier.application.port.`in`.GetPresentationDefinition
 import eu.europa.ec.euidw.verifier.application.port.`in`.GetRequestObject
 import eu.europa.ec.euidw.verifier.application.port.`in`.QueryResponse.*
@@ -22,7 +23,7 @@ class WalletApi(
         GET(presentationDefinitionPath, this@WalletApi::handleGetPresentationDefinition)
     }
 
-    suspend fun handleGetRequestObject(req: ServerRequest): ServerResponse {
+    private suspend fun handleGetRequestObject(req: ServerRequest): ServerResponse {
 
 
         suspend fun requestObjectFound(jwt: String) =
@@ -41,8 +42,8 @@ class WalletApi(
     }
 
 
-    suspend fun handleGetPresentationDefinition(req: ServerRequest): ServerResponse {
-        suspend fun pdFound(json: String) = ok().json().bodyValueAndAwait(json)
+    private suspend fun handleGetPresentationDefinition(req: ServerRequest): ServerResponse {
+        suspend fun pdFound(pd: PresentationDefinition) = ok().json().bodyValueAndAwait(pd)
         val requestId = req.requestId()
         return when (val result = getPresentationDefinition(requestId)) {
             is NotFound -> notFound().buildAndAwait()

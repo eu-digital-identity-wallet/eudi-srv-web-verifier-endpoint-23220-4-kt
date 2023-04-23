@@ -1,16 +1,12 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonValue
-import com.fasterxml.jackson.databind.ObjectMapper
-import eu.europa.ec.euidw.prex.PresentationExchange
+import eu.europa.ec.euidw.prex.PresentationDefinition
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.*
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.net.URLEncoder
 import java.time.Clock
@@ -21,26 +17,36 @@ import java.time.Clock
  * It could be either a request (to the wallet) to present
  * a id_token, a vp_token or both
  */
-enum class PresentationTypeTO(@get:JsonValue val jsonValue: String) {
-    IdTokenRequest("id_token"),
-    VpTokenRequest("vp_token"),
-    IdAndVpTokenRequest("vp_token id_token")
+@Serializable
+enum class PresentationTypeTO {
+    @SerialName("id_token")
+    IdTokenRequest,
+
+    @SerialName("vp_token")
+    VpTokenRequest,
+
+    @SerialName("vp_token id_token")
+    IdAndVpTokenRequest
 }
 
 /**
  * Specifies what kind of id_token to request
  */
-enum class IdTokenTypeTO(@get:JsonValue val jsonValue: String) {
-    SubjectSigned("subject_signed_id_token"),
-    AttesterSigned("attester_signed_id_token")
+@Serializable
+enum class IdTokenTypeTO {
+    @SerialName("subject_signed_id_token")
+    SubjectSigned,
+
+    @SerialName("attester_signed_id_token")
+    AttesterSigned
 }
 
 
 @Serializable
 data class InitTransactionTO(
-    @JsonProperty("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
-    @JsonProperty("id_token_type") val idTokenType: IdTokenTypeTO? = null,
-    @JsonProperty("presentation_definition") val presentationDefinition: Any?
+    @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
+    @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
+    @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition?
 )
 
 /**
@@ -60,11 +66,11 @@ data class ValidationException(val error: ValidationError) : RuntimeException()
  * The return value of successfully [initializing][InitTransaction] a [Presentation]
  *
  */
-@JsonInclude(Include.NON_NULL)
+@Serializable
 data class JwtSecuredAuthorizationRequestTO(
-    @JsonProperty("client_id") val clientId: String,
-    @JsonProperty("request") val request: String? = null,
-    @JsonProperty("request_uri") val requestUri: String?
+    @SerialName("client_id") val clientId: String,
+    @SerialName("request") val request: String? = null,
+    @SerialName("request_uri") val requestUri: String?
 )
 
 /**
@@ -78,33 +84,12 @@ data class JwtSecuredAuthorizationRequestTO(
 interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO>
 
-    companion object {
-
-        /**
-         * Factory method to obtain the implementation of the use case
-         */
-        fun live(
-            generatePresentationId: GeneratePresentationId,
-            generateRequestId: GenerateRequestId,
-            storePresentation: StorePresentation,
-            signRequestObject: SignRequestObject,
-            verifierConfig: VerifierConfig,
-            clock: Clock
-        ): InitTransaction = InitTransactionLive(
-            generatePresentationId,
-            generateRequestId,
-            storePresentation,
-            signRequestObject,
-            verifierConfig,
-            clock
-        )
-    }
 }
 
 /**
  * The default implementation of the use case
  */
-internal class InitTransactionLive(
+class InitTransactionLive(
     private val generatePresentationId: GeneratePresentationId,
     private val generateRequestId: GenerateRequestId,
     private val storePresentation: StorePresentation,
@@ -162,30 +147,24 @@ internal class InitTransactionLive(
 
 internal fun InitTransactionTO.toDomain(): Result<PresentationType> {
 
-    fun getIdTokenType() = Result.success(idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList())
-    fun getPd() = when (presentationDefinition) {
-        null -> Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
-        else -> runCatching {
-            try {
-                val str = ObjectMapper().writeValueAsString(presentationDefinition)
-                PresentationExchange.jsonParser.decodePresentationDefinition(str!!).getOrThrow()
-            } catch (t: Throwable) {
-                throw ValidationException(ValidationError.InvalidPresentationDefinition)
-            }
-        }
-    }
+    fun requiredIdTokenType() =
+        Result.success(idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList())
+
+    fun requiredPresentationDefinition() =
+        if (presentationDefinition != null) Result.success(presentationDefinition)
+        else Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
 
     return runCatching {
         when (type) {
             PresentationTypeTO.IdTokenRequest ->
-                PresentationType.IdTokenRequest(getIdTokenType().getOrThrow())
+                PresentationType.IdTokenRequest(requiredIdTokenType().getOrThrow())
 
             PresentationTypeTO.VpTokenRequest ->
-                PresentationType.VpTokenRequest(getPd().getOrThrow())
+                PresentationType.VpTokenRequest(requiredPresentationDefinition().getOrThrow())
 
             PresentationTypeTO.IdAndVpTokenRequest -> {
-                val idTokenTypes = getIdTokenType().getOrThrow()
-                val pd = getPd().getOrThrow()
+                val idTokenTypes = requiredIdTokenType().getOrThrow()
+                val pd = requiredPresentationDefinition().getOrThrow()
                 PresentationType.IdAndVpToken(idTokenTypes, pd)
             }
         }

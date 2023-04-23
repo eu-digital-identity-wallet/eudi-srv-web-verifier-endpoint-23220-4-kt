@@ -78,18 +78,18 @@ class InitTransactionTest {
         testWithInvalidInput(input, ValidationError.MissingPresentationDefinition)
     }
 
-    @Test
-    fun `when input has invalid presentation definition validation error is raised`() {
-
-        // Input is invalid.
-        //  Invalid presentation definition
-        val input = InitTransactionTO(
-            PresentationTypeTO.VpTokenRequest,
-            null,
-            "invalid presentation definition json"
-        )
-        testWithInvalidInput(input, ValidationError.InvalidPresentationDefinition)
-    }
+//    @Test
+//    fun `when input has invalid presentation definition validation error is raised`() {
+//
+//        // Input is invalid.
+//        //  Invalid presentation definition
+//        val input = InitTransactionTO(
+//            PresentationTypeTO.VpTokenRequest,
+//            null,
+//            "invalid presentation definition json"
+//        )
+//        testWithInvalidInput(input, ValidationError.InvalidPresentationDefinition)
+//    }
 
     private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) = input.toDomain().fold(
         onSuccess = { fail { "Invalid input accepted" } },

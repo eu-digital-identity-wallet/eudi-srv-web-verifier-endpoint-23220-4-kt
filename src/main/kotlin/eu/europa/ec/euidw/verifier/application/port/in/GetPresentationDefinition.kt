@@ -1,7 +1,6 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
 import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.`in`.QueryResponse.*
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.euidw.verifier.domain.Presentation
@@ -9,25 +8,20 @@ import eu.europa.ec.euidw.verifier.domain.PresentationType
 import eu.europa.ec.euidw.verifier.domain.RequestId
 
 interface GetPresentationDefinition {
-    suspend operator fun invoke(requestId: RequestId): QueryResponse<String>
-
-    companion object {
-        fun live(loadPresentationByRequestId: LoadPresentationByRequestId): GetPresentationDefinition =
-            GetPresentationDefinitionLive(loadPresentationByRequestId)
-    }
+    suspend operator fun invoke(requestId: RequestId): QueryResponse<PresentationDefinition>
 }
 
 
-private class GetPresentationDefinitionLive(private val loadPresentationByRequestId: LoadPresentationByRequestId) :
-    GetPresentationDefinition {
-    override suspend fun invoke(requestId: RequestId): QueryResponse<String> {
+class GetPresentationDefinitionLive(
+    private val loadPresentationByRequestId: LoadPresentationByRequestId
+) : GetPresentationDefinition {
+    override suspend fun invoke(requestId: RequestId): QueryResponse<PresentationDefinition> {
+        fun foundOrInvalid(p: Presentation) =
+            presentationDefinitionOf(p)?.let { Found(it) } ?: InvalidState
+
         return when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> NotFound
-            is Presentation.RequestObjectRetrieved ->
-                presentationDefinitionOf(presentation)
-                    ?.toJson()
-                    ?.let { Found(it) }
-                    ?: InvalidState
+            is Presentation.RequestObjectRetrieved -> foundOrInvalid(presentation)
             else -> InvalidState
         }
     }
@@ -39,6 +33,4 @@ private class GetPresentationDefinitionLive(private val loadPresentationByReques
             is PresentationType.IdAndVpToken -> type.presentationDefinition
         }
 
-    private fun PresentationDefinition.toJson() =
-        with(PresentationExchange.jsonParser) { encode() }
 }
