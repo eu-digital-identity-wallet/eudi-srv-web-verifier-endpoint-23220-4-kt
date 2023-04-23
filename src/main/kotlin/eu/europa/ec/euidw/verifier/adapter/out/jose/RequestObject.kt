@@ -1,14 +1,10 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.prex.PresentationExchange
-import eu.europa.ec.euidw.verifier.domain.EmbedOption
-import eu.europa.ec.euidw.verifier.domain.VerifierConfig
-import eu.europa.ec.euidw.verifier.domain.IdTokenType
-import eu.europa.ec.euidw.verifier.domain.Presentation
-import eu.europa.ec.euidw.verifier.domain.PresentationType
+import eu.europa.ec.euidw.verifier.domain.*
 import java.net.URL
+import java.time.Clock
+import java.time.Instant
 
 internal data class RequestObject(
     val clientId: String,
@@ -22,10 +18,16 @@ internal data class RequestObject(
     val responseMode: String,
     val responseUri: URL?,
     val aud: List<String>,
-    val state: String
+    val state: String,
+    val issuedAt: Instant
 )
 
-internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentation: Presentation.Requested): RequestObject {
+internal fun requestObjectFromDomain(
+    verifierConfig: VerifierConfig,
+    clock: Clock,
+    presentation: Presentation.Requested
+): RequestObject {
+
     val type = presentation.type
     val scope = when (type) {
         is PresentationType.IdTokenRequest -> listOf("openid")
@@ -82,7 +84,8 @@ internal fun requestObjectFromDomain(verifierConfig: VerifierConfig, presentatio
         nonce = presentation.id.value,
         state = presentation.requestId.value,
         responseMode = "direct_post.jwt",
-        responseUri = verifierConfig.responseUriBuilder(presentation.requestId)
+        responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
+        issuedAt = clock.instant()
     )
 }
 

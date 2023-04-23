@@ -1,8 +1,6 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.RSASSASigner
@@ -15,22 +13,26 @@ import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
-import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.domain.Jwt
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import java.net.URL
 import java.net.URLEncoder
+import java.time.Clock
+import java.util.*
 
 /**
  * An implementation of [SignRequestObject] that uses Nimbus SDK
  */
 class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
-    override fun invoke(verifierConfig: VerifierConfig, presentation: Presentation.Requested): Result<Jwt> {
-        val requestObject = requestObjectFromDomain(verifierConfig, presentation)
+    override fun invoke(
+        verifierConfig: VerifierConfig,
+        clock: Clock,
+        presentation: Presentation.Requested
+    ): Result<Jwt> {
+        val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         return sign(requestObject)
     }
 
@@ -54,41 +56,32 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
         val state = State(r.state)
 
-        val cs = with(AuthorizationRequest.Builder(responseType, clientId)) {
-
-            fun String.urlEncoded() = URLEncoder.encode(this, "UTF-8")
-
-
-            fun customParameter(s: String, ts: Collection<String>) =
-                customParameter(s, *ts.toTypedArray())
-
-            fun customOptionalURI(s: String, url: URL?): AuthorizationRequest.Builder? {
-                return url?.let {
-                    val encoded = it.toExternalForm().urlEncoded()
-                    customParameter(s, encoded)
-                }
-            }
-
+        val authorizationRequestClaims = with(AuthorizationRequest.Builder(responseType, clientId)) {
             state(state)
-            customParameter("nonce", r.nonce)
             scope(scope)
             responseMode(ResponseMode(r.responseMode))
-            customParameter("client_id_scheme", r.clientIdScheme)
-            customOptionalURI("response_uri", r.responseUri)
-            customOptionalURI("presentation_definition_uri", r.presentationDefinitionUri)
-            customParameter("aud", r.aud)
-            customParameter("id_token_type", r.idTokenType)
             build()
 
         }.toJWTClaimsSet()
 
-        return r.presentationDefinition?.let { cs.addPresentationDefinition(it) } ?: cs
+        return with(JWTClaimsSet.Builder(authorizationRequestClaims)) {
+
+            fun optionalClaim(c: String, v: Any?) {
+                v?.let { claim(c,it) }
+            }
+            issueTime(Date.from(r.issuedAt))
+            audience(r.aud)
+            claim("nonce", r.nonce)
+            claim("client_id_scheme", r.clientIdScheme)
+            claim("id_token_type", r.idTokenType.joinToString(" "))
+            optionalClaim("presentation_definition", r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) })
+            optionalClaim("response_uri", r.responseUri?.toExternalForm())
+            optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
+            build()
+        }
+
 
     }
 
-    private fun JWTClaimsSet.addPresentationDefinition(pd: PresentationDefinition) : JWTClaimsSet {
-        val jacksonPD = PresentationDefinitionJackson.toJsonObject(pd)
-        return JWTClaimsSet.Builder(this).claim("presentation_definition", jacksonPD).build()
-    }
 
 }

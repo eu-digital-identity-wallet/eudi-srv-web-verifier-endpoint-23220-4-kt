@@ -8,10 +8,15 @@ import eu.europa.ec.euidw.verifier.domain.*
 import java.time.Clock
 import java.time.Instant
 
-
+/**
+ * Given a [RequestId] it returns a RFC9101 Request Object
+ * encoded as JWT, if the [Presentation] is in state [Presentation.Requested].
+ * In this case, the [Presentation] is updated to [Presentation.RequestObjectRetrieved]
+ * in order to guarantee that only once the Request Object can be retrieved by
+ * the wallet
+ */
 interface GetRequestObject {
     suspend operator fun invoke(requestId: RequestId): QueryResponse<Jwt>
-
 }
 
 class GetRequestObjectLive(
@@ -25,13 +30,13 @@ class GetRequestObjectLive(
     override suspend operator fun invoke(requestId: RequestId): QueryResponse<Jwt> =
         when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> NotFound
-            is Presentation.Requested -> Found(requestObjectOf(presentation, clock.instant()))
+            is Presentation.Requested -> Found(requestObjectOf(presentation))
             else -> InvalidState
         }
 
-    private suspend fun requestObjectOf(presentation: Presentation.Requested, at: Instant): Jwt {
-        val jwt = signRequestObject(verifierConfig, presentation).getOrThrow()
-        val updatedPresentation = presentation.retrieveRequestObject(at).getOrThrow()
+    private suspend fun requestObjectOf(presentation: Presentation.Requested): Jwt {
+        val jwt = signRequestObject(verifierConfig, clock, presentation).getOrThrow()
+        val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
         storePresentation(updatedPresentation)
         return jwt
     }

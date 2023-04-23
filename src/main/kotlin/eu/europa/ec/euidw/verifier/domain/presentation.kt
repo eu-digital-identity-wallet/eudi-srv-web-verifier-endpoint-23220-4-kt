@@ -1,8 +1,8 @@
 package eu.europa.ec.euidw.verifier.domain
 
 import eu.europa.ec.euidw.prex.PresentationDefinition
+import java.time.Clock
 import java.time.Instant
-import java.util.*
 
 
 @JvmInline
@@ -79,6 +79,7 @@ sealed interface Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
         }
+
         companion object {
             fun requestObjectRetrieved(requested: Requested, at: Instant): Result<RequestObjectRetrieved> =
                 runCatching {
@@ -114,9 +115,16 @@ sealed interface Presentation {
     }
 }
 
-fun Presentation.Requested.retrieveRequestObject(at: Instant): Result<Presentation.RequestObjectRetrieved> =
-    Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, at)
+val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
+    get() = when (this) {
+        is PresentationType.IdTokenRequest -> null
+        is PresentationType.VpTokenRequest -> presentationDefinition
+        is PresentationType.IdAndVpToken -> presentationDefinition
+    }
 
-fun Presentation.Requested.timedOut(at: Instant): Result<Presentation.TimedOut> =
-    Presentation.TimedOut.timeOut(this, at)
+fun Presentation.Requested.retrieveRequestObject(clock: Clock): Result<Presentation.RequestObjectRetrieved> =
+    Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, clock.instant())
+
+fun Presentation.Requested.timedOut(clock: Clock): Result<Presentation.TimedOut> =
+    Presentation.TimedOut.timeOut(this, clock.instant())
 

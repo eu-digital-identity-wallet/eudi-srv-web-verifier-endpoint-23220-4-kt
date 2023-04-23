@@ -59,7 +59,7 @@ class InitTransactionTest {
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
             Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
-            Assertions.assertEquals(uri, jwtSecuredAuthorizationRequest.requestUri)
+            Assertions.assertEquals(uri.toExternalForm(), jwtSecuredAuthorizationRequest.requestUri)
             Assertions.assertTrue(
                 loadPresentationById(testPresentationId)?.let { it is Presentation.Requested } ?: false
             )

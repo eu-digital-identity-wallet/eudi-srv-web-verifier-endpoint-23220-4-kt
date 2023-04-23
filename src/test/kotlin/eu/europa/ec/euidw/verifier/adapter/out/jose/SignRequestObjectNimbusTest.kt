@@ -1,9 +1,5 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
-import com.fasterxml.jackson.databind.JavaType
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.euidw.prex.PresentationDefinition
@@ -38,7 +34,8 @@ class SignRequestObjectNimbusTest {
             responseMode = "direct_post.jwt",
             responseUri = URL("https://foo"),
             state = TestContext.testRequestId.value,
-            aud = emptyList()
+            aud = emptyList(),
+            issuedAt = TestContext.testClock.instant()
         )
 
         val jwt = signRequestObject.sign(requestObject).getOrThrow().also { println(it) }
@@ -61,13 +58,13 @@ class SignRequestObjectNimbusTest {
         assertEquals(r.clientId, c.getStringClaim("client_id"))
         assertEquals(r.clientIdScheme, c.getStringClaim("client_id_scheme"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
-        assertEquals(r.presentationDefinitionUri?.urlEncoded(), c.getStringClaim("presentation_definition_uri"))
+        assertEquals(r.presentationDefinitionUri?.toExternalForm(), c.getStringClaim("presentation_definition_uri"))
         assertEquals(r.presentationDefinition, c.getJSONObjectClaim("presentation_definition"))
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
         assertEquals(r.idTokenType.joinToString(separator = " "), c.getStringClaim("id_token_type"))
         assertEquals(r.nonce, c.getStringClaim("nonce"))
         assertEquals(r.responseMode, c.getStringClaim("response_mode"))
-        assertEquals(r.responseUri?.urlEncoded(), c.getStringClaim("response_uri"))
+        assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim("response_uri"))
         assertEquals(r.state, c.getStringClaim("state"))
 
     }
