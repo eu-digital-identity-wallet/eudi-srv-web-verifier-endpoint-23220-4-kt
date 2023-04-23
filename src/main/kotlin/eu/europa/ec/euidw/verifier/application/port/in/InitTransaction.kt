@@ -6,6 +6,7 @@ import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.*
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.net.URLEncoder
@@ -46,7 +47,7 @@ enum class IdTokenTypeTO {
 data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
-    @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition?
+    @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? =  null
 )
 
 /**
@@ -68,7 +69,7 @@ data class ValidationException(val error: ValidationError) : RuntimeException()
  */
 @Serializable
 data class JwtSecuredAuthorizationRequestTO(
-    @SerialName("client_id") val clientId: String,
+    @Required @SerialName("client_id") val clientId: String,
     @SerialName("request") val request: String? = null,
     @SerialName("request_uri") val requestUri: String?
 )
@@ -130,14 +131,12 @@ class InitTransactionLive(
         when (val requestJarOption = verifierConfig.requestJarOption) {
             is EmbedOption.ByValue -> {
                 val jwt = signRequestObject(verifierConfig, clock,requestedPresentation).getOrThrow()
-                val requestObjectRetrieved =
-                    requestedPresentation.retrieveRequestObject(clock).getOrThrow()
+                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, jwt, null)
             }
 
             is EmbedOption.ByReference -> {
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId).toExternalForm()
-
                 requestedPresentation to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, null, requestUri)
             }
         }

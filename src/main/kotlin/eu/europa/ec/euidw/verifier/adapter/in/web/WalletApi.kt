@@ -4,12 +4,12 @@ import eu.europa.ec.euidw.prex.PresentationDefinition
 import eu.europa.ec.euidw.verifier.application.port.`in`.GetPresentationDefinition
 import eu.europa.ec.euidw.verifier.application.port.`in`.GetRequestObject
 import eu.europa.ec.euidw.verifier.application.port.`in`.QueryResponse.*
+import eu.europa.ec.euidw.verifier.domain.EmbedOption
 import eu.europa.ec.euidw.verifier.domain.RequestId
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
-import java.net.URL
 
 
 class WalletApi(
@@ -58,19 +58,21 @@ class WalletApi(
     companion object {
         const val requestJwtPath = "/wallet/request.jwt/{requestId}"
 
-        fun requestJwtUrlBuilder(baseUrl: String): (RequestId) -> URL = { requestId ->
-            DefaultUriBuilderFactory(baseUrl)
-                .uriString(requestJwtPath)
-                .build(requestId.value).toURL()
-        }
+        fun requestJwtUrlBuilder(baseUrl: String): EmbedOption.ByReference<RequestId> =
+            EmbedOption.byReference { requestId ->
+                DefaultUriBuilderFactory(baseUrl)
+                    .uriString(requestJwtPath)
+                    .build(requestId.value).toURL()
+            }
 
         const val presentationDefinitionPath = "/wallet/pd/{requestId}"
 
-        fun presentationDefinitionUrlBuilder(baseUrl: String): (RequestId) -> URL = { requestId ->
-            DefaultUriBuilderFactory(baseUrl)
-                .uriString(presentationDefinitionPath)
-                .build(requestId.value).toURL()
-        }
+        fun presentationDefinitionUrlBuilder(baseUrl: String): EmbedOption.ByReference<RequestId> =
+            EmbedOption.byReference { requestId ->
+                DefaultUriBuilderFactory(baseUrl)
+                    .uriString(presentationDefinitionPath)
+                    .build(requestId.value).toURL()
+            }
     }
 }
 

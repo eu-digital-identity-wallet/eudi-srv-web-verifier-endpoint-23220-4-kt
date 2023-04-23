@@ -76,8 +76,6 @@ class SignRequestObjectNimbusTest {
 
     }
 
-    private fun URL.urlEncoded() = URLEncoder.encode(toExternalForm(), "UTF-8")
-
 
     val pd = """{
   "type": "vp_token id_token",
