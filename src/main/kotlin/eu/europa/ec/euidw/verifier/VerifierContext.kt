@@ -155,17 +155,34 @@ class VerifierContext(environment: Environment) {
 
 }
 
+private enum class EmbedOptionEnum{
+    byValue,
+    byReference
+}
 private fun Environment.verifierConfig(): VerifierConfig {
 
+
+    val clientId = getProperty("verifier.clientId", "verifier")
+    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-regis tered")
     val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
-    fun requestJarByRef() = WalletApi.requestJwtByReference(publicUrl)
-    fun presentationDefByRef() = WalletApi.presentationDefinitionByReference(publicUrl)
+    val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
+        when(it){
+            EmbedOptionEnum.byValue->EmbedOption.ByValue
+            else->WalletApi.requestJwtByReference(publicUrl)
+        }
+    }
+    val presentationDefinitionEmbedOption = getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
+        when(it){
+            EmbedOptionEnum.byReference->WalletApi.presentationDefinitionByReference(publicUrl)
+            else->EmbedOption.ByValue
+        }
+    }
 
     return VerifierConfig(
-        clientId = getProperty("verifier.clientId", "verifier"),
-        clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered"),
-        requestJarOption = requestJarByRef(),
-        presentationDefinitionEmbedOption = EmbedOption.ByValue,
+        clientId = clientId ,
+        clientIdScheme = clientIdScheme,
+        requestJarOption = requestJarOption,
+        presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { _ -> URL("https://foo") },
     )
 
