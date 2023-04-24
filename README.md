@@ -9,19 +9,19 @@ Thus, you need to firstly clone this project, build it and publish the library t
 local maven repo. To do so, from within the cloned directory run
 
 ```bash
-./grandlew clean build publishToMavenLocal
+./gradlew clean build publishToMavenLocal
 ```
 
 Then switch to this project folder and run
 
 ```bash
-./grandlew build
+./gradlew build
 ```
 
 Clean up
 
 ```bash
-./grandlew clean
+./gradlew clean
 ```
 
 ## Build OCI Image
