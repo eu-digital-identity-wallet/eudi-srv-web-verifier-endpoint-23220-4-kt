@@ -44,11 +44,7 @@ internal fun requestObjectFromDomain(
             IdTokenType.SubjectSigned -> "subject_signed_id_token"
         }
     }
-    val maybePresentationDefinition = when (type) {
-        is PresentationType.IdTokenRequest -> null
-        is PresentationType.VpTokenRequest -> type.presentationDefinition
-        is PresentationType.IdAndVpToken -> type.presentationDefinition
-    }
+    val maybePresentationDefinition = type.presentationDefinitionOrNull
     val presentationDefinitionUri = maybePresentationDefinition?.let {
         when (val option = verifierConfig.presentationDefinitionEmbedOption) {
             is EmbedOption.ByValue -> null
