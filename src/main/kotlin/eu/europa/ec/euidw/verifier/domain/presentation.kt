@@ -14,7 +14,7 @@ value class PresentationId(val value: String){
 
 
 /**
- * This is a identifier of the [Presentation]
+ * This is an identifier of the [Presentation]
  * which is communicated to the wallet as <em>state</em>.
  * As such, it is being used to correlate an authorization response
  * send from wallet with a [Presentation]
