@@ -1,5 +1,6 @@
 package eu.europa.ec.euidw.verifier.domain
 
+import kotlinx.serialization.SerialName
 import java.net.URL
 import java.time.Duration
 
@@ -28,5 +29,10 @@ data class VerifierConfig(
     val requestJarOption: EmbedOption<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,
-    val maxAge: Duration
+    val maxAge: Duration,
+    val jwksUri: String,
+    val idTokenSignedResponseAlg: String,
+    val idTokenEncryptedResponseAlg: String,
+    val idTokenEncryptedResponseEnc: String,
+    val subjectSyntaxTypesSupported: List<String>
 )

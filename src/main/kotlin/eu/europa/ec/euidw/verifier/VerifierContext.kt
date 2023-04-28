@@ -219,7 +219,16 @@ private fun Environment.verifierConfig(): VerifierConfig {
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { _ -> URL("https://foo") },
-        maxAge = maxAge
+        maxAge = maxAge,
+        jwksUri = "https://jwk",
+        idTokenSignedResponseAlg = "RS256",
+        idTokenEncryptedResponseAlg = "RS256",
+        idTokenEncryptedResponseEnc = "A128CBC-HS256",
+        subjectSyntaxTypesSupported = listOf(
+            "urn:ietf:params:oauth:jwk-thumbprint",
+            "did:example",
+            "did:key"
+        )
     )
 
 }

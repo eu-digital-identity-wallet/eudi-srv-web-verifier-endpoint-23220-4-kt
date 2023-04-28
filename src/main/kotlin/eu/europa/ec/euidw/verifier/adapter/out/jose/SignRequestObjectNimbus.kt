@@ -17,8 +17,6 @@ import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.domain.Jwt
 import eu.europa.ec.euidw.verifier.domain.Presentation
 import eu.europa.ec.euidw.verifier.domain.VerifierConfig
-import java.net.URL
-import java.net.URLEncoder
 import java.time.Clock
 import java.util.*
 
@@ -73,8 +71,9 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             audience(r.aud)
             claim("nonce", r.nonce)
             claim("client_id_scheme", r.clientIdScheme)
-            claim("id_token_type", r.idTokenType.joinToString(" "))
+            if (r.responseType.contains("id_token")) claim("id_token_type", r.idTokenType.joinToString(" "))
             optionalClaim("presentation_definition", r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) })
+            optionalClaim("client_metadata", r.clientMetaData?.let { ClientMetaData.toJsonObject(it) })
             optionalClaim("response_uri", r.responseUri?.toExternalForm())
             optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
             build()
