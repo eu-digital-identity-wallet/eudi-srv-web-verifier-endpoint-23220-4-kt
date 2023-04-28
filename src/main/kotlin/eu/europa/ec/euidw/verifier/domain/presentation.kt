@@ -6,7 +6,7 @@ import java.time.Instant
 
 
 @JvmInline
-value class PresentationId(val value: String){
+value class PresentationId(val value: String) {
     init {
         require(value.isNotBlank())
     }
@@ -20,7 +20,7 @@ value class PresentationId(val value: String){
  * send from wallet with a [Presentation]
  */
 @JvmInline
-value class RequestId(val value: String){
+value class RequestId(val value: String) {
     init {
         require(value.isNotBlank())
     }
@@ -130,7 +130,14 @@ sealed interface Presentation {
     }
 }
 
-
+fun Presentation.isExpired(at: Instant): Boolean {
+    fun Instant.isBeforeOrEqual(at: Instant) = isBefore(at)|| this == at
+    return when(this) {
+        is Presentation.Requested -> initiatedAt.isBeforeOrEqual(at)
+        is Presentation.RequestObjectRetrieved-> requestObjectRetrievedAt.isBeforeOrEqual(at)
+        is Presentation.TimedOut -> false
+    }
+}
 
 fun Presentation.Requested.retrieveRequestObject(clock: Clock): Result<Presentation.RequestObjectRetrieved> =
     Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, clock.instant())
@@ -138,3 +145,5 @@ fun Presentation.Requested.retrieveRequestObject(clock: Clock): Result<Presentat
 fun Presentation.Requested.timedOut(clock: Clock): Result<Presentation.TimedOut> =
     Presentation.TimedOut.timeOut(this, clock.instant())
 
+fun Presentation.RequestObjectRetrieved.timedOut(clock: Clock): Result<Presentation.TimedOut> =
+    Presentation.TimedOut.timeOut(this, clock.instant())

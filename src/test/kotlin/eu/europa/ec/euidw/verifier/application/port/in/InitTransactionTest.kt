@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import java.net.URL
+import java.time.Duration
 
 class InitTransactionTest {
 
@@ -21,7 +22,8 @@ class InitTransactionTest {
             val verifierConfig = VerifierConfig(
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { _ -> URL("https://foo") }
+                responseUriBuilder = { _ -> URL("https://foo") },
+                maxAge =  Duration.ofDays(3)
             )
 
             val input = InitTransactionTO(
@@ -46,7 +48,8 @@ class InitTransactionTest {
             val verifierConfig = VerifierConfig(
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { _ -> URL("https://foo") }
+                responseUriBuilder = { _ -> URL("https://foo") },
+                maxAge = Duration.ofDays(3)
             )
 
             val input = InitTransactionTO(

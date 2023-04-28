@@ -1,6 +1,7 @@
 package eu.europa.ec.euidw.verifier.domain
 
 import java.net.URL
+import java.time.Duration
 
 typealias PresentationRelatedUrlBuilder<ID> = (ID) -> URL
 
@@ -26,5 +27,6 @@ data class VerifierConfig(
     val clientIdScheme: String = "pre-registered",
     val requestJarOption: EmbedOption<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
-    val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>
+    val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,
+    val maxAge: Duration
 )

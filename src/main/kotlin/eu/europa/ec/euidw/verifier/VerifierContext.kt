@@ -3,6 +3,7 @@ package eu.europa.ec.euidw.verifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import eu.europa.ec.euidw.verifier.adapter.`in`.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.VerifierApi
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.WalletApi
 import eu.europa.ec.euidw.verifier.adapter.out.cfg.GeneratePresentationIdNimbus
@@ -13,6 +14,7 @@ import eu.europa.ec.euidw.verifier.application.port.`in`.*
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
+import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadIncompletePresentationsOlderThan
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
@@ -23,11 +25,13 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Lazy
 import org.springframework.core.env.Environment
 import org.springframework.http.codec.ServerCodecConfigurer
+import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.web.reactive.config.EnableWebFlux
 import org.springframework.web.reactive.config.WebFluxConfigurer
 import org.springframework.web.reactive.function.server.RouterFunction
 import java.net.URL
 import java.time.Clock
+import java.time.Duration
 import java.util.*
 
 @Configuration
@@ -36,6 +40,12 @@ class MyConfig : WebFluxConfigurer {
     override fun configureHttpMessageCodecs(configurer: ServerCodecConfigurer) {
         configurer.defaultCodecs().enableLoggingRequestDetails(true)
     }
+
+}
+
+@Configuration
+@EnableScheduling
+class ScheduleSupport {
 
 }
 
@@ -61,6 +71,13 @@ class VerifierContext(environment: Environment) {
 
     @Bean
     fun verifierApi(initTransaction: InitTransaction): VerifierApi = VerifierApi(initTransaction)
+
+    //
+    // Scheduled
+    //
+    @Bean
+    fun scheduleTimeoutPresentations(timeoutPresentations: TimeoutPresentations): ScheduleTimeoutPresentations =
+        ScheduleTimeoutPresentations(timeoutPresentations)
 
     //
     // Use cases
@@ -102,6 +119,17 @@ class VerifierContext(environment: Environment) {
     ): GetPresentationDefinition =
         GetPresentationDefinitionLive(loadPresentationByRequestId)
 
+    @Bean
+    fun timeoutPresentations(
+        loadIncompletePresentationsOlderThan: LoadIncompletePresentationsOlderThan,
+        storePresentation: StorePresentation,
+        clock: Clock
+    ): TimeoutPresentations = TimeoutPresentationsLive(
+        loadIncompletePresentationsOlderThan,
+        storePresentation,
+        verifierConfig.maxAge,
+        clock
+    )
 
     //
     // JOSE
@@ -144,6 +172,10 @@ class VerifierContext(environment: Environment) {
         presentationInMemoryRepo.storePresentation
 
     @Bean
+    fun loadIncompletePresentationsOlderThan(presentationInMemoryRepo: PresentationInMemoryRepo): LoadIncompletePresentationsOlderThan =
+        presentationInMemoryRepo.loadIncompletePresentationsOlderThan
+
+    @Bean
     fun presentationInMemoryRepo(): PresentationInMemoryRepo =
         PresentationInMemoryRepo()
 
@@ -155,10 +187,11 @@ class VerifierContext(environment: Environment) {
 
 }
 
-private enum class EmbedOptionEnum{
+private enum class EmbedOptionEnum {
     byValue,
     byReference
 }
+
 private fun Environment.verifierConfig(): VerifierConfig {
 
 
@@ -166,24 +199,27 @@ private fun Environment.verifierConfig(): VerifierConfig {
     val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-regis tered")
     val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
     val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
-        when(it){
-            EmbedOptionEnum.byValue->EmbedOption.ByValue
-            else->WalletApi.requestJwtByReference(publicUrl)
+        when (it) {
+            EmbedOptionEnum.byValue -> EmbedOption.ByValue
+            else -> WalletApi.requestJwtByReference(publicUrl)
         }
     }
-    val presentationDefinitionEmbedOption = getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
-        when(it){
-            EmbedOptionEnum.byReference->WalletApi.presentationDefinitionByReference(publicUrl)
-            else->EmbedOption.ByValue
+    val presentationDefinitionEmbedOption =
+        getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
+            when (it) {
+                EmbedOptionEnum.byReference -> WalletApi.presentationDefinitionByReference(publicUrl)
+                else -> EmbedOption.ByValue
+            }
         }
-    }
+    val maxAge = getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
 
     return VerifierConfig(
-        clientId = clientId ,
+        clientId = clientId,
         clientIdScheme = clientIdScheme,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { _ -> URL("https://foo") },
+        maxAge = maxAge
     )
 
 }
