@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+import java.net.URI
 
 plugins {
 	id("org.jetbrains.dokka") version "1.8.10"
@@ -17,6 +18,15 @@ java.sourceCompatibility = JavaVersion.VERSION_17
 repositories {
 	mavenCentral()
 	mavenLocal()
+	maven{
+		name="NiscyEudiwPackages"
+		url= URI("https://maven.pkg.github.com/niscy-eudiw/presentation-exchange-kt")
+		credentials {
+			username = System.getenv("GITHUB_ACTOR")
+			password = System.getenv("GITHUB_TOKEN")
+		}
+
+	}
 }
 
 val presentationExchangeVersion = "1.0-SNAPSHOT"
