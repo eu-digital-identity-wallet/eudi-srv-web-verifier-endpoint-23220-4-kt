@@ -23,7 +23,12 @@ class InitTransactionTest {
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
-                maxAge =  Duration.ofDays(3)
+                maxAge = Duration.ofDays(3),
+                jwksUri = "httpsL://jwks",
+                idTokenSignedResponseAlg = "RS256",
+                idTokenEncryptedResponseAlg = "RS256",
+                idTokenEncryptedResponseEnc = "A128CBC-HS256",
+                subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint","did:example","did:key")
             )
 
             val input = InitTransactionTO(
@@ -49,7 +54,12 @@ class InitTransactionTest {
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
-                maxAge = Duration.ofDays(3)
+                maxAge = Duration.ofDays(3),
+                jwksUri = "httpsL://jwks",
+                idTokenSignedResponseAlg = "RS256",
+                idTokenEncryptedResponseAlg = "RS256",
+                idTokenEncryptedResponseEnc = "A128CBC-HS256",
+                subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint","did:example","did:key")
             )
 
             val input = InitTransactionTO(

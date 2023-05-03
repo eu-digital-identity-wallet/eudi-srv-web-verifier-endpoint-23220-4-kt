@@ -35,7 +35,14 @@ class SignRequestObjectNimbusTest {
             responseUri = URL("https://foo"),
             state = TestContext.testRequestId.value,
             aud = emptyList(),
-            issuedAt = TestContext.testClock.instant()
+            issuedAt = TestContext.testClock.instant(),
+            clientMetaData = ClientMetaData(
+                jwksUri = "https://jwksUri",
+                idTokenSignedResponseAlg = "RS256",
+                idTokenEncryptedResponseAlg = "RS256",
+                idTokenEncryptedResponseEnc = "A128CBC-HS256",
+                subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint","did:example","did:key")
+            )
         )
 
         val jwt = signRequestObject.sign(requestObject).getOrThrow().also { println(it) }

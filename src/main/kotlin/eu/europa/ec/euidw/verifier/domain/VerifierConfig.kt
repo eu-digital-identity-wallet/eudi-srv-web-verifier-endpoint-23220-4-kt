@@ -1,6 +1,5 @@
 package eu.europa.ec.euidw.verifier.domain
 
-import kotlinx.serialization.SerialName
 import java.net.URL
 import java.time.Duration
 
