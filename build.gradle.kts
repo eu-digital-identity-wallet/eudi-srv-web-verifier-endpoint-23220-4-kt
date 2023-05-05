@@ -1,36 +1,35 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
-import java.net.URI
 
 plugins {
     id("org.jetbrains.dokka") version "1.8.10"
-    id("org.springframework.boot") version "3.0.5"
+    id("org.springframework.boot") version "3.0.6"
     id("io.spring.dependency-management") version "1.1.0"
-    kotlin("jvm") version "1.8.20"
-    kotlin("plugin.serialization") version "1.8.20"
-    kotlin("plugin.spring") version "1.8.20"
+    kotlin("jvm") version "1.8.21"
+    kotlin("plugin.serialization") version "1.8.21"
+    kotlin("plugin.spring") version "1.8.21"
 }
 
 group = "eu.europa.ec.euidw"
 version = "0.0.1-SNAPSHOT"
-java.sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
     mavenCentral()
-	maven {
-		name = "NiscyEudiwPackages"
-		url = URI("https://maven.pkg.github.com/niscy-eudiw/presentation-exchange-kt")
-		credentials {
-			username = System.getenv("GITHUB_ACTOR")
-			password = System.getenv("GITHUB_TOKEN")
-		}
-
-	}
-	mavenLocal()
+    maven {
+        name = "NiscyEudiwPackages"
+        url = uri("https://maven.pkg.github.com/niscy-eudiw/*")
+        credentials {
+            username = System.getenv("GH_PKG_USER")
+            password = System.getenv("GH_PKG_TOKEN")
+        }
+        mavenContent{
+            snapshotsOnly()
+        }
+    }
+    mavenLocal()
 }
 
 val presentationExchangeVersion = "1.0-SNAPSHOT"
-val nimbusSdkVersion = "10.7.1"
+val nimbusSdkVersion = "10.8"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -45,11 +44,10 @@ dependencies {
     testImplementation("io.projectreactor:reactor-test")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "17"
-    }
+
+
+kotlin {
+    jvmToolchain(17)
 }
 
 tasks.withType<Test> {
