@@ -3,6 +3,7 @@ package eu.europa.ec.euidw.verifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import eu.europa.ec.euidw.verifier.EmbedOptionEnum.*
 import eu.europa.ec.euidw.verifier.adapter.`in`.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.VerifierApi
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.WalletApi
@@ -202,15 +203,15 @@ private fun Environment.verifierConfig(): VerifierConfig {
     val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
     val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
-            EmbedOptionEnum.byValue -> EmbedOption.ByValue
-            EmbedOptionEnum.byReference, null -> WalletApi.requestJwtByReference(publicUrl)
+            byValue -> EmbedOption.ByValue
+            byReference, null -> WalletApi.requestJwtByReference(publicUrl)
         }
     }
     val presentationDefinitionEmbedOption =
         getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
             when (it) {
-                EmbedOptionEnum.byReference -> WalletApi.presentationDefinitionByReference(publicUrl)
-                EmbedOptionEnum.byValue, null -> EmbedOption.ByValue
+                byReference -> WalletApi.presentationDefinitionByReference(publicUrl)
+                byValue, null -> EmbedOption.ByValue
             }
         }
     val maxAge = getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
@@ -230,8 +231,8 @@ private fun Environment.verifierConfig(): VerifierConfig {
 private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
     val jwkOption = getProperty("verifier.jwk.embed", EmbedOptionEnum::class.java).let {
         when (it) {
-            EmbedOptionEnum.byReference -> WalletApi.publicJwkSet(publicUrl)
-            EmbedOptionEnum.byValue, null -> EmbedOption.ByValue
+            byReference -> WalletApi.publicJwkSet(publicUrl)
+            byValue, null -> EmbedOption.ByValue
         }
     }
     return ClientMetaData(

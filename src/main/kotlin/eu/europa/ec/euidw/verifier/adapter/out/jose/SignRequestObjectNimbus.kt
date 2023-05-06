@@ -19,6 +19,8 @@ import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
 import eu.europa.ec.euidw.verifier.domain.*
+import eu.europa.ec.euidw.verifier.domain.EmbedOption.ByReference
+import eu.europa.ec.euidw.verifier.domain.EmbedOption.ByValue
 import java.time.Clock
 import java.util.*
 
@@ -36,7 +38,10 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         return sign(verifierConfig.clientMetaData, requestObject)
     }
 
-    internal fun sign(clientMetaData: ClientMetaData, requestObject: RequestObject): Result<Jwt> = runCatching {
+    internal fun sign(
+        clientMetaData: ClientMetaData,
+        requestObject: RequestObject
+    ): Result<Jwt> = runCatching {
         val header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.keyID).build()
         val claimSet = asClaimSet(toNimbus(clientMetaData), requestObject)
         with(SignedJWT(header, claimSet)) {
@@ -60,7 +65,6 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             scope(scope)
             responseMode(ResponseMode(r.responseMode))
             build()
-
         }.toJWTClaimsSet()
 
         return with(JWTClaimsSet.Builder(authorizationRequestClaims)) {
@@ -72,7 +76,10 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             audience(r.aud)
             claim("nonce", r.nonce)
             claim("client_id_scheme", r.clientIdScheme)
-            if (r.responseType.contains("id_token")) claim("id_token_type", r.idTokenType.joinToString(" "))
+            optionalClaim("id_token_type",
+                if (r.idTokenType.isEmpty()) null
+                else r.idTokenType.joinToString(" ")
+            )
             optionalClaim(
                 "presentation_definition",
                 r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) })
@@ -88,8 +95,8 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
     private fun toNimbus(c: ClientMetaData): OIDCClientMetadata {
 
         val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
-            is EmbedOption.ByValue -> JWKSet(rsaJWK).toPublicJWKSet() to null
-            is EmbedOption.ByReference -> null to option.buildUrl.invoke(Unit)
+            is ByValue -> JWKSet(rsaJWK).toPublicJWKSet() to null
+            is ByReference -> null to option.buildUrl.invoke(Unit)
         }
         return OIDCClientMetadata().apply {
             idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
