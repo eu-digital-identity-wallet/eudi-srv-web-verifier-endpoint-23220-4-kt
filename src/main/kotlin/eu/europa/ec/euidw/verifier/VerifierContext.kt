@@ -66,9 +66,10 @@ class VerifierContext(environment: Environment) {
     @Bean
     fun webApi(
         getRequestObject: GetRequestObject,
-        getPresentationDefinition: GetPresentationDefinition
+        getPresentationDefinition: GetPresentationDefinition,
+        rsaKey: RSAKey,
     ): WalletApi =
-        WalletApi(getRequestObject, getPresentationDefinition)
+        WalletApi(getRequestObject, getPresentationDefinition, rsaKey)
 
     @Bean
     fun verifierApi(initTransaction: InitTransaction): VerifierApi = VerifierApi(initTransaction)
@@ -221,15 +222,15 @@ private fun Environment.verifierConfig(): VerifierConfig {
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { _ -> URL("https://foo") },
         maxAge = maxAge,
-        clientMetaData = clientMetaData()
+        clientMetaData = clientMetaData(publicUrl)
     )
 
 }
 
-private fun Environment.clientMetaData(): ClientMetaData {
+private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
     val jwkOption = getProperty("verifier.jwk.embed", EmbedOptionEnum::class.java).let {
         when (it) {
-            EmbedOptionEnum.byReference -> TODO()
+            EmbedOptionEnum.byReference -> WalletApi.publicJwkSet(publicUrl)
             EmbedOptionEnum.byValue, null -> EmbedOption.ByValue
         }
     }

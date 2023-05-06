@@ -88,7 +88,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
     private fun toNimbus(c: ClientMetaData): OIDCClientMetadata {
 
         val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
-            is EmbedOption.ByValue -> JWKSet(rsaJWK) to null
+            is EmbedOption.ByValue -> JWKSet(rsaJWK).toPublicJWKSet() to null
             is EmbedOption.ByReference -> null to option.buildUrl.invoke(Unit)
         }
         return OIDCClientMetadata().apply {

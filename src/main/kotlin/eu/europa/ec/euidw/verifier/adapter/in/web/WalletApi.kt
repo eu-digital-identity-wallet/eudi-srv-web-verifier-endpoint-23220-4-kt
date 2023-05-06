@@ -1,5 +1,7 @@
 package eu.europa.ec.euidw.verifier.adapter.`in`.web
 
+import com.nimbusds.jose.jwk.JWKSet
+import com.nimbusds.jose.jwk.RSAKey
 import eu.europa.ec.euidw.prex.PresentationDefinition
 import eu.europa.ec.euidw.verifier.application.port.`in`.GetPresentationDefinition
 import eu.europa.ec.euidw.verifier.application.port.`in`.GetRequestObject
@@ -16,7 +18,8 @@ import org.springframework.web.util.DefaultUriBuilderFactory
  */
 class WalletApi(
     private val getRequestObject: GetRequestObject,
-    private val getPresentationDefinition: GetPresentationDefinition
+    private val getPresentationDefinition: GetPresentationDefinition,
+    private val rsaKey: RSAKey
 ) {
 
     /**
@@ -25,6 +28,7 @@ class WalletApi(
     val route = coRouter {
         GET(requestJwtPath, this@WalletApi::handleGetRequestObject)
         GET(presentationDefinitionPath, this@WalletApi::handleGetPresentationDefinition)
+        GET(getPublicJwkSetPath) { _-> handleGetPublicJwkSet() }
     }
 
     /**
@@ -65,7 +69,17 @@ class WalletApi(
 
     }
 
+    private suspend fun handleGetPublicJwkSet(): ServerResponse {
+        val publicJwkSet = JWKSet(rsaKey).toJSONObject(true)
+        return ok()
+            .contentType(MediaType.parseMediaType(JWKSet.MIME_TYPE))
+            .bodyValueAndAwait(publicJwkSet)
+
+    }
+
     companion object {
+        const val getPublicJwkSetPath = "/wallet/public-keys.json"
+
         /**
          * Path template for the route for
          * getting the presentation's request object
@@ -88,6 +102,13 @@ class WalletApi(
 
         fun presentationDefinitionByReference(baseUrl: String): EmbedOption.ByReference<RequestId> =
             urlBuilder(baseUrl = baseUrl, pathTemplate = presentationDefinitionPath)
+
+        fun publicJwkSet(baseUrl: String): EmbedOption.ByReference<Any> = EmbedOption.ByReference{ _ ->
+            DefaultUriBuilderFactory(baseUrl)
+                .uriString(getPublicJwkSetPath)
+                .build()
+                .toURL()
+        }
 
         private fun urlBuilder(
             baseUrl: String,
