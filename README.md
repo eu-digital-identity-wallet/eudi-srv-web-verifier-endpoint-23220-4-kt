@@ -3,17 +3,15 @@ Web application (backend Restful service) that would allow somebody to trigger t
 
 ## Build
 
-
 Project depends on [Presentation Exchange](https://github.com/niscy-eudiw/presentation-exchange-kt)
-Thus, you need to firstly clone this project, build it and publish the library to 
-local maven repo. To do so, from within the cloned directory run
+To be able to download this library you need to have 
+- a GitHub account
+- a GitHub personal token with access to [NiScy organization](https://github.com/niscy-eudiw)
 
 ```bash
-./gradlew clean build publishToMavenLocal
+export GH_PKG_USER=yourGitHubUserName
+export GH_PKG_TOKEN=yourGitHubPersonalToekn
 ```
-
-Then switch to this project folder and run
-
 ```bash
 ./gradlew build
 ```
