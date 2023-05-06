@@ -20,6 +20,18 @@ sealed interface EmbedOption<in ID> {
 }
 
 /**
+ * By OpenID Connect Dynamic Client Registration specification
+ *
+ * @see <a href="https://openid.net/specs/openid-connect-registration-1_0.html">OpenID Connect Dynamic Client Registration specification</a>
+ */
+data class ClientMetaData(
+    val jwkOption: EmbedOption<Any>,
+    val idTokenSignedResponseAlg: String,
+    val idTokenEncryptedResponseAlg: String,
+    val idTokenEncryptedResponseEnc: String,
+    val subjectSyntaxTypesSupported: List<String>
+)
+/**
  * Verifier configuration options
  */
 data class VerifierConfig(
@@ -28,5 +40,6 @@ data class VerifierConfig(
     val requestJarOption: EmbedOption<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,
-    val maxAge: Duration
+    val maxAge: Duration,
+    val clientMetaData: ClientMetaData
 )

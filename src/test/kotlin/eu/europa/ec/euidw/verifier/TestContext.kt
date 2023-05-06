@@ -12,6 +12,8 @@ import eu.europa.ec.euidw.verifier.application.port.`in`.InitTransactionLive
 import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
+import eu.europa.ec.euidw.verifier.domain.ClientMetaData
+import eu.europa.ec.euidw.verifier.domain.EmbedOption.ByValue
 import eu.europa.ec.euidw.verifier.domain.PresentationId
 import eu.europa.ec.euidw.verifier.domain.RequestId
 import java.time.Clock
@@ -33,6 +35,13 @@ object TestContext {
         .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
         .issueTime(Date()) // issued-at timestamp (optional)
         .generate()
+    val clientMetaData  = ClientMetaData(
+        jwkOption = ByValue,
+        idTokenSignedResponseAlg = "RS256",
+        idTokenEncryptedResponseAlg = "RS256",
+        idTokenEncryptedResponseEnc = "A128CBC-HS256",
+        subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint","did:example","did:key")
+    )
     val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus(rsaJwk)
     val singRequestObjectVerifier = RSASSAVerifier(rsaJwk.toRSAPublicKey())
     private val repo = PresentationInMemoryRepo()

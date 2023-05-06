@@ -23,7 +23,8 @@ class InitTransactionTest {
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
-                maxAge =  Duration.ofDays(3)
+                maxAge = Duration.ofDays(3),
+                clientMetaData = TestContext.clientMetaData
             )
 
             val input = InitTransactionTO(
@@ -49,7 +50,8 @@ class InitTransactionTest {
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
-                maxAge = Duration.ofDays(3)
+                maxAge = Duration.ofDays(3),
+                clientMetaData = TestContext.clientMetaData
             )
 
             val input = InitTransactionTO(
@@ -81,18 +83,7 @@ class InitTransactionTest {
         testWithInvalidInput(input, ValidationError.MissingPresentationDefinition)
     }
 
-//    @Test
-//    fun `when input has invalid presentation definition validation error is raised`() {
 //
-//        // Input is invalid.
-//        //  Invalid presentation definition
-//        val input = InitTransactionTO(
-//            PresentationTypeTO.VpTokenRequest,
-//            null,
-//            "invalid presentation definition json"
-//        )
-//        testWithInvalidInput(input, ValidationError.InvalidPresentationDefinition)
-//    }
 
     private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) = input.toDomain().fold(
         onSuccess = { fail { "Invalid input accepted" } },
