@@ -18,6 +18,7 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadIncomple
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationById
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
+import eu.europa.ec.euidw.verifier.domain.ClientMetaData
 import eu.europa.ec.euidw.verifier.domain.EmbedOption
 import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import org.springframework.context.annotation.Bean
@@ -201,14 +202,14 @@ private fun Environment.verifierConfig(): VerifierConfig {
     val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
             EmbedOptionEnum.byValue -> EmbedOption.ByValue
-            else -> WalletApi.requestJwtByReference(publicUrl)
+            EmbedOptionEnum.byReference, null -> WalletApi.requestJwtByReference(publicUrl)
         }
     }
     val presentationDefinitionEmbedOption =
         getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
             when (it) {
                 EmbedOptionEnum.byReference -> WalletApi.presentationDefinitionByReference(publicUrl)
-                else -> EmbedOption.ByValue
+                EmbedOptionEnum.byValue, null -> EmbedOption.ByValue
             }
         }
     val maxAge = getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
@@ -220,7 +221,20 @@ private fun Environment.verifierConfig(): VerifierConfig {
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { _ -> URL("https://foo") },
         maxAge = maxAge,
-        jwksUri = "https://jwk",
+        clientMetaData = clientMetaData()
+    )
+
+}
+
+private fun Environment.clientMetaData(): ClientMetaData {
+    val jwkOption = getProperty("verifier.jwk.embed", EmbedOptionEnum::class.java).let {
+        when (it) {
+            EmbedOptionEnum.byReference -> TODO()
+            EmbedOptionEnum.byValue, null -> EmbedOption.ByValue
+        }
+    }
+    return ClientMetaData(
+        jwkOption = jwkOption,
         idTokenSignedResponseAlg = "RS256",
         idTokenEncryptedResponseAlg = "RS256",
         idTokenEncryptedResponseEnc = "A128CBC-HS256",
@@ -230,5 +244,4 @@ private fun Environment.verifierConfig(): VerifierConfig {
             "did:key"
         )
     )
-
 }

@@ -1,9 +1,12 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.RSASSASigner
+import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
@@ -13,10 +16,9 @@ import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
+import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
-import eu.europa.ec.euidw.verifier.domain.Jwt
-import eu.europa.ec.euidw.verifier.domain.Presentation
-import eu.europa.ec.euidw.verifier.domain.VerifierConfig
+import eu.europa.ec.euidw.verifier.domain.*
 import java.time.Clock
 import java.util.*
 
@@ -31,23 +33,22 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         presentation: Presentation.Requested
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        return sign(requestObject)
+        return sign(verifierConfig.clientMetaData, requestObject)
     }
 
-    internal fun sign(requestObject: RequestObject): Result<Jwt> = runCatching {
+    internal fun sign(clientMetaData: ClientMetaData, requestObject: RequestObject): Result<Jwt> = runCatching {
         val header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.keyID).build()
-        val claimSet = asClaimSet(requestObject)
+        val claimSet = asClaimSet(toNimbus(clientMetaData), requestObject)
         with(SignedJWT(header, claimSet)) {
             sign(RSASSASigner(rsaJWK))
             serialize()
         }
     }
 
-
     /**
      * Maps a [RequestObject] into a Nimbus [JWTClaimsSet]
      */
-    private fun asClaimSet(r: RequestObject): JWTClaimsSet {
+    private fun asClaimSet(clientMetaData: OIDCClientMetadata?, r: RequestObject): JWTClaimsSet {
 
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
         val clientId = ClientID(r.clientId)
@@ -65,21 +66,38 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         return with(JWTClaimsSet.Builder(authorizationRequestClaims)) {
 
             fun optionalClaim(c: String, v: Any?) {
-                v?.let { claim(c,it) }
+                v?.let { claim(c, it) }
             }
             issueTime(Date.from(r.issuedAt))
             audience(r.aud)
             claim("nonce", r.nonce)
             claim("client_id_scheme", r.clientIdScheme)
             if (r.responseType.contains("id_token")) claim("id_token_type", r.idTokenType.joinToString(" "))
-            optionalClaim("presentation_definition", r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) })
-            optionalClaim("client_metadata", r.clientMetaData?.let { ClientMetaData.toJsonObject(it) })
+            optionalClaim(
+                "presentation_definition",
+                r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) })
+            optionalClaim("client_metadata", clientMetaData?.toJSONObject())
             optionalClaim("response_uri", r.responseUri?.toExternalForm())
             optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
             build()
         }
 
 
+    }
+
+    private fun toNimbus(c: ClientMetaData): OIDCClientMetadata {
+
+        val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
+            is EmbedOption.ByValue -> JWKSet(rsaJWK) to null
+            is EmbedOption.ByReference -> null to option.buildUrl.invoke(Unit)
+        }
+        return OIDCClientMetadata().apply {
+            idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
+            idTokenJWEAlg = JWEAlgorithm.parse(c.idTokenEncryptedResponseAlg)
+            idTokenJWEEnc = EncryptionMethod.parse(c.idTokenEncryptedResponseEnc)
+            jwkSet = vJwkSet
+            jwkSetURI = vJwkSetURI?.toURI()
+        }
     }
 
 

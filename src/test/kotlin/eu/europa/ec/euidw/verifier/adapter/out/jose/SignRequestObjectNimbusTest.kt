@@ -17,6 +17,7 @@ class SignRequestObjectNimbusTest {
 
     private val signRequestObject = TestContext.singRequestObject
     private val verifier = TestContext.singRequestObjectVerifier
+    private val clientMetaData = TestContext.clientMetaData
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
@@ -35,17 +36,11 @@ class SignRequestObjectNimbusTest {
             responseUri = URL("https://foo"),
             state = TestContext.testRequestId.value,
             aud = emptyList(),
-            issuedAt = TestContext.testClock.instant(),
-            clientMetaData = ClientMetaData(
-                jwksUri = "https://jwksUri",
-                idTokenSignedResponseAlg = "RS256",
-                idTokenEncryptedResponseAlg = "RS256",
-                idTokenEncryptedResponseEnc = "A128CBC-HS256",
-                subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint","did:example","did:key")
-            )
+            issuedAt = TestContext.testClock.instant()
+
         )
 
-        val jwt = signRequestObject.sign(requestObject).getOrThrow().also { println(it) }
+        val jwt = signRequestObject.sign(clientMetaData,requestObject).getOrThrow().also { println(it) }
         val claimSet = decode(jwt).getOrThrow().also { println(it) }
 
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)

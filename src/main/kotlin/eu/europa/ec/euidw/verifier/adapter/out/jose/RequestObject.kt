@@ -9,7 +9,6 @@ import java.time.Instant
 internal data class RequestObject(
     val clientId: String,
     val clientIdScheme: String,
-    val clientMetaData: ClientMetaData?,
     val responseType: List<String>,
     val presentationDefinitionUri: URL?,
     val presentationDefinition: PresentationDefinition? = null,
@@ -82,14 +81,7 @@ internal fun requestObjectFromDomain(
         state = presentation.requestId.value,
         responseMode = "direct_post.jwt",
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
-        issuedAt = clock.instant(),
-        clientMetaData = ClientMetaData(
-            jwksUri= verifierConfig.jwksUri,
-            idTokenSignedResponseAlg= verifierConfig.idTokenSignedResponseAlg,
-            idTokenEncryptedResponseAlg= verifierConfig.idTokenEncryptedResponseAlg,
-            idTokenEncryptedResponseEnc= verifierConfig.idTokenEncryptedResponseEnc,
-            subjectSyntaxTypesSupported= verifierConfig.subjectSyntaxTypesSupported
-        )
+        issuedAt = clock.instant()
     )
 }
 
