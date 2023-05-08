@@ -18,9 +18,12 @@ import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject
-import eu.europa.ec.euidw.verifier.domain.*
+import eu.europa.ec.euidw.verifier.domain.ClientMetaData
 import eu.europa.ec.euidw.verifier.domain.EmbedOption.ByReference
 import eu.europa.ec.euidw.verifier.domain.EmbedOption.ByValue
+import eu.europa.ec.euidw.verifier.domain.Jwt
+import eu.europa.ec.euidw.verifier.domain.Presentation
+import eu.europa.ec.euidw.verifier.domain.VerifierConfig
 import java.time.Clock
 import java.util.*
 
@@ -76,7 +79,8 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             audience(r.aud)
             claim("nonce", r.nonce)
             claim("client_id_scheme", r.clientIdScheme)
-            optionalClaim("id_token_type",
+            optionalClaim(
+                "id_token_type",
                 if (r.idTokenType.isEmpty()) null
                 else r.idTokenType.joinToString(" ")
             )
@@ -104,6 +108,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             idTokenJWEEnc = EncryptionMethod.parse(c.idTokenEncryptedResponseEnc)
             jwkSet = vJwkSet
             jwkSetURI = vJwkSetURI?.toURI()
+            setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
         }
     }
 
