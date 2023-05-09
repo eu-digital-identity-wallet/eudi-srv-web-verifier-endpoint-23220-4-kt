@@ -69,6 +69,7 @@ data class ValidationException(val error: ValidationError) : RuntimeException()
  */
 @Serializable
 data class JwtSecuredAuthorizationRequestTO(
+    @Required @SerialName("presentation_id") val presentationId: String,
     @Required @SerialName("client_id") val clientId: String,
     @SerialName("request") val request: String? = null,
     @SerialName("request_uri") val requestUri: String?
@@ -132,12 +133,21 @@ class InitTransactionLive(
             is EmbedOption.ByValue -> {
                 val jwt = signRequestObject(verifierConfig, clock,requestedPresentation).getOrThrow()
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
-                requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, jwt, null)
+                requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(
+                    requestedPresentation.requestId.value,
+                    verifierConfig.clientId,
+                    jwt, null
+                )
             }
 
             is EmbedOption.ByReference -> {
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId).toExternalForm()
-                requestedPresentation to JwtSecuredAuthorizationRequestTO(verifierConfig.clientId, null, requestUri)
+                requestedPresentation to JwtSecuredAuthorizationRequestTO(
+                    requestedPresentation.requestId.value,
+                    verifierConfig.clientId,
+                    null,
+                    requestUri
+                )
             }
         }
 

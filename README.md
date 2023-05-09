@@ -65,6 +65,7 @@ Successful output looks like:
 
 ```json
 {
+  "presentation_id": "K-Olj9xXmeVzPhsKedqrlRHsNlK9_8iK3hshmT2o-h3s3gn3DgO_4NP1MFXpD5AJ-zSKTPV8FhIpYQugn2_9bw",
   "client_id":"Verifier",
   "request_uri":"http://localhost:8080/wallet/request.jwt/o8J8zSIppIFj6iBOHR-iE4HoTnxd3B3CVuh_E8kC_s0wFxwAUwJ6Xq0gFXL_bv9P7QvHSb3KBQ0V47_kYxOuTw"
 }
