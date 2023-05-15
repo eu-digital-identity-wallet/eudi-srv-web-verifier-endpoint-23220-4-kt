@@ -79,7 +79,7 @@ internal fun requestObjectFromDomain(
         aud = aud,
         nonce = presentation.id.value,
         state = presentation.requestId.value,
-        responseMode = "direct_post.jwt",
+        responseMode = "direct_post",
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
         issuedAt = clock.instant()
     )
