@@ -1,0 +1,4 @@
+{
+  "type": "id_token",
+  "id_token_type": "subject_signed_id_token"
+}

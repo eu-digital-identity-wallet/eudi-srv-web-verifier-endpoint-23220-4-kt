@@ -3,7 +3,6 @@ package eu.europa.ec.euidw.verifier.application.port.`in`
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.VerifierApi
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.WalletApi
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.buildJsonObject
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
@@ -16,7 +15,6 @@ import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
-import org.springframework.util.Assert
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
@@ -25,26 +23,23 @@ import org.springframework.web.reactive.function.BodyInserters
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
-internal class WalletResponseTest {
+internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
     @Autowired
     private lateinit var client: WebTestClient
 
     /**
-     * OpenId4VP draft 18, section 10.5, Figure 3:
+     * Verifier application to Verifier Backend, Initiate transaction
+     *
+     * As per OpenId4VP draft 18, section 10.5, Figure 3:
      * - (request) Verifier to Verifier Response endpoint, flow "(2) initiate transaction"
      * - (response) Verifier ResponseEndpoint to Verifier, flow "(3) return transaction-id & request-id"
      */
     fun `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`(): String {
-        // given
-        val presentationDefinitionBody = """
-            {
-              "type": "id_token",
-              "id_token_type": "subject_signed_id_token"
-            }
-        """
 
-        // when / then
+        val presentationDefinitionBody = TestUtils.loadResource("02-presentationDefinition.json")
+        println("presentationDefinitionBody=${presentationDefinitionBody}")
+
         val requestUri = client.post().uri(VerifierApi.initTransactionPath)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
@@ -61,15 +56,13 @@ internal class WalletResponseTest {
     }
 
     /**
+     * Wallet application to Verifier Backend, get presentation definition
      *
-     * ISO 23220-4, Appendix B:
+     * As per ISO 23220-4, Appendix B:
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
     fun `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri: String): String {
-        // given
-
-        // when / then
 
         // update the request_uri to point to the local server
         val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
@@ -97,6 +90,7 @@ internal class WalletResponseTest {
         println("prettyHeader:\n${prettyHeader}")
         println("prettyPayload:\n${prettyPayload}")
 
+        // extract presentationId from payload
         val payloadObject = JSONObject(payload)
         val presentationId = payloadObject.get("nonce").toString()
         println("presentationId: $presentationId")
@@ -107,66 +101,23 @@ internal class WalletResponseTest {
     }
 
     /**
-     * OpenId4VP draft 18, section 10.5, Figure 3:
+     * Wallet application to Verifier Backend, submit wallet response
+     *
+     * As per OpenId4VP draft 18, section 10.5, Figure 3:
      * - (request) Wallet to Verifier Response endpoint, flow "(5) Authorisation Response (VP Token, state)"
      * - (response) Verifier ResponseEndpoint to Wallet, flow "(6) Response (redirect_uri with response_code)"
      *
-     * ISO 23220-4, Appendix B:
+     * As per ISO 23220-4, Appendix B:
      * - (request) mDocApp to Internet Web Service, flow "12 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mDocApp, flow "14 OK: HTTP 200 with redirect_uri"
      */
-    fun `Wallet to VerifierBackend - sends HTTP POST to submit wallet response, return presentationId`(): String {
-        // given
-        val requestUri = `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`()
-        val presentationId = `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri)
+    fun `Wallet to VerifierBackend - sends HTTP POST to submit wallet response`(requestId: String) {
 
-        // when
-        val requestId = requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")
-
-        val walletResponseBody = """
-            {
-              "state": "$requestId",
-              "id_token": "12345"
-            }
-        """
-
-        client.post().uri(WalletApi.walletResponsePath)
-            .contentType(MediaType.APPLICATION_JSON)
-            //.contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .accept(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(walletResponseBody))
-            .exchange()
-            // then
-            .expectStatus().isOk()
-
-        return presentationId
-    }
-
-    /**
-     * OpenId4VP draft 18, section 10.5, Figure 3:
-     * - (request) Wallet to Verifier Response endpoint, flow "(5) Authorisation Response (VP Token, state)"
-     * - (response) Verifier ResponseEndpoint to Wallet, flow "(6) Response (redirect_uri with response_code)"
-     *
-     * ISO 23220-4, Appendix B:
-     * - (request) mDocApp to Internet Web Service, flow "12 HTTPs POST to response_uri [section B.3.2.2]
-     * - (response) Internet Web Service to mDocApp, flow "14 OK: HTTP 200 with redirect_uri"
-     */
-    fun `Wallet to VerifierBackend - sends HTTP POST to submit wallet response (includes idToken only), return presentationId`(): String {
-        // given
-        val requestUri = `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`()
-        val requestId = requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")
-        val presentationId = `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri)
-
-//        buildJsonObject {
-//            put("fo", )
-//        }
-
-        // when
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId)
         formEncodedBody.add("idToken", "value 1")
-//        formEncodedBody.add("vpToken", "{\"id\": \"123456\"}")
-//        formEncodedBody.add("presentationSubmission", "{\"id\": \"a30e3b91-fb77-4d22-95fa-871689c322e2\",\"definition_id\": \"32f54163-7166-48f1-93d8-ff217bdb0653\",\"descriptor_map\": [{\"id\": \"employment_input\",\"format\": \"jwt_vc\",\"path\": \"\$.verifiableCredential[0]\"}]}")
+        formEncodedBody.add("vpToken", TestUtils.loadResource("02-vpToken.json"))
+        formEncodedBody.add("presentationSubmission", TestUtils.loadResource("02-presentationSubmission.json"))
 
         client.post().uri(WalletApi.walletResponsePath)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -176,39 +127,25 @@ internal class WalletResponseTest {
             // then
             .expectStatus().isOk()
 
-        return presentationId
-    }
-
-//    @Test @Order(value = 1)
-//    fun `post wallet response - confirm returns 200`(): Unit = runBlocking {
-//        val presentationId = `Wallet to VerifierBackend sends HTTP POST to submit wallet response, return presentationId`()
-//        Assertions.assertNotNull(presentationId)
-//    }
-    @Test @Order(value = 1)
-    fun `post wallet response (only idToken) - confirm returns 200`(): Unit = runBlocking {
-        val presentationId = `Wallet to VerifierBackend - sends HTTP POST to submit wallet response (includes idToken only), return presentationId`()
-        Assertions.assertNotNull(presentationId)
     }
 
     /**
-     * OpenId4VP draft 18, section 10.5, Figure 3:
+     * Verifier application to Verifier Backend, get authorisation response
+     *
+     * As per OpenId4VP draft 18, section 10.5, Figure 3:
      * - (request) Verifier to Verifier Response endpoint, flow "(8) fetch response data (transaction-id, response_code)"
      * - (response) Verifier ResponseEndpoint to Verifier, flow "(9) response data (VP Token, Presentation Submission)"
      *
-     * ISO 23220-4, Appendix B:
+     * As per ISO 23220-4, Appendix B:
      * - (request) mdocVerification application Internet frontend to Internet Web Service, flow "18 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mdocVerification application Internet frontend, flow "20 return status and conditionally return data"
      */
-    @Test @Order(value = 2)
-    fun `get authorisation response - confirm returns 200`(): Unit = runBlocking {
-        // given: the wallet response has been posted
-        val presentationId = `Wallet to VerifierBackend - sends HTTP POST to submit wallet response (includes idToken only), return presentationId`()
-        Assertions.assertNotNull(presentationId)
+    fun `Verifier Application to Verifier Backend, get authorisation response`(presentationId: String): String {
 
-        // when: the wallet response is retrieved
-        val requestUri = VerifierApi.walletResponsePath.replace("{presentationId}", presentationId)
+        val walletResponseUri = VerifierApi.walletResponsePath.replace("{presentationId}", presentationId)
 
-        val responseSpec = client.get().uri(requestUri)
+        // when
+        val responseSpec = client.get().uri(walletResponseUri)
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
         val returnResult = responseSpec.expectBody().returnResult()
@@ -219,7 +156,53 @@ internal class WalletResponseTest {
         }
 
         // then
-        Assertions.assertEquals(returnResult.status, HttpStatus.OK)
+        Assertions.assertEquals(HttpStatus.OK, returnResult.status)
+
+        return returnResult.responseBodyContent?.let { String(it) }!!
+    }
+
+    /**
+     * Unit test of flow:
+     * - verifier to verifier backend, to post presentation definition
+     * - wallet to verifier backend, to get presentation definition
+     * - wallet to verifier backend, to post wallet response
+     */
+    @Test @Order(value = 1)
+    fun `post wallet response (only idToken) - confirm returns 200`(): Unit = runBlocking {
+        // given
+        val requestUri = `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`()
+        val requestId = requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")
+        val presentationId = `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri)
+
+        // when
+        `Wallet to VerifierBackend - sends HTTP POST to submit wallet response`(requestId)
+
+        // then
+        Assertions.assertNotNull(presentationId)
+    }
+
+    /**
+     * Unit test of flow:
+     * - verifier to verifier backend, to post presentation definition
+     * - wallet to verifier backend, to get presentation definition
+     * - wallet to verifier backend, to post wallet response
+     * - verifier to verifier backend, to get wallet response
+     */
+    @Test @Order(value = 2)
+    fun `get authorisation response - confirm returns 200`(): Unit = runBlocking {
+        // given
+        val requestUri = `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`()
+        val requestId = requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")
+        val presentationId = `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri)
+
+        `Wallet to VerifierBackend - sends HTTP POST to submit wallet response`(requestId)
+        Assertions.assertNotNull(presentationId)
+
+        // when
+        val response = `Verifier Application to Verifier Backend, get authorisation response`(presentationId)
+
+        // then
+        Assertions.assertNotNull(response, "response is null")
     }
 
 }

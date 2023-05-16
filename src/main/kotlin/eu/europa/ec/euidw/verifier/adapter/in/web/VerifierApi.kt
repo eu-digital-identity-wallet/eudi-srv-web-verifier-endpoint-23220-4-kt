@@ -49,7 +49,7 @@ class VerifierApi(
      */
     private suspend fun handleGetWalletResponse(req: ServerRequest): ServerResponse {
 
-        suspend fun found(pd: WalletResponse) = ok().json().bodyValueAndAwait(pd)
+        suspend fun found(pd: WalletResponseTO) = ok().json().bodyValueAndAwait(pd)
 
         val presentationId = req.presentationId()
 

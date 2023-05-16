@@ -101,20 +101,13 @@ class WalletApi(
             // debug
             logger.info("formData: $it")
         }
-//        val vpToken = formData.getFirst("vpToken")
-//        val vpTokenJson = Json.parseToJsonElement(vpToken!!)
 
         val input = AuthorisationResponseTO(
             idToken = formData.getFirst("idToken"),
             state = formData.getFirst("state")!!,
             vpToken = formData.getFirst("vpToken")?.let { Json.parseToJsonElement(it).jsonObject},
-            presentationSubmission = formData.getFirst("vpToken")?.let { PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()}
+            presentationSubmission = formData.getFirst("presentationSubmission")?.let { PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()}
         )
-
-//        val input = req.awaitBody<AuthorisationResponseTO>().also {
-//            // debug
-//            logger.info("input: $it")
-//        }
 
         return when (postWalletResponse(input)) {
             is Found -> walletResponseStored()
