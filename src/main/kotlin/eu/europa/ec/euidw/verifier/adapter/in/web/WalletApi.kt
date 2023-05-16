@@ -97,17 +97,17 @@ class WalletApi(
 
         suspend fun failed() = badRequest().buildAndAwait()
 
-        val formData = req.formData().awaitSingle().also {
-            // debug
-            logger.info("formData: $it")
+        val input = with(req.awaitFormData()) {
+            logger.info("formData: $this")
+            AuthorisationResponseTO(
+                state = getFirst("state"),
+                idToken = getFirst("id_token"),
+                vpToken = getFirst("vp_token")?.let { Json.parseToJsonElement(it).jsonObject},
+                presentationSubmission = getFirst("presentation_submission")?.let { PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()},
+                error = getFirst("error"),
+                errorDescription = getFirst("error_description")
+            )
         }
-
-        val input = AuthorisationResponseTO(
-            idToken = formData.getFirst("idToken"),
-            state = formData.getFirst("state")!!,
-            vpToken = formData.getFirst("vpToken")?.let { Json.parseToJsonElement(it).jsonObject},
-            presentationSubmission = formData.getFirst("presentationSubmission")?.let { PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()}
-        )
 
         return when (postWalletResponse(input)) {
             is Found -> walletResponseStored()

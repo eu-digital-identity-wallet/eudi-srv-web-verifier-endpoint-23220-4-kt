@@ -4,22 +4,21 @@ import eu.europa.ec.euidw.prex.PresentationSubmission
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.*
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 
 
 /**
- * Represent the [AuthorisationResponse]
+ * Represent the Authorisation Response placed by wallet
  */
-@Serializable
-@SerialName("authorisation_response")
+
 data class AuthorisationResponseTO(
-    @SerialName("state") val state: String,// this is the request_id
-    @SerialName("id_token") val idToken: String? = null,
-    @SerialName("vp_token") val vpToken: JsonObject? = null,
-    @SerialName("presentation_submission") val presentationSubmission: PresentationSubmission? = null,
+    val state: String?,// this is the request_id
+    val error: String? = null,
+    val errorDescription: String? = null,
+    val idToken: String? = null,
+    val vpToken: JsonObject? = null,
+    val presentationSubmission: PresentationSubmission? = null,
 )
 
 /**
@@ -43,7 +42,7 @@ internal fun AuthorisationResponseTO.toDomain(presentation: Presentation.Request
             Result.success(WalletResponse.VpToken(vpToken, presentationSubmission))
         else Result.failure(WalletResponseValidationException(WalletResponseValidationError.MissingVpTokenOrPresentationSubmission))
 
-    fun requiredIdandVpToken() =
+    fun requiredIdAndVpToken() =
         if (idToken != null && vpToken != null && presentationSubmission != null)
             Result.success(
                 WalletResponse.IdAndVpToken(
@@ -54,7 +53,10 @@ internal fun AuthorisationResponseTO.toDomain(presentation: Presentation.Request
             )
         else Result.failure(WalletResponseValidationException(WalletResponseValidationError.MissingIdTokenOrVpTokenOrPresentationSubmission))
 
-    return runCatching {
+    val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
+
+    return if (maybeError != null) Result.success(maybeError)
+    else runCatching {
         when (presentation.type) {
             is PresentationType.IdTokenRequest -> WalletResponse.IdToken(requiredIdToken().getOrThrow().idToken)
             is PresentationType.VpTokenRequest -> WalletResponse.VpToken(
@@ -63,9 +65,9 @@ internal fun AuthorisationResponseTO.toDomain(presentation: Presentation.Request
             )
 
             is PresentationType.IdAndVpToken -> WalletResponse.IdAndVpToken(
-                requiredIdandVpToken().getOrThrow().idToken,
-                requiredIdandVpToken().getOrThrow().vpToken,
-                requiredIdandVpToken().getOrThrow().presentationSubmission
+                requiredIdAndVpToken().getOrThrow().idToken,
+                requiredIdAndVpToken().getOrThrow().vpToken,
+                requiredIdAndVpToken().getOrThrow().presentationSubmission
             )
         }
     }
@@ -88,9 +90,9 @@ class PostWalletResponseLive(
 
     override suspend operator fun invoke(authorisationResponseObject: AuthorisationResponseTO): QueryResponse<String> {
 
-        val requestId = RequestId(authorisationResponseObject.state)
-
-        return when (val presentation = loadPresentationByRequestId(requestId)) {
+        val requestId = authorisationResponseObject.state?.let { RequestId(it) }
+        return if (requestId == null) QueryResponse.InvalidState
+        else when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> QueryResponse.NotFound
             is Presentation.RequestObjectRetrieved ->
                 submit(presentation, authorisationResponseObject).fold(

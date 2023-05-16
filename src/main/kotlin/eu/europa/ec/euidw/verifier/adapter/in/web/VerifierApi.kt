@@ -3,7 +3,6 @@ package eu.europa.ec.euidw.verifier.adapter.`in`.web
 import eu.europa.ec.euidw.verifier.application.port.`in`.*
 import eu.europa.ec.euidw.verifier.domain.PresentationId
 import eu.europa.ec.euidw.verifier.domain.RequestId
-import eu.europa.ec.euidw.verifier.domain.WalletResponse
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
@@ -49,7 +48,7 @@ class VerifierApi(
      */
     private suspend fun handleGetWalletResponse(req: ServerRequest): ServerResponse {
 
-        suspend fun found(pd: WalletResponseTO) = ok().json().bodyValueAndAwait(pd)
+        suspend fun found(walletResponse: WalletResponseTO) = ok().json().bodyValueAndAwait(walletResponse)
 
         val presentationId = req.presentationId()
 

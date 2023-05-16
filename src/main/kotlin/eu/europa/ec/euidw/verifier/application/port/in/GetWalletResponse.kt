@@ -31,10 +31,13 @@ private fun WalletResponse.toTO(): WalletResponseTO {
             idToken = idToken,
             vpToken = vpToken,
             presentationSubmission = presentationSubmission)
+        is WalletResponse.Error -> WalletResponseTO(
+            error = value,
+            errorDescription = description)
     }
 }
 /**
- * Given a [RequestId] returns the [AuthorisationResponse]
+ * Given a [RequestId] returns the [WalletResponse]
  */
 interface GetWalletResponse {
     suspend operator fun invoke(presentationId: PresentationId): QueryResponse<WalletResponseTO>
