@@ -100,7 +100,7 @@ class WalletApi(
         val input = with(req.awaitFormData()) {
             logger.info("formData: $this")
             AuthorisationResponseTO(
-                state = getFirst("state") ?: throw IllegalArgumentException("Missing state"),
+                state = getFirst("state"),
                 idToken = getFirst("id_token"),
                 vpToken = getFirst("vp_token")?.let { Json.parseToJsonElement(it).jsonObject},
                 presentationSubmission = getFirst("presentation_submission")?.let { PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()},

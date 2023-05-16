@@ -9,11 +9,11 @@ import java.time.Clock
 
 
 /**
- * Represent the [AuthorisationResponse]
+ * Represent the Authorisation Response placed by wallet
  */
 
 data class AuthorisationResponseTO(
-    val state: String,// this is the request_id
+    val state: String?,// this is the request_id
     val error: String? = null,
     val errorDescription: String? = null,
     val idToken: String? = null,
@@ -90,9 +90,9 @@ class PostWalletResponseLive(
 
     override suspend operator fun invoke(authorisationResponseObject: AuthorisationResponseTO): QueryResponse<String> {
 
-        val requestId = RequestId(authorisationResponseObject.state)
-
-        return when (val presentation = loadPresentationByRequestId(requestId)) {
+        val requestId = authorisationResponseObject.state?.let { RequestId(it) }
+        return if (requestId == null) QueryResponse.InvalidState
+        else when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> QueryResponse.NotFound
             is Presentation.RequestObjectRetrieved ->
                 submit(presentation, authorisationResponseObject).fold(

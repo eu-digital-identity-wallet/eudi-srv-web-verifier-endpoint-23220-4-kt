@@ -5,7 +5,7 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresenta
 import eu.europa.ec.euidw.verifier.domain.*
 
 /**
- * Given a [RequestId] returns the [AuthorisationResponse]
+ * Given a [RequestId] returns the [WalletResponse]
  */
 interface GetWalletResponse {
     suspend operator fun invoke(presentationId: PresentationId): QueryResponse<WalletResponse>
