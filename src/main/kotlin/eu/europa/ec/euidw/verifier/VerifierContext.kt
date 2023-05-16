@@ -33,7 +33,6 @@ import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.web.reactive.config.EnableWebFlux
 import org.springframework.web.reactive.config.WebFluxConfigurer
 import org.springframework.web.reactive.function.server.RouterFunction
-import java.net.URL
 import java.time.Clock
 import java.time.Duration
 import java.util.*
@@ -247,7 +246,7 @@ private fun Environment.verifierConfig(): VerifierConfig {
         clientIdScheme = clientIdScheme,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
-        responseUriBuilder = { _ -> URL("https://foo") },
+        responseUriBuilder = { WalletApi.directPost(publicUrl) },
         maxAge = maxAge,
         clientMetaData = clientMetaData(publicUrl)
     )

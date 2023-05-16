@@ -20,6 +20,7 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
+import java.net.URL
 
 /**
  * The WEB API available to the wallet
@@ -40,8 +41,7 @@ class WalletApi(
         GET(requestJwtPath, this@WalletApi::handleGetRequestObject)
         GET(presentationDefinitionPath, this@WalletApi::handleGetPresentationDefinition)
         POST(walletResponsePath,
-//            accept(MediaType.APPLICATION_JSON),
-            accept(MediaType.APPLICATION_FORM_URLENCODED),
+            //accept(MediaType.APPLICATION_FORM_URLENCODED),
             this@WalletApi::handlePostWalletResponse)
         GET(getPublicJwkSetPath) { _-> handleGetPublicJwkSet() }
     }
@@ -169,6 +169,12 @@ class WalletApi(
                 .build()
                 .toURL()
         }
+
+        fun directPost(baseUrl: String): URL =
+            DefaultUriBuilderFactory(baseUrl)
+                .uriString(walletResponsePath)
+                .build()
+                .toURL()
 
         private fun urlBuilder(
             baseUrl: String,
