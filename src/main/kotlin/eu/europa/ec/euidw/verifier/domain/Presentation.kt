@@ -66,7 +66,7 @@ val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
 sealed interface WalletResponse {
 
     data class IdToken(
-        val idToken: String
+        val idToken: Jwt
     ) : WalletResponse {
         init {
             require(idToken.isNotEmpty())
@@ -83,7 +83,7 @@ sealed interface WalletResponse {
     }
 
     data class IdAndVpToken(
-        val idToken: String,
+        val idToken: Jwt,
         val vpToken: JsonObject,
         val presentationSubmission: PresentationSubmission
     ) : WalletResponse {
@@ -92,6 +92,8 @@ sealed interface WalletResponse {
             require(vpToken.isNotEmpty())
         }
     }
+
+    data class Error(val value: String, val description : String?): WalletResponse
 
 }
 
