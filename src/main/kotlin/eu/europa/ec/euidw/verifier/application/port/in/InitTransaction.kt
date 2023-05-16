@@ -9,7 +9,6 @@ import eu.europa.ec.euidw.verifier.domain.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.net.URLEncoder
 import java.time.Clock
 
 /**
@@ -28,6 +27,7 @@ enum class PresentationTypeTO {
 
     @SerialName("vp_token id_token")
     IdAndVpTokenRequest
+
 }
 
 /**
@@ -47,15 +47,14 @@ enum class IdTokenTypeTO {
 data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
-    @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? =  null
+    @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null
 )
 
 /**
  * Possible validation errors of caller's input
  */
 enum class ValidationError {
-    MissingPresentationDefinition,
-    InvalidPresentationDefinition
+    MissingPresentationDefinition
 }
 
 /**
@@ -131,7 +130,7 @@ class InitTransactionLive(
     private fun createRequest(requestedPresentation: Presentation.Requested): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
         when (val requestJarOption = verifierConfig.requestJarOption) {
             is EmbedOption.ByValue -> {
-                val jwt = signRequestObject(verifierConfig, clock,requestedPresentation).getOrThrow()
+                val jwt = signRequestObject(verifierConfig, clock, requestedPresentation).getOrThrow()
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(
                     requestedPresentation.requestId.value,

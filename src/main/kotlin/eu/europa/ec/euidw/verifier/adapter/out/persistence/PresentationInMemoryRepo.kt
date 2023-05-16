@@ -24,10 +24,13 @@ class PresentationInMemoryRepo(
         fun requestId(p: Presentation) = when (p) {
             is Presentation.Requested -> p.requestId
             is Presentation.RequestObjectRetrieved -> p.requestId
+            is Presentation.Submitted -> p.requestId
             is Presentation.TimedOut -> null
         }
         LoadPresentationByRequestId { requestId ->
-            presentations.values.firstOrNull { requestId(it) == requestId }
+            presentations.values.firstOrNull {
+                requestId(it) == requestId
+            }
         }
     }
 

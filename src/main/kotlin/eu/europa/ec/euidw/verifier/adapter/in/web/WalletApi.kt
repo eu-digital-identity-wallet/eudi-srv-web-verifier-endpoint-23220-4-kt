@@ -3,12 +3,20 @@ package eu.europa.ec.euidw.verifier.adapter.`in`.web
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.verifier.application.port.`in`.GetPresentationDefinition
-import eu.europa.ec.euidw.verifier.application.port.`in`.GetRequestObject
+import eu.europa.ec.euidw.prex.PresentationExchange
+import eu.europa.ec.euidw.verifier.application.port.`in`.*
 import eu.europa.ec.euidw.verifier.application.port.`in`.QueryResponse.*
 import eu.europa.ec.euidw.verifier.domain.EmbedOption
 import eu.europa.ec.euidw.verifier.domain.RequestId
+import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
@@ -19,8 +27,11 @@ import org.springframework.web.util.DefaultUriBuilderFactory
 class WalletApi(
     private val getRequestObject: GetRequestObject,
     private val getPresentationDefinition: GetPresentationDefinition,
+    private val postWalletResponse: PostWalletResponse,
     private val rsaKey: RSAKey
 ) {
+
+    private val logger : Logger = LoggerFactory.getLogger(WalletApi::class.java)
 
     /**
      * The routes available to the wallet
@@ -28,6 +39,10 @@ class WalletApi(
     val route = coRouter {
         GET(requestJwtPath, this@WalletApi::handleGetRequestObject)
         GET(presentationDefinitionPath, this@WalletApi::handleGetPresentationDefinition)
+        POST(walletResponsePath,
+//            accept(MediaType.APPLICATION_JSON),
+            accept(MediaType.APPLICATION_FORM_URLENCODED),
+            this@WalletApi::handlePostWalletResponse)
         GET(getPublicJwkSetPath) { _-> handleGetPublicJwkSet() }
     }
 
@@ -69,6 +84,45 @@ class WalletApi(
 
     }
 
+    /**
+     * Handles a POST request placed by the wallet, in order to submit
+     * the [AuthorisationResponse], containing the id_token, presentation_submission
+     * and the verifiableCredentials
+     */
+    private suspend fun handlePostWalletResponse(req: ServerRequest): ServerResponse {
+
+        suspend fun walletResponseStored() = ok().buildAndAwait()
+
+        suspend fun notFound() = ServerResponse.notFound().buildAndAwait()
+
+        suspend fun failed() = badRequest().buildAndAwait()
+
+        val formData = req.formData().awaitSingle().also {
+            // debug
+            logger.info("formData: $it")
+        }
+//        val vpToken = formData.getFirst("vpToken")
+//        val vpTokenJson = Json.parseToJsonElement(vpToken!!)
+
+        val input = AuthorisationResponseTO(
+            idToken = formData.getFirst("idToken"),
+            state = formData.getFirst("state")!!,
+            vpToken = formData.getFirst("vpToken")?.let { Json.parseToJsonElement(it).jsonObject},
+            presentationSubmission = formData.getFirst("vpToken")?.let { PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()}
+        )
+
+//        val input = req.awaitBody<AuthorisationResponseTO>().also {
+//            // debug
+//            logger.info("input: $it")
+//        }
+
+        return when (postWalletResponse(input)) {
+            is Found -> walletResponseStored()
+            is NotFound -> notFound()
+            else -> failed()
+        }
+    }
+
     private suspend fun handleGetPublicJwkSet(): ServerResponse {
         val publicJwkSet = JWKSet(rsaKey).toJSONObject(true)
         return ok()
@@ -91,6 +145,12 @@ class WalletApi(
          * getting the presentation definition
          */
         const val presentationDefinitionPath = "/wallet/pd/{requestId}"
+
+        /**
+         * Path template for the route for
+         * posting the Authorisation Response
+         */
+        const val walletResponsePath = "/wallet/direct_post"
 
         /**
          * Extracts from the request the [RequestId]

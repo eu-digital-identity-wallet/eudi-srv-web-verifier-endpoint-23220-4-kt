@@ -28,6 +28,7 @@ class TimeoutPresentationsLive(
         val timeout = when (presentation) {
             is Presentation.Requested -> presentation.timedOut(clock).getOrNull()
             is Presentation.RequestObjectRetrieved -> presentation.timedOut(clock).getOrNull()
+            is Presentation.Submitted -> presentation.timedOut(clock).getOrNull()
             is Presentation.TimedOut -> null
         }
         return timeout?.also { storePresentation(it) }

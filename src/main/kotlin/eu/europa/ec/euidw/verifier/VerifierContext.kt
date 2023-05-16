@@ -3,8 +3,10 @@ package eu.europa.ec.euidw.verifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
-import eu.europa.ec.euidw.verifier.EmbedOptionEnum.*
+import eu.europa.ec.euidw.verifier.EmbedOptionEnum.byReference
+import eu.europa.ec.euidw.verifier.EmbedOptionEnum.byValue
 import eu.europa.ec.euidw.verifier.adapter.`in`.timer.ScheduleTimeoutPresentations
+import eu.europa.ec.euidw.verifier.adapter.`in`.web.StaticContent
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.VerifierApi
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.WalletApi
 import eu.europa.ec.euidw.verifier.adapter.out.cfg.GeneratePresentationIdNimbus
@@ -61,19 +63,26 @@ class VerifierContext(environment: Environment) {
     //
 
     @Bean
-    fun route(webApi: WalletApi, verifierApi: VerifierApi): RouterFunction<*> =
-        webApi.route.and(verifierApi.route)
+    fun route(webApi: WalletApi, verifierApi: VerifierApi, staticContent: StaticContent): RouterFunction<*> =
+        webApi.route.and(verifierApi.route).and(staticContent.route)
 
     @Bean
     fun webApi(
         getRequestObject: GetRequestObject,
         getPresentationDefinition: GetPresentationDefinition,
-        rsaKey: RSAKey,
+        postWalletResponse: PostWalletResponse,
+        rsaKey: RSAKey
     ): WalletApi =
-        WalletApi(getRequestObject, getPresentationDefinition, rsaKey)
+        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, rsaKey)
 
     @Bean
-    fun verifierApi(initTransaction: InitTransaction): VerifierApi = VerifierApi(initTransaction)
+    fun verifierApi(
+        initTransaction: InitTransaction,
+        getWalletResponse: GetWalletResponse
+    ): VerifierApi = VerifierApi(initTransaction, getWalletResponse)
+
+    @Bean
+    fun staticApi(): StaticContent = StaticContent()
 
     //
     // Scheduled
@@ -134,6 +143,24 @@ class VerifierContext(environment: Environment) {
         clock
     )
 
+    @Bean
+    fun postAuthorisationResponse(
+        loadPresentationByRequestId: LoadPresentationByRequestId,
+        storePresentation: StorePresentation,
+        clock: Clock
+    ): PostWalletResponse = PostWalletResponseLive(
+        loadPresentationByRequestId,
+        storePresentation,
+        clock
+    )
+
+    @Bean
+    fun getWalletResponse(
+        loadPresentationById: LoadPresentationById
+    ): GetWalletResponse =
+        GetWalletResponseLive(loadPresentationById)
+
+
     //
     // JOSE
     //
@@ -186,7 +213,6 @@ class VerifierContext(environment: Environment) {
     fun clock(): Clock {
         return Clock.systemDefaultZone()
     }
-
 
 }
 

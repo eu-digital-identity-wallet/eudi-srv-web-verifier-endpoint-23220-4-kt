@@ -6,7 +6,6 @@ import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresenta
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.*
 import java.time.Clock
-import java.time.Instant
 
 /**
  * Given a [RequestId] it returns a RFC9101 Request Object

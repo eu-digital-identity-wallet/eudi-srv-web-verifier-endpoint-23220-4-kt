@@ -1,3 +1,5 @@
+@file:Suppress("invisible_reference", "invisible_member")
+
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 import com.nimbusds.jwt.JWTClaimsSet

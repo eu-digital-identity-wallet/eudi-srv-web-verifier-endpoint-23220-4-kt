@@ -1,3 +1,5 @@
+@file:Suppress("invisible_reference", "invisible_member")
+
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
 import eu.europa.ec.euidw.verifier.TestContext

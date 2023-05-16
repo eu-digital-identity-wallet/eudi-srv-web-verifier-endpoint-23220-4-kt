@@ -1,21 +1,28 @@
 package eu.europa.ec.euidw.verifier.adapter.`in`.web
 
-import eu.europa.ec.euidw.verifier.application.port.`in`.InitTransaction
-import eu.europa.ec.euidw.verifier.application.port.`in`.InitTransactionTO
-import eu.europa.ec.euidw.verifier.application.port.`in`.JwtSecuredAuthorizationRequestTO
-import eu.europa.ec.euidw.verifier.application.port.`in`.ValidationException
+import eu.europa.ec.euidw.verifier.application.port.`in`.*
+import eu.europa.ec.euidw.verifier.domain.PresentationId
+import eu.europa.ec.euidw.verifier.domain.RequestId
+import eu.europa.ec.euidw.verifier.domain.WalletResponse
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
 
-class VerifierApi(private val initTransaction: InitTransaction) {
-
+class VerifierApi(
+    private val initTransaction: InitTransaction,
+    private val getWalletResponse: GetWalletResponse
+) {
 
     val route = coRouter {
-        "/ui/presentations".nest {
-            POST("", contentType(APPLICATION_JSON) and accept(APPLICATION_JSON), this@VerifierApi::handleInitTransaction)
-        }
+
+        POST(
+            initTransactionPath,
+            contentType(APPLICATION_JSON) and accept(APPLICATION_JSON),
+            this@VerifierApi::handleInitTransaction
+        )
+        GET(walletResponsePath, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
+
     }
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse {
@@ -36,4 +43,31 @@ class VerifierApi(private val initTransaction: InitTransaction) {
         )
     }
 
+    /**
+     * Handles a request placed by verifier, in order to obtain
+     * the [AuthorisationResponse]
+     */
+    private suspend fun handleGetWalletResponse(req: ServerRequest): ServerResponse {
+
+        suspend fun found(pd: WalletResponse) = ok().json().bodyValueAndAwait(pd)
+
+        val presentationId = req.presentationId()
+
+        return when (val result = getWalletResponse(presentationId)) {
+            is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
+            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.Found -> found(result.value)
+        }
+
+    }
+
+    companion object {
+        const val initTransactionPath = "/ui/presentations"
+        const val walletResponsePath = "/ui/presentations/{presentationId}"
+
+        /**
+         * Extracts from the request the [RequestId]
+         */
+        private fun ServerRequest.presentationId() = PresentationId(pathVariable("presentationId"))
+    }
 }
