@@ -24,7 +24,6 @@ import org.springframework.web.reactive.function.BodyInserters
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
-@Disabled
 internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
     @Autowired
@@ -117,13 +116,13 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId)
-        formEncodedBody.add("idToken", "value 1")
-        formEncodedBody.add("vpToken", TestUtils.loadResource("02-vpToken.json"))
-        formEncodedBody.add("presentationSubmission", TestUtils.loadResource("02-presentationSubmission.json"))
+        formEncodedBody.add("id_token", "value 1")
+        formEncodedBody.add("vp_token", TestUtils.loadResource("02-vpToken.json"))
+        formEncodedBody.add("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
 
         client.post().uri(WalletApi.walletResponsePath)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            //.accept(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(formEncodedBody))
             .exchange()
             // then
@@ -196,9 +195,9 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val requestUri = `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`()
         val requestId = requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")
         val presentationId = `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri)
+        Assertions.assertNotNull(presentationId)
 
         `Wallet to VerifierBackend - sends HTTP POST to submit wallet response`(requestId)
-        Assertions.assertNotNull(presentationId)
 
         // when
         val response = `Verifier Application to Verifier Backend, get authorisation response`(presentationId)
