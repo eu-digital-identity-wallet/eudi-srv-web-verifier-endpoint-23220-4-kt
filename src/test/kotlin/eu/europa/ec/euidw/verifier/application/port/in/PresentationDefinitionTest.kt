@@ -45,7 +45,8 @@ internal class PresentationDefinitionTest () {
                     }
                   }
                 ]
-              }
+              },
+              "nonce" : "nonce"
             }
         """
 
@@ -87,7 +88,8 @@ internal class PresentationDefinitionTest () {
                     }
                   }
                 ]
-              }
+              },
+              "nonce": "nonce"
             }
         """
 
@@ -114,7 +116,7 @@ internal class PresentationDefinitionTest () {
             .expectStatus().isOk()
             .expectBody().returnResult();
         val getResponseString = String(getResponse.responseBodyContent!!)
-        println("response: ${getResponseString}")
+        println("response: $getResponseString")
 
         val (header, payload) = TestUtils.parseJWT(getResponseString)
         // debug

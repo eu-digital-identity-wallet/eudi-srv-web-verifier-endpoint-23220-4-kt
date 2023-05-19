@@ -1,12 +1,14 @@
 package eu.europa.ec.euidw.verifier.adapter.`in`.web
 
 import eu.europa.ec.euidw.verifier.application.port.`in`.*
+import eu.europa.ec.euidw.verifier.domain.Nonce
 import eu.europa.ec.euidw.verifier.domain.PresentationId
 import eu.europa.ec.euidw.verifier.domain.RequestId
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
+import kotlin.jvm.optionals.getOrNull
 
 class VerifierApi(
     private val initTransaction: InitTransaction,
@@ -30,7 +32,7 @@ class VerifierApi(
             ok().json().bodyValueAndAwait(jar)
 
         suspend fun failed(t: Throwable) = when (t) {
-            is ValidationException -> badRequest().json().bodyValueAndAwait("error" to t.error)
+            is ValidationException -> t.error.asBadRequest()
             else -> badRequest().buildAndAwait()
         }
 
@@ -44,15 +46,17 @@ class VerifierApi(
 
     /**
      * Handles a request placed by verifier, in order to obtain
-     * the [AuthorisationResponse]
+     * the wallet authorisation response
      */
     private suspend fun handleGetWalletResponse(req: ServerRequest): ServerResponse {
 
         suspend fun found(walletResponse: WalletResponseTO) = ok().json().bodyValueAndAwait(walletResponse)
 
         val presentationId = req.presentationId()
+        val nonce = req.queryParam("nonce").getOrNull()?.let { Nonce(it) }
 
-        return when (val result = getWalletResponse(presentationId)) {
+        return if (nonce == null) ValidationError.MissingNonce.asBadRequest()
+        else when (val result = getWalletResponse(presentationId, nonce)) {
             is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
             is QueryResponse.Found -> found(result.value)
@@ -68,5 +72,7 @@ class VerifierApi(
          * Extracts from the request the [RequestId]
          */
         private fun ServerRequest.presentationId() = PresentationId(pathVariable("presentationId"))
+        private suspend fun ValidationError.asBadRequest() =
+            badRequest().json().bodyValueAndAwait(mapOf("error" to this))
     }
 }

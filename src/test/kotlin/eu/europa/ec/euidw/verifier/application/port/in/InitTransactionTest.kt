@@ -32,7 +32,8 @@ class InitTransactionTest {
             val input = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
-                null
+                null,
+                "nonce"
             )
 
             val useCase: InitTransaction = TestContext.initTransaction(verifierConfig)
@@ -59,7 +60,8 @@ class InitTransactionTest {
             val input = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
-                null
+                null,
+                "nonce"
             )
 
             val useCase = TestContext.initTransaction(verifierConfig)
@@ -78,11 +80,26 @@ class InitTransactionTest {
         // Input is invalid.
         //  Misses presentation definition
         val input = InitTransactionTO(
-            PresentationTypeTO.VpTokenRequest,
-            null,
-            null
+            type = PresentationTypeTO.VpTokenRequest,
+            idTokenType = null,
+            presentationDefinition = null,
+            nonce = "nonce"
         )
         testWithInvalidInput(input, ValidationError.MissingPresentationDefinition)
+    }
+
+    @Test
+    fun `when input misses nonce validation error is raised`() = runBlocking {
+
+        // Input is invalid.
+        //  Misses presentation definition
+        val input = InitTransactionTO(
+            type = PresentationTypeTO.IdTokenRequest,
+            idTokenType = IdTokenTypeTO.SubjectSigned,
+            presentationDefinition = null,
+            nonce = null
+        )
+        testWithInvalidInput(input, ValidationError.MissingNonce)
     }
 
 //

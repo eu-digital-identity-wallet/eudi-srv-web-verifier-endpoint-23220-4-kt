@@ -77,7 +77,7 @@ internal fun requestObjectFromDomain(
         presentationDefinition = presentationDefinition,
         responseType = responseType,
         aud = aud,
-        nonce = presentation.id.value,
+        nonce = presentation.nonce.value,
         state = presentation.requestId.value,
         responseMode = "direct_post", // or direct_post for direct submission
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),

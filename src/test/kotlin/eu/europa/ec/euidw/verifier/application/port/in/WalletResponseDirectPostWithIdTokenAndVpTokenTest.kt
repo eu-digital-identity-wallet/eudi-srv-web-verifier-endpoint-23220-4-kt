@@ -2,10 +2,15 @@ package eu.europa.ec.euidw.verifier.application.port.`in`
 
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.VerifierApi
 import eu.europa.ec.euidw.verifier.adapter.`in`.web.WalletApi
+import eu.europa.ec.euidw.verifier.domain.Nonce
+import eu.europa.ec.euidw.verifier.domain.PresentationId
+import eu.europa.ec.euidw.verifier.domain.RequestId
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
@@ -19,6 +24,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
+import java.io.ByteArrayInputStream
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -36,24 +42,21 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
      * - (request) Verifier to Verifier Response endpoint, flow "(2) initiate transaction"
      * - (response) Verifier ResponseEndpoint to Verifier, flow "(3) return transaction-id & request-id"
      */
-    fun `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`(): String {
+    @OptIn(ExperimentalSerializationApi::class)
+    fun initTransaction(): JwtSecuredAuthorizationRequestTO {
 
         val presentationDefinitionBody = TestUtils.loadResource("02-presentationDefinition.json")
         println("presentationDefinitionBody=${presentationDefinitionBody}")
-
-        val requestUri = client.post().uri(VerifierApi.initTransactionPath)
+        return client.post().uri(VerifierApi.initTransactionPath)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(presentationDefinitionBody))
             .exchange()
             .expectStatus().isOk()
-            .expectBody().returnResult()
-            .responseBodyContent?.let { JSONObject(String(it)).get("request_uri").toString() }
-        println("requestUri=${requestUri}")
+            .expectBody().returnResult().responseBodyContent!!.let { byteArray->
+                ByteArrayInputStream(byteArray).use { Json.decodeFromStream(it) }
+            }
 
-        Assertions.assertNotNull(requestUri)
-
-        return requestUri!!
     }
 
     /**
@@ -63,7 +66,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
-    fun `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri: String): String {
+    fun getRequestObject(requestUri: String): String {
 
         // update the request_uri to point to the local server
         val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
@@ -112,10 +115,10 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
      * - (request) mDocApp to Internet Web Service, flow "12 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mDocApp, flow "14 OK: HTTP 200 with redirect_uri"
      */
-    fun `Wallet to VerifierBackend - sends HTTP POST to submit wallet response`(requestId: String) {
+    fun directPost(requestId: RequestId) {
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
-        formEncodedBody.add("state", requestId)
+        formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("id_token", "value 1")
         formEncodedBody.add("vp_token", TestUtils.loadResource("02-vpToken.json"))
         formEncodedBody.add("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
@@ -141,9 +144,9 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
      * - (request) mdocVerification application Internet frontend to Internet Web Service, flow "18 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mdocVerification application Internet frontend, flow "20 return status and conditionally return data"
      */
-    fun `Verifier Application to Verifier Backend, get authorisation response`(presentationId: String): String {
+    fun getWalletResponse(presentationId: PresentationId, nonce: Nonce): String {
 
-        val walletResponseUri = VerifierApi.walletResponsePath.replace("{presentationId}", presentationId)
+        val walletResponseUri = VerifierApi.walletResponsePath.replace("{presentationId}", presentationId.value)+"?nonce=${nonce.value}"
 
         // when
         val responseSpec = client.get().uri(walletResponseUri)
@@ -171,12 +174,13 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Test @Order(value = 1)
     fun `post wallet response (only idToken) - confirm returns 200`(): Unit = runBlocking {
         // given
-        val requestUri = `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`()
-        val requestId = requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")
-        val presentationId = `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri)
+        val initTransaction = initTransaction()
+        val requestId = RequestId(initTransaction.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        val presentationId = initTransaction.presentationId
+        getRequestObject(initTransaction.requestUri!!)
 
         // when
-        `Wallet to VerifierBackend - sends HTTP POST to submit wallet response`(requestId)
+        directPost(requestId)
 
         // then
         Assertions.assertNotNull(presentationId)
@@ -192,15 +196,16 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Test @Order(value = 2)
     fun `get authorisation response - confirm returns 200`(): Unit = runBlocking {
         // given
-        val requestUri = `Verifier to VerifierBackend - sends HTTP POST presentation definition, return requestUri`()
-        val requestId = requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")
-        val presentationId = `Wallet to VerifierBackend - sends HTTP GET requestUri to retrieve presentation definition, return presentationId`(requestUri)
-        Assertions.assertNotNull(presentationId)
+        val initTransaction = initTransaction()
+        val presentationId = PresentationId(initTransaction.presentationId)
+        val requestId = RequestId(initTransaction.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        getRequestObject(initTransaction.requestUri!!)
 
-        `Wallet to VerifierBackend - sends HTTP POST to submit wallet response`(requestId)
+
+        directPost(requestId)
 
         // when
-        val response = `Verifier Application to Verifier Backend, get authorisation response`(presentationId)
+        val response = getWalletResponse(presentationId, Nonce("nonce"))
 
         // then
         Assertions.assertNotNull(response, "response is null")
