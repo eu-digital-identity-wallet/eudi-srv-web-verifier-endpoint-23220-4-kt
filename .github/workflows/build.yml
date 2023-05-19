@@ -24,6 +24,7 @@ jobs:
           GH_PKG_USER: ${{ github.actor }}
           GH_PKG_TOKEN: ${{ secrets.GH_PKG_TOKEN }} # This is a personal token, defined as secret to allow downloading
                                                     # dependencies from GitΗub Packages
+          DEP_MVN_REPO: https://maven.pkg.github.com/${{ github.repository_owner }}/*
         with:
           arguments: build
 
