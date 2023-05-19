@@ -15,8 +15,9 @@ version = "0.0.1-SNAPSHOT"
 repositories {
     mavenCentral()
     maven {
-        name = "NiscyEudiwPackages"
-        url = uri("https://maven.pkg.github.com/niscy-eudiw/*")
+        name = "EUDIWalletSnapshots"
+        val dependenciesRepoUrl = System.getenv("DEP_MVN_REPO") ?: "https://maven.pkg.github.com/eu-digital-identity-wallet/*"
+        url = uri(dependenciesRepoUrl)
         credentials {
             username = System.getenv("GH_PKG_USER")
             password = System.getenv("GH_PKG_TOKEN")
