@@ -1,12 +1,14 @@
 package eu.europa.ec.euidw.verifier.adapter.`in`.web
 
 import eu.europa.ec.euidw.verifier.application.port.`in`.*
+import eu.europa.ec.euidw.verifier.domain.Nonce
 import eu.europa.ec.euidw.verifier.domain.PresentationId
 import eu.europa.ec.euidw.verifier.domain.RequestId
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
+import kotlin.jvm.optionals.getOrNull
 
 class VerifierApi(
     private val initTransaction: InitTransaction,
@@ -44,15 +46,16 @@ class VerifierApi(
 
     /**
      * Handles a request placed by verifier, in order to obtain
-     * the [AuthorisationResponse]
+     * the wallet authorisation response
      */
     private suspend fun handleGetWalletResponse(req: ServerRequest): ServerResponse {
 
         suspend fun found(walletResponse: WalletResponseTO) = ok().json().bodyValueAndAwait(walletResponse)
 
         val presentationId = req.presentationId()
-
-        return when (val result = getWalletResponse(presentationId)) {
+        val nonce = req.queryParam("nonce").getOrNull()?.let { Nonce(it) }
+        return if (nonce == null) badRequest().buildAndAwait()
+        else when (val result = getWalletResponse(presentationId, nonce)) {
             is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
             is QueryResponse.Found -> found(result.value)

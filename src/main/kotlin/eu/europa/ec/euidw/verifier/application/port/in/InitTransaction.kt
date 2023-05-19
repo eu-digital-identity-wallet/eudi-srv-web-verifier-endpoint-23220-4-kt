@@ -47,14 +47,16 @@ enum class IdTokenTypeTO {
 data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
-    @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null
+    @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null,
+    @SerialName("nonce") val nonce: String? = null
 )
 
 /**
  * Possible validation errors of caller's input
  */
 enum class ValidationError {
-    MissingPresentationDefinition
+    MissingPresentationDefinition,
+    MissingNonce
 }
 
 /**
@@ -103,14 +105,16 @@ class InitTransactionLive(
         runCatching {
 
             // validate input
-            val type = initTransactionTO.toDomain().getOrThrow()
+            val (nonce,type) = initTransactionTO.toDomain().getOrThrow()
+
 
             // Initialize presentation
             val requestedPresentation = Presentation.Requested(
                 id = generatePresentationId(),
                 initiatedAt = clock.instant(),
                 requestId = generateRequestId(),
-                type = type
+                type = type,
+                nonce = nonce
             )
             // create request, which may update presentation
             val (updatedPresentation, request) = createRequest(requestedPresentation)
@@ -153,7 +157,7 @@ class InitTransactionLive(
 }
 
 
-internal fun InitTransactionTO.toDomain(): Result<PresentationType> {
+internal fun InitTransactionTO.toDomain(): Result<Pair<Nonce, PresentationType>> {
 
     fun requiredIdTokenType() =
         Result.success(idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList())
@@ -162,8 +166,12 @@ internal fun InitTransactionTO.toDomain(): Result<PresentationType> {
         if (presentationDefinition != null) Result.success(presentationDefinition)
         else Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
 
+    fun requiredNonce() =
+        if (!nonce.isNullOrBlank()) Result.success(Nonce(nonce))
+        else Result.failure(ValidationException(ValidationError.MissingNonce))
+
     return runCatching {
-        when (type) {
+        val presentationType = when (type) {
             PresentationTypeTO.IdTokenRequest ->
                 PresentationType.IdTokenRequest(requiredIdTokenType().getOrThrow())
 
@@ -176,6 +184,10 @@ internal fun InitTransactionTO.toDomain(): Result<PresentationType> {
                 PresentationType.IdAndVpToken(idTokenTypes, pd)
             }
         }
+
+        val nonce = requiredNonce().getOrThrow()
+
+        nonce to presentationType
     }
 }
 

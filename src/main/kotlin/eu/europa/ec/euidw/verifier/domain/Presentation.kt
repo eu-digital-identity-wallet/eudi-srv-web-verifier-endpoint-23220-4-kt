@@ -28,6 +28,12 @@ value class RequestId(val value: String) {
     }
 }
 
+@JvmInline
+value class Nonce(val value: String) {
+    init {
+        require(value.isNotBlank())
+    }
+}
 
 typealias Jwt = String
 
@@ -93,7 +99,7 @@ sealed interface WalletResponse {
         }
     }
 
-    data class Error(val value: String, val description : String?): WalletResponse
+    data class Error(val value: String, val description: String?) : WalletResponse
 
 }
 
@@ -113,7 +119,8 @@ sealed interface Presentation {
         override val id: PresentationId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
-        val requestId: RequestId
+        val requestId: RequestId,
+        val nonce: Nonce
     ) : Presentation
 
     /**
@@ -127,7 +134,8 @@ sealed interface Presentation {
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestId: RequestId,
-        val requestObjectRetrievedAt: Instant
+        val requestObjectRetrievedAt: Instant,
+        val nonce: Nonce
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
@@ -136,7 +144,14 @@ sealed interface Presentation {
         companion object {
             fun requestObjectRetrieved(requested: Requested, at: Instant): Result<RequestObjectRetrieved> =
                 runCatching {
-                    RequestObjectRetrieved(requested.id, requested.initiatedAt, requested.type, requested.requestId, at)
+                    RequestObjectRetrieved(
+                        requested.id,
+                        requested.initiatedAt,
+                        requested.type,
+                        requested.requestId,
+                        at,
+                        requested.nonce
+                    )
                 }
         }
     }
@@ -144,14 +159,15 @@ sealed interface Presentation {
     /**
      * A presentation process that has been just submitted by the wallet to the verifier backend
      */
-    class Submitted private constructor (
+    class Submitted private constructor(
         override val id: PresentationId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestId: RequestId,
         var requestObjectRetrievedAt: Instant,
         var submittedAt: Instant,
-        val walletResponse: WalletResponse
+        val walletResponse: WalletResponse,
+        val nonce: Nonce
     ) : Presentation {
 
         init {
@@ -159,11 +175,24 @@ sealed interface Presentation {
         }
 
         companion object {
-            fun submitted(requestObjectRetrieved: RequestObjectRetrieved, at:Instant, walletResponse: WalletResponse): Result<Submitted> =
-                runCatching {
-                    // TODO: add validation rules before changing state. This is the business logic
-                    Submitted(requestObjectRetrieved.id, requestObjectRetrieved.initiatedAt, requestObjectRetrieved.type, requestObjectRetrieved.requestId, requestObjectRetrieved.requestObjectRetrievedAt, at, walletResponse)
+            fun submitted(
+                requestObjectRetrieved: RequestObjectRetrieved,
+                at: Instant,
+                walletResponse: WalletResponse
+            ): Result<Submitted> = runCatching {
+                with(requestObjectRetrieved) {
+                    Submitted(
+                        id,
+                        initiatedAt,
+                        type,
+                        requestId,
+                        requestObjectRetrievedAt,
+                        at,
+                        walletResponse,
+                        nonce
+                    )
                 }
+            }
         }
     }
 
@@ -192,6 +221,7 @@ sealed interface Presentation {
                     at
                 )
             }
+
             fun timeOut(presentation: Submitted, at: Instant): Result<TimedOut> = runCatching {
                 require(presentation.initiatedAt.isBefore(at))
                 TimedOut(
@@ -208,10 +238,10 @@ sealed interface Presentation {
 }
 
 fun Presentation.isExpired(at: Instant): Boolean {
-    fun Instant.isBeforeOrEqual(at: Instant) = isBefore(at)|| this == at
-    return when(this) {
+    fun Instant.isBeforeOrEqual(at: Instant) = isBefore(at) || this == at
+    return when (this) {
         is Presentation.Requested -> initiatedAt.isBeforeOrEqual(at)
-        is Presentation.RequestObjectRetrieved-> requestObjectRetrievedAt.isBeforeOrEqual(at)
+        is Presentation.RequestObjectRetrieved -> requestObjectRetrievedAt.isBeforeOrEqual(at)
         is Presentation.TimedOut -> false
         is Presentation.Submitted -> initiatedAt.isBeforeOrEqual(at)
     }
@@ -226,8 +256,11 @@ fun Presentation.Requested.timedOut(clock: Clock): Result<Presentation.TimedOut>
 fun Presentation.RequestObjectRetrieved.timedOut(clock: Clock): Result<Presentation.TimedOut> =
     Presentation.TimedOut.timeOut(this, clock.instant())
 
-fun Presentation.RequestObjectRetrieved.submit(clock: Clock, walletResponse: WalletResponse): Result<Presentation.Submitted> =
-     Presentation.Submitted.submitted(this, clock.instant(), walletResponse)
+fun Presentation.RequestObjectRetrieved.submit(
+    clock: Clock,
+    walletResponse: WalletResponse
+): Result<Presentation.Submitted> =
+    Presentation.Submitted.submitted(this, clock.instant(), walletResponse)
 
 fun Presentation.Submitted.timedOut(clock: Clock): Result<Presentation.TimedOut> =
     Presentation.TimedOut.timeOut(this, clock.instant())
