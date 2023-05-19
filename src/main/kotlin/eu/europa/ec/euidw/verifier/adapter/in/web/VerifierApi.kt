@@ -32,7 +32,7 @@ class VerifierApi(
             ok().json().bodyValueAndAwait(jar)
 
         suspend fun failed(t: Throwable) = when (t) {
-            is ValidationException -> badRequest().json().bodyValueAndAwait("error" to t.error)
+            is ValidationException -> t.error.asBadRequest()
             else -> badRequest().buildAndAwait()
         }
 
@@ -54,7 +54,8 @@ class VerifierApi(
 
         val presentationId = req.presentationId()
         val nonce = req.queryParam("nonce").getOrNull()?.let { Nonce(it) }
-        return if (nonce == null) badRequest().buildAndAwait()
+
+        return if (nonce == null) ValidationError.MissingNonce.asBadRequest()
         else when (val result = getWalletResponse(presentationId, nonce)) {
             is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
@@ -71,5 +72,7 @@ class VerifierApi(
          * Extracts from the request the [RequestId]
          */
         private fun ServerRequest.presentationId() = PresentationId(pathVariable("presentationId"))
+        private suspend fun ValidationError.asBadRequest() =
+            badRequest().json().bodyValueAndAwait(mapOf("error" to this))
     }
 }
