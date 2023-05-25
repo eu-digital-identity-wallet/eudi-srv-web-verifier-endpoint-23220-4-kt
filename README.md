@@ -5,8 +5,11 @@ Web application (Backend Restful service) that would allow somebody to trigger t
 ## Entity Relationship Diagram
 
 In the EUDIW ecosystem there are 3 main entities:
-- Wallet, 
+
+- Wallet,
+
 - Issuer,
+
 - Verifier 
 
 ```mermaid
@@ -174,15 +177,21 @@ Clean up
 ./gradlew clean
 ```
 
-## Build OCI Image
+### Build OCI Image
 
 ```bash
 ./gradlew bootBuildImage
 ```
 
-## Example
+## Run
 
-Requesting a id_token & vp_token
+```bash
+./gradlew bootRun
+```
+
+## Example invocations
+
+### Requesting a id_token & vp_token
 
 ```bash
 curl -X POST -H "Content-type: application/json" -d '{
@@ -209,7 +218,8 @@ curl -X POST -H "Content-type: application/json" -d '{
         }
       }
     ]
-  }
+  },
+  "nonce": "nonce"
 }' 'http://localhost:8080/ui/presentations'
 ```
 
@@ -217,34 +227,42 @@ Successful output looks like:
 
 ```json
 {
-  "presentation_id": "K-Olj9xXmeVzPhsKedqrlRHsNlK9_8iK3hshmT2o-h3s3gn3DgO_4NP1MFXpD5AJ-zSKTPV8FhIpYQugn2_9bw",
+  "presentation_id":"bU-RBE_cgy-tloaN71v_q4DIy05UA12gWDHF975MwnWmxaIaogPo6M0MTyouNcP94exqCUxUCgDFHXVC0CpMXg",
   "client_id":"Verifier",
-  "request_uri":"http://localhost:8080/wallet/request.jwt/o8J8zSIppIFj6iBOHR-iE4HoTnxd3B3CVuh_E8kC_s0wFxwAUwJ6Xq0gFXL_bv9P7QvHSb3KBQ0V47_kYxOuTw"
+  "request_uri":"http://localhost:8080/wallet/request.jwt/IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA"
 }
 ```
+
+### Getting the request object
 
 Accessing the request_uri:
 
 ```bash
-curl "http://localhost:8080/wallet/request.jwt/6si8XHRCzyxsN9swxkfgR7pw8JCggnCmnz0VN0H4gsoHxIaRiY4Z9Yg-VsUsXC5FpZPuqjpP3c3ZPbCeKzRUzg"
+curl "http://localhost:8080/wallet/request.jwt/IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA"
 ```
 
 returns:
 ```base64
-eyJraWQiOiIwNTg4ZjUxMS0wMGE2LTQ3ZDAtOTJmNC0wNTUyZDRlNzM3OGEiLCJhbGciOiJSUzI1NiJ9.eyJyZXNwb25zZV91cmkiOiJodHRwczovL2ZvbyIsImNsaWVudF9pZF9zY2hlbWUiOiJwcmUtcmVnaXN0ZXJlZCIsInJlc3BvbnNlX3R5cGUiOiJ2cF90b2tlbiBpZF90b2tlbiIsImlkX3Rva2VuX3R5cGUiOiJzdWJqZWN0X3NpZ25lZF9pZF90b2tlbiIsIm5vbmNlIjoiWFRXTnp3Y2tsLTgyemc0aURxV2dYb0l4dVhHSmV6eFZ1UG9RYWRneHJGay1RbVpCeDRFak41dE4xbURhRk5WNFMySGFfTTVsMVNjUFlDRE1rZzVzR0EiLCJjbGllbnRfaWQiOiJWZXJpZmllciIsInJlc3BvbnNlX21vZGUiOiJkaXJlY3RfcG9zdC5qd3QiLCJhdWQiOiJodHRwczovL3NlbGYtaXNzdWVkLm1lL3YyIiwic2NvcGUiOiJvcGVuaWQiLCJwcmVzZW50YXRpb25fZGVmaW5pdGlvbiI6eyJpZCI6IjMyZjU0MTYzLTcxNjYtNDhmMS05M2Q4LWZmMjE3YmRiMDY1MyIsImlucHV0X2Rlc2NyaXB0b3JzIjpbeyJpZCI6IndhX2RyaXZlcl9saWNlbnNlIiwibmFtZSI6Ildhc2hpbmd0b24gU3RhdGUgQnVzaW5lc3MgTGljZW5zZSIsInB1cnBvc2UiOiJXZSBjYW4gb25seSBhbGxvdyBsaWNlbnNlZCBXYXNoaW5ndG9uIFN0YXRlIGJ1c2luZXNzIHJlcHJlc2VudGF0aXZlcyBpbnRvIHRoZSBXQSBCdXNpbmVzcyBDb25mZXJlbmNlIiwiY29uc3RyYWludHMiOnsiZmllbGRzIjpbeyJwYXRoIjpbIiQuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiIsIiQudmMuY3JlZGVudGlhbFN1YmplY3QuZGF0ZU9mQmlydGgiLCIkLnZjLmNyZWRlbnRpYWxTdWJqZWN0LmRvYiJdfV19fV19LCJzdGF0ZSI6IjZzaThYSFJDenl4c045c3d4a2ZnUjdwdzhKQ2dnbkNtbnowVk4wSDRnc29IeElhUmlZNFo5WWctVnNVc1hDNUZwWlB1cWpwUDNjM1pQYkNlS3pSVXpnIiwiaWF0IjoxNjgyMzMxMTIxfQ.bHwjJVoaljDT0hn5akeTQrsVnqZkGCSQdk9Z_scZQdA0qqj40YGUiD6ur2k4ngj59MKsWh9tXtwS_xfL9QQcXSeeE6_aOefGYnnn2Q4LHrFMikfWC2e8T4j3X8V_hL27MCGkJhl6g7FO8Z4KGDw9rzLmvRj9LURlIUtVID94izp_cQQ1qK0VKd8I-ooxwT75GwNGI4nH9FuW8wgKg15L_zjtZTR_ME41M_wOrM9nocEL2dO_OLd9j2KqazMrXQZxa2Qyh9y0NvhzqGzUcSCmKceGtl9tNSFSsOuCRxmoD-0HTvffYeC4BjJdadnEDm2J9c-gBZ94rHUZbjxE1z98mw
+eyJraWQiOiI4NzY4YTVlOC0zNzc2LTQzNDQtOWM5NS05MTQzZGU2NDVlNTkiLCJhbGciOiJSUzI1NiJ9.eyJyZXNwb25zZV91cmkiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvd2FsbGV0L2RpcmVjdF9wb3N0IiwiY2xpZW50X2lkX3NjaGVtZSI6InByZS1yZWdpc3RlcmVkIiwicmVzcG9uc2VfdHlwZSI6InZwX3Rva2VuIGlkX3Rva2VuIiwiaWRfdG9rZW5fdHlwZSI6InN1YmplY3Rfc2lnbmVkX2lkX3Rva2VuIiwibm9uY2UiOiJub25jZSIsImNsaWVudF9pZCI6IlZlcmlmaWVyIiwicmVzcG9uc2VfbW9kZSI6ImRpcmVjdF9wb3N0IiwiYXVkIjoiaHR0cHM6Ly9zZWxmLWlzc3VlZC5tZS92MiIsInNjb3BlIjoib3BlbmlkIiwicHJlc2VudGF0aW9uX2RlZmluaXRpb24iOnsiaWQiOiIzMmY1NDE2My03MTY2LTQ4ZjEtOTNkOC1mZjIxN2JkYjA2NTMiLCJpbnB1dF9kZXNjcmlwdG9ycyI6W3siaWQiOiJ3YV9kcml2ZXJfbGljZW5zZSIsIm5hbWUiOiJXYXNoaW5ndG9uIFN0YXRlIEJ1c2luZXNzIExpY2Vuc2UiLCJwdXJwb3NlIjoiV2UgY2FuIG9ubHkgYWxsb3cgbGljZW5zZWQgV2FzaGluZ3RvbiBTdGF0ZSBidXNpbmVzcyByZXByZXNlbnRhdGl2ZXMgaW50byB0aGUgV0EgQnVzaW5lc3MgQ29uZmVyZW5jZSIsImNvbnN0cmFpbnRzIjp7ImZpZWxkcyI6W3sicGF0aCI6WyIkLmNyZWRlbnRpYWxTdWJqZWN0LmRhdGVPZkJpcnRoIiwiJC5jcmVkZW50aWFsU3ViamVjdC5kb2IiLCIkLnZjLmNyZWRlbnRpYWxTdWJqZWN0LmRhdGVPZkJpcnRoIiwiJC52Yy5jcmVkZW50aWFsU3ViamVjdC5kb2IiXX1dfX1dfSwic3RhdGUiOiJJc29ZOVZ3WlhKOEdTN3pnNENFSHNDTnUtNUxwQWlQR2pid1lzc1oybmgzdG5raHl0TncybU5aTFNGc0tPd2RHMld3MzNoWDZQVXA2UDl4SW1kUy1xQSIsImlhdCI6MTY4NDc2NTIyNiwiY2xpZW50X21ldGFkYXRhIjp7Imp3a3MiOnsia2V5cyI6W3sia3R5IjoiUlNBIiwiZSI6IkFRQUIiLCJ1c2UiOiJzaWciLCJraWQiOiI4NzY4YTVlOC0zNzc2LTQzNDQtOWM5NS05MTQzZGU2NDVlNTkiLCJpYXQiOjE2ODQ3NjUxNjMsIm4iOiIyZTJPUjZDdzNweU1xSU9YcU1MRE9GS3dsUG1rZlN2SlJwYXFJdWJpSjM2ZnB3VFRhNEpnNE13UUNRZldNVERHWXJrSmdNWjNJR2pVR1JKMFdsYmw4UWROUFR3Z0k5OVM4OUNhMWo4aU5BcVg2WjBSU0I4TngzU056YjJpdjRTVWQyUzNXZVhfNDdPQ3VSdkhnMGtYRDl1OVA2MGJYc3lJTTY5OURINU5UN1B5STY1SWJ6ck1xTVhld1R3QzdiWnoyOUtkbmhCYTAyd09vMkRPcE5hRmVaQ3Zjci1INksxYVlCXy1paTRsbWlrbU92cUpMaTZicWI1WlFNZGVRenBKYmlxbm5XOEJ1bG1VTTB5WHFNM0h0R1JrZjBHa2ZGYi1ZX3Y4Qk11YlJ0aEhUd01lYVhNcFRkUm5FRDZGVE9Ia1ZNc1M2ejNpMmV5OE0teGY5elVKRXcifV19LCJpZF90b2tlbl9lbmNyeXB0ZWRfcmVzcG9uc2VfYWxnIjoiUlMyNTYiLCJpZF90b2tlbl9lbmNyeXB0ZWRfcmVzcG9uc2VfZW5jIjoiQTEyOENCQy1IUzI1NiIsInN1YmplY3Rfc3ludGF4X3R5cGVzX3N1cHBvcnRlZCI6WyJ1cm46aWV0ZjpwYXJhbXM6b2F1dGg6andrLXRodW1icHJpbnQiLCJkaWQ6ZXhhbXBsZSIsImRpZDprZXkiXSwiaWRfdG9rZW5fc2lnbmVkX3Jlc3BvbnNlX2FsZyI6IlJTMjU2In19.ZK4wzsJRsovRPHO0CHrrUZ4LmtpBqNic7wrfsRaklD_n5w4d-U-HbdK_Im9YTOMBmx1R6qegVaBv_K8K3o88OWaO3KC6d_Cd_ifEkEE_wvG9EvZ-cVjAs1sIv9yRgBFJtGBJCpwe9nhL2vctXKP1xXqpF_x70rwTmSB8rx2nXXqBEqVVLQ6XBvtSo5aNdw58OgUY9WfbHA9hWy_LWoSMUcy90RvxltwjhGtUx7oR44dhV_8ohAMBpNG6DUIKNGNIyRHx-f3L8YDid1hDY4N0wIgUd_ulqDM9MEMlipnqc8Tgd96zbDR1Yo7buVIYcx7ngBupBA3m-t8JfnAShJVAqQ
 ```
 
-and with base64 decoding:
+and with JWT decoding:
 
 ```json
 {
-  "response_uri": "https://foo",
+  "kid": "8768a5e8-3776-4344-9c95-9143de645e59",
+  "alg": "RS256"
+}
+```
+```json
+{
+  "response_uri": "http://localhost:8080/wallet/direct_post",
   "client_id_scheme": "pre-registered",
   "response_type": "vp_token id_token",
   "id_token_type": "subject_signed_id_token",
-  "nonce": "XTWNzwckl-82zg4iDqWgXoIxuXGJezxVuPoQadgxrFk-QmZBx4EjN5tN1mDaFNV4S2Ha_M5l1ScPYCDMkg5sGA",
+  "nonce": "nonce",
   "client_id": "Verifier",
-  "response_mode": "direct_post.jwt",
+  "response_mode": "direct_post",
   "aud": "https://self-issued.me/v2",
   "scope": "openid",
   "presentation_definition": {
@@ -269,12 +287,98 @@ and with base64 decoding:
       }
     ]
   },
-  "state": "6si8XHRCzyxsN9swxkfgR7pw8JCggnCmnz0VN0H4gsoHxIaRiY4Z9Yg-VsUsXC5FpZPuqjpP3c3ZPbCeKzRUzg",
-  "iat": 1682331121
+  "state": "IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA",
+  "iat": 1684765226,
+  "client_metadata": {
+    "jwks": {
+      "keys": [
+        {
+          "kty": "RSA",
+          "e": "AQAB",
+          "use": "sig",
+          "kid": "8768a5e8-3776-4344-9c95-9143de645e59",
+          "iat": 1684765163,
+          "n": "2e2OR6Cw3pyMqIOXqMLDOFKwlPmkfSvJRpaqIubiJ36fpwTTa4Jg4MwQCQfWMTDGYrkJgMZ3IGjUGRJ0Wlbl8QdNPTwgI99S89Ca1j8iNAqX6Z0RSB8Nx3SNzb2iv4SUd2S3WeX_47OCuRvHg0kXD9u9P60bXsyIM699DH5NT7PyI65IbzrMqMXewTwC7bZz29KdnhBa02wOo2DOpNaFeZCvcr-H6K1aYB_-ii4lmikmOvqJLi6bqb5ZQMdeQzpJbiqnnW8BulmUM0yXqM3HtGRkf0GkfFb-Y_v8BMubRthHTwMeaXMpTdRnED6FTOHkVMsS6z3i2ey8M-xf9zUJEw"
+        }
+      ]
+    },
+    "id_token_encrypted_response_alg": "RS256",
+    "id_token_encrypted_response_enc": "A128CBC-HS256",
+    "subject_syntax_types_supported": [
+      "urn:ietf:params:oauth:jwk-thumbprint",
+      "did:example",
+      "did:key"
+    ],
+    "id_token_signed_response_alg": "RS256"
+  }
 }
 ```
+```text
+Signature: DuNtWVzeQ2tKIq5nqtsRfv1oEwuapweGrUI6kNzKPWOLQXMv5b4tfguqBixjj7WICEcb2hFB1OZOnJ5K947OYimX7rvGYxua_X6sexI2a6GGV0GlTqZzOvS39RS6OoPmaGhwwxUdIw6dCmlmyXFtYdte85SCHgT_J_GWBGlu5ExsEmA9UI7zlKku1oamZCxXFwaE7c94rD4lSn_AsY14WhxiFfQLECvYIIQ-hGjVluTpqB0XGEDJyXBkeMJ6RTevnbVj9GzNpdrrNt6mLaaQkQTjXTkjivWvmtXYm04gC0vHx1GOpK_UIMDZAxVwNhWXRIBMAx2qn8Bk4nBrVBo-9A
+```
 
-## Authorisation Response
+### Submit Wallet Response - Direct Post
+
+- Method POST
+- http://localhost:8080/wallet/direct_post
+
+```bash
+STATE=IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA
+curl -v -X POST 'http://localhost:8080/wallet/direct_post' \
+  -H "Content-type: application/x-www-form-urlencoded" \
+  -H "Accept: application/json" \
+  --data-urlencode "state=$STATE" \
+  --data-urlencode 'id_token=value 1' \
+  --data-urlencode 'vp_token={"id": "123456"}' \
+  --data-urlencode presentation_submission@- << EOF
+{
+  "id": "a30e3b91-fb77-4d22-95fa-871689c322e2",
+  "definition_id": "32f54163-7166-48f1-93d8-ff217bdb0653",
+  "descriptor_map": [
+    {
+      "id": "employment_input",
+      "format": "jwt_vc",
+      "path": "$.verifiableCredential[0]"
+    }
+  ]
+}
+EOF
+```
+
+```HTTP
+HTTP/1.1 200 OK
+```
+
+### Get Wallet Response - Direct Post
+
+```bash
+curl -v --http1.1 \
+  -X GET \
+  -H "Accept: application/json" \
+  'http://localhost:8080/ui/presentations/bU-RBE_cgy-tloaN71v_q4DIy05UA12gWDHF975MwnWmxaIaogPo6M0MTyouNcP94exqCUxUCgDFHXVC0CpMXg?nonce=nonce' | jq .
+```
+
+Response:
+
+```json
+{
+  "id_token": "value 1",
+  "vp_token": {
+    "id": "123456"
+  },
+  "presentation_submission": {
+    "id": "a30e3b91-fb77-4d22-95fa-871689c322e2",
+    "definition_id": "32f54163-7166-48f1-93d8-ff217bdb0653",
+    "descriptor_map": [
+      {
+        "id": "employment_input",
+        "format": "jwt_vc",
+        "path": "$.verifiableCredential[0]"
+      }
+    ]
+  }
+}
+```
 
 ### Submit Authorisation Response
 
@@ -318,7 +422,7 @@ curl -v -X POST -H "Content-type: application/json" -d '{
 }' 'http://localhost:8080/wallet/direct_post/6si8XHRCzyxsN9swxkfgR7pw8JCggnCmnz0VN0H4gsoHxIaRiY4Z9Yg-VsUsXC5FpZPuqjpP3c3ZPbCeKzRUzg'
 ```
 
-### get Authorisation Response
+### Get Authorisation Response - Direct Post JWT (Work in progress)
 
 ```bash
 curl -s -X GET -H "Content-type: application/json" 'http://localhost:8080/wallet/response.jwt/6si8XHRCzyxsN9swxkfgR7pw8JCggnCmnz0VN0H4gsoHxIaRiY4Z9Yg-VsUsXC5FpZPuqjpP3c3ZPbCeKzRUzg' | jq .
