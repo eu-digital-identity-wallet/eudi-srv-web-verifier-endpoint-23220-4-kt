@@ -2,8 +2,8 @@ package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.prex.PresentationExchange
+import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.prex.PresentationExchange
 
 /**
  * Nimbus library depends on Jackson for JSON parsing

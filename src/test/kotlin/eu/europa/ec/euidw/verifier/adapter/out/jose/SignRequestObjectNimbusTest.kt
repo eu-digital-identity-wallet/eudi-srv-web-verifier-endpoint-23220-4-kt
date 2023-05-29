@@ -4,8 +4,8 @@ package eu.europa.ec.euidw.verifier.adapter.out.jose
 
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.prex.PresentationExchange
+import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.TestContext
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

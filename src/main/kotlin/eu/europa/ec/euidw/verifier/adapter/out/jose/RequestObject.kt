@@ -1,6 +1,6 @@
 package eu.europa.ec.euidw.verifier.adapter.out.jose
 
-import eu.europa.ec.euidw.prex.PresentationDefinition
+import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.euidw.verifier.domain.*
 import java.net.URL
 import java.time.Clock

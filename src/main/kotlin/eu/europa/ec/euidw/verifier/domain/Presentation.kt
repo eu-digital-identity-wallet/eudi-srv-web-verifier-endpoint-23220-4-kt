@@ -1,7 +1,7 @@
 package eu.europa.ec.euidw.verifier.domain
 
-import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.prex.PresentationSubmission
+import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.prex.PresentationSubmission
 import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 import java.time.Instant

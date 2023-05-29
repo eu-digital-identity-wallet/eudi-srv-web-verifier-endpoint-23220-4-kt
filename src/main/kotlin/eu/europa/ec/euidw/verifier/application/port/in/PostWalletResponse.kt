@@ -1,6 +1,6 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
-import eu.europa.ec.euidw.prex.PresentationSubmission
+import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.persistence.StorePresentation
 import eu.europa.ec.euidw.verifier.domain.*

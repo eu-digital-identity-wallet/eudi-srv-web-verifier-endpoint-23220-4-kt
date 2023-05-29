@@ -2,8 +2,8 @@ package eu.europa.ec.euidw.verifier.adapter.`in`.web
 
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
-import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.prex.PresentationExchange
+import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.euidw.verifier.application.port.`in`.*
 import eu.europa.ec.euidw.verifier.application.port.`in`.QueryResponse.*
 import eu.europa.ec.euidw.verifier.domain.EmbedOption

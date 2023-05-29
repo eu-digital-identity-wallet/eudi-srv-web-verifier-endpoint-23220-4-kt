@@ -1,6 +1,6 @@
 package eu.europa.ec.euidw.verifier.application.port.`in`
 
-import eu.europa.ec.euidw.prex.PresentationDefinition
+import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.euidw.verifier.application.port.out.cfg.GenerateRequestId
 import eu.europa.ec.euidw.verifier.application.port.out.jose.SignRequestObject

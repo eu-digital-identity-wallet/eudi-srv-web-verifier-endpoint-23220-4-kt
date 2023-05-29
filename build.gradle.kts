@@ -9,9 +9,6 @@ plugins {
     kotlin("plugin.spring") version "1.8.21"
 }
 
-group = "eu.europa.ec.euidw"
-version = "0.0.1-SNAPSHOT"
-
 repositories {
     mavenCentral()
     maven {
@@ -29,7 +26,7 @@ repositories {
     mavenLocal()
 }
 
-val presentationExchangeVersion = "1.0-SNAPSHOT"
+val presentationExchangeVersion = "0.1.0-SNAPSHOT"
 val nimbusSdkVersion = "10.9.1"
 
 dependencies {
@@ -39,7 +36,7 @@ dependencies {
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
-    implementation("eu.europa.ec.euidw:presentation-exchange-kt:$presentationExchangeVersion")
+    implementation("eu.europa.ec.eudi:eudi-lib-jvm-presentation-exchange-kt:$presentationExchangeVersion")
     implementation("com.nimbusds:oauth2-oidc-sdk:$nimbusSdkVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")

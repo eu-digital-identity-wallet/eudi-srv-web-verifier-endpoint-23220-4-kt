@@ -4,10 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.euidw.prex.PresentationDefinition
-import eu.europa.ec.euidw.prex.PresentationExchange
-import org.junit.jupiter.api.fail
-import java.io.InputStream
 import java.text.ParseException
 
 object TestUtils {
