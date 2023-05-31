@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
@@ -6,14 +21,12 @@ import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 import java.time.Instant
 
-
 @JvmInline
 value class PresentationId(val value: String) {
     init {
         require(value.isNotBlank())
     }
 }
-
 
 /**
  * This is an identifier of the [Presentation]
@@ -39,7 +52,7 @@ typealias Jwt = String
 
 enum class IdTokenType {
     SubjectSigned,
-    AttesterSigned
+    AttesterSigned,
 }
 
 /**
@@ -48,18 +61,17 @@ enum class IdTokenType {
  */
 sealed interface PresentationType {
     data class IdTokenRequest(
-        val idTokenType: List<IdTokenType>
+        val idTokenType: List<IdTokenType>,
     ) : PresentationType
 
     data class VpTokenRequest(
-        val presentationDefinition: PresentationDefinition
+        val presentationDefinition: PresentationDefinition,
     ) : PresentationType
 
     data class IdAndVpToken(
         val idTokenType: List<IdTokenType>,
-        val presentationDefinition: PresentationDefinition
+        val presentationDefinition: PresentationDefinition,
     ) : PresentationType
-
 }
 
 val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
@@ -72,7 +84,7 @@ val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
 sealed interface WalletResponse {
 
     data class IdToken(
-        val idToken: Jwt
+        val idToken: Jwt,
     ) : WalletResponse {
         init {
             require(idToken.isNotEmpty())
@@ -81,7 +93,7 @@ sealed interface WalletResponse {
 
     data class VpToken(
         val vpToken: JsonObject,
-        val presentationSubmission: PresentationSubmission
+        val presentationSubmission: PresentationSubmission,
     ) : WalletResponse {
         init {
             require(vpToken.isNotEmpty())
@@ -91,7 +103,7 @@ sealed interface WalletResponse {
     data class IdAndVpToken(
         val idToken: Jwt,
         val vpToken: JsonObject,
-        val presentationSubmission: PresentationSubmission
+        val presentationSubmission: PresentationSubmission,
     ) : WalletResponse {
         init {
             require(idToken.isNotEmpty())
@@ -100,9 +112,7 @@ sealed interface WalletResponse {
     }
 
     data class Error(val value: String, val description: String?) : WalletResponse
-
 }
-
 
 /**
  * The entity that represents the presentation process
@@ -120,7 +130,7 @@ sealed interface Presentation {
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestId: RequestId,
-        val nonce: Nonce
+        val nonce: Nonce,
     ) : Presentation
 
     /**
@@ -135,7 +145,7 @@ sealed interface Presentation {
         override val type: PresentationType,
         val requestId: RequestId,
         val requestObjectRetrievedAt: Instant,
-        val nonce: Nonce
+        val nonce: Nonce,
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
@@ -150,7 +160,7 @@ sealed interface Presentation {
                         requested.type,
                         requested.requestId,
                         at,
-                        requested.nonce
+                        requested.nonce,
                     )
                 }
         }
@@ -167,7 +177,7 @@ sealed interface Presentation {
         var requestObjectRetrievedAt: Instant,
         var submittedAt: Instant,
         val walletResponse: WalletResponse,
-        val nonce: Nonce
+        val nonce: Nonce,
     ) : Presentation {
 
         init {
@@ -178,7 +188,7 @@ sealed interface Presentation {
             fun submitted(
                 requestObjectRetrieved: RequestObjectRetrieved,
                 at: Instant,
-                walletResponse: WalletResponse
+                walletResponse: WalletResponse,
             ): Result<Submitted> = runCatching {
                 with(requestObjectRetrieved) {
                     Submitted(
@@ -189,7 +199,7 @@ sealed interface Presentation {
                         requestObjectRetrievedAt,
                         at,
                         walletResponse,
-                        nonce
+                        nonce,
                     )
                 }
             }
@@ -218,7 +228,7 @@ sealed interface Presentation {
                     presentation.type,
                     presentation.requestObjectRetrievedAt,
                     null,
-                    at
+                    at,
                 )
             }
 
@@ -230,7 +240,7 @@ sealed interface Presentation {
                     presentation.type,
                     presentation.requestObjectRetrievedAt,
                     presentation.submittedAt,
-                    at
+                    at,
                 )
             }
         }
@@ -258,7 +268,7 @@ fun Presentation.RequestObjectRetrieved.timedOut(clock: Clock): Result<Presentat
 
 fun Presentation.RequestObjectRetrieved.submit(
     clock: Clock,
-    walletResponse: WalletResponse
+    walletResponse: WalletResponse,
 ): Result<Presentation.Submitted> =
     Presentation.Submitted.submitted(this, clock.instant(), walletResponse)
 

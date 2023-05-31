@@ -1,5 +1,19 @@
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
-
 
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
@@ -35,7 +49,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
     override fun invoke(
         verifierConfig: VerifierConfig,
         clock: Clock,
-        presentation: Presentation.Requested
+        presentation: Presentation.Requested,
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         return sign(verifierConfig.clientMetaData, requestObject)
@@ -43,7 +57,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
 
     internal fun sign(
         clientMetaData: ClientMetaData,
-        requestObject: RequestObject
+        requestObject: RequestObject,
     ): Result<Jwt> = runCatching {
         val header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.keyID).build()
         val claimSet = asClaimSet(toNimbus(clientMetaData), requestObject)
@@ -57,7 +71,6 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
      * Maps a [RequestObject] into a Nimbus [JWTClaimsSet]
      */
     private fun asClaimSet(clientMetaData: OIDCClientMetadata?, r: RequestObject): JWTClaimsSet {
-
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
         val clientId = ClientID(r.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
@@ -71,7 +84,6 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         }.toJWTClaimsSet()
 
         return with(JWTClaimsSet.Builder(authorizationRequestClaims)) {
-
             fun optionalClaim(c: String, v: Any?) {
                 v?.let { claim(c, it) }
             }
@@ -81,23 +93,22 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             claim("client_id_scheme", r.clientIdScheme)
             optionalClaim(
                 "id_token_type",
-                if (r.idTokenType.isEmpty()) null
-                else r.idTokenType.joinToString(" ")
+                if (r.idTokenType.isEmpty()) {
+                    null
+                } else r.idTokenType.joinToString(" "),
             )
             optionalClaim(
                 "presentation_definition",
-                r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) })
+                r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) },
+            )
             optionalClaim("client_metadata", clientMetaData?.toJSONObject())
             optionalClaim("response_uri", r.responseUri?.toExternalForm())
             optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
             build()
         }
-
-
     }
 
     private fun toNimbus(c: ClientMetaData): OIDCClientMetadata {
-
         val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
             is ByValue -> JWKSet(rsaJWK).toPublicJWKSet() to null
             is ByReference -> null to option.buildUrl.invoke(Unit)
@@ -111,6 +122,4 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
         }
     }
-
-
 }

@@ -1,20 +1,32 @@
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 @file:Suppress("invisible_reference", "invisible_member")
 
-package eu.europa.ec.eudi.verifier.endpoint.jose
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.PresentationDefinitionJackson
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.RequestObject
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.net.URL
 import java.util.*
-
 
 class SignRequestObjectNimbusTest {
 
@@ -24,8 +36,6 @@ class SignRequestObjectNimbusTest {
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
-
-
         val requestObject = RequestObject(
             clientId = "client-id",
             clientIdScheme = "pre-registered",
@@ -39,18 +49,17 @@ class SignRequestObjectNimbusTest {
             responseUri = URL("https://foo"),
             state = TestContext.testRequestId.value,
             aud = emptyList(),
-            issuedAt = TestContext.testClock.instant()
+            issuedAt = TestContext.testClock.instant(),
 
         )
 
-        val jwt = signRequestObject.sign(clientMetaData,requestObject).getOrThrow().also { println(it) }
+        val jwt = signRequestObject.sign(clientMetaData, requestObject).getOrThrow().also { println(it) }
         val claimSet = decode(jwt).getOrThrow().also { println(it) }
 
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)
     }
 
     private fun decode(jwt: String): Result<JWTClaimsSet> {
-
         return runCatching {
             val signedJWT = SignedJWT.parse(jwt)
             signedJWT.verify(verifier)
@@ -59,7 +68,6 @@ class SignRequestObjectNimbusTest {
     }
 
     private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c: JWTClaimsSet) {
-
         assertEquals(r.clientId, c.getStringClaim("client_id"))
         assertEquals(r.clientIdScheme, c.getStringClaim("client_id_scheme"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
@@ -71,16 +79,12 @@ class SignRequestObjectNimbusTest {
         assertEquals(r.responseMode, c.getStringClaim("response_mode"))
         assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim("response_uri"))
         assertEquals(r.state, c.getStringClaim("state"))
-
     }
 
     private fun assertEquals(pd: PresentationDefinition?, c: MutableMap<String, Any?>?) {
-
         val pd2 = c?.let { PresentationDefinitionJackson.fromJsonObject(c).getOrThrow() }
         assertTrue(pd == pd2)
-
     }
-
 
     val pd = """{
   "type": "vp_token id_token",

@@ -1,6 +1,20 @@
-package eu.europa.ec.eudi.verifier.endpoint.`in`
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.adapter.`in`.web.VerifierApi
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -10,7 +24,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-internal class PresentationDefinitionTest () {
+internal class PresentationDefinitionTest() {
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -97,22 +111,22 @@ internal class PresentationDefinitionTest () {
             .body(BodyInserters.fromValue(body))
             .exchange()
             .expectStatus().isOk()
-            .expectBody().returnResult();
+            .expectBody().returnResult()
         val responseString = String(response.responseBodyContent!!)
         val responseJson = JSONObject(responseString)
         val requestUri = responseJson.get("request_uri")
-        println("requestUri=${requestUri}")
+        println("requestUri=$requestUri")
 
         // when
         val relativeRequestUri = requestUri.toString().removePrefix("http://localhost:0")
-        println("relative request_uri: ${relativeRequestUri}")
+        println("relative request_uri: $relativeRequestUri")
 
         // then
         val getResponse = client.get().uri(relativeRequestUri)
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
             .expectStatus().isOk()
-            .expectBody().returnResult();
+            .expectBody().returnResult()
         val getResponseString = String(getResponse.responseBodyContent!!)
         println("response: $getResponseString")
 
@@ -120,8 +134,8 @@ internal class PresentationDefinitionTest () {
         // debug
         val prettyHeader = TestUtils.prettyPrintJson(header)
         val prettyPayload = TestUtils.prettyPrintJson(payload)
-        println("prettyHeader:\n${prettyHeader}")
-        println("prettyPayload:\n${prettyPayload}")
+        println("prettyHeader:\n$prettyHeader")
+        println("prettyPayload:\n$prettyPayload")
 
         val responsePresentationDefinition = JSONObject(payload).get("presentation_definition")
         val bodyPresentationDefinition = JSONObject(body).get("presentation_definition")
@@ -129,9 +143,9 @@ internal class PresentationDefinitionTest () {
         assert(
             TestUtils.compareJsonStrings(
                 bodyPresentationDefinition.toString(),
-                responsePresentationDefinition.toString()
+                responsePresentationDefinition.toString(),
             ),
-            { "presentationDefinition of response is not equal to presentationDefinition of request" })
+            { "presentationDefinition of response is not equal to presentationDefinition of request" },
+        )
     }
-
 }
