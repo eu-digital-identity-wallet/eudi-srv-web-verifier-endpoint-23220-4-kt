@@ -13,21 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.cfg
+package eu.europa.ec.eudi.verifier.endpoint.port.input
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-
-/**
- * A port for generating [RequestId]
- */
-fun interface GenerateRequestId {
-    suspend operator fun invoke(): RequestId
-
-    companion object {
-
-        /**
-         * Fixed generator, useful input tests
-         */
-        fun fixed(id: RequestId): GenerateRequestId = GenerateRequestId { id }
-    }
+sealed interface QueryResponse<out T : Any> {
+    object NotFound : QueryResponse<Nothing>
+    object InvalidState : QueryResponse<Nothing>
+    data class Found<T : Any>(val value: T) : QueryResponse<T>
 }

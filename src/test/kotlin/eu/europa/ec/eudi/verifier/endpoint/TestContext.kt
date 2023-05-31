@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package eu.europa.ec.eudi.verifier.endpoint
 
 import com.nimbusds.jose.crypto.RSASSAVerifier
@@ -5,17 +20,17 @@ import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
-import eu.europa.ec.eudi.verifier.endpoint.port.`in`.GetRequestObject
-import eu.europa.ec.eudi.verifier.endpoint.port.`in`.GetRequestObjectLive
-import eu.europa.ec.eudi.verifier.endpoint.port.`in`.InitTransaction
-import eu.europa.ec.eudi.verifier.endpoint.port.`in`.InitTransactionLive
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
-import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
+import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObject
+import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObjectLive
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -27,19 +42,19 @@ object TestContext {
     val testClock = Clock.fixed(testDate.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
     val testPresentationId = PresentationId("SamplePresentationId")
     val generatedPresentationId = GeneratePresentationId.fixed(testPresentationId)
-    val testRequestId= RequestId("SampleRequestId")
+    val testRequestId = RequestId("SampleRequestId")
     val generateRequestId = GenerateRequestId.fixed(testRequestId)
     val rsaJwk = RSAKeyGenerator(2048)
         .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
         .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
         .issueTime(Date()) // issued-at timestamp (optional)
         .generate()
-    val clientMetaData  = ClientMetaData(
+    val clientMetaData = ClientMetaData(
         jwkOption = ByValue,
         idTokenSignedResponseAlg = "RS256",
         idTokenEncryptedResponseAlg = "RS256",
         idTokenEncryptedResponseEnc = "A128CBC-HS256",
-        subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint","did:example","did:key")
+        subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
     )
     val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus(rsaJwk)
     val singRequestObjectVerifier = RSASSAVerifier(rsaJwk.toRSAPublicKey())
@@ -48,7 +63,6 @@ object TestContext {
     val loadPresentationByRequestId = repo.loadPresentationByRequestId
     val storePresentation = repo.storePresentation
 
-
     fun initTransaction(verifierConfig: VerifierConfig): InitTransaction =
         InitTransactionLive(
             generatedPresentationId,
@@ -56,7 +70,7 @@ object TestContext {
             storePresentation,
             singRequestObject,
             verifierConfig,
-            testClock
+            testClock,
         )
     fun getRequestObject(verifierConfig: VerifierConfig, presentationInitiatedAt: Instant): GetRequestObject =
         GetRequestObjectLive(
@@ -64,8 +78,6 @@ object TestContext {
             storePresentation,
             singRequestObject,
             verifierConfig,
-            Clock.fixed(presentationInitiatedAt.plusSeconds(1 * 60), testClock.zone)
+            Clock.fixed(presentationInitiatedAt.plusSeconds(1 * 60), testClock.zone),
         )
-
-
 }

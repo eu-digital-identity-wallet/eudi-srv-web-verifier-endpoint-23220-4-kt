@@ -1,4 +1,19 @@
-package eu.europa.ec.eudi.verifier.endpoint.port.`in`
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -26,8 +41,7 @@ enum class PresentationTypeTO {
     VpTokenRequest,
 
     @SerialName("vp_token id_token")
-    IdAndVpTokenRequest
-
+    IdAndVpTokenRequest,
 }
 
 /**
@@ -39,16 +53,15 @@ enum class IdTokenTypeTO {
     SubjectSigned,
 
     @SerialName("attester_signed_id_token")
-    AttesterSigned
+    AttesterSigned,
 }
-
 
 @Serializable
 data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
     @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null,
-    @SerialName("nonce") val nonce: String? = null
+    @SerialName("nonce") val nonce: String? = null,
 )
 
 /**
@@ -56,7 +69,7 @@ data class InitTransactionTO(
  */
 enum class ValidationError {
     MissingPresentationDefinition,
-    MissingNonce
+    MissingNonce,
 }
 
 /**
@@ -73,7 +86,7 @@ data class JwtSecuredAuthorizationRequestTO(
     @Required @SerialName("presentation_id") val presentationId: String,
     @Required @SerialName("client_id") val clientId: String,
     @SerialName("request") val request: String? = null,
-    @SerialName("request_uri") val requestUri: String?
+    @SerialName("request_uri") val requestUri: String?,
 )
 
 /**
@@ -86,7 +99,6 @@ data class JwtSecuredAuthorizationRequestTO(
  */
 interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO>
-
 }
 
 /**
@@ -98,15 +110,13 @@ class InitTransactionLive(
     private val storePresentation: StorePresentation,
     private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig,
-    private val clock: Clock
+    private val clock: Clock,
 
 ) : InitTransaction {
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> =
         runCatching {
-
             // validate input
-            val (nonce,type) = initTransactionTO.toDomain().getOrThrow()
-
+            val (nonce, type) = initTransactionTO.toDomain().getOrThrow()
 
             // Initialize presentation
             val requestedPresentation = Presentation.Requested(
@@ -114,7 +124,7 @@ class InitTransactionLive(
                 initiatedAt = clock.instant(),
                 requestId = generateRequestId(),
                 type = type,
-                nonce = nonce
+                nonce = nonce,
             )
             // create request, which may update presentation
             val (updatedPresentation, request) = createRequest(requestedPresentation)
@@ -139,7 +149,8 @@ class InitTransactionLive(
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(
                     requestedPresentation.id.value,
                     verifierConfig.clientId,
-                    jwt, null
+                    jwt,
+                    null,
                 )
             }
 
@@ -149,26 +160,25 @@ class InitTransactionLive(
                     requestedPresentation.id.value,
                     verifierConfig.clientId,
                     null,
-                    requestUri
+                    requestUri,
                 )
             }
         }
-
 }
 
-
 internal fun InitTransactionTO.toDomain(): Result<Pair<Nonce, PresentationType>> {
-
     fun requiredIdTokenType() =
         Result.success(idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList())
 
     fun requiredPresentationDefinition() =
-        if (presentationDefinition != null) Result.success(presentationDefinition)
-        else Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
+        if (presentationDefinition != null) {
+            Result.success(presentationDefinition)
+        } else Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
 
     fun requiredNonce() =
-        if (!nonce.isNullOrBlank()) Result.success(Nonce(nonce))
-        else Result.failure(ValidationException(ValidationError.MissingNonce))
+        if (!nonce.isNullOrBlank()) {
+            Result.success(Nonce(nonce))
+        } else Result.failure(ValidationException(ValidationError.MissingNonce))
 
     return runCatching {
         val presentationType = when (type) {
@@ -190,7 +200,6 @@ internal fun InitTransactionTO.toDomain(): Result<Pair<Nonce, PresentationType>>
         nonce to presentationType
     }
 }
-
 
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned

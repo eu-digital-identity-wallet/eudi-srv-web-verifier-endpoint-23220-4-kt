@@ -13,21 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.cfg
+package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import org.springframework.core.io.ClassPathResource
+import org.springframework.http.MediaType
+import org.springframework.web.reactive.function.server.coRouter
 
-/**
- * A port for generating [RequestId]
- */
-fun interface GenerateRequestId {
-    suspend operator fun invoke(): RequestId
+class StaticContent() {
 
-    companion object {
-
-        /**
-         * Fixed generator, useful input tests
-         */
-        fun fixed(id: RequestId): GenerateRequestId = GenerateRequestId { id }
+    val route = coRouter {
+        accept(MediaType.TEXT_HTML).nest {
+            resources("/**", ClassPathResource("/static/"))
+        }
     }
 }

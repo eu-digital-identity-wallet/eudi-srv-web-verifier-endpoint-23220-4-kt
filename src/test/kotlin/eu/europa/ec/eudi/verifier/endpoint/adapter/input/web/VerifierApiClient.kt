@@ -1,10 +1,24 @@
-package eu.europa.ec.eudi.verifier.endpoint.`in`
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.adapter.`in`.web.VerifierApi
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
-import eu.europa.ec.eudi.verifier.endpoint.port.`in`.InitTransactionTO
-import eu.europa.ec.eudi.verifier.endpoint.port.`in`.JwtSecuredAuthorizationRequestTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
@@ -16,8 +30,7 @@ import java.io.ByteArrayInputStream
 
 object VerifierApiClient {
 
-
-    fun loadInitTransactionTO(testResource: String) : InitTransactionTO =
+    fun loadInitTransactionTO(testResource: String): InitTransactionTO =
         Json.decodeFromString(TestUtils.loadResource(testResource))
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -28,10 +41,9 @@ object VerifierApiClient {
             .bodyValue(initTransactionTO)
             .exchange()
             .expectStatus().isOk()
-            .expectBody().returnResult().responseBodyContent!!.let { byteArray->
-                ByteArrayInputStream(byteArray).use { Json.decodeFromStream(it) }
-            }
-
+            .expectBody().returnResult().responseBodyContent!!.let { byteArray ->
+            ByteArrayInputStream(byteArray).use { Json.decodeFromStream(it) }
+        }
     }
 
     /**
@@ -46,7 +58,6 @@ object VerifierApiClient {
      * - (response) Internet Web Service to mdocVerification application Internet frontend, flow "20 return status and conditionally return data"
      */
     fun getWalletResponse(client: WebTestClient, presentationId: PresentationId, nonce: Nonce): String {
-
         val walletResponseUri =
             VerifierApi.walletResponsePath.replace("{presentationId}", presentationId.value) + "?nonce=${nonce.value}"
 
@@ -55,8 +66,8 @@ object VerifierApiClient {
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
         val returnResult = responseSpec.expectBody().returnResult()
-        returnResult.status.also { println("response status: ${it}") }
-        returnResult.responseHeaders.also { println("response headers: ${it}") }
+        returnResult.status.also { println("response status: $it") }
+        returnResult.responseHeaders.also { println("response headers: $it") }
         returnResult.responseBodyContent?.let {
             println("response body content:\n${TestUtils.prettyPrintJson(String(it))}")
         }
@@ -66,5 +77,4 @@ object VerifierApiClient {
 
         return returnResult.responseBodyContent?.let { String(it) }!!
     }
-
 }

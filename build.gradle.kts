@@ -7,6 +7,7 @@ plugins {
     kotlin("jvm") version "1.8.21"
     kotlin("plugin.serialization") version "1.8.21"
     kotlin("plugin.spring") version "1.8.21"
+    id("com.diffplug.spotless") version "6.19.0"
 }
 
 repositories {
@@ -19,7 +20,7 @@ repositories {
             username = System.getenv("GH_PKG_USER")
             password = System.getenv("GH_PKG_TOKEN")
         }
-        mavenContent{
+        mavenContent {
             snapshotsOnly()
         }
     }
@@ -42,8 +43,6 @@ dependencies {
     testImplementation("io.projectreactor:reactor-test")
 }
 
-
-
 kotlin {
     jvmToolchain(17)
 }
@@ -52,11 +51,21 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-
 springBoot {
     buildInfo()
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
     imageName.set("$group/${project.name}")
+}
+
+val ktlintVersion = "0.49.1"
+spotless {
+    kotlin {
+        ktlint(ktlintVersion)
+        licenseHeaderFile("LICENSE-HEADER.txt")
+    }
+    kotlinGradle {
+        ktlint(ktlintVersion)
+    }
 }

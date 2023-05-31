@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
@@ -19,15 +34,14 @@ internal data class RequestObject(
     val responseUri: URL?,
     val aud: List<String>,
     val state: String,
-    val issuedAt: Instant
+    val issuedAt: Instant,
 )
 
 internal fun requestObjectFromDomain(
     verifierConfig: VerifierConfig,
     clock: Clock,
-    presentation: Presentation.Requested
+    presentation: Presentation.Requested,
 ): RequestObject {
-
     val type = presentation.type
     val scope = when (type) {
         is PresentationType.IdTokenRequest -> listOf("openid")
@@ -81,7 +95,6 @@ internal fun requestObjectFromDomain(
         state = presentation.requestId.value,
         responseMode = "direct_post", // or direct_post for direct submission
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
-        issuedAt = clock.instant()
+        issuedAt = clock.instant(),
     )
 }
-
