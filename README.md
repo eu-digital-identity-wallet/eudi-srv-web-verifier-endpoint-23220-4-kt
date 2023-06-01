@@ -1,29 +1,56 @@
-# Verifier
+# EUDI Verifier Endpoint
 
-Web application (Backend Restful service) that would allow somebody to trigger the presentation use case (cross device, remote presentation scenario).
+## Table of contents
 
-## Entity Relationship Diagram
+* [Overview](#overview)
+* [Disclaimer](#disclaimer)
+* [Sequence Diagram](#sequence-diagram)
+* [How to use](#how-to-use)
+* [Examples](#examples)
+* [How to contribute](#how-to-contribute)
+* [License](#license)
 
-In the EUDIW ecosystem there are 3 main entities:
+ 
+## Overview
 
-- Wallet,
+This is a Web application (Backend Restful service) that acts
+as a Verifier/RP trusted end-point.
 
-- Issuer,
+Application exposes two APIs
+* [Verifier API](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/VerifierApi.kt)
+* [Wallet API](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
 
-- Verifier 
+The Verifier API, supports two operations:
+* [Initialize Transaction](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/InitTransaction.kt), where Verifier may define whether it wants to request a SIOP or OpenID4VP or combined request
+* [Get Wallet response](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetWalletResponse.kt), where Verifier receives depending on the request an `id_token`, `vp_token`, or an error  
 
-```mermaid
-graph TB;
-  Wallet --> Issuer;
-  Issuer --> Wallet;
-  Wallet -- <i>a</i> --> Verifier;
-  Verifier -- <i>b</i> --> Wallet;
-```
+The Wallet API, provides the following main operations
+* [Get Request Object](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetRequestObject.kt) according JWT Secured Authorization Request
+* [Get Presentation Definition](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetPresentationDefinition.kt) according to OpenId4VP in case of using `presentation_definition_uri`
+* [Direct Post](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/PostWalletResponse.kt) according to OpenID4VP `direct_post`
 
-This document is focusing on the interactions _a_ and _b_ between Wallet and Verifier.
-The Verifier implemented in this repo is part of the Verifier entity, in particular it is the Verifier Backend.
+Please note that 
+* Both APIs need to be exposed over HTTPS.  
+* Verifier API needs to be protected to allow only authorized access. 
 
-## Sequence diagram for Wallet to Verifier interaction
+Both of those concerns have not been tackled by the current version of the application, 
+since in its current version is merely a development tool, rather a production application.
+
+## Disclaimer
+
+- The pre-release has reduced security, privacy, availability, and reliability standards relative to
+  future releases. This could make the software slower, less reliable, or more vulnerable to attacks
+  than mature software.
+- The pre-release is not yet comprehensively documented.
+- The pre-release may contain errors or design flaws and other problems that could cause system or
+  other failures and data loss.
+- The pre-release is an early endeavor reflecting the efforts of a short time-boxed period, and by no
+  means can be considered as the final product.
+- The pre-release may be changed substantially over time, might introduce new features but also may
+  change or remove existing ones, potentially breaking compatibility with your existing code.
+
+
+## Sequence diagram
 
 This sequence diagram is a merge of the following specifications:
 
@@ -156,40 +183,14 @@ Note: If the Verifier's Response Endpoint did not return a redirect_uri in step 
 
 (10) The Verifier checks whether the nonce received in the Credential(s) in the VP Token in step (9) corresponds to the nonce value from the session. The Verifier then consumes the VP Token and invalidates the transaction-id, request-id and nonce in the session.
 
-## Build
 
-Project depends on [Presentation Exchange](https://github.com/niscy-eudiw/presentation-exchange-kt)
-To be able to download this library you need to have 
-- a GitHub account
-- a GitHub personal token with access to [NiScy organization](https://github.com/niscy-eudiw)
-
-```bash
-export GH_PKG_USER=yourGitHubUserName
-export GH_PKG_TOKEN=yourGitHubPersonalToekn
-```
-```bash
-./gradlew build
-```
-
-Clean up
-
-```bash
-./gradlew clean
-```
-
-### Build OCI Image
-
-```bash
-./gradlew bootBuildImage
-```
-
-## Run
+## How to use
 
 ```bash
 ./gradlew bootRun
 ```
 
-## Example invocations
+## Examples
 
 ### Requesting a id_token & vp_token
 
@@ -469,22 +470,25 @@ Response:
 }
 ```
 
-## Contributing
+## How to contribute
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct,
-and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, 
-see the [tags on this repository](https://github.com/eu-digital-identity-wallet/architecture-and-reference-framework/tags). 
-
-## Authors
-
-See the list of [contributors](https://github.com/eu-digital-identity-wallet/architecture-and-reference-framework/graphs/contributors) who participated in this project.
+We welcome contributions to this project. To ensure that the process is smooth for everyone
+involved, follow the guidelines found in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the [Attribution 4.0
-International](http://creativecommons.org/licenses/by/4.0/) - see the
-[LICENSE.txt](LICENSE) file for details.
+### License details
+
+Copyright (c) 2023 European Commission
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
