@@ -26,10 +26,7 @@ jobs:
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v1
       - name: Build with Gradle Wrapper
-        uses: gradle/gradle-build-action@v2
-        env:
-          GH_PKG_USER: ${{ github.actor }}
-          GH_PKG_TOKEN: ${{ secrets.GH_PKG_TOKEN }}
+        uses: gradle/gradle-build-action@v2.4.2
         with:
           arguments: build --full-stacktrace
 
