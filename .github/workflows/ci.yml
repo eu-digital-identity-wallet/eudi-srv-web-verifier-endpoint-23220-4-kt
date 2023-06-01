@@ -30,7 +30,6 @@ jobs:
         env:
           GH_PKG_USER: ${{ github.actor }}
           GH_PKG_TOKEN: ${{ secrets.GH_PKG_TOKEN }}
-          DEP_MVN_REPO: https://maven.pkg.github.com/${{ github.repository_owner }}/*
         with:
-          arguments: build
+          arguments: build --full-stacktrace
 
