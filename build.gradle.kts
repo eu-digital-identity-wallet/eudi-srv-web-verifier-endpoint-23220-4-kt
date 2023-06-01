@@ -13,16 +13,8 @@ plugins {
 repositories {
     mavenCentral()
     maven {
-        name = "EUDIWalletSnapshots"
-        val dependenciesRepoUrl = System.getenv("DEP_MVN_REPO") ?: "https://maven.pkg.github.com/eu-digital-identity-wallet/*"
-        url = uri(dependenciesRepoUrl)
-        credentials {
-            username = System.getenv("GH_PKG_USER")
-            password = System.getenv("GH_PKG_TOKEN")
-        }
-        mavenContent {
-            snapshotsOnly()
-        }
+        url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+        mavenContent { snapshotsOnly() }
     }
     mavenLocal()
 }
