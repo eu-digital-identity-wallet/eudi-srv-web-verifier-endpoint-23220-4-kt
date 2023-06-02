@@ -38,7 +38,7 @@ Please note that
 Both of those concerns have not been tackled by the current version of the application, 
 since in its current version is merely a development tool, rather a production application.
 
-# Disclaimer
+## Disclaimer
 
 The released software is a initial development release version: 
 -  The initial development release is an early endeavor reflecting the efforts of a short timeboxed period, and by no means can be considered as the final product.  
