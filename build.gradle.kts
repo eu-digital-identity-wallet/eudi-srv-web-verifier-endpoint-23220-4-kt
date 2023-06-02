@@ -55,7 +55,7 @@ val ktlintVersion = "0.49.1"
 spotless {
     kotlin {
         ktlint(ktlintVersion)
-        licenseHeaderFile("LICENSE-HEADER.txt")
+        licenseHeaderFile("FileHeader.txt")
     }
     kotlinGradle {
         ktlint(ktlintVersion)
