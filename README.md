@@ -1,6 +1,6 @@
 # EUDI Verifier Endpoint
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE.txt)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/niscy-eudiw/eudi-srv-web-verifier-endpoint-23220-4-kt/blob/licence/LICENSE.txt)
 
 ## Table of contents
 
