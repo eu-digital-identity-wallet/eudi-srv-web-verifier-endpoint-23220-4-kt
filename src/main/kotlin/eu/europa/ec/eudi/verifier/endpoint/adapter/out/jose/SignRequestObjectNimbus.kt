@@ -15,10 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import com.nimbusds.jose.EncryptionMethod
-import com.nimbusds.jose.JWEAlgorithm
-import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.JWSHeader
+import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
@@ -59,7 +56,10 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         clientMetaData: ClientMetaData,
         requestObject: RequestObject,
     ): Result<Jwt> = runCatching {
-        val header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.keyID).build()
+        val header = JWSHeader.Builder(JWSAlgorithm.RS256)
+            .keyID(rsaJWK.keyID)
+            .type(JOSEObjectType(AuthReqJwt))
+            .build()
         val claimSet = asClaimSet(toNimbus(clientMetaData), requestObject)
         with(SignedJWT(header, claimSet)) {
             sign(RSASSASigner(rsaJWK))
@@ -121,5 +121,9 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             jwkSetURI = vJwkSetURI?.toURI()
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
         }
+    }
+
+    companion object {
+        const val AuthReqJwt = "oauth-authz-req+jwt"
     }
 }
