@@ -6,7 +6,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.0"
     kotlin("jvm") version "1.8.21"
     kotlin("plugin.serialization") version "1.8.21"
-    kotlin("plugin.spring") version "1.8.21"
+    kotlin("plugin.spring") version "1.8.22"
     id("com.diffplug.spotless") version "6.19.0"
 }
 
