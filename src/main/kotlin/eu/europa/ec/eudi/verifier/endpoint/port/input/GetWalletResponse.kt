@@ -24,7 +24,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 
 /**
  * Represent the [WalletResponse] as returned by the wallet
@@ -33,7 +32,7 @@ import kotlinx.serialization.json.JsonObject
 @SerialName("wallet_response")
 data class WalletResponseTO(
     @SerialName("id_token") val idToken: String? = null,
-    @SerialName("vp_token") val vpToken: JsonObject? = null,
+    @SerialName("vp_token") val vpToken: String? = null,
     @SerialName("presentation_submission") val presentationSubmission: PresentationSubmission? = null,
     @SerialName("error") val error: String? = null,
     @SerialName("error_description") val errorDescription: String? = null,
