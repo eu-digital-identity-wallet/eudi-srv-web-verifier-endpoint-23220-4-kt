@@ -17,7 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationSubmission
-import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 import java.time.Instant
 
@@ -92,7 +91,7 @@ sealed interface WalletResponse {
     }
 
     data class VpToken(
-        val vpToken: JsonObject,
+        val vpToken: String,
         val presentationSubmission: PresentationSubmission,
     ) : WalletResponse {
         init {
@@ -102,7 +101,7 @@ sealed interface WalletResponse {
 
     data class IdAndVpToken(
         val idToken: Jwt,
-        val vpToken: JsonObject,
+        val vpToken: String,
         val presentationSubmission: PresentationSubmission,
     ) : WalletResponse {
         init {

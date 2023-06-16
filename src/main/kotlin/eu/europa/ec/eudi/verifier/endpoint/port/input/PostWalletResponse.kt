@@ -19,7 +19,6 @@ import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
-import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 
 /**
@@ -31,7 +30,7 @@ data class AuthorisationResponseTO(
     val error: String? = null,
     val errorDescription: String? = null,
     val idToken: String? = null,
-    val vpToken: JsonObject? = null,
+    val vpToken: String? = null,
     val presentationSubmission: PresentationSubmission? = null,
 )
 

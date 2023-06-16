@@ -23,8 +23,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -111,7 +109,7 @@ class WalletApi(
             AuthorisationResponseTO(
                 state = getFirst("state"),
                 idToken = getFirst("id_token"),
-                vpToken = getFirst("vp_token")?.let { Json.parseToJsonElement(it).jsonObject },
+                vpToken = getFirst("vp_token"),
                 presentationSubmission = getFirst("presentation_submission")?.let {
                     PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
                 },
