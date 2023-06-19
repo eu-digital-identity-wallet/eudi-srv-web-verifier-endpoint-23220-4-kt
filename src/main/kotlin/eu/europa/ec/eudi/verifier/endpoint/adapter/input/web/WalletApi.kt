@@ -17,12 +17,17 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
+import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -51,8 +56,11 @@ class WalletApi(
         GET(presentationDefinitionPath, this@WalletApi::handleGetPresentationDefinition)
         POST(
             walletResponsePath,
-            // accept(MediaType.APPLICATION_FORM_URLENCODED),
             this@WalletApi::handlePostWalletResponse,
+        )
+        POST(
+            walletJwtResponsePath,
+            this@WalletApi::handlePostWalletJwtResponse,
         )
         GET(getPublicJwkSetPath) { _ -> handleGetPublicJwkSet() }
     }
@@ -125,6 +133,61 @@ class WalletApi(
         }
     }
 
+    /**
+     * Handles a POST request placed by the wallet, input order to submit
+     * the [AuthorisationResponse], containing the id_token, presentation_submission
+     * and the verifiableCredentials
+     */
+    private suspend fun handlePostWalletJwtResponse(req: ServerRequest): ServerResponse {
+        suspend fun walletResponseStored() = ok().buildAndAwait()
+
+        suspend fun notFound() = ServerResponse.notFound().buildAndAwait()
+
+        suspend fun failed() = badRequest().buildAndAwait()
+
+        val input = with(req.awaitFormData()) {
+            logger.info("post body: $this")
+            // process the form data
+            var response = getFirst("response")
+            println("response: $response")
+
+            processJwt(response!!)
+        }
+
+        return input.fold(
+            onSuccess = {
+                when (postWalletResponse(it)) {
+                    is Found -> walletResponseStored()
+                    is NotFound -> notFound()
+                    else -> failed()
+                }
+            },
+            onFailure = { failed() }
+        )
+
+    }
+
+    private suspend fun processJwt(jwt: String): Result<AuthorisationResponseTO> = runCatching {
+        var decodedJwt = SignedJWT.parse(jwt)
+        println("header:\n${decodedJwt.header}")
+
+        // get AuthorisationResponseTO from claimSet
+        getAuthorisationResponseFromClaimSet(decodedJwt.jwtClaimsSet)
+    }
+
+    private suspend fun getAuthorisationResponseFromClaimSet(claimSet: JWTClaimsSet): AuthorisationResponseTO = runBlocking {
+        AuthorisationResponseTO(
+            state = claimSet.getClaim("state")?.toString(),
+            idToken = claimSet.getClaim("id_token")?.toString(),
+            vpToken = claimSet.getClaim("vp_token")?.toString(),
+            presentationSubmission = claimSet.getClaim("presentation_submission")?.let {
+                PresentationExchange.jsonParser.decodePresentationSubmission(it.toString()).getOrThrow()
+            },
+            error = claimSet.getClaim("error")?.toString(),
+            errorDescription = claimSet.getClaim("error_description")?.toString()
+        )
+    }
+
     private suspend fun handleGetPublicJwkSet(): ServerResponse {
         val publicJwkSet = JWKSet(rsaKey).toJSONObject(true)
         return ok()
@@ -152,6 +215,14 @@ class WalletApi(
          * posting the Authorisation Response
          */
         const val walletResponsePath = "/wallet/direct_post"
+
+        /**
+         * Path template for the route for
+         * posting the Authorisation Response as JWT
+         * (response mode: "direct_post.jwt")
+         *
+         */
+        const val walletJwtResponsePath = "/wallet/direct_post.jwt"
 
         /**
          * Extracts from the request the [RequestId]
