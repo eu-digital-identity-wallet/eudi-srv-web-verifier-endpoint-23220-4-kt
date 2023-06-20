@@ -34,6 +34,9 @@ sealed interface EmbedOption<in ID> {
     }
 }
 
+/**
+ * Configure option for response mode
+ */
 enum class ResponseModeOption {
     DirectPost,
     DirectPostJwt,
