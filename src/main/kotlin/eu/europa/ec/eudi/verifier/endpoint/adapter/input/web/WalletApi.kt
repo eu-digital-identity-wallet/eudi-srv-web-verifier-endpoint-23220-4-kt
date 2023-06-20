@@ -23,8 +23,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -69,7 +67,7 @@ class WalletApi(
             ok().contentType(MediaType.parseMediaType("application/oauth-authz-req+jwt"))
                 .bodyValueAndAwait(jwt)
 
-        val requestId = req.requestId()
+        val requestId = req.requestId().also { logger.info("Handling GetRequestObject for $it ...") }
 
         return when (val result = getRequestObject(requestId)) {
             is Found -> requestObjectFound(result.value)
@@ -85,7 +83,7 @@ class WalletApi(
     private suspend fun handleGetPresentationDefinition(req: ServerRequest): ServerResponse {
         suspend fun pdFound(pd: PresentationDefinition) = ok().json().bodyValueAndAwait(pd)
 
-        val requestId = req.requestId()
+        val requestId = req.requestId().also { logger.info("Handling GetPresentationDefinition for $it ...") }
 
         return when (val result = getPresentationDefinition(requestId)) {
             is NotFound -> notFound().buildAndAwait()

@@ -21,8 +21,6 @@ import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 
 object VerifyJarmJwtSignatureNimbus : VerifyJarmJwtSignature {
 
@@ -34,8 +32,7 @@ object VerifyJarmJwtSignatureNimbus : VerifyJarmJwtSignature {
         AuthorisationResponseTO(
             state = getClaim("state")?.toString(),
             idToken = getClaim("id_token")?.toString(),
-            vpToken = getClaim("vp_token")
-                ?.let { Json.parseToJsonElement(it.toString()).jsonObject },
+            vpToken = getClaim("vp_token")?.toString(),
             presentationSubmission = getClaim("presentation_submission")?.let {
                 PresentationExchange.jsonParser.decodePresentationSubmission(it.toString()).getOrThrow()
             },
