@@ -15,8 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
-import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient

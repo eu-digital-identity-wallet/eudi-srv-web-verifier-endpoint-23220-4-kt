@@ -162,9 +162,8 @@ class WalletApi(
                     else -> failed()
                 }
             },
-            onFailure = { failed() }
+            onFailure = { failed() },
         )
-
     }
 
     private suspend fun processJwt(jwt: String): Result<AuthorisationResponseTO> = runCatching {
@@ -184,7 +183,7 @@ class WalletApi(
                 PresentationExchange.jsonParser.decodePresentationSubmission(it.toString()).getOrThrow()
             },
             error = claimSet.getClaim("error")?.toString(),
-            errorDescription = claimSet.getClaim("error_description")?.toString()
+            errorDescription = claimSet.getClaim("error_description")?.toString(),
         )
     }
 

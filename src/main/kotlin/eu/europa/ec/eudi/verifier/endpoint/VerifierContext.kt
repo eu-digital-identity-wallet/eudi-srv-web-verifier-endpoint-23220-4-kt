@@ -240,7 +240,7 @@ private fun Environment.verifierConfig(): VerifierConfig {
             ByReference, null -> WalletApi.requestJwtByReference(publicUrl)
         }
     }
-    val responseModeOption = getProperty("verifier.response.mode", ResponseModeOption::class.java)?: ResponseModeOption.DirectPostJwt
+    val responseModeOption = getProperty("verifier.response.mode", ResponseModeOption::class.java) ?: ResponseModeOption.DirectPostJwt
 
     val presentationDefinitionEmbedOption =
         getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {

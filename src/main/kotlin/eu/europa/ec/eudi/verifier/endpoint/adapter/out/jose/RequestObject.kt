@@ -16,7 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
-import eu.europa.ec.eudi.verifier.endpoint.VerifierContext
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 import java.time.Clock

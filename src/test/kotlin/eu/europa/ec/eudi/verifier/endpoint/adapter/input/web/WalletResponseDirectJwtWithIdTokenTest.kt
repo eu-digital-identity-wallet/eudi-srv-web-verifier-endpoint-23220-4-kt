@@ -22,7 +22,6 @@ import com.nimbusds.jose.crypto.ECDSASigner
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
-import kotlinx.serialization.json.Json
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
@@ -30,6 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
@@ -64,7 +64,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
     @Order(value = 1)
     fun `post wallet response jwt of an idToken`(): Unit = runBlocking {
         // given
-        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs";
+        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
         val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId =
@@ -94,7 +94,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
     @Order(value = 2)
     fun `get wallet response jwt of an idToken`(): Unit = runBlocking {
         // given
-        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs";
+        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
         val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId =
@@ -137,7 +137,9 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
     fun `post wallet response jwt of an error`(): Unit = runBlocking {
         // given
         val error = "invalid_request"
-        val errorDescription = "The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed."
+        val errorDescription =
+            "The request is missing a required parameter, includes an invalid parameter value, includes a parameter more " +
+                "than once, or is otherwise malformed."
         val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId =
@@ -169,7 +171,9 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
     fun `get wallet response jwt of an error`(): Unit = runBlocking {
         // given
         val error = "invalid_request"
-        val errorDescription = "The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed."
+        val errorDescription =
+            "The request is missing a required parameter, includes an invalid parameter value, " +
+                "includes a parameter more than once, or is otherwise malformed."
         val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId =
@@ -206,6 +210,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
     fun decodeWalletResponseBody(walletResponse: String): WalletResponseTO? = runBlocking {
         Json.decodeFromString<WalletResponseTO>(walletResponse)
     }
+
     /*
      * create a JWT for the idToken
      *
@@ -218,7 +223,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         val header = JWSHeader.Builder(JWSAlgorithm.ES256)
             .type(JOSEObjectType.JWT)
             .keyID(key.keyID)
-            .build();
+            .build()
         val payload = JWTClaimsSet.Builder()
             .issuer("issuer value")
             .audience("https://client.example.org/cb") // client_id tou verifier, get the env variable
@@ -243,7 +248,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         val header = JWSHeader.Builder(JWSAlgorithm.ES256)
             .type(JOSEObjectType.JWT)
             .keyID(key.keyID)
-            .build();
+            .build()
         val payload = JWTClaimsSet.Builder()
             .issuer("issuer value")
             .audience("https://client.example.org/cb")
@@ -256,5 +261,4 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         signedJWT.sign(ECDSASigner(key.toECPrivateKey()))
         signedJWT.serialize()
     }
-
 }

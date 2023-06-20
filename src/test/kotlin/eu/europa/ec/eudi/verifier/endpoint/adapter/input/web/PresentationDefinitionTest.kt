@@ -54,7 +54,7 @@ internal class PresentationDefinitionTest() {
 
         val relativeRequestUri =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0")!!)
-        println("relativeRequestUri: ${relativeRequestUri}")
+        println("relativeRequestUri: $relativeRequestUri")
 
         // then
         val getResponse = client.get().uri(relativeRequestUri.value)
@@ -83,6 +83,5 @@ internal class PresentationDefinitionTest() {
             ),
             { "presentationDefinition of response is not equal to presentationDefinition of request" },
         )
-
     }
 }
