@@ -246,7 +246,8 @@ private fun Environment.verifierConfig(): VerifierConfig {
             ByReference, null -> WalletApi.requestJwtByReference(publicUrl)
         }
     }
-    val responseModeOption = getProperty("verifier.response.mode", ResponseModeOption::class.java) ?: ResponseModeOption.DirectPostJwt
+    val responseModeOption =
+        getProperty("verifier.response.mode", ResponseModeOption::class.java) ?: ResponseModeOption.DirectPostJwt
 
     val presentationDefinitionEmbedOption =
         getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
@@ -262,12 +263,7 @@ private fun Environment.verifierConfig(): VerifierConfig {
         clientIdScheme = clientIdScheme,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
-        responseUriBuilder = {
-            when (responseModeOption) {
-                ResponseModeOption.DirectPost -> WalletApi.directPost(publicUrl)
-                ResponseModeOption.DirectPostJwt -> WalletApi.directPostJwt(publicUrl)
-            }
-        },
+        responseUriBuilder = { WalletApi.directPost(publicUrl) },
         responseModeOption = responseModeOption,
         maxAge = maxAge,
         clientMetaData = clientMetaData(publicUrl),

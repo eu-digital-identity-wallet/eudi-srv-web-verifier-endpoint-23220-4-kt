@@ -56,10 +56,6 @@ class WalletApi(
             walletResponsePath,
             this@WalletApi::handlePostWalletResponse,
         )
-        POST(
-            walletJwtResponsePath,
-            this@WalletApi::handlePostWalletResponse,
-        )
         GET(getPublicJwkSetPath) { _ -> handleGetPublicJwkSet() }
     }
 
@@ -152,14 +148,6 @@ class WalletApi(
         const val walletResponsePath = "/wallet/direct_post"
 
         /**
-         * Path template for the route for
-         * posting the Authorisation Response as JWT
-         * (response mode: "direct_post.jwt")
-         *
-         */
-        const val walletJwtResponsePath = "/wallet/direct_post.jwt"
-
-        /**
          * Extracts from the request the [RequestId]
          */
         private fun ServerRequest.requestId() = RequestId(pathVariable("requestId"))
@@ -199,12 +187,6 @@ class WalletApi(
         fun directPost(baseUrl: String): URL =
             DefaultUriBuilderFactory(baseUrl)
                 .uriString(walletResponsePath)
-                .build()
-                .toURL()
-
-        fun directPostJwt(baseUrl: String): URL =
-            DefaultUriBuilderFactory(baseUrl)
-                .uriString(walletJwtResponsePath)
                 .build()
                 .toURL()
 
