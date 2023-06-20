@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.verifier.endpoint.VerifierContext
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 import java.time.Clock
@@ -93,7 +94,10 @@ internal fun requestObjectFromDomain(
         aud = aud,
         nonce = presentation.nonce.value,
         state = presentation.requestId.value,
-        responseMode = "direct_post.jwt", // or direct_post for direct submission
+        responseMode = when (verifierConfig.responseModeOption) {
+            ResponseModeOption.DirectPost -> "direct_post"
+            ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
+        }, // or direct_post for direct submission
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
         issuedAt = clock.instant(),
     )

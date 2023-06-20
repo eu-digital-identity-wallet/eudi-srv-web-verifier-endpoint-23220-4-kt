@@ -64,6 +64,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
     @Order(value = 1)
     fun `post wallet response jwt of an idToken`(): Unit = runBlocking {
         // given
+        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs";
         val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId =
@@ -71,7 +72,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         // create a JWT with the idToken
-        var jwt = `create jwt wallet response for id_token`(requestId.value, "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs")
+        var jwt = jwtForIdToken(requestId.value, idToken)
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -101,7 +102,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         // create a JWT with the idToken
-        var jwt = `create jwt wallet response for id_token`(requestId.value, idToken)
+        var jwt = jwtForIdToken(requestId.value, idToken)
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -144,7 +145,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         // create a JWT with the error and error_description
-        var jwt = `create jwt wallet response for error`(requestId.value, error, errorDescription)
+        var jwt = jwtForError(requestId.value, error, errorDescription)
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -176,7 +177,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         // create a JWT with the error and error_description
-        var jwt = `create jwt wallet response for error`(requestId.value, error, errorDescription)
+        var jwt = jwtForError(requestId.value, error, errorDescription)
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -210,7 +211,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
      *
      * @see: <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-response-mode-direct_postjw">OpenId4vp</a>
      */
-    fun `create jwt wallet response for id_token`(state: String, idToken: String) = runBlocking {
+    fun jwtForIdToken(state: String, idToken: String) = runBlocking {
         val key: ECKey = ECKeyGenerator(Curve.P_256)
             .keyID("123")
             .generate()
@@ -220,7 +221,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
             .build();
         val payload = JWTClaimsSet.Builder()
             .issuer("issuer value")
-            .audience("https://client.example.org/cb")
+            .audience("https://client.example.org/cb") // client_id tou verifier, get the env variable
             .expirationTime(Date.from(Instant.now().plusSeconds(120)))
             .claim("state", state)
             .claim("id_token", idToken)
@@ -235,7 +236,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
      *
      * @see: <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-response-mode-direct_postjw">OpenId4vp</a>
      */
-    fun `create jwt wallet response for error`(state: String, error: String, errorDescription: String) = runBlocking {
+    fun jwtForError(state: String, error: String, errorDescription: String) = runBlocking {
         val key: ECKey = ECKeyGenerator(Curve.P_256)
             .keyID("123")
             .generate()

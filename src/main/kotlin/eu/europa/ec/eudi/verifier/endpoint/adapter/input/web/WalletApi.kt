@@ -172,10 +172,10 @@ class WalletApi(
         println("header:\n${decodedJwt.header}")
 
         // get AuthorisationResponseTO from claimSet
-        getAuthorisationResponseFromClaimSet(decodedJwt.jwtClaimsSet)
+        mapToDomain(decodedJwt.jwtClaimsSet)
     }
 
-    private suspend fun getAuthorisationResponseFromClaimSet(claimSet: JWTClaimsSet): AuthorisationResponseTO = runBlocking {
+    private fun mapToDomain(claimSet: JWTClaimsSet): AuthorisationResponseTO = runBlocking {
         AuthorisationResponseTO(
             state = claimSet.getClaim("state")?.toString(),
             idToken = claimSet.getClaim("id_token")?.toString(),
@@ -245,6 +245,12 @@ class WalletApi(
         fun directPost(baseUrl: String): URL =
             DefaultUriBuilderFactory(baseUrl)
                 .uriString(walletResponsePath)
+                .build()
+                .toURL()
+
+        fun directPostJwt(baseUrl: String): URL =
+            DefaultUriBuilderFactory(baseUrl)
+                .uriString(walletJwtResponsePath)
                 .build()
                 .toURL()
 

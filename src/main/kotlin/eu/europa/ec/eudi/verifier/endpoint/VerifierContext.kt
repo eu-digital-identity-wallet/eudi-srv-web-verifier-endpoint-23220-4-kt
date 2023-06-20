@@ -30,6 +30,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNim
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseModeOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
@@ -231,7 +232,7 @@ private enum class EmbedOptionEnum {
 
 private fun Environment.verifierConfig(): VerifierConfig {
     val clientId = getProperty("verifier.clientId", "verifier")
-    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-regis tered")
+    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered")
     val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
     val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
@@ -239,6 +240,8 @@ private fun Environment.verifierConfig(): VerifierConfig {
             ByReference, null -> WalletApi.requestJwtByReference(publicUrl)
         }
     }
+    val responseModeOption = getProperty("verifier.response.mode", ResponseModeOption::class.java)?: ResponseModeOption.DirectPostJwt
+
     val presentationDefinitionEmbedOption =
         getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
             when (it) {
@@ -253,7 +256,13 @@ private fun Environment.verifierConfig(): VerifierConfig {
         clientIdScheme = clientIdScheme,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
-        responseUriBuilder = { WalletApi.directPost(publicUrl) },
+        responseUriBuilder = {
+            when (responseModeOption) {
+                ResponseModeOption.DirectPost -> WalletApi.directPost(publicUrl)
+                ResponseModeOption.DirectPostJwt -> WalletApi.directPostJwt(publicUrl)
+            }
+        },
+        responseModeOption = responseModeOption,
         maxAge = maxAge,
         clientMetaData = clientMetaData(publicUrl),
     )

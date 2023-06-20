@@ -18,10 +18,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
-import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -40,6 +37,7 @@ class InitTransactionTest {
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
+                responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
             )
@@ -69,6 +67,7 @@ class InitTransactionTest {
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
+                responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
             )
