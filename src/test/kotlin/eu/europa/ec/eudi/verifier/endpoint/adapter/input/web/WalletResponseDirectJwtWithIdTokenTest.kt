@@ -84,8 +84,8 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post request for id_token
+     * - wallet to verifier backend, to get request
      * - wallet to verifier backend, to post wallet response, an idToken
      * - verifier to verifier backend, to get the wallet response
      *
