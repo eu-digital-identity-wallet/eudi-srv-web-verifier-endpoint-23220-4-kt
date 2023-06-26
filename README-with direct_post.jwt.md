@@ -4,11 +4,12 @@
 
 ## Table of contents
 
-* [Example id_token using direct_post.jwt](#example-idtoken-request-using-directpostjwt)
-* [verifier to verifier backend, to post request for id_token]()
-* [wallet to verifier backend, to get request]()
-* [wallet to verifier backend, to post wallet response, an idToken]()
-* [verifier to verifier backend, to get the wallet response]()
+[Example id_token using direct_post.jwt](#example-idtoken-request-using-directpostjwt):
+
+* [verifier to verifier backend, to post request for id_token](#requesting-a-idtoken)
+* [wallet to verifier backend, to get request](#getting-the-request-object)
+* [wallet to verifier backend, to post wallet response, an idToken](#submit-wallet-response---direct-post)
+* [verifier to verifier backend, to get the wallet response](#get-wallet-response---direct-post)
 
 ## Example id_token request using direct_post.jwt
 
