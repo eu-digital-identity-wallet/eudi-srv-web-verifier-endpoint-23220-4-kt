@@ -35,6 +35,14 @@ sealed interface EmbedOption<in ID> {
 }
 
 /**
+ * Configure option for response mode
+ */
+enum class ResponseModeOption {
+    DirectPost,
+    DirectPostJwt,
+}
+
+/**
  * By OpenID Connect Dynamic Client Registration specification
  *
  * @see <a href="https://openid.net/specs/openid-connect-registration-1_0.html">OpenID Connect Dynamic Client Registration specification</a>
@@ -55,6 +63,7 @@ data class VerifierConfig(
     val clientIdScheme: String = "pre-registered",
     val requestJarOption: EmbedOption<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
+    val responseModeOption: ResponseModeOption,
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,

@@ -15,13 +15,15 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.json.JSONObject
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
-import org.springframework.web.reactive.function.BodyInserters
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 internal class PresentationDefinitionTest() {
@@ -31,98 +33,31 @@ internal class PresentationDefinitionTest() {
 
     @Test
     fun `post presentation definition returns 200`() {
-        // given
-        val body = """
-            { 
-              "type": "vp_token id_token",
-              "id_token_type": "subject_signed_id_token",
-              "presentation_definition": {
-                "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
-                "input_descriptors": [
-                  {
-                    "id": "wa_driver_license",
-                    "name": "Washington State Business License",
-                    "purpose": "We can only allow licensed Washington State business representatives into the WA Business Conference",
-                    "constraints": {
-                      "fields": [
-                        {
-                          "path": [
-                            "$.credentialSubject.dateOfBirth",
-                            "$.credentialSubject.dob",
-                            "$.vc.credentialSubject.dateOfBirth",
-                            "$.vc.credentialSubject.dob"
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                ]
-              },
-              "nonce" : "nonce"
-            }
-        """
-
-        // when / then
-        client.post().uri(VerifierApi.initTransactionPath)
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(body))
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody().returnResult().responseBodyContent?.let { println("response: ${String(it)}") }
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("00-presentationDefinition.json")
+        println("initTransaction: $initTransaction")
+        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        println("transactionInitialized: $transactionInitialized")
+        val requestId =
+            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        println("requestId: ${requestId.value}")
     }
 
     @Test
     fun `get presentation definition returns 200`() {
-        // given
-        val body = """
-            { 
-              "type": "vp_token id_token",
-              "id_token_type": "subject_signed_id_token",
-              "presentation_definition": {
-                "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
-                "input_descriptors": [
-                  {
-                    "id": "wa_driver_license",
-                    "name": "Washington State Business License",
-                    "purpose": "We can only allow licensed Washington State business representatives into the WA Business Conference",
-                    "constraints": {
-                      "fields": [
-                        {
-                          "path": [
-                            "$.credentialSubject.dateOfBirth",
-                            "$.credentialSubject.dob",
-                            "$.vc.credentialSubject.dateOfBirth",
-                            "$.vc.credentialSubject.dob"
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                ]
-              },
-              "nonce": "nonce"
-            }
-        """
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("00-presentationDefinition.json")
+        println("initTransaction: $initTransaction")
+        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        println("transactionInitialized: $transactionInitialized")
+        val requestId =
+            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        println("requestId: ${requestId.value}")
 
-        val response = client.post().uri(VerifierApi.initTransactionPath)
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(body))
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody().returnResult()
-        val responseString = String(response.responseBodyContent!!)
-        val responseJson = JSONObject(responseString)
-        val requestUri = responseJson.get("request_uri")
-        println("requestUri=$requestUri")
-
-        // when
-        val relativeRequestUri = requestUri.toString().removePrefix("http://localhost:0")
-        println("relative request_uri: $relativeRequestUri")
+        val relativeRequestUri =
+            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0")!!)
+        println("relativeRequestUri: $relativeRequestUri")
 
         // then
-        val getResponse = client.get().uri(relativeRequestUri)
+        val getResponse = client.get().uri(relativeRequestUri.value)
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
             .expectStatus().isOk()
@@ -138,11 +73,12 @@ internal class PresentationDefinitionTest() {
         println("prettyPayload:\n$prettyPayload")
 
         val responsePresentationDefinition = JSONObject(payload).get("presentation_definition")
-        val bodyPresentationDefinition = JSONObject(body).get("presentation_definition")
+        // get presentation definition from initTransaction as json string
+        val requestPresentationDefinition = Json.encodeToString(initTransaction.presentationDefinition)
 
         assert(
             TestUtils.compareJsonStrings(
-                bodyPresentationDefinition.toString(),
+                requestPresentationDefinition,
                 responsePresentationDefinition.toString(),
             ),
             { "presentationDefinition of response is not equal to presentationDefinition of request" },

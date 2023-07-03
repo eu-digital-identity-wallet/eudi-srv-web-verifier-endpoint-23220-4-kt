@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import java.time.Clock
@@ -24,7 +25,6 @@ import java.time.Clock
 /**
  * Represent the Authorisation Response placed by wallet
  */
-
 data class AuthorisationResponseTO(
     val state: String?, // this is the request_id
     val error: String? = null,
@@ -33,6 +33,12 @@ data class AuthorisationResponseTO(
     val vpToken: String? = null,
     val presentationSubmission: PresentationSubmission? = null,
 )
+
+sealed interface AuthorisationResponse {
+
+    data class DirectPost(val response: AuthorisationResponseTO) : AuthorisationResponse
+    data class DirectPostJwt(val jarm: Jwt) : AuthorisationResponse
+}
 
 /**
  * Carrier of [ValidationError]
@@ -98,16 +104,26 @@ internal fun AuthorisationResponseTO.toDomain(presentation: Presentation.Request
  * The caller (wallet) may POST the [AuthorisationResponseTO] to the verifier back-end
  */
 fun interface PostWalletResponse {
-    suspend operator fun invoke(authorisationResponseObject: AuthorisationResponseTO): QueryResponse<Jwt>
+    suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<Jwt>
 }
 
 class PostWalletResponseLive(
     private val loadPresentationByRequestId: LoadPresentationByRequestId,
     private val storePresentation: StorePresentation,
+    private val verifyJarmJwtSignature: VerifyJarmJwtSignature,
     private val clock: Clock,
 ) : PostWalletResponse {
 
-    override suspend operator fun invoke(authorisationResponseObject: AuthorisationResponseTO): QueryResponse<String> {
+    override suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String> =
+        when (walletResponse) {
+            is AuthorisationResponse.DirectPost -> Result.success(walletResponse.response)
+            is AuthorisationResponse.DirectPostJwt -> verifyJarmJwtSignature(walletResponse.jarm)
+        }.fold(
+            onSuccess = { handle(it) },
+            onFailure = { QueryResponse.InvalidState },
+        )
+
+    private suspend fun handle(authorisationResponseObject: AuthorisationResponseTO): QueryResponse<String> {
         val requestId = authorisationResponseObject.state?.let { RequestId(it) }
         return if (requestId == null) {
             QueryResponse.InvalidState

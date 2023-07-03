@@ -27,14 +27,17 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GeneratePresentationIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmJwtSignatureNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseModeOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePresentationsOlderThan
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
@@ -158,10 +161,12 @@ class VerifierContext(environment: Environment) {
     fun postAuthorisationResponse(
         loadPresentationByRequestId: LoadPresentationByRequestId,
         storePresentation: StorePresentation,
+        verifyJarmJwtSignature: VerifyJarmJwtSignature,
         clock: Clock,
     ): PostWalletResponse = PostWalletResponseLive(
         loadPresentationByRequestId,
         storePresentation,
+        verifyJarmJwtSignature,
         clock,
     )
 
@@ -188,6 +193,8 @@ class VerifierContext(environment: Environment) {
     fun signRequestObject(rsaKey: RSAKey): SignRequestObject =
         SignRequestObjectNimbus(rsaKey)
 
+    @Bean
+    fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmJwtSignatureNimbus
     //
     // Persistence
     //
@@ -231,7 +238,7 @@ private enum class EmbedOptionEnum {
 
 private fun Environment.verifierConfig(): VerifierConfig {
     val clientId = getProperty("verifier.clientId", "verifier")
-    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-regis tered")
+    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered")
     val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
     val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
@@ -239,6 +246,9 @@ private fun Environment.verifierConfig(): VerifierConfig {
             ByReference, null -> WalletApi.requestJwtByReference(publicUrl)
         }
     }
+    val responseModeOption =
+        getProperty("verifier.response.mode", ResponseModeOption::class.java) ?: ResponseModeOption.DirectPostJwt
+
     val presentationDefinitionEmbedOption =
         getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
             when (it) {
@@ -254,6 +264,7 @@ private fun Environment.verifierConfig(): VerifierConfig {
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { WalletApi.directPost(publicUrl) },
+        responseModeOption = responseModeOption,
         maxAge = maxAge,
         clientMetaData = clientMetaData(publicUrl),
     )

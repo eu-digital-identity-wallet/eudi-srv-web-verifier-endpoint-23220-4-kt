@@ -26,6 +26,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
+import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
@@ -51,7 +52,6 @@ class WalletApi(
         GET(presentationDefinitionPath, this@WalletApi::handleGetPresentationDefinition)
         POST(
             walletResponsePath,
-            // accept(MediaType.APPLICATION_FORM_URLENCODED),
             this@WalletApi::handlePostWalletResponse,
         )
         GET(getPublicJwkSetPath) { _ -> handleGetPublicJwkSet() }
@@ -67,7 +67,7 @@ class WalletApi(
             ok().contentType(MediaType.parseMediaType("application/oauth-authz-req+jwt"))
                 .bodyValueAndAwait(jwt)
 
-        val requestId = req.requestId()
+        val requestId = req.requestId().also { logger.info("Handling GetRequestObject for $it ...") }
 
         return when (val result = getRequestObject(requestId)) {
             is Found -> requestObjectFound(result.value)
@@ -83,7 +83,7 @@ class WalletApi(
     private suspend fun handleGetPresentationDefinition(req: ServerRequest): ServerResponse {
         suspend fun pdFound(pd: PresentationDefinition) = ok().json().bodyValueAndAwait(pd)
 
-        val requestId = req.requestId()
+        val requestId = req.requestId().also { logger.info("Handling GetPresentationDefinition for $it ...") }
 
         return when (val result = getPresentationDefinition(requestId)) {
             is NotFound -> notFound().buildAndAwait()
@@ -104,25 +104,17 @@ class WalletApi(
 
         suspend fun failed() = badRequest().buildAndAwait()
 
-        val input = with(req.awaitFormData()) {
-            logger.info("formData: $this")
-            AuthorisationResponseTO(
-                state = getFirst("state"),
-                idToken = getFirst("id_token"),
-                vpToken = getFirst("vp_token"),
-                presentationSubmission = getFirst("presentation_submission")?.let {
-                    PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
-                },
-                error = getFirst("error"),
-                errorDescription = getFirst("error_description"),
-            )
-        }
+        return runCatching { req.awaitFormData().walletResponse() }.fold(
+            onSuccess = { walletResponse ->
 
-        return when (postWalletResponse(input)) {
-            is Found -> walletResponseStored()
-            is NotFound -> notFound()
-            else -> failed()
-        }
+                when (postWalletResponse(walletResponse)) {
+                    is Found -> walletResponseStored()
+                    is NotFound -> notFound()
+                    is InvalidState -> failed()
+                }
+            },
+            onFailure = { failed() },
+        )
     }
 
     private suspend fun handleGetPublicJwkSet(): ServerResponse {
@@ -157,6 +149,25 @@ class WalletApi(
          * Extracts from the request the [RequestId]
          */
         private fun ServerRequest.requestId() = RequestId(pathVariable("requestId"))
+
+        private fun MultiValueMap<String, String>.walletResponse(): AuthorisationResponse {
+            fun directPost() = AuthorisationResponseTO(
+                state = getFirst("state"),
+                idToken = getFirst("id_token"),
+                vpToken = getFirst("vp_token"),
+                presentationSubmission = getFirst("presentation_submission")?.let {
+                    PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
+                },
+                error = getFirst("error"),
+                errorDescription = getFirst("error_description"),
+            ).run { AuthorisationResponse.DirectPost(this) }
+
+            fun directPostJwt() = getFirst("response")?.let {
+                AuthorisationResponse.DirectPostJwt(it)
+            }
+
+            return directPostJwt() ?: directPost()
+        }
 
         fun requestJwtByReference(baseUrl: String): EmbedOption.ByReference<RequestId> =
             urlBuilder(baseUrl = baseUrl, pathTemplate = requestJwtPath)

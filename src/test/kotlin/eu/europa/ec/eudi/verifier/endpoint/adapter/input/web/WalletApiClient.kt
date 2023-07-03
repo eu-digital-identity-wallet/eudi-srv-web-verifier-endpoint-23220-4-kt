@@ -78,4 +78,20 @@ object WalletApiClient {
             // then
             .expectStatus().isOk()
     }
+
+    /**
+     * Wallet application to Verifier Backend, submit wallet response
+     * https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-response-mode-direct_postjw
+     *
+     * @see: <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-response-mode-direct_postjw">OpenId4vp Response Mode "direct_post.jwt</a>
+     */
+    fun directPostJwt(client: WebTestClient, formEncodedBody: MultiValueMap<String, Any>) {
+        client.post().uri(WalletApi.walletResponsePath)
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .accept(MediaType.APPLICATION_JSON)
+            .body(BodyInserters.fromValue(formEncodedBody))
+            .exchange()
+            // then
+            .expectStatus().isOk()
+    }
 }
