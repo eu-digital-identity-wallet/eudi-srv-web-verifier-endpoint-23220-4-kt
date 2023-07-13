@@ -1,0 +1,29 @@
+version: '3.3'
+
+services:
+  verifier:
+    image: docker.io/build/eudi-srv-web-verifier-endpoint-23220-4-kt:latest
+    container_name: verifier-backend
+    ports:
+      - 8080:8080
+    environment:
+      VERIFIER_PUBLICURL: "https://10.240.174.10"
+
+  verifier-ui:
+    # image: niscy-eudiw/verifier-ui:latest
+    image: docker.io/library/eudi-web-verifier
+    container_name: verifier-ui
+    ports:
+      - 4300:4300
+    environment:
+      - DOMAIN_NAME=""
+      - HOST_API="https://10.240.174.10"
+
+  haproxy:
+    image: haproxy:2.7.2
+    container_name: haproxy
+    ports:
+      - 443:443
+    volumes:
+      - ./haproxy.conf:/usr/local/etc/haproxy/haproxy.cfg
+      - ./haproxy.pem:/etc/ssl/certs/mysite.pem

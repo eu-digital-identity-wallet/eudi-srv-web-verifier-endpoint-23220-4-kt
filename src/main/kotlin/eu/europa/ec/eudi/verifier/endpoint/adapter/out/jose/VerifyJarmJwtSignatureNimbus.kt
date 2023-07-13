@@ -33,8 +33,9 @@ object VerifyJarmJwtSignatureNimbus : VerifyJarmJwtSignature {
             state = getClaim("state")?.toString(),
             idToken = getClaim("id_token")?.toString(),
             vpToken = getClaim("vp_token")?.toString(),
-            presentationSubmission = getClaim("presentation_submission")?.let {
-                PresentationExchange.jsonParser.decodePresentationSubmission(it.toString()).getOrThrow()
+            presentationSubmission = getStringClaim("presentation_submission")?.let {
+                println("presentation_submission: $it")
+                PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
             },
             error = getClaim("error")?.toString(),
             errorDescription = getClaim("error_description")?.toString(),

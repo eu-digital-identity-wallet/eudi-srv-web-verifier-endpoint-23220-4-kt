@@ -23,10 +23,17 @@ import java.util.*
 @SpringBootTest
 internal class JweTest {
 
-    private fun ecdhEncrypt(ecPublicKey: ECPublicKey, jwtClaims: JWTClaimsSet): String {
+    private fun ecdhEncrypt(alg: JWEAlgorithm, enc: EncryptionMethod, ecPublicKey: ECPublicKey, jwtClaims: JWTClaimsSet): String {
         // define JWE alg and enc
-        val alg = JWEAlgorithm.ECDH_ES
-        val enc = EncryptionMethod.A256GCM
+        // {
+        //   "alg": "ECDH-ES",
+        //   "enc": "A256GCM",
+        //   "epk": { device ephemeral public key },
+        //   "apu": "SKDevice",
+        //  "apv": "SKReader"
+        // }
+        //val alg = JWEAlgorithm.ECDH_ES
+        //val enc = EncryptionMethod.A256GCM
 
         // Request JWT encrypted with ECDH-ES
         val jweHeader = JWEHeader(alg, enc)
@@ -60,7 +67,27 @@ internal class JweTest {
 
     @Test
     fun `Encrypting and Decrypt using ECDH`() {
-        // generate claims
+
+        // (Verifier during initialisation of Transaction) generate key pair
+        val alg = JWEAlgorithm.ECDH_ES
+        val enc = EncryptionMethod.A256GCM
+        val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
+            .keyUse(KeyUse.ENCRYPTION)
+            .algorithm(JWEAlgorithm.ECDH_ES)
+            .keyID("123")
+        val ecKey = ecKeyGenerator.generate()
+        println("ecKey private: ${ecKey.toJSONString()}")
+        println("ecKey public : ${ecKey.toPublicJWK().toJSONString()}")
+        val ecPublicKey = ecKey.toECPublicKey()
+        val ecPrivateKey = ecKey.toECPrivateKey()
+
+        // (Verifier, on the response of the request of the wallet to get the request object)
+        // sends public key, alg and enc from verifier backend to wallet
+        println("ecKey alg (authorization_signed_response_alg) : ${alg}")
+        println("ecKey enc : ${enc}")
+        println("ecKey ec public : ${ecPublicKey}")
+
+        // (wallet) generate JWT with claims
         val now = Date()
         val jwtClaims: JWTClaimsSet = JWTClaimsSet.Builder()
             .issuer("Verifier")
@@ -74,25 +101,11 @@ internal class JweTest {
             .build()
         println("plaintextJwtClaims: ${jwtClaims.toJSONObject()}");
 
-        // generate key pair
-        val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
-            .keyUse(KeyUse.ENCRYPTION)
-            .algorithm(JWEAlgorithm.ECDH_ES)
-            .keyID("123")
-        val ecKey = ecKeyGenerator.generate()
-        println("ecKey private: ${ecKey.toJSONString()}")
-        println("ecKey public : ${ecKey.toPublicJWK().toJSONString()}")
-        val ecPublicKey = ecKey.toECPublicKey()
-        val ecPrivateKey = ecKey.toECPrivateKey()
-
-        // verifier backend public key is sent from verifier backend to wallet
-        println("ecKey ec public : ${ecPublicKey}")
-
-        // sender (wallet) encrypts with public key (of the verifier backend)
-        val encrypted = ecdhEncrypt(ecPublicKey, jwtClaims)
+        // (wallet) encrypts with public key (of the verifier backend)
+        val encrypted = ecdhEncrypt(alg, enc, ecPublicKey, jwtClaims)
         println("encrypted = ${encrypted}")
 
-        // decrypt with private key
+        // (verifier backend) decrypt with private key
         val decryptedJwtClaimSet = ecdhDecrypt(ecPrivateKey, encrypted)
         println("decryptedJwtClaimSet = ${decryptedJwtClaimSet.toJSONObject()}")
     }

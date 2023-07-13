@@ -1,9 +1,9 @@
-# EUDI Verifier Endpoint - Howto vp_token request using direct_post
+# EUDI Verifier Endpoint - Howto id_token request using direct_post
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Example of this scenario:
-- Request for vp_token & id_token
+- Request for id_token
 - Submit Wallet Response - Direct Post
 
 ## Table of contents
