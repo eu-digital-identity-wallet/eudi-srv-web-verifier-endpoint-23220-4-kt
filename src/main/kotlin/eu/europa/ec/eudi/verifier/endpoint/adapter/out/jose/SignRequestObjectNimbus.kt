@@ -113,6 +113,10 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             is ByValue -> JWKSet(rsaJWK).toPublicJWKSet() to null
             is ByReference -> null to option.buildUrl.invoke(Unit)
         }
+        val authSgnRespAlg: JWSAlgorithm? = c.authorizationSignedResponseAlg.let { JWSAlgorithm.parse(it) }
+        val authEncRespAlg: JWEAlgorithm? = c.authorizationEncryptedResponseAlg.let {JWEAlgorithm.parse(it) }
+        val authEncRespEnc: EncryptionMethod? = c.authorizationEncryptedResponseEnc.let { EncryptionMethod.parse(it) }
+
         return OIDCClientMetadata().apply {
             idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
             idTokenJWEAlg = JWEAlgorithm.parse(c.idTokenEncryptedResponseAlg)
@@ -120,6 +124,10 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             jwkSet = vJwkSet
             jwkSetURI = vJwkSetURI?.toURI()
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
+
+            authSgnRespAlg.let { setCustomField("authorization_signed_response_alg", it.toString()) }
+            authEncRespAlg.let { setCustomField("authorization_encrypted_response_alg", it.toString()) }
+            authEncRespEnc.let { setCustomField("authorization_encrypted_response_enc", it.toString()) }
         }
     }
 

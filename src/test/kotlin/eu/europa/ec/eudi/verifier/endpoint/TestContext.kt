@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
@@ -55,6 +57,9 @@ object TestContext {
         idTokenEncryptedResponseAlg = "RS256",
         idTokenEncryptedResponseEnc = "A128CBC-HS256",
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
+        authorizationSignedResponseAlg = "",
+        authorizationEncryptedResponseAlg = "ECDH_ES",
+        authorizationEncryptedResponseEnc = "A256GCM",
     )
     val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus(rsaJwk)
     val singRequestObjectVerifier = RSASSAVerifier(rsaJwk.toRSAPublicKey())

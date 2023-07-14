@@ -287,5 +287,8 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
             "did:example",
             "did:key",
         ),
+        authorizationSignedResponseAlg = "",
+        authorizationEncryptedResponseAlg = "ECDH-ES",
+        authorizationEncryptedResponseEnc = "A128CBC-HS256",
     )
 }

@@ -117,7 +117,7 @@ class PostWalletResponseLive(
     override suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String> =
         when (walletResponse) {
             is AuthorisationResponse.DirectPost -> Result.success(walletResponse.response)
-            is AuthorisationResponse.DirectPostJwt -> verifyJarmJwtSignature(walletResponse.jarm)
+            is AuthorisationResponse.DirectPostJwt -> verifyJarmJwtSignature(walletResponse.jarm, null, null, null)
         }.fold(
             onSuccess = { handle(it) },
             onFailure = { QueryResponse.InvalidState },

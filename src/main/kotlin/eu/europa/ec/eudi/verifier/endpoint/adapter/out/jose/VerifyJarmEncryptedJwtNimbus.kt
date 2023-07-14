@@ -18,17 +18,37 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.crypto.ECDHDecrypter
+import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.KeyUse
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator
+import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
-import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 
-object VerifyJarmJwtSignatureNimbus : VerifyJarmJwtSignature {
+object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
 
     override fun invoke(jarmJwt: Jwt, signAlg: JWSAlgorithm?, encAlg: JWEAlgorithm?, encMethod: EncryptionMethod?): Result<AuthorisationResponseTO> = runCatching {
-        SignedJWT.parse(jarmJwt).jwtClaimsSet.mapToDomain()
+        // to be removed after creating the key during initTransaction (start)
+        val alg = JWEAlgorithm.ECDH_ES
+        val enc = EncryptionMethod.A256GCM
+        val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
+            .keyUse(KeyUse.ENCRYPTION)
+            .algorithm(JWEAlgorithm.ECDH_ES)
+            .keyID("123")
+        val ecKey = ecKeyGenerator.generate()
+        println("ecKey private: ${ecKey.toJSONString()}")
+        println("ecKey public : ${ecKey.toPublicJWK().toJSONString()}")
+        val ecPrivateKey = ecKey.toECPrivateKey()
+        // to be removed after creating the key during initTransaction (end)
+
+        val ecdhDecrypter = ECDHDecrypter(ecPrivateKey)
+        EncryptedJWT.parse(jarmJwt).also {
+            it.decrypt(ecdhDecrypter)
+        }.jwtClaimsSet.mapToDomain()
     }
 
     private fun JWTClaimsSet.mapToDomain(): AuthorisationResponseTO =
@@ -36,8 +56,9 @@ object VerifyJarmJwtSignatureNimbus : VerifyJarmJwtSignature {
             state = getClaim("state")?.toString(),
             idToken = getClaim("id_token")?.toString(),
             vpToken = getClaim("vp_token")?.toString(),
-            presentationSubmission = getClaim("presentation_submission")?.let {
-                PresentationExchange.jsonParser.decodePresentationSubmission(it.toString()).getOrThrow()
+            presentationSubmission = getStringClaim("presentation_submission")?.let {
+                println("presentation_submission: $it")
+                PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
             },
             error = getClaim("error")?.toString(),
             errorDescription = getClaim("error_description")?.toString(),
