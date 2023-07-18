@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
@@ -25,12 +26,22 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.annotation.Order
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 
 /*
   https://jira.intrasoft-intl.com/browse/EUDIW-693
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(
+    properties = [
+        "verifier.maxAge=PT6400M",
+        "verifier.response.mode=DirectPostJwt",
+        "verifier.clientMetadata.authorizationSignedResponseAlg=",
+        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
+        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
+    ],
+)
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectJwtTest {
@@ -50,17 +61,43 @@ internal class WalletResponseDirectJwtTest {
     @Order(value = 1)
     fun `get request object, confirm headers`(): Unit = runBlocking {
         // given
-        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
-        val requestId =
-            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        Assertions.assertEquals("", requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_signed_response_alg"), "authorization_signed_response_alg is not empty")
-        Assertions.assertEquals("ECDH-ES", requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_encrypted_response_alg"), "authorization_encrypted_response_alg is not ECDH-ES")
-        Assertions.assertEquals("A128CBC-HS256", requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_encrypted_response_enc"), "authorization_encrypted_response_enc is not A128CBC-HS256")
+//        val ecPublicKey = WalletApiClient.getEcKey(requestObjectJsonResponse)
 
+        Assertions.assertEquals(
+            "",
+            requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_signed_response_alg"),
+            "authorization_signed_response_alg is not empty",
+        )
+        Assertions.assertEquals(
+            "ECDH-ES",
+            requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_encrypted_response_alg"),
+            "authorization_encrypted_response_alg is not ECDH-ES",
+        )
+        Assertions.assertEquals(
+            requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_encrypted_response_enc"),
+            "A128CBC-HS256",
+            "authorization_encrypted_response_enc is not A128CBC-HS256",
+        )
+        Assertions.assertTrue(requestObjectContainsClientMetadataEcKey(requestObjectJsonResponse)) { "jwks does not contain EC key" }
+    }
+    private fun requestObjectContainsClientMetadataEcKey(requestObjectJsonResponse: JSONObject): Boolean {
+        var containsEcKey = false
+        val jsonArray =
+            requestObjectJsonResponse.getJSONObject("client_metadata").getJSONObject("jwks").getJSONArray("keys")
+        for (i in 0 until jsonArray.length()) {
+            val item = jsonArray.get(i)
+            if (item is JSONObject) {
+                if (item.getString("kty") == "EC") {
+                    containsEcKey = true
+                }
+            }
+        }
+        return containsEcKey
     }
 }

@@ -29,16 +29,17 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 
+/**
+ * Decrypts an encrypted JWT and maps the JWT claimSet to an AuthorisationResponseTO
+ */
 object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
 
-    override fun invoke(jarmJwt: Jwt, signAlg: JWSAlgorithm?, encAlg: JWEAlgorithm?, encMethod: EncryptionMethod?): Result<AuthorisationResponseTO> = runCatching {
+    override fun invoke(jarmJwt: Jwt, signAlg: JWSAlgorithm?, encAlg: JWEAlgorithm?, encMethod: EncryptionMethod?):
+        Result<AuthorisationResponseTO> = runCatching {
         // to be removed after creating the key during initTransaction (start)
-        val alg = JWEAlgorithm.ECDH_ES
-        val enc = EncryptionMethod.A256GCM
         val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
             .keyUse(KeyUse.ENCRYPTION)
-            .algorithm(JWEAlgorithm.ECDH_ES)
-            .keyID("123")
+            .algorithm(encAlg)
         val ecKey = ecKeyGenerator.generate()
         println("ecKey private: ${ecKey.toJSONString()}")
         println("ecKey public : ${ecKey.toPublicJWK().toJSONString()}")

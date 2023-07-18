@@ -15,8 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.RequestObject
-import kotlinx.serialization.json.JsonObject
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.springframework.http.MediaType
@@ -34,7 +32,6 @@ object WalletApiClient {
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
     fun getRequestObjectJsonResponse(client: WebTestClient, requestUri: String): JSONObject {
-
         val (header, payload) = getRequestObjectPair(client, requestUri)
         // debug
         val prettyHeader = TestUtils.prettyPrintJson(header)
@@ -53,7 +50,6 @@ object WalletApiClient {
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
     fun getRequestObject(client: WebTestClient, requestUri: String) {
-
         val (header, payload) = getRequestObjectPair(client, requestUri)
 
         // debug

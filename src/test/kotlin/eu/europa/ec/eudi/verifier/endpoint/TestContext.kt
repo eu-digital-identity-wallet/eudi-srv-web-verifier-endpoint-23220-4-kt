@@ -15,11 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import com.nimbusds.jose.EncryptionMethod
-import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEpheperalKeyNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
@@ -67,6 +66,7 @@ object TestContext {
     val loadPresentationById = repo.loadPresentationById
     val loadPresentationByRequestId = repo.loadPresentationByRequestId
     val storePresentation = repo.storePresentation
+    val generateEphemeralKey = GenerateEpheperalKeyNimbus()
 
     fun initTransaction(verifierConfig: VerifierConfig): InitTransaction =
         InitTransactionLive(
@@ -76,6 +76,7 @@ object TestContext {
             singRequestObject,
             verifierConfig,
             testClock,
+            generateEphemeralKey,
         )
     fun getRequestObject(verifierConfig: VerifierConfig, presentationInitiatedAt: Instant): GetRequestObject =
         GetRequestObjectLive(

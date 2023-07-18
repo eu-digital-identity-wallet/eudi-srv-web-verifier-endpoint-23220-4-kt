@@ -130,6 +130,7 @@ sealed interface Presentation {
         override val type: PresentationType,
         val requestId: RequestId,
         val nonce: Nonce,
+        val ephemeralEcPrivateKey: Jwt?,
     ) : Presentation
 
     /**
@@ -145,6 +146,7 @@ sealed interface Presentation {
         val requestId: RequestId,
         val requestObjectRetrievedAt: Instant,
         val nonce: Nonce,
+        val ephemeralEcPrivateKey: Jwt?,
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
@@ -160,6 +162,7 @@ sealed interface Presentation {
                         requested.requestId,
                         at,
                         requested.nonce,
+                        requested.ephemeralEcPrivateKey,
                     )
                 }
         }

@@ -15,14 +15,14 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
-import com.nimbusds.jose.EncryptionMethod
-import com.nimbusds.jose.JWEAlgorithm
-import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 
-fun interface VerifyJarmJwtSignature {
-
-    operator fun invoke(jarmJwt: Jwt, signAlg: JWSAlgorithm?, encAlg: JWEAlgorithm?, encMethod: EncryptionMethod?):
-        Result<AuthorisationResponseTO>
+/**
+ * An out port that generates ephemeral key
+ */
+fun interface GenerateEphemeralKey {
+    operator fun invoke(
+        verifierConfig: VerifierConfig,
+    ): Result<Jwt>
 }

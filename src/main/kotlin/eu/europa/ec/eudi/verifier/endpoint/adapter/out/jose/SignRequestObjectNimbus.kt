@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.RSASSASigner
+import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jwt.JWTClaimsSet
@@ -28,15 +29,13 @@ import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
-import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
-import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import java.time.Clock
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * An implementation of [SignRequestObject] that uses Nimbus SDK
@@ -49,18 +48,22 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         presentation: Presentation.Requested,
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        return sign(verifierConfig.clientMetaData, requestObject)
+        val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey?.let {
+            JWK.parse(presentation.ephemeralEcPrivateKey).toPublicJWK().toJSONString()
+        }
+        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
     }
 
     internal fun sign(
         clientMetaData: ClientMetaData,
+        ecPublicKey: String?,
         requestObject: RequestObject,
     ): Result<Jwt> = runCatching {
         val header = JWSHeader.Builder(JWSAlgorithm.RS256)
             .keyID(rsaJWK.keyID)
             .type(JOSEObjectType(AuthReqJwt))
             .build()
-        val claimSet = asClaimSet(toNimbus(clientMetaData), requestObject)
+        val claimSet = asClaimSet(toNimbus(clientMetaData, ecPublicKey), requestObject)
         with(SignedJWT(header, claimSet)) {
             sign(RSASSASigner(rsaJWK))
             serialize()
@@ -108,13 +111,17 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         }
     }
 
-    private fun toNimbus(c: ClientMetaData): OIDCClientMetadata {
+    private fun toNimbus(c: ClientMetaData, ecPublicKey: String?): OIDCClientMetadata {
+        val keyset = ArrayList<JWK>().apply {
+            add(rsaJWK)
+            add(ecPublicKey.let { JWK.parse(ecPublicKey) })
+        }
         val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
-            is ByValue -> JWKSet(rsaJWK).toPublicJWKSet() to null
+            is ByValue -> JWKSet(keyset).toPublicJWKSet() to null
             is ByReference -> null to option.buildUrl.invoke(Unit)
         }
         val authSgnRespAlg: JWSAlgorithm? = c.authorizationSignedResponseAlg.let { JWSAlgorithm.parse(it) }
-        val authEncRespAlg: JWEAlgorithm? = c.authorizationEncryptedResponseAlg.let {JWEAlgorithm.parse(it) }
+        val authEncRespAlg: JWEAlgorithm? = c.authorizationEncryptedResponseAlg.let { JWEAlgorithm.parse(it) }
         val authEncRespEnc: EncryptionMethod? = c.authorizationEncryptedResponseEnc.let { EncryptionMethod.parse(it) }
 
         return OIDCClientMetadata().apply {
