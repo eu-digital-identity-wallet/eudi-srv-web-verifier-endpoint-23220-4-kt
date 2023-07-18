@@ -29,22 +29,24 @@ import org.springframework.core.annotation.Order
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 
-/*
-  https://jira.intrasoft-intl.com/browse/EUDIW-693
- */
+/**
+  * https://jira.intrasoft-intl.com/browse/EUDIW-693
+ *
+  * when response mode is direct_post the ResponseObject must not contain JARM parameters
+  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
-        "verifier.response.mode=DirectPostJwt",
+        "verifier.response.mode=DirectPost",
         "verifier.clientMetadata.authorizationSignedResponseAlg=",
         "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
-        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A256GCM",
+        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
-internal class WalletResponseDirectJwtTest {
+internal class WalletResponseDirectTest {
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -59,7 +61,7 @@ internal class WalletResponseDirectJwtTest {
      */
     @Test
     @Order(value = 1)
-    fun `get request object, confirm headers`(): Unit = runBlocking {
+    fun `get request object when request mode is direct_post, confirm headers do not exist`(): Unit = runBlocking {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
@@ -69,22 +71,19 @@ internal class WalletResponseDirectJwtTest {
 
 //        val ecPublicKey = WalletApiClient.getEcKey(requestObjectJsonResponse)
 
-        Assertions.assertEquals(
-            "",
-            requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_signed_response_alg"),
-            "authorization_signed_response_alg is not empty",
+        Assertions.assertFalse(
+            requestObjectJsonResponse.getJSONObject("client_metadata").has("authorization_signed_response_alg"),
+            "authorization_signed_response_alg must not be present",
         )
-        Assertions.assertEquals(
-            "ECDH-ES",
-            requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_encrypted_response_alg"),
-            "authorization_encrypted_response_alg is not ECDH-ES",
+        Assertions.assertFalse(
+            requestObjectJsonResponse.getJSONObject("client_metadata").has("authorization_encrypted_response_alg"),
+            "authorization_encrypted_response_alg must not be present",
         )
-        Assertions.assertEquals(
-            requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_encrypted_response_enc"),
-            "A256GCM",
-            "authorization_encrypted_response_enc is not A256GCM",
+        Assertions.assertFalse(
+            requestObjectJsonResponse.getJSONObject("client_metadata").has("authorization_encrypted_response_enc"),
+            "authorization_encrypted_response_enc must not be present",
         )
-        Assertions.assertTrue(requestObjectContainsClientMetadataEcKey(requestObjectJsonResponse)) { "jwks does not contain EC key" }
+        Assertions.assertFalse(requestObjectContainsClientMetadataEcKey(requestObjectJsonResponse)) { "jwks must not contain EC key" }
     }
     private fun requestObjectContainsClientMetadataEcKey(requestObjectJsonResponse: JSONObject): Boolean {
         var containsEcKey = false

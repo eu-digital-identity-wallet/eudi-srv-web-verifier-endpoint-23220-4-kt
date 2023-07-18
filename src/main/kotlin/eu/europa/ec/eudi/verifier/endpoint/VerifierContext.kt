@@ -300,7 +300,7 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
         authorizationEncryptedResponseAlg =
             getProperty("verifier.clientMetadata.authorizationEncryptedResponseAlg", String::class.java) ?: "ECDH-ES",
         authorizationEncryptedResponseEnc =
-            getProperty("verifier.clientMetadata.authorizationEncryptedResponseEnc", String::class.java) ?: "A128CBC-HS256",
+            getProperty("verifier.clientMetadata.authorizationEncryptedResponseEnc", String::class.java) ?: "A256GCM",
 
     )
 }
