@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package eu.europa.ec.eudi.verifier.endpoint
 
 import com.nimbusds.jose.*
@@ -32,8 +47,8 @@ internal class JweTest {
         //   "apu": "SKDevice",
         //  "apv": "SKReader"
         // }
-        //val alg = JWEAlgorithm.ECDH_ES
-        //val enc = EncryptionMethod.A256GCM
+        // val alg = JWEAlgorithm.ECDH_ES
+        // val enc = EncryptionMethod.A256GCM
 
         // Request JWT encrypted with ECDH-ES
         val jweHeader = JWEHeader(alg, enc)
@@ -51,12 +66,11 @@ internal class JweTest {
         // Serialise to JWT compact form
         val jwtString: String = encryptedJWT.serialize()
 
-        println("jwtString = ${jwtString}")
+        println("jwtString = $jwtString")
         return jwtString
     }
 
     private fun ecdhDecrypt(ecPrivateKey: ECPrivateKey, jwtString: String): JWTClaimsSet {
-
         val jwt = EncryptedJWT.parse(jwtString)
         val rsaDecrypter = ECDHDecrypter(ecPrivateKey)
 
@@ -67,7 +81,6 @@ internal class JweTest {
 
     @Test
     fun `Encrypting and Decrypt using ECDH`() {
-
         // (Verifier during initialisation of Transaction) generate key pair
         val alg = JWEAlgorithm.ECDH_ES
         val enc = EncryptionMethod.A256GCM
@@ -83,9 +96,9 @@ internal class JweTest {
 
         // (Verifier, on the response of the request of the wallet to get the request object)
         // sends public key, alg and enc from verifier backend to wallet
-        println("ecKey alg (authorization_signed_response_alg) : ${alg}")
-        println("ecKey enc : ${enc}")
-        println("ecKey ec public : ${ecPublicKey}")
+        println("ecKey alg (authorization_signed_response_alg) : $alg")
+        println("ecKey enc : $enc")
+        println("ecKey ec public : $ecPublicKey")
 
         // (wallet) generate JWT with claims
         val now = Date()
@@ -99,15 +112,14 @@ internal class JweTest {
             .jwtID(UUID.randomUUID().toString())
             .claim("email", "john-doe@eudi.com")
             .build()
-        println("plaintextJwtClaims: ${jwtClaims.toJSONObject()}");
+        println("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
         // (wallet) encrypts with public key (of the verifier backend)
         val encrypted = ecdhEncrypt(alg, enc, ecPublicKey, jwtClaims)
-        println("encrypted = ${encrypted}")
+        println("encrypted = $encrypted")
 
         // (verifier backend) decrypt with private key
         val decryptedJwtClaimSet = ecdhDecrypt(ecPrivateKey, encrypted)
         println("decryptedJwtClaimSet = ${decryptedJwtClaimSet.toJSONObject()}")
     }
-
 }
