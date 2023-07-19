@@ -30,10 +30,10 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 
 /**
-  * https://jira.intrasoft-intl.com/browse/EUDIW-693
+ * https://jira.intrasoft-intl.com/browse/EUDIW-693
  *
-  * when response mode is direct_post the ResponseObject must not contain JARM parameters
-  */
+ * when response mode is direct_post the ResponseObject must not contain JARM parameters
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(
     properties = [

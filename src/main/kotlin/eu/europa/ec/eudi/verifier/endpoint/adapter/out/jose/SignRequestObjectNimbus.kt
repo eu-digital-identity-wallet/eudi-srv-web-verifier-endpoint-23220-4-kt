@@ -126,7 +126,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         var authEncRespAlg: JWEAlgorithm? = null
         var authEncRespEnc: EncryptionMethod? = null
 
-        when(responseMode) {
+        when (responseMode) {
             "direct_post.jwt" -> {
                 authSgnRespAlg = c.authorizationSignedResponseAlg?.let { JWSAlgorithm.parse(it) }
                 authEncRespAlg = c.authorizationEncryptedResponseAlg?.let { JWEAlgorithm.parse(it) }

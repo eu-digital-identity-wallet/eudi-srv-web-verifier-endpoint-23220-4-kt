@@ -34,8 +34,13 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
  */
 object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
 
-    override fun invoke(jarmJwt: Jwt, signAlg: JWSAlgorithm?, encAlg: JWEAlgorithm?, encMethod: EncryptionMethod?):
-        Result<AuthorisationResponseTO> = runCatching {
+    override fun invoke(
+        jarmJwt: Jwt,
+        signAlg: JWSAlgorithm?,
+        encAlg: JWEAlgorithm?,
+        encMethod: EncryptionMethod?,
+        ephemeralEcPrivateKey: String,
+    ): Result<AuthorisationResponseTO> = runCatching {
         // to be removed after creating the key during initTransaction (start)
         val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
             .keyUse(KeyUse.ENCRYPTION)

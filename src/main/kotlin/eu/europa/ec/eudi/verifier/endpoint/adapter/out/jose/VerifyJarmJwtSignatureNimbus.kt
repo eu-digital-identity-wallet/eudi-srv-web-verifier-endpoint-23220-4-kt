@@ -27,8 +27,13 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 
 object VerifyJarmJwtSignatureNimbus : VerifyJarmJwtSignature {
 
-    override fun invoke(jarmJwt: Jwt, signAlg: JWSAlgorithm?, encAlg: JWEAlgorithm?, encMethod: EncryptionMethod?):
-        Result<AuthorisationResponseTO> = runCatching {
+    override fun invoke(
+        jarmJwt: Jwt,
+        signAlg: JWSAlgorithm?,
+        encAlg: JWEAlgorithm?,
+        encMethod: EncryptionMethod?,
+        ephemeralEcPrivateKey: String,
+    ): Result<AuthorisationResponseTO> = runCatching {
         SignedJWT.parse(jarmJwt).jwtClaimsSet.mapToDomain()
     }
 

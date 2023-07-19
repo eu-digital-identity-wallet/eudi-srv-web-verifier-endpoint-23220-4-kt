@@ -23,6 +23,11 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 
 fun interface VerifyJarmJwtSignature {
 
-    operator fun invoke(jarmJwt: Jwt, signAlg: JWSAlgorithm?, encAlg: JWEAlgorithm?, encMethod: EncryptionMethod?):
-        Result<AuthorisationResponseTO>
+    operator fun invoke(
+        jarmJwt: Jwt,
+        signAlg: JWSAlgorithm?,
+        encAlg: JWEAlgorithm?,
+        encMethod: EncryptionMethod?,
+        ephemeralEcPrivateKey: String,
+    ): Result<AuthorisationResponseTO>
 }

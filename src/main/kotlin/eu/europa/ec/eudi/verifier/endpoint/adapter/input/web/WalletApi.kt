@@ -162,8 +162,8 @@ class WalletApi(
                 errorDescription = getFirst("error_description"),
             ).run { AuthorisationResponse.DirectPost(this) }
 
-            fun directPostJwt() = getFirst("response")?.let {
-                AuthorisationResponse.DirectPostJwt(it)
+            fun directPostJwt() = getFirst("response")?.let { jwt ->
+                AuthorisationResponse.DirectPostJwt(getFirst("state"), jwt)
             }
 
             return directPostJwt() ?: directPost()
