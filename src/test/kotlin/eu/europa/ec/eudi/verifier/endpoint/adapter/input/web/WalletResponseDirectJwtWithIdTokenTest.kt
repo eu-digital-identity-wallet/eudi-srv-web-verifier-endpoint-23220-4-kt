@@ -38,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.annotation.Order
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
@@ -45,6 +46,15 @@ import java.time.Instant
 import java.util.Date
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(
+    properties = [
+        "verifier.maxAge=PT6400M",
+        "verifier.response.mode=DirectPostJwt",
+        "verifier.clientMetadata.authorizationSignedResponseAlg=",
+        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
+        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
+    ],
+)
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectJwtWithIdTokenTest {
@@ -76,6 +86,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("response", jwt)
 
         // when
@@ -107,6 +118,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("response", jwt)
+        formEncodedBody.add("state", requestId.value)
         // send the wallet response
         WalletApiClient.directPostJwt(client, formEncodedBody)
 
@@ -151,6 +163,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("response", jwt)
 
         // when
@@ -185,6 +198,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("response", jwt)
         // send the wallet response
         WalletApiClient.directPostJwt(client, formEncodedBody)
