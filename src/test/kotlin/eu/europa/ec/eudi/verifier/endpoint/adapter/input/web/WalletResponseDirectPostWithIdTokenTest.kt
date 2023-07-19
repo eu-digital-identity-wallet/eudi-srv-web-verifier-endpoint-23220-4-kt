@@ -27,11 +27,21 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.annotation.Order
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(
+    properties = [
+        "verifier.maxAge=PT6400M",
+        "verifier.response.mode=DirectPost",
+        "verifier.clientMetadata.authorizationSignedResponseAlg=",
+        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
+        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
+    ],
+)
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectPostWithIdTokenTest {
