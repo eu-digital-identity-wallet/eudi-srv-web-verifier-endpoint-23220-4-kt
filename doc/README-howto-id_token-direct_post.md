@@ -8,7 +8,7 @@ Example of this scenario:
 
 ## Table of contents
 
-* [verifier to verifier backend, to post request for id_token](#requesting-a-idtoken)
+* [verifier to verifier backend, to post request for id_token](#requesting-an-idtoken)
 * [wallet to verifier backend, to get request](#getting-the-request-object)
 * [wallet to verifier backend, to post wallet response, an idToken](#submit-wallet-response---direct-post)
 * [verifier to verifier backend, to get the wallet response](#get-wallet-response---direct-post)
@@ -101,7 +101,7 @@ and with JWT decoding:
 }
 ```
 
-## Submit Wallet Response - Direct Post JWT
+## Submit Wallet Response - Direct Post
 
 Sequence diagram interaction:
 - ISO(12) HTTPs POST to response_uri [section B.3.2.2]
