@@ -8,6 +8,7 @@ services:
       - 8080:8080
     environment:
       VERIFIER_PUBLICURL: "https://10.240.174.10"
+      VERIFIER_RESPONSE_MODE: "DirectPost"
 
   verifier-ui:
     # image: niscy-eudiw/verifier-ui:latest
