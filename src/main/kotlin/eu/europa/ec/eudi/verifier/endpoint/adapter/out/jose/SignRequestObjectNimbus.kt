@@ -48,13 +48,13 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         presentation: Presentation.Requested,
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey?.value
+        val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey
         return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
     }
 
     internal fun sign(
         clientMetaData: ClientMetaData,
-        ecPublicKey: String?,
+        ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
     ): Result<Jwt> = runCatching {
         val header = JWSHeader.Builder(JWSAlgorithm.RS256)
@@ -110,11 +110,11 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         }
     }
 
-    private fun toNimbus(c: ClientMetaData, responseMode: String, ecPublicKey: String?): OIDCClientMetadata {
+    private fun toNimbus(c: ClientMetaData, responseMode: String, ecPublicKey: EphemeralEncryptionKeyPairJWK?): OIDCClientMetadata {
         val keyset = ArrayList<JWK>().apply {
             add(rsaJWK)
         }
-        ecPublicKey?.let { keyset.add(JWK.parse(it)) }
+        ecPublicKey?.let { keyset.add(it.jwk()) }
 
         val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
             is ByValue -> JWKSet(keyset).toPublicJWKSet() to null

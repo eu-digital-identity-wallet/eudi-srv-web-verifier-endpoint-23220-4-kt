@@ -26,6 +26,7 @@ import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
+import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -62,7 +63,7 @@ class SignRequestObjectNimbusTest {
             .keyUse(KeyUse.ENCRYPTION)
             .algorithm(JWEAlgorithm.ECDH_ES)
             .keyID(UUID.randomUUID().toString())
-        val ecPublicKey = ecKeyGenerator.generate().toJSONString()
+        val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
         val jwt = signRequestObject.sign(clientMetaData, ecPublicKey, requestObject).getOrThrow().also { println(it) }
         val claimSet = decode(jwt).getOrThrow().also { println(it) }
