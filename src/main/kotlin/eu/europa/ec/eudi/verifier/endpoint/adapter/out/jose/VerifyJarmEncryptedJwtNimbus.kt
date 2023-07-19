@@ -15,47 +15,47 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
-import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.ECDHDecrypter
-import com.nimbusds.jose.jwk.Curve
-import com.nimbusds.jose.jwk.KeyUse
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator
+import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Decrypts an encrypted JWT and maps the JWT claimSet to an AuthorisationResponseTO
  */
 object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
 
-    override fun invoke(
-        jarmJwt: Jwt,
-        signAlg: JWSAlgorithm?,
-        encAlg: JWEAlgorithm?,
-        encMethod: EncryptionMethod?,
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
-    ): Result<AuthorisationResponseTO> = runCatching {
-        // to be removed after creating the key during initTransaction (start)
-        val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
-            .keyUse(KeyUse.ENCRYPTION)
-            .algorithm(encAlg)
-        val ecKey = ecKeyGenerator.generate()
-        println("ecKey private: ${ecKey.toJSONString()}")
-        println("ecKey public : ${ecKey.toPublicJWK().toJSONString()}")
-        val ecPrivateKey = ecKey.toECPrivateKey()
-        // to be removed after creating the key during initTransaction (end)
+    private val logger: Logger = LoggerFactory.getLogger(VerifyJarmEncryptedJwtNimbus::class.java)
 
+    override fun invoke(
+        verifierConfig: VerifierConfig,
+        jarmJwt: Jwt,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
+        state: String?,
+    ): Result<AuthorisationResponseTO> = runCatching {
+        // jwe algorithm to use to decrypt
+        val jweAlgorithm = JWEAlgorithm.parse(verifierConfig.clientMetaData.authorizationEncryptedResponseAlg)
+        logger.debug("jweAlgorithm: ${jweAlgorithm.name}")
+
+        val privateJwk = ephemeralEcPrivateKey.jwk().toJSONString()
+        logger.debug("privateJwk: $privateJwk")
+        val ecPrivateKey = ECKey.parse(privateJwk)
+
+        // decrypt JARM
+        val jwt = EncryptedJWT.parse(jarmJwt)
         val ecdhDecrypter = ECDHDecrypter(ecPrivateKey)
-        EncryptedJWT.parse(jarmJwt).also {
-            it.decrypt(ecdhDecrypter)
-        }.jwtClaimsSet.mapToDomain()
+        jwt.decrypt(ecdhDecrypter)
+
+        jwt.jwtClaimsSet.mapToDomain()
     }
 
     private fun JWTClaimsSet.mapToDomain(): AuthorisationResponseTO =
@@ -64,7 +64,7 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
             idToken = getClaim("id_token")?.toString(),
             vpToken = getClaim("vp_token")?.toString(),
             presentationSubmission = getStringClaim("presentation_submission")?.let {
-                println("presentation_submission: $it")
+                logger.debug("presentation_submission: $it")
                 PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
             },
             error = getClaim("error")?.toString(),

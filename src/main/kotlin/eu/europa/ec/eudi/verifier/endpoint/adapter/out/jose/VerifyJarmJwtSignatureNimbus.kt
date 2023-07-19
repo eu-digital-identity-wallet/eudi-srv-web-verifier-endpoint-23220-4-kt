@@ -15,25 +15,22 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import com.nimbusds.jose.EncryptionMethod
-import com.nimbusds.jose.JWEAlgorithm
-import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 
 object VerifyJarmJwtSignatureNimbus : VerifyJarmJwtSignature {
 
     override fun invoke(
+        verifierConfig: VerifierConfig,
         jarmJwt: Jwt,
-        signAlg: JWSAlgorithm?,
-        encAlg: JWEAlgorithm?,
-        encMethod: EncryptionMethod?,
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
+        state: String?,
     ): Result<AuthorisationResponseTO> = runCatching {
         SignedJWT.parse(jarmJwt).jwtClaimsSet.mapToDomain()
     }

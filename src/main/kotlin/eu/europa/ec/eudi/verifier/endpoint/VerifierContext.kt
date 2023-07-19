@@ -28,7 +28,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GeneratePresentationI
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmJwtSignatureNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
@@ -172,6 +172,7 @@ class VerifierContext(environment: Environment) {
         storePresentation,
         verifyJarmJwtSignature,
         clock,
+        verifierConfig,
     )
 
     @Bean
@@ -201,7 +202,8 @@ class VerifierContext(environment: Environment) {
         SignRequestObjectNimbus(rsaKey)
 
     @Bean
-    fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmJwtSignatureNimbus
+    fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmEncryptedJwtNimbus
+
     //
     // Persistence
     //

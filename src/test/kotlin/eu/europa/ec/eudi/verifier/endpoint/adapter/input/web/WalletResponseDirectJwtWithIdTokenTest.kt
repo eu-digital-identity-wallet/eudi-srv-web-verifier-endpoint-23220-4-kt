@@ -31,6 +31,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
@@ -45,6 +46,8 @@ import org.springframework.util.MultiValueMap
 import java.time.Instant
 import java.util.Date
 
+@Deprecated(message = "direct_post.jwt no longer supports jwt (not encoded)")
+@Disabled
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(
     properties = [
@@ -82,7 +85,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         // create a JWT with the idToken
-        var jwt = jwtForIdToken(requestId.value, idToken)
+        val jwt = jwtForIdToken(requestId.value, idToken)
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -113,7 +116,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         // create a JWT with the idToken
-        var jwt = jwtForIdToken(requestId.value, idToken)
+        val jwt = jwtForIdToken(requestId.value, idToken)
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -123,7 +126,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.directPostJwt(client, formEncodedBody)
 
         // when
-        var response = VerifierApiClient.getWalletResponse(
+        val response = VerifierApiClient.getWalletResponse(
             client,
             PresentationId(transactionInitialized.presentationId),
             Nonce(initTransaction.nonce!!),
@@ -159,7 +162,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         // create a JWT with the error and error_description
-        var jwt = jwtForError(requestId.value, error, errorDescription)
+        val jwt = jwtForError(requestId.value, error, errorDescription)
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -194,7 +197,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         // create a JWT with the error and error_description
-        var jwt = jwtForError(requestId.value, error, errorDescription)
+        val jwt = jwtForError(requestId.value, error, errorDescription)
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -204,7 +207,7 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
         WalletApiClient.directPostJwt(client, formEncodedBody)
 
         // when
-        var response = VerifierApiClient.getWalletResponse(
+        val response = VerifierApiClient.getWalletResponse(
             client,
             PresentationId(transactionInitialized.presentationId),
             Nonce(initTransaction.nonce!!),

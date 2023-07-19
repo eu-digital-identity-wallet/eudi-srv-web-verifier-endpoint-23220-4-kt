@@ -112,6 +112,7 @@ class PostWalletResponseLive(
     private val storePresentation: StorePresentation,
     private val verifyJarmJwtSignature: VerifyJarmJwtSignature,
     private val clock: Clock,
+    private val verifierConfig: VerifierConfig,
 ) : PostWalletResponse {
 
     override suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String> = runCatching {
@@ -120,15 +121,13 @@ class PostWalletResponseLive(
         val authorisationResponseObject = when (walletResponse) {
             is AuthorisationResponse.DirectPost -> walletResponse.response
             is AuthorisationResponse.DirectPostJwt -> {
-                if (presentation.ephemeralEcPrivateKey == null) throw IllegalArgumentException(
-                    "No Ephemeral key for for requestId ${presentation.requestId}",
-                )
+                requireNotNull(presentation.ephemeralEcPrivateKey) { "No Ephemeral key for for requestId ${presentation.requestId}" }
+
                 verifyJarmJwtSignature(
+                    verifierConfig,
                     walletResponse.jarm,
-                    null,
-                    null,
-                    null,
                     presentation.ephemeralEcPrivateKey,
+                    walletResponse.state,
                 ).getOrThrow()
             }
         }
@@ -146,7 +145,7 @@ class PostWalletResponseLive(
 
         val presentation = loadPresentationByRequestId(requestId)
             ?: throw IllegalArgumentException("Presentation not found for requestId $requestId")
-        if (presentation !is Presentation.RequestObjectRetrieved) throw IllegalArgumentException("Invalid state for requestId $requestId")
+        require(presentation is Presentation.RequestObjectRetrieved) { "Invalid state for requestId $requestId" }
         return presentation
     }
 
