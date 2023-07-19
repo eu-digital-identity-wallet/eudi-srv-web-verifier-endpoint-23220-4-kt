@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 
@@ -28,6 +29,6 @@ fun interface VerifyJarmJwtSignature {
         signAlg: JWSAlgorithm?,
         encAlg: JWEAlgorithm?,
         encMethod: EncryptionMethod?,
-        ephemeralEcPrivateKey: String,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
     ): Result<AuthorisationResponseTO>
 }

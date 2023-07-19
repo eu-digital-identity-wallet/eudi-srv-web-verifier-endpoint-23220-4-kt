@@ -17,30 +17,38 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.ECKey
+import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
-import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralKey
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import java.util.*
 
 /**
- * An implementation of [GenerateEphemeralKey] that uses Nimbus SDK
+ * An implementation of [GenerateEphemeralEncryptionKeyPair] that uses Nimbus SDK
  */
-class GenerateEpheperalKeyNimbus : GenerateEphemeralKey {
+object GenerateEphemeralEncryptionKeyPairNimbus : GenerateEphemeralEncryptionKeyPair {
 
     override fun invoke(
         verifierConfig: VerifierConfig,
-    ): Result<Jwt> {
+    ): Result<EphemeralEncryptionKeyPairJWK> {
         val alg = JWEAlgorithm.parse(verifierConfig.clientMetaData.authorizationEncryptedResponseAlg)
-        return createEphemeralEncryptionKey(alg)
+        return createEphemeralEncryptionKey(alg).map { EphemeralEncryptionKeyPairJWK.from(keyPair = it) }
     }
 
-    private fun createEphemeralEncryptionKey(alg: JWEAlgorithm): Result<Jwt> = runCatching {
+    private fun createEphemeralEncryptionKey(alg: JWEAlgorithm): Result<ECKey> = runCatching {
         val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
             .keyUse(KeyUse.ENCRYPTION)
             .algorithm(alg)
             .keyID(UUID.randomUUID().toString())
-        ecKeyGenerator.generate().toJSONString()
+        ecKeyGenerator.generate()
     }
 }
+
+fun EphemeralEncryptionKeyPairJWK.Companion.from(keyPair: ECKey): EphemeralEncryptionKeyPairJWK {
+    return EphemeralEncryptionKeyPairJWK(keyPair.toJSONString())
+}
+
+fun EphemeralEncryptionKeyPairJWK.jwk(): JWK = JWK.parse(value)

@@ -25,6 +25,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.ec.eudi.prex.PresentationExchange
+import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
@@ -39,7 +40,7 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
         signAlg: JWSAlgorithm?,
         encAlg: JWEAlgorithm?,
         encMethod: EncryptionMethod?,
-        ephemeralEcPrivateKey: String,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
     ): Result<AuthorisationResponseTO> = runCatching {
         // to be removed after creating the key during initTransaction (start)
         val ecKeyGenerator = ECKeyGenerator(Curve.P_256)

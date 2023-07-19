@@ -19,7 +19,7 @@ import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralKey
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import kotlinx.serialization.Required
@@ -112,7 +112,7 @@ class InitTransactionLive(
     private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
-    private val generateEphemeralKey: GenerateEphemeralKey,
+    private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
 
 ) : InitTransaction {
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> =
@@ -124,7 +124,7 @@ class InitTransactionLive(
             val newEphemeralEcPublicKey = when (verifierConfig.responseModeOption) {
                 ResponseModeOption.DirectPost -> null
                 ResponseModeOption.DirectPostJwt ->
-                    generateEphemeralKey(verifierConfig).getOrThrow()
+                    generateEphemeralEncryptionKeyPair(verifierConfig).getOrThrow()
             }
 
             // Initialize presentation

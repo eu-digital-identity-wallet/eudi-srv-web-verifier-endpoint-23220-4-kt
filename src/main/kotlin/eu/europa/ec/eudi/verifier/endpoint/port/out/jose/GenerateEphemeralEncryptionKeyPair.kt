@@ -15,14 +15,14 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 
 /**
  * An out port that generates ephemeral key
  */
-fun interface GenerateEphemeralKey {
+fun interface GenerateEphemeralEncryptionKeyPair {
     operator fun invoke(
         verifierConfig: VerifierConfig,
-    ): Result<Jwt>
+    ): Result<EphemeralEncryptionKeyPairJWK>
 }

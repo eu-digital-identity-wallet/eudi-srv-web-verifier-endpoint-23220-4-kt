@@ -19,7 +19,7 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.server.coRouter
 
-class StaticContent() {
+class StaticContent {
 
     val route = coRouter {
         accept(MediaType.TEXT_HTML).nest {

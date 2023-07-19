@@ -67,14 +67,11 @@ class VerifierApi(
         val presentationId = req.presentationId()
         val nonce = req.queryParam("nonce").getOrNull()?.let { Nonce(it) }
 
-        return if (nonce == null) {
-            ValidationError.MissingNonce.asBadRequest()
-        } else {
-            when (val result = getWalletResponse(presentationId, nonce)) {
-                is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
-                is QueryResponse.InvalidState -> badRequest().buildAndAwait()
-                is QueryResponse.Found -> found(result.value)
-            }
+        return if (nonce == null) ValidationError.MissingNonce.asBadRequest()
+        else when (val result = getWalletResponse(presentationId, nonce)) {
+            is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
+            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.Found -> found(result.value)
         }
     }
 

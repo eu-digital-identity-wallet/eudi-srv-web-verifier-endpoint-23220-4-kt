@@ -113,6 +113,11 @@ sealed interface WalletResponse {
     data class Error(val value: String, val description: String?) : WalletResponse
 }
 
+@JvmInline
+value class EphemeralEncryptionKeyPairJWK(val value: String) {
+    companion object
+}
+
 /**
  * The entity that represents the presentation process
  */
@@ -130,7 +135,7 @@ sealed interface Presentation {
         override val type: PresentationType,
         val requestId: RequestId,
         val nonce: Nonce,
-        val ephemeralEcPrivateKey: String?,
+        val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
     ) : Presentation
 
     /**
@@ -146,7 +151,7 @@ sealed interface Presentation {
         val requestId: RequestId,
         val requestObjectRetrievedAt: Instant,
         val nonce: Nonce,
-        val ephemeralEcPrivateKey: String?,
+        val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)

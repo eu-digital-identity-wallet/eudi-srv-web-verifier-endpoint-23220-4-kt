@@ -18,7 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEpheperalKeyNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
@@ -66,7 +66,7 @@ object TestContext {
     val loadPresentationById = repo.loadPresentationById
     val loadPresentationByRequestId = repo.loadPresentationByRequestId
     val storePresentation = repo.storePresentation
-    val generateEphemeralKey = GenerateEpheperalKeyNimbus()
+    val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus
 
     fun initTransaction(verifierConfig: VerifierConfig): InitTransaction =
         InitTransactionLive(

@@ -48,9 +48,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         presentation: Presentation.Requested,
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey?.let {
-            JWK.parse(presentation.ephemeralEcPrivateKey).toPublicJWK().toJSONString()
-        }
+        val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey?.value
         return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
     }
 

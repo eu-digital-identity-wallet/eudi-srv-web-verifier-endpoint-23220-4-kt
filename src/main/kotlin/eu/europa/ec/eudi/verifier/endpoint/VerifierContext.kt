@@ -26,7 +26,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GeneratePresentationIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEpheperalKeyNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmJwtSignatureNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
@@ -37,7 +37,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralKey
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePresentationsOlderThan
@@ -118,7 +118,7 @@ class VerifierContext(environment: Environment) {
         storePresentation: StorePresentation,
         signRequestObject: SignRequestObject,
         clock: Clock,
-        generateEphemeralKey: GenerateEphemeralKey,
+        generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
     ): InitTransaction = InitTransactionLive(
         generatePresentationId,
         generateRequestId,
@@ -126,7 +126,7 @@ class VerifierContext(environment: Environment) {
         signRequestObject,
         verifierConfig,
         clock,
-        generateEphemeralKey,
+        generateEphemeralEncryptionKeyPair,
     )
 
     @Bean
@@ -175,7 +175,7 @@ class VerifierContext(environment: Environment) {
     )
 
     @Bean
-    fun generateEphemeralKey(): GenerateEphemeralKey = GenerateEpheperalKeyNimbus()
+    fun generateEphemeralKey(): GenerateEphemeralEncryptionKeyPair = GenerateEphemeralEncryptionKeyPairNimbus
 
     @Bean
     fun getWalletResponse(
