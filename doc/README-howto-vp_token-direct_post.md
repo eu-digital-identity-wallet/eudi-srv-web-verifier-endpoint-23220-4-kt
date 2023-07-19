@@ -13,7 +13,7 @@ Example of this scenario:
 * [wallet to verifier backend, to post wallet response, an idToken](#submit-wallet-response---direct-post)
 * [verifier to verifier backend, to get the wallet response](#get-wallet-response---direct-post)
 
-## Requesting a id_token & vp_token
+## Requesting a vp_token
 
 Sequence diagram interaction:
 - ISO(1) prepare request_uri
