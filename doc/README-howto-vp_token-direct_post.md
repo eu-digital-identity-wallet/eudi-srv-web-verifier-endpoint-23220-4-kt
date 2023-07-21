@@ -1,9 +1,9 @@
-# EUDI Verifier Endpoint - Howto vp_token & id_token request using direct_post
+# EUDI Verifier Endpoint - Howto vp_token request using direct_post
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Example of this scenario:
-- Request for vp_token & id_token
+- Request for vp_token 
 - Submit Wallet Response - Direct Post
 
 ## Table of contents
@@ -23,7 +23,6 @@ Sequence diagram interaction:
 ```bash
 curl -X POST -H "Content-type: application/json" -d '{
   "type": "vp_token id_token",
-  "id_token_type": "subject_signed_id_token",
   "presentation_definition": {
     "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
     "input_descriptors": [
@@ -160,7 +159,6 @@ curl -v -X POST 'http://localhost:8080/wallet/direct_post' \
   -H "Content-type: application/x-www-form-urlencoded" \
   -H "Accept: application/json" \
   --data-urlencode "state=$STATE" \
-  --data-urlencode 'id_token=value 1' \
   --data-urlencode 'vp_token={"id": "123456"}' \
   --data-urlencode presentation_submission@- << EOF
 {
@@ -201,7 +199,7 @@ Response:
 
 ```json
 {
-  "id_token": "value 1",
+
   "vp_token": {
     "id": "123456"
   },
