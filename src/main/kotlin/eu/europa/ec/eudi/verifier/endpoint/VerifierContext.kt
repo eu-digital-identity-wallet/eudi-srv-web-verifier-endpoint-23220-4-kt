@@ -27,13 +27,11 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GeneratePresentationIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
-import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
-import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
-import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseModeOption
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
@@ -286,6 +284,16 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
             ByValue, null -> EmbedOption.ByValue
         }
     }
+
+    val authorizationSignedResponseAlg =
+        getProperty("verifier.clientMetadata.authorizationSignedResponseAlg", String::class.java) ?: null
+    val authorizationEncryptedResponseAlg =
+        getProperty("verifier.clientMetadata.authorizationEncryptedResponseAlg", String::class.java) ?: null
+    val authorizationEncryptedResponseEnc =
+        getProperty("verifier.clientMetadata.authorizationEncryptedResponseEnc", String::class.java) ?: null
+
+    val defaultJarmOption = ParseJarmOptionNimbus(null, "ECDH-ES", "A256GCM")!!
+
     return ClientMetaData(
         jwkOption = jwkOption,
         idTokenSignedResponseAlg = "RS256",
@@ -296,13 +304,10 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
             "did:example",
             "did:key",
         ),
-
-        authorizationSignedResponseAlg =
-            getProperty("verifier.clientMetadata.authorizationSignedResponseAlg", String::class.java) ?: "",
-        authorizationEncryptedResponseAlg =
-            getProperty("verifier.clientMetadata.authorizationEncryptedResponseAlg", String::class.java) ?: "ECDH-ES",
-        authorizationEncryptedResponseEnc =
-            getProperty("verifier.clientMetadata.authorizationEncryptedResponseEnc", String::class.java) ?: "A256GCM",
-
+        jarmOption = ParseJarmOptionNimbus.invoke(
+            authorizationSignedResponseAlg,
+            authorizationEncryptedResponseAlg,
+            authorizationEncryptedResponseEnc,
+        ) ?: defaultJarmOption,
     )
 }

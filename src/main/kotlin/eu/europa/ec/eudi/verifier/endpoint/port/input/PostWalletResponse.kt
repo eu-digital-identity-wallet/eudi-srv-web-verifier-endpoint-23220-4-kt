@@ -122,9 +122,13 @@ class PostWalletResponseLive(
             is AuthorisationResponse.DirectPost -> walletResponse.response
             is AuthorisationResponse.DirectPostJwt -> {
                 requireNotNull(presentation.ephemeralEcPrivateKey) { "No Ephemeral key for for requestId ${presentation.requestId}" }
-
+                val encrypted = when (val jarmOption = verifierConfig.clientMetaData.jarmOption) {
+                    is JarmOption.Signed -> error("Misconfiguration")
+                    is JarmOption.Encrypted -> jarmOption
+                    is JarmOption.SignedAndEncrypted -> jarmOption.encrypted
+                }
                 verifyJarmJwtSignature(
-                    verifierConfig,
+                    encrypted,
                     walletResponse.jarm,
                     presentation.ephemeralEcPrivateKey,
                     walletResponse.state,

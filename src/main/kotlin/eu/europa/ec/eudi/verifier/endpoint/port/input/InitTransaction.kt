@@ -121,11 +121,7 @@ class InitTransactionLive(
             val (nonce, type) = initTransactionTO.toDomain().getOrThrow()
 
             // if response mode is direct post jwt then generate ephemeral key
-            val newEphemeralEcPublicKey = when (verifierConfig.responseModeOption) {
-                ResponseModeOption.DirectPost -> null
-                ResponseModeOption.DirectPostJwt ->
-                    generateEphemeralEncryptionKeyPair(verifierConfig).getOrThrow()
-            }
+            val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(verifierConfig.responseModeOption)
 
             // Initialize presentation
             val requestedPresentation = Presentation.Requested(
@@ -141,6 +137,17 @@ class InitTransactionLive(
 
             storePresentation(updatedPresentation)
             request
+        }
+
+    private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
+        when (responseModeOption) {
+            ResponseModeOption.DirectPost -> null
+            ResponseModeOption.DirectPostJwt ->
+                when (val jarmOption = verifierConfig.clientMetaData.jarmOption) {
+                    is JarmOption.Signed -> error("Misconfiguration")
+                    is JarmOption.Encrypted -> jarmOption
+                    is JarmOption.SignedAndEncrypted -> jarmOption.encrypted
+                }.run { generateEphemeralEncryptionKeyPair(this).getOrThrow() }
         }
 
     /**

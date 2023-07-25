@@ -22,7 +22,7 @@ import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import java.util.*
 
@@ -32,9 +32,9 @@ import java.util.*
 object GenerateEphemeralEncryptionKeyPairNimbus : GenerateEphemeralEncryptionKeyPair {
 
     override fun invoke(
-        verifierConfig: VerifierConfig,
+        encryptedResponse: JarmOption.Encrypted,
     ): Result<EphemeralEncryptionKeyPairJWK> {
-        val alg = JWEAlgorithm.parse(verifierConfig.clientMetaData.authorizationEncryptedResponseAlg)
+        val alg = encryptedResponse.nimbusAlg()
         return createEphemeralEncryptionKey(alg).map { EphemeralEncryptionKeyPairJWK.from(keyPair = it) }
     }
 
