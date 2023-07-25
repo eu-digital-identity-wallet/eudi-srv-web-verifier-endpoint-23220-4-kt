@@ -15,10 +15,13 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import com.nimbusds.jose.crypto.ECDHDecrypter
-import com.nimbusds.jose.jwk.ECKey
-import com.nimbusds.jwt.EncryptedJWT
+import com.nimbusds.jose.jwk.JWKSet
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet
+import com.nimbusds.jose.proc.JWEDecryptionKeySelector
+import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.proc.DefaultJWTProcessor
+import com.nimbusds.jwt.proc.JWTProcessor
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
@@ -41,20 +44,20 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
         state: String?,
     ): Result<AuthorisationResponseTO> = runCatching {
-        // jwe algorithm to use to decrypt
-        val jweAlgorithm = encrypt.nimbusAlg()
-        logger.debug("jweAlgorithm: ${jweAlgorithm.name}")
+        processor(encrypt, ephemeralEcPrivateKey)
+            .process(jarmJwt, null)
+            .mapToDomain()
+    }
 
-        val privateJwk = ephemeralEcPrivateKey.jwk().toJSONString()
-        logger.debug("privateJwk: $privateJwk")
-        val ecPrivateKey = ECKey.parse(privateJwk)
-
-        // decrypt JARM
-        val jwt = EncryptedJWT.parse(jarmJwt)
-        val ecdhDecrypter = ECDHDecrypter(ecPrivateKey)
-        jwt.decrypt(ecdhDecrypter)
-
-        jwt.jwtClaimsSet.mapToDomain()
+    private fun processor(
+        encrypt: JarmOption.Encrypted,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
+    ): JWTProcessor<SecurityContext> = DefaultJWTProcessor<SecurityContext>().apply {
+        jweKeySelector = JWEDecryptionKeySelector(
+            encrypt.nimbusAlg(),
+            encrypt.nimbusEnc(),
+            ImmutableJWKSet(JWKSet(ephemeralEcPrivateKey.jwk())),
+        )
     }
 
     private fun JWTClaimsSet.mapToDomain(): AuthorisationResponseTO =
