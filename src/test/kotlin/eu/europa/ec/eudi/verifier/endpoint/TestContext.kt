@@ -19,13 +19,11 @@ import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
-import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
-import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
-import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObjectLive
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
@@ -56,9 +54,7 @@ object TestContext {
         idTokenEncryptedResponseAlg = "RS256",
         idTokenEncryptedResponseEnc = "A128CBC-HS256",
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
-        authorizationSignedResponseAlg = "",
-        authorizationEncryptedResponseAlg = "ECDH_ES",
-        authorizationEncryptedResponseEnc = "A256GCM",
+        jarmOption = ParseJarmOptionNimbus(null, "ECDH_ES", "A256GCM")!!,
     )
     val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus(rsaJwk)
     val singRequestObjectVerifier = RSASSAVerifier(rsaJwk.toRSAPublicKey())

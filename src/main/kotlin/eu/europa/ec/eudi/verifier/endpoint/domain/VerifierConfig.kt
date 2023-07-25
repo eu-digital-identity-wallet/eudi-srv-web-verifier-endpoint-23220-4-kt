@@ -26,7 +26,7 @@ typealias PresentationRelatedUrlBuilder<ID> = (ID) -> URL
  * where can be embedded either by value or by reference
  */
 sealed interface EmbedOption<in ID> {
-    object ByValue : EmbedOption<Any>
+    data object ByValue : EmbedOption<Any>
     data class ByReference<ID>(val buildUrl: PresentationRelatedUrlBuilder<ID>) : EmbedOption<ID>
 
     companion object {
@@ -42,6 +42,36 @@ enum class ResponseModeOption {
     DirectPostJwt,
 }
 
+sealed interface JarmOption {
+
+    val jwsAlg: String?
+        get() = when (this) {
+            is Signed -> algorithm
+            is SignedAndEncrypted -> signed.algorithm
+            else -> null
+        }
+
+    val jweAlg: String?
+        get() = when (this) {
+            is Encrypted -> algorithm
+            is SignedAndEncrypted -> encrypted.algorithm
+            else -> null
+        }
+
+    val encryptionMethod: String?
+        get() = when (this) {
+            is Encrypted -> encode
+            is SignedAndEncrypted -> encrypted.encode
+            else -> null
+        }
+    data class Signed(val algorithm: String) : JarmOption
+    data class Encrypted(val algorithm: String, val encode: String) : JarmOption
+    data class SignedAndEncrypted(
+        val signed: Signed,
+        val encrypted: Encrypted,
+    ) : JarmOption
+}
+
 /**
  * By OpenID Connect Dynamic Client Registration specification
  *
@@ -53,9 +83,7 @@ data class ClientMetaData(
     val idTokenEncryptedResponseAlg: String,
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
-    val authorizationSignedResponseAlg: String?,
-    val authorizationEncryptedResponseAlg: String?,
-    val authorizationEncryptedResponseEnc: String?,
+    val jarmOption: JarmOption,
 )
 
 /**

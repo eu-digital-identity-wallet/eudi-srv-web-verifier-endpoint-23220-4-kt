@@ -15,15 +15,14 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.crypto.ECDHDecrypter
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
+import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import org.slf4j.Logger
@@ -37,13 +36,13 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
     private val logger: Logger = LoggerFactory.getLogger(VerifyJarmEncryptedJwtNimbus::class.java)
 
     override fun invoke(
-        verifierConfig: VerifierConfig,
+        encrypt: JarmOption.Encrypted,
         jarmJwt: Jwt,
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
         state: String?,
     ): Result<AuthorisationResponseTO> = runCatching {
         // jwe algorithm to use to decrypt
-        val jweAlgorithm = JWEAlgorithm.parse(verifierConfig.clientMetaData.authorizationEncryptedResponseAlg)
+        val jweAlgorithm = encrypt.nimbusAlg()
         logger.debug("jweAlgorithm: ${jweAlgorithm.name}")
 
         val privateJwk = ephemeralEcPrivateKey.jwk().toJSONString()

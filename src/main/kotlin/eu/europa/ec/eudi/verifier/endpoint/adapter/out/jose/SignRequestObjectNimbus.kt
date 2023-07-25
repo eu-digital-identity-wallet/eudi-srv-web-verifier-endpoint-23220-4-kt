@@ -17,7 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.RSASSASigner
-import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jwt.JWTClaimsSet
@@ -35,7 +34,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import java.time.Clock
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * An implementation of [SignRequestObject] that uses Nimbus SDK
@@ -110,26 +108,22 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         }
     }
 
-    private fun toNimbus(c: ClientMetaData, responseMode: String, ecPublicKey: EphemeralEncryptionKeyPairJWK?): OIDCClientMetadata {
-        val keyset = ArrayList<JWK>().apply {
-            add(rsaJWK)
-        }
-        ecPublicKey?.let { keyset.add(it.jwk()) }
-
+    private fun toNimbus(
+        c: ClientMetaData,
+        responseMode: String,
+        ecPublicKey: EphemeralEncryptionKeyPairJWK?,
+    ): OIDCClientMetadata {
         val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
-            is ByValue -> JWKSet(keyset).toPublicJWKSet() to null
-            is ByReference -> null to option.buildUrl.invoke(Unit)
-        }
-        var authSgnRespAlg: JWSAlgorithm? = null
-        var authEncRespAlg: JWEAlgorithm? = null
-        var authEncRespEnc: EncryptionMethod? = null
-
-        when (responseMode) {
-            "direct_post.jwt" -> {
-                authSgnRespAlg = c.authorizationSignedResponseAlg?.let { JWSAlgorithm.parse(it) }
-                authEncRespAlg = c.authorizationEncryptedResponseAlg?.let { JWEAlgorithm.parse(it) }
-                authEncRespEnc = c.authorizationEncryptedResponseEnc?.let { EncryptionMethod.parse(it) }
+            is ByValue -> {
+                val keySet = buildList {
+                    add(rsaJWK)
+                    ecPublicKey?.jwk()?.let { add(it) }
+                }
+                val jwkSet = JWKSet(keySet).toPublicJWKSet()
+                jwkSet to null
             }
+
+            is ByReference -> null to option.buildUrl.invoke(Unit)
         }
 
         return OIDCClientMetadata().apply {
@@ -140,9 +134,11 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             jwkSetURI = vJwkSetURI?.toURI()
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
 
-            authSgnRespAlg?.let { setCustomField("authorization_signed_response_alg", it.toString()) }
-            authEncRespAlg?.let { setCustomField("authorization_encrypted_response_alg", it.toString()) }
-            authEncRespEnc?.let { setCustomField("authorization_encrypted_response_enc", it.toString()) }
+            if ("direct_post.jwt" == responseMode) {
+                c.jarmOption.jwsAlg?.let { setCustomField("authorization_signed_response_alg", it) }
+                c.jarmOption.jweAlg?.let { setCustomField("authorization_encrypted_response_alg", it) }
+                c.jarmOption.encryptionMethod?.let { setCustomField("authorization_encrypted_response_enc", it) }
+            }
         }
     }
 

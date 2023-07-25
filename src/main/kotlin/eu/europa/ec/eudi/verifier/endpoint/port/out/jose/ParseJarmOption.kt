@@ -15,17 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
-import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 
-fun interface VerifyJarmJwtSignature {
+fun interface ParseJarmOption {
 
-    operator fun invoke(
-        encrypt: JarmOption.Encrypted,
-        jarmJwt: Jwt,
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
-        state: String?,
-    ): Result<AuthorisationResponseTO>
+    operator fun invoke(jwsAlg: String?, jweAlg: String?, encryptionMethod: String?): JarmOption?
 }
