@@ -15,22 +15,21 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import com.nimbusds.jose.EncryptionMethod
-import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWEEncrypter
 import com.nimbusds.jose.JWEHeader
 import com.nimbusds.jose.crypto.ECDHEncrypter
-import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusAlg
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusEnc
+import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
-import org.json.JSONObject
-import org.junit.jupiter.api.Assertions
+import kotlinx.serialization.json.*
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
@@ -80,35 +79,22 @@ internal class WalletResponseDirectJwtTest {
         val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
-        val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        val requestId =
+            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        val signAlg =
-            requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_signed_response_alg")
-        Assertions.assertEquals("", signAlg, "authorization_signed_response_alg is not empty")
-        val encAlg =
-            requestObjectJsonResponse.getJSONObject("client_metadata").getString("authorization_encrypted_response_alg")
-        Assertions.assertEquals("ECDH-ES", encAlg, "authorization_encrypted_response_alg is not ECDH-ES")
-        val encMethod = requestObjectJsonResponse.getJSONObject("client_metadata")
-            .getString("authorization_encrypted_response_enc")
-        Assertions.assertEquals(encMethod, "A256GCM", "authorization_encrypted_response_enc is not A256GCM")
-
-        val clientMetadataEcKey =
-            requestObjectClientMetadataEcKey(requestObjectJsonResponse)
-        Assertions.assertNotNull(clientMetadataEcKey) { "jwks does not contain EC key" }
-
-        val jweAlgorithm = JWEAlgorithm.parse(encAlg)
-        val encryptMethod = EncryptionMethod.parse(encMethod)
-
-        val ecKey = ECKey.parse(clientMetadataEcKey)
+        val jarmOption = assertInstanceOf(JarmOption.Encrypted::class.java, requestObjectJsonResponse.jarmOption())
+        val ecKey = requestObjectJsonResponse.ecKey()
+        assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
+        assertNotNull(ecKey)
 
         // (wallet) generate JWT with claims
         val now = Date()
         val jwtClaims: JWTClaimsSet = JWTClaimsSet.Builder()
             .issuer("Verifier")
-            .audience(Arrays.asList("https://eudi.com", "https://eudi.org"))
-            .expirationTime(Date(now.getTime() + 1000 * 60 * 10)) // expires in 10 minutes
+            .audience(listOf("https://eudi.com", "https://eudi.org"))
+            .expirationTime(Date(now.time + 1000 * 60 * 10)) // expires in 10 minutes
             .notBeforeTime(now)
             .issueTime(now)
             .jwtID(UUID.randomUUID().toString())
@@ -120,7 +106,7 @@ internal class WalletResponseDirectJwtTest {
         println("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
         // Request JWT encrypted with ECDH-ES
-        val jweHeader = JWEHeader(jweAlgorithm, encryptMethod)
+        val jweHeader = JWEHeader(jarmOption.nimbusAlg(), jarmOption.nimbusEnc())
         println("header = ${jweHeader.toJSONObject()}")
 
         // Create the encrypted JWT object
@@ -154,21 +140,7 @@ internal class WalletResponseDirectJwtTest {
         println("wallet response to domain: $walletResponse")
 
         // then
-        Assertions.assertNotNull(response, "response is null")
-    }
-
-    private fun requestObjectClientMetadataEcKey(requestObjectJsonResponse: JSONObject): String? {
-        val jsonArray =
-            requestObjectJsonResponse.getJSONObject("client_metadata").getJSONObject("jwks").getJSONArray("keys")
-        for (i in 0 until jsonArray.length()) {
-            val item = jsonArray.get(i)
-            if (item is JSONObject) {
-                if (item.getString("kty") == "EC") {
-                    return item.toString()
-                }
-            }
-        }
-        return null
+        assertNotNull(response, "response is null")
     }
 
     /*

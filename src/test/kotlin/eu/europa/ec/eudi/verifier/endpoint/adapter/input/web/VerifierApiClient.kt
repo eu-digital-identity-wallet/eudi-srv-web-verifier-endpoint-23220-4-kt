@@ -21,11 +21,13 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromStream
 import org.junit.jupiter.api.Assertions
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.test.web.reactive.server.expectBody
 import java.io.ByteArrayInputStream
 
 object VerifierApiClient {
@@ -65,11 +67,11 @@ object VerifierApiClient {
         val responseSpec = client.get().uri(walletResponseUri)
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
-        val returnResult = responseSpec.expectBody().returnResult()
+        val returnResult = responseSpec.expectBody<JsonObject>().returnResult()
         returnResult.status.also { println("response status: $it") }
         returnResult.responseHeaders.also { println("response headers: $it") }
-        returnResult.responseBodyContent?.let {
-            println("response body content:\n${TestUtils.prettyPrintJson(String(it))}")
+        returnResult.responseBody?.also { responseBody ->
+            println("response body:\n${TestUtils.prettyPrintJson(responseBody)}")
         }
 
         // then

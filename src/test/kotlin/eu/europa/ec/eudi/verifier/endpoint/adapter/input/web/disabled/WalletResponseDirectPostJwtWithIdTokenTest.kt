@@ -19,6 +19,9 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Disabled
@@ -32,6 +35,7 @@ import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.test.web.reactive.server.expectBody
 import org.springframework.web.reactive.function.BodyInserters
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -100,20 +104,14 @@ internal class WalletResponseDirectPostJwtWithIdTokenTest {
 
         println("response: $getResponseString")
 
-        val (header, payload) = TestUtils.parseJWT(getResponseString)
-        // debug
-        val prettyHeader = TestUtils.prettyPrintJson(header)
-        val prettyPayload = TestUtils.prettyPrintJson(payload)
-        println("prettyHeader:\n$prettyHeader")
-        println("prettyPayload:\n$prettyPayload")
+        val (_, payload) = TestUtils.parseJWTIntoClaims(getResponseString)
 
-        val payloadObject = JSONObject(payload)
-        val presentationId = payloadObject.get("nonce").toString()
+        val presentationId = payload["nonce"]!!.jsonPrimitive.contentOrNull
         println("presentationId: $presentationId")
 
         Assertions.assertNotNull(presentationId)
 
-        return presentationId
+        return presentationId!!
     }
 
     /**
@@ -187,11 +185,11 @@ internal class WalletResponseDirectPostJwtWithIdTokenTest {
         val responseSpec = client.get().uri(requestUri)
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
-        val returnResult = responseSpec.expectBody().returnResult()
+        val returnResult = responseSpec.expectBody<JsonObject>().returnResult()
         returnResult.status.also { println("response status: $it") }
         returnResult.responseHeaders.also { println("response headers: $it") }
-        returnResult.responseBodyContent?.let {
-            println("response body content:\n${TestUtils.prettyPrintJson(String(it))}")
+        returnResult.responseBody?.also { jsonResponse ->
+            println("response body content:\n${TestUtils.prettyPrintJson(jsonResponse)}")
         }
 
         // then

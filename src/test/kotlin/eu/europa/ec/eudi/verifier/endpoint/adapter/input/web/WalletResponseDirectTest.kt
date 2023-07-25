@@ -17,8 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import kotlinx.coroutines.runBlocking
-import org.json.JSONObject
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
@@ -69,34 +68,7 @@ internal class WalletResponseDirectTest {
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-//        val ecPublicKey = WalletApiClient.getEcKey(requestObjectJsonResponse)
-
-        Assertions.assertFalse(
-            requestObjectJsonResponse.getJSONObject("client_metadata").has("authorization_signed_response_alg"),
-            "authorization_signed_response_alg must not be present",
-        )
-        Assertions.assertFalse(
-            requestObjectJsonResponse.getJSONObject("client_metadata").has("authorization_encrypted_response_alg"),
-            "authorization_encrypted_response_alg must not be present",
-        )
-        Assertions.assertFalse(
-            requestObjectJsonResponse.getJSONObject("client_metadata").has("authorization_encrypted_response_enc"),
-            "authorization_encrypted_response_enc must not be present",
-        )
-        Assertions.assertFalse(requestObjectContainsClientMetadataEcKey(requestObjectJsonResponse)) { "jwks must not contain EC key" }
-    }
-    private fun requestObjectContainsClientMetadataEcKey(requestObjectJsonResponse: JSONObject): Boolean {
-        var containsEcKey = false
-        val jsonArray =
-            requestObjectJsonResponse.getJSONObject("client_metadata").getJSONObject("jwks").getJSONArray("keys")
-        for (i in 0 until jsonArray.length()) {
-            val item = jsonArray.get(i)
-            if (item is JSONObject) {
-                if (item.getString("kty") == "EC") {
-                    containsEcKey = true
-                }
-            }
-        }
-        return containsEcKey
+        assertNull(requestObjectJsonResponse.jarmOption())
+        assertNull(requestObjectJsonResponse.ecKey()) { "jwks must not contain EC key" }
     }
 }

@@ -24,7 +24,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.ParseJarmOption
 object ParseJarmOptionNimbus : ParseJarmOption {
 
     override operator fun invoke(jwsAlg: String?, jweAlg: String?, encryptionMethod: String?): JarmOption? {
-        val signed = jwsAlg?.signed()
+        val signed = if (!jwsAlg.isNullOrBlank()) jwsAlg.signed() else null
         val encrypted = bothNotNull(jweAlg, encryptionMethod)?.encrypted()
 
         return when {
@@ -44,8 +44,8 @@ object ParseJarmOptionNimbus : ParseJarmOption {
             EncryptionMethod.parse(second).name,
         )
 
-    private fun <A, B> bothNotNull(a: A?, b: B?): Pair<A, B>? =
-        if (a != null && b != null) a to b
+    private fun bothNotNull(a: String?, b: String?): Pair<String, String>? =
+        if (!a.isNullOrBlank() && !b.isNullOrBlank()) a to b
         else null
 }
 

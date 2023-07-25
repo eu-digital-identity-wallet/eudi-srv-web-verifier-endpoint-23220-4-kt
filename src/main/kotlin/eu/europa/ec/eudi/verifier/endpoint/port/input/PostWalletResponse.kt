@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
@@ -51,7 +52,7 @@ enum class WalletResponseValidationError {
     MissingIdTokenOrVpTokenOrPresentationSubmission,
 }
 
-internal fun AuthorisationResponseTO.toDomain(presentation: Presentation.RequestObjectRetrieved): Result<WalletResponse> {
+internal fun AuthorisationResponseTO.toDomain(presentation: RequestObjectRetrieved): Result<WalletResponse> {
     fun requiredIdToken() =
         if (idToken != null) {
             Result.success(WalletResponse.IdToken(idToken))
@@ -104,7 +105,7 @@ internal fun AuthorisationResponseTO.toDomain(presentation: Presentation.Request
  * The caller (wallet) may POST the [AuthorisationResponseTO] to the verifier back-end
  */
 fun interface PostWalletResponse {
-    suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<Jwt>
+    suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String>
 }
 
 class PostWalletResponseLive(
@@ -115,33 +116,20 @@ class PostWalletResponseLive(
     private val verifierConfig: VerifierConfig,
 ) : PostWalletResponse {
 
-    override suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String> = runCatching {
-        val presentation = loadRequiredPresentation(walletResponse)
+    override suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String> =
+        handleWalletResponse(walletResponse).fold(
+            onSuccess = { QueryResponse.Found("OK") },
+            onFailure = { QueryResponse.InvalidState },
+        )
 
-        val authorisationResponseObject = when (walletResponse) {
-            is AuthorisationResponse.DirectPost -> walletResponse.response
-            is AuthorisationResponse.DirectPostJwt -> {
-                requireNotNull(presentation.ephemeralEcPrivateKey) { "No Ephemeral key for for requestId ${presentation.requestId}" }
-                val encrypted = when (val jarmOption = verifierConfig.clientMetaData.jarmOption) {
-                    is JarmOption.Signed -> error("Misconfiguration")
-                    is JarmOption.Encrypted -> jarmOption
-                    is JarmOption.SignedAndEncrypted -> jarmOption.encrypted
-                }
-                verifyJarmJwtSignature(
-                    encrypted,
-                    walletResponse.jarm,
-                    presentation.ephemeralEcPrivateKey,
-                    walletResponse.state,
-                ).getOrThrow()
-            }
+    private suspend fun handleWalletResponse(walletResponse: AuthorisationResponse): Result<Presentation.Submitted> =
+        runCatching {
+            val presentation = loadPresentation(walletResponse)
+            val responseObject = responseObject(walletResponse, presentation)
+            submit(presentation, responseObject).also { storePresentation(it) }
         }
-        submit(presentation, authorisationResponseObject).getOrThrow()
-    }.fold(
-        onSuccess = { QueryResponse.Found("OK") },
-        onFailure = { QueryResponse.InvalidState },
-    )
 
-    private suspend fun loadRequiredPresentation(walletResponse: AuthorisationResponse): Presentation.RequestObjectRetrieved {
+    private suspend fun loadPresentation(walletResponse: AuthorisationResponse): RequestObjectRetrieved {
         val requestId = when (walletResponse) {
             is AuthorisationResponse.DirectPost -> walletResponse.response.state
             is AuthorisationResponse.DirectPostJwt -> walletResponse.state
@@ -149,21 +137,34 @@ class PostWalletResponseLive(
 
         val presentation = loadPresentationByRequestId(requestId)
             ?: throw IllegalArgumentException("Presentation not found for requestId $requestId")
-        require(presentation is Presentation.RequestObjectRetrieved) { "Invalid state for requestId $requestId" }
+        require(presentation is RequestObjectRetrieved) { "Invalid state for requestId $requestId" }
         return presentation
     }
 
-    private suspend fun submit(
-        presentation: Presentation.RequestObjectRetrieved,
-        authorisationResponseObject: AuthorisationResponseTO,
-    ): Result<Presentation.Submitted> =
-
-        runCatching {
-            // add the wallet response to the presentation
-            val walletResponse = authorisationResponseObject.toDomain(presentation).getOrThrow()
-            val authorisationResponse = presentation.submit(clock, walletResponse).getOrThrow()
-            // store the presentation
-            storePresentation(authorisationResponse)
-            authorisationResponse
+    private fun responseObject(
+        walletResponse: AuthorisationResponse,
+        presentation: RequestObjectRetrieved,
+    ): AuthorisationResponseTO = when (walletResponse) {
+        is AuthorisationResponse.DirectPost -> walletResponse.response
+        is AuthorisationResponse.DirectPostJwt -> {
+            val response = verifyJarmJwtSignature(
+                jarmOption = verifierConfig.clientMetaData.jarmOption,
+                ephemeralEcPrivateKey = presentation.ephemeralEcPrivateKey,
+                jarmJwt = walletResponse.jarm,
+            ).getOrThrow()
+            require(response.state == walletResponse.state) {
+                "State is not the same in wallet response and inside JARM"
+            }
+            response
         }
+    }
+
+    private fun submit(
+        presentation: RequestObjectRetrieved,
+        responseObject: AuthorisationResponseTO,
+    ): Presentation.Submitted {
+        // add the wallet response to the presentation
+        val walletResponse = responseObject.toDomain(presentation).getOrThrow()
+        return presentation.submit(clock, walletResponse).getOrThrow()
+    }
 }
