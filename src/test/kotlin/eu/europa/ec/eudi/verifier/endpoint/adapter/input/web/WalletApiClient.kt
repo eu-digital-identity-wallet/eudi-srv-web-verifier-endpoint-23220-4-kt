@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import org.json.JSONObject
 import org.junit.jupiter.api.Assertions
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -30,7 +31,38 @@ object WalletApiClient {
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
      * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
      */
+    fun getRequestObjectJsonResponse(client: WebTestClient, requestUri: String): JSONObject {
+        val (header, payload) = getRequestObjectPair(client, requestUri)
+        // debug
+        val prettyHeader = TestUtils.prettyPrintJson(header)
+        val prettyPayload = TestUtils.prettyPrintJson(payload)
+        println("prettyHeader:\n$prettyHeader")
+        println("prettyPayload:\n$prettyPayload")
+
+        return JSONObject(prettyPayload)
+    }
+
+    /**
+     * Wallet application to Verifier Backend, get presentation definition
+     *
+     * As per ISO 23220-4, Appendix B:
+     * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
+     * - (response) Internet Web Service to mDocApp, flow "7 JWS Authorisation request object [section B.3.2.1]"
+     */
     fun getRequestObject(client: WebTestClient, requestUri: String) {
+        val (header, payload) = getRequestObjectPair(client, requestUri)
+
+        // debug
+        val prettyHeader = TestUtils.prettyPrintJson(header)
+        val prettyPayload = TestUtils.prettyPrintJson(payload)
+        println("WalletApi.getRequestObject.prettyHeader:\n$prettyHeader")
+        println("WalletApi.getRequestObject.prettyPayload:\n$prettyPayload")
+    }
+
+    /**
+     * private helper function to get the request object response as a pair of strings (header, payload)
+     */
+    private fun getRequestObjectPair(client: WebTestClient, requestUri: String): Pair<String, String> {
         // update the request_uri to point to the local server
         val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
         println("relative request_uri: $relativeRequestUri")
@@ -51,11 +83,8 @@ object WalletApiClient {
         println("response: $getResponseString")
 
         val (header, payload) = TestUtils.parseJWT(getResponseString)
-        // debug
-        val prettyHeader = TestUtils.prettyPrintJson(header)
-        val prettyPayload = TestUtils.prettyPrintJson(payload)
-        println("prettyHeader:\n$prettyHeader")
-        println("prettyPayload:\n$prettyPayload")
+
+        return Pair(header, payload)
     }
 
     /**

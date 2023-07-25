@@ -37,7 +37,7 @@ data class AuthorisationResponseTO(
 sealed interface AuthorisationResponse {
 
     data class DirectPost(val response: AuthorisationResponseTO) : AuthorisationResponse
-    data class DirectPostJwt(val jarm: Jwt) : AuthorisationResponse
+    data class DirectPostJwt(val state: String?, val jarm: Jwt) : AuthorisationResponse
 }
 
 /**
@@ -112,33 +112,41 @@ class PostWalletResponseLive(
     private val storePresentation: StorePresentation,
     private val verifyJarmJwtSignature: VerifyJarmJwtSignature,
     private val clock: Clock,
+    private val verifierConfig: VerifierConfig,
 ) : PostWalletResponse {
 
-    override suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String> =
-        when (walletResponse) {
-            is AuthorisationResponse.DirectPost -> Result.success(walletResponse.response)
-            is AuthorisationResponse.DirectPostJwt -> verifyJarmJwtSignature(walletResponse.jarm)
-        }.fold(
-            onSuccess = { handle(it) },
-            onFailure = { QueryResponse.InvalidState },
-        )
+    override suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String> = runCatching {
+        val presentation = loadRequiredPresentation(walletResponse)
 
-    private suspend fun handle(authorisationResponseObject: AuthorisationResponseTO): QueryResponse<String> {
-        val requestId = authorisationResponseObject.state?.let { RequestId(it) }
-        return if (requestId == null) {
-            QueryResponse.InvalidState
-        } else {
-            when (val presentation = loadPresentationByRequestId(requestId)) {
-                null -> QueryResponse.NotFound
-                is Presentation.RequestObjectRetrieved ->
-                    submit(presentation, authorisationResponseObject).fold(
-                        onSuccess = { QueryResponse.Found("OK") },
-                        onFailure = { QueryResponse.InvalidState },
-                    )
+        val authorisationResponseObject = when (walletResponse) {
+            is AuthorisationResponse.DirectPost -> walletResponse.response
+            is AuthorisationResponse.DirectPostJwt -> {
+                requireNotNull(presentation.ephemeralEcPrivateKey) { "No Ephemeral key for for requestId ${presentation.requestId}" }
 
-                else -> QueryResponse.InvalidState
+                verifyJarmJwtSignature(
+                    verifierConfig,
+                    walletResponse.jarm,
+                    presentation.ephemeralEcPrivateKey,
+                    walletResponse.state,
+                ).getOrThrow()
             }
         }
+        submit(presentation, authorisationResponseObject).getOrThrow()
+    }.fold(
+        onSuccess = { QueryResponse.Found("OK") },
+        onFailure = { QueryResponse.InvalidState },
+    )
+
+    private suspend fun loadRequiredPresentation(walletResponse: AuthorisationResponse): Presentation.RequestObjectRetrieved {
+        val requestId = when (walletResponse) {
+            is AuthorisationResponse.DirectPost -> walletResponse.response.state
+            is AuthorisationResponse.DirectPostJwt -> walletResponse.state
+        }?.let { RequestId(it) } ?: throw IllegalArgumentException("Missing state")
+
+        val presentation = loadPresentationByRequestId(requestId)
+            ?: throw IllegalArgumentException("Presentation not found for requestId $requestId")
+        require(presentation is Presentation.RequestObjectRetrieved) { "Invalid state for requestId $requestId" }
+        return presentation
     }
 
     private suspend fun submit(

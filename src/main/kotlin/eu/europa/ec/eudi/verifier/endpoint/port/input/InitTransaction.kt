@@ -19,6 +19,7 @@ import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import kotlinx.serialization.Required
@@ -30,7 +31,7 @@ import java.time.Clock
  * Represent the kind of [Presentation] process
  * a caller wants to initiate
  * It could be either a request (to the wallet) to present
- * a id_token, a vp_token or both
+ * an id_token, a vp_token or both
  */
 @Serializable
 enum class PresentationTypeTO {
@@ -97,7 +98,7 @@ data class JwtSecuredAuthorizationRequestTO(
  *
  * Use case will initialize a [Presentation] process
  */
-interface InitTransaction {
+fun interface InitTransaction {
     suspend operator fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO>
 }
 
@@ -111,12 +112,20 @@ class InitTransactionLive(
     private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
+    private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
 
 ) : InitTransaction {
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> =
         runCatching {
             // validate input
             val (nonce, type) = initTransactionTO.toDomain().getOrThrow()
+
+            // if response mode is direct post jwt then generate ephemeral key
+            val newEphemeralEcPublicKey = when (verifierConfig.responseModeOption) {
+                ResponseModeOption.DirectPost -> null
+                ResponseModeOption.DirectPostJwt ->
+                    generateEphemeralEncryptionKeyPair(verifierConfig).getOrThrow()
+            }
 
             // Initialize presentation
             val requestedPresentation = Presentation.Requested(
@@ -125,6 +134,7 @@ class InitTransactionLive(
                 requestId = generateRequestId(),
                 type = type,
                 nonce = nonce,
+                ephemeralEcPrivateKey = newEphemeralEcPublicKey,
             )
             // create request, which may update presentation
             val (updatedPresentation, request) = createRequest(requestedPresentation)

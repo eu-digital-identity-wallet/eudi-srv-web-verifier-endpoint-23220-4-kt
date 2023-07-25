@@ -53,6 +53,9 @@ data class ClientMetaData(
     val idTokenEncryptedResponseAlg: String,
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
+    val authorizationSignedResponseAlg: String?,
+    val authorizationEncryptedResponseAlg: String?,
+    val authorizationEncryptedResponseEnc: String?,
 )
 
 /**

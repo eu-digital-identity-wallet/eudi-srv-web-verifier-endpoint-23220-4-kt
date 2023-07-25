@@ -26,8 +26,9 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GeneratePresentationIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmJwtSignatureNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
@@ -36,6 +37,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePresentationsOlderThan
@@ -116,6 +118,7 @@ class VerifierContext(environment: Environment) {
         storePresentation: StorePresentation,
         signRequestObject: SignRequestObject,
         clock: Clock,
+        generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
     ): InitTransaction = InitTransactionLive(
         generatePresentationId,
         generateRequestId,
@@ -123,6 +126,7 @@ class VerifierContext(environment: Environment) {
         signRequestObject,
         verifierConfig,
         clock,
+        generateEphemeralEncryptionKeyPair,
     )
 
     @Bean
@@ -168,7 +172,11 @@ class VerifierContext(environment: Environment) {
         storePresentation,
         verifyJarmJwtSignature,
         clock,
+        verifierConfig,
     )
+
+    @Bean
+    fun generateEphemeralKey(): GenerateEphemeralEncryptionKeyPair = GenerateEphemeralEncryptionKeyPairNimbus
 
     @Bean
     fun getWalletResponse(
@@ -194,7 +202,8 @@ class VerifierContext(environment: Environment) {
         SignRequestObjectNimbus(rsaKey)
 
     @Bean
-    fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmJwtSignatureNimbus
+    fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmEncryptedJwtNimbus
+
     //
     // Persistence
     //
@@ -287,5 +296,13 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
             "did:example",
             "did:key",
         ),
+
+        authorizationSignedResponseAlg =
+            getProperty("verifier.clientMetadata.authorizationSignedResponseAlg", String::class.java) ?: "",
+        authorizationEncryptedResponseAlg =
+            getProperty("verifier.clientMetadata.authorizationEncryptedResponseAlg", String::class.java) ?: "ECDH-ES",
+        authorizationEncryptedResponseEnc =
+            getProperty("verifier.clientMetadata.authorizationEncryptedResponseEnc", String::class.java) ?: "A256GCM",
+
     )
 }

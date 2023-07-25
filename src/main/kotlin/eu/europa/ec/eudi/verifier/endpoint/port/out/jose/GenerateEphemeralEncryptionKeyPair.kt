@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
+package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
-import org.springframework.core.io.ClassPathResource
-import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.server.coRouter
+import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 
-class StaticContent {
-
-    val route = coRouter {
-        accept(MediaType.TEXT_HTML).nest {
-            resources("/**", ClassPathResource("/static/"))
-        }
-    }
+/**
+ * An out port that generates ephemeral key
+ */
+fun interface GenerateEphemeralEncryptionKeyPair {
+    operator fun invoke(
+        verifierConfig: VerifierConfig,
+    ): Result<EphemeralEncryptionKeyPairJWK>
 }

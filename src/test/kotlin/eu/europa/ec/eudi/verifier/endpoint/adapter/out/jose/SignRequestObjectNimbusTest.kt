@@ -17,11 +17,16 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import com.nimbusds.jose.JWEAlgorithm
+import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.KeyUse
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
+import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -53,7 +58,14 @@ class SignRequestObjectNimbusTest {
 
         )
 
-        val jwt = signRequestObject.sign(clientMetaData, requestObject).getOrThrow().also { println(it) }
+        // responseMode is direct_post.jwt, so we need to generate an ephemeral key
+        val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
+            .keyUse(KeyUse.ENCRYPTION)
+            .algorithm(JWEAlgorithm.ECDH_ES)
+            .keyID(UUID.randomUUID().toString())
+        val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
+
+        val jwt = signRequestObject.sign(clientMetaData, ecPublicKey, requestObject).getOrThrow().also { println(it) }
         val claimSet = decode(jwt).getOrThrow().also { println(it) }
 
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)
