@@ -7,7 +7,7 @@ plugins {
     kotlin("jvm") version "1.8.21"
     kotlin("plugin.serialization") version "1.8.21"
     kotlin("plugin.spring") version "1.8.21"
-    id("com.diffplug.spotless") version "6.19.0"
+    id("com.diffplug.spotless") version "6.20.0"
 }
 
 repositories {
@@ -51,7 +51,7 @@ tasks.named<BootBuildImage>("bootBuildImage") {
     imageName.set("$group/${project.name}")
 }
 
-val ktlintVersion = "0.49.1"
+val ktlintVersion = "0.50.0"
 spotless {
     kotlin {
         ktlint(ktlintVersion)
