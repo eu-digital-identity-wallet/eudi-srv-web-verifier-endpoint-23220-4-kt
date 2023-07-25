@@ -67,7 +67,7 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
     ): JWTProcessor<SecurityContext> = DefaultJWTProcessor<SecurityContext>().apply {
         jweKeySelector = JWEDecryptionKeySelector(
-            encrypt.nimbusAlg(),
+            encrypt.nimbusJWSAlgorithm(),
             encrypt.nimbusEnc(),
             ImmutableJWKSet(JWKSet(ephemeralEcPrivateKey.jwk())),
         )

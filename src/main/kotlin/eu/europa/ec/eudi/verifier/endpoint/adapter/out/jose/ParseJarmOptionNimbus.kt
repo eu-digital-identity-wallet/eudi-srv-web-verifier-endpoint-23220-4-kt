@@ -22,33 +22,14 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.ParseJarmOption
 
 object ParseJarmOptionNimbus : ParseJarmOption {
-
-    override operator fun invoke(jwsAlg: String?, jweAlg: String?, encryptionMethod: String?): JarmOption? {
-        val signed = if (!jwsAlg.isNullOrBlank()) jwsAlg.signed() else null
-        val encrypted = bothNotNull(jweAlg, encryptionMethod)?.encrypted()
-
-        return when {
-            signed != null && encrypted != null -> JarmOption.SignedAndEncrypted(signed, encrypted)
-            signed != null && encrypted == null -> signed
-            signed == null && encrypted != null -> encrypted
-            else -> null
-        }
-    }
-
-    private fun String.signed(): JarmOption.Signed =
-        JarmOption.Signed(JWSAlgorithm.parse(this).name)
-
-    private fun Pair<String, String>.encrypted(): JarmOption.Encrypted =
-        JarmOption.Encrypted(
-            JWEAlgorithm.parse(first).name,
-            EncryptionMethod.parse(second).name,
-        )
-
-    private fun bothNotNull(a: String?, b: String?): Pair<String, String>? =
-        if (!a.isNullOrBlank() && !b.isNullOrBlank()) a to b
-        else null
+    override fun jwsAlgOf(s: String): String = s.nimbusJWSAlgorithm().name
+    override fun jweAlgOf(s: String): String = s.nimbusJWEAlgorithm().name
+    override fun encMethodOf(s: String): String = s.nimbusEncryptionMethod().name
 }
 
-internal fun JarmOption.Signed.nimbusAlg(): JWSAlgorithm = JWSAlgorithm.parse(algorithm)
-internal fun JarmOption.Encrypted.nimbusAlg(): JWEAlgorithm = JWEAlgorithm.parse(algorithm)
-internal fun JarmOption.Encrypted.nimbusEnc(): EncryptionMethod = EncryptionMethod.parse(encryptionMethod)
+internal fun String.nimbusJWSAlgorithm(): JWSAlgorithm = JWSAlgorithm.parse(this)
+internal fun String.nimbusJWEAlgorithm(): JWEAlgorithm = JWEAlgorithm.parse(this)
+internal fun String.nimbusEncryptionMethod(): EncryptionMethod = EncryptionMethod.parse(this)
+internal fun JarmOption.Signed.nimbusJWSAlgorithm(): JWSAlgorithm = algorithm.nimbusJWSAlgorithm()
+internal fun JarmOption.Encrypted.nimbusJWSAlgorithm(): JWEAlgorithm = algorithm.nimbusJWEAlgorithm()
+internal fun JarmOption.Encrypted.nimbusEnc(): EncryptionMethod = encode.nimbusEncryptionMethod()
