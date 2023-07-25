@@ -15,10 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import org.json.JSONObject
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -65,23 +64,17 @@ internal class PresentationDefinitionTest() {
         val getResponseString = String(getResponse.responseBodyContent!!)
         println("response: $getResponseString")
 
-        val (header, payload) = TestUtils.parseJWT(getResponseString)
-        // debug
-        val prettyHeader = TestUtils.prettyPrintJson(header)
-        val prettyPayload = TestUtils.prettyPrintJson(payload)
-        println("prettyHeader:\n$prettyHeader")
-        println("prettyPayload:\n$prettyPayload")
+        val (_, payload) = TestUtils.parseJWTIntoClaims(getResponseString)
 
-        val responsePresentationDefinition = JSONObject(payload).get("presentation_definition")
+        val responsePresentationDefinition = payload["presentation_definition"]?.let {
+            PresentationExchange.jsonParser.decodePresentationDefinition(it.toString()).getOrNull()
+        }
         // get presentation definition from initTransaction as json string
-        val requestPresentationDefinition = Json.encodeToString(initTransaction.presentationDefinition)
+        val requestPresentationDefinition = initTransaction.presentationDefinition
 
-        assert(
-            TestUtils.compareJsonStrings(
-                requestPresentationDefinition,
-                responsePresentationDefinition.toString(),
-            ),
-            { "presentationDefinition of response is not equal to presentationDefinition of request" },
-        )
+        assertEquals(
+            requestPresentationDefinition,
+            responsePresentationDefinition,
+        ) { "presentationDefinition of response is not equal to presentationDefinition of request" }
     }
 }

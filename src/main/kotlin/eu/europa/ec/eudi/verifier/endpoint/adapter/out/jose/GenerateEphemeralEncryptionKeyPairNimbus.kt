@@ -34,7 +34,7 @@ object GenerateEphemeralEncryptionKeyPairNimbus : GenerateEphemeralEncryptionKey
     override fun invoke(
         encryptedResponse: JarmOption.Encrypted,
     ): Result<EphemeralEncryptionKeyPairJWK> {
-        val alg = encryptedResponse.nimbusAlg()
+        val alg = encryptedResponse.nimbusJWSAlgorithm()
         return createEphemeralEncryptionKey(alg).map { EphemeralEncryptionKeyPairJWK.from(keyPair = it) }
     }
 

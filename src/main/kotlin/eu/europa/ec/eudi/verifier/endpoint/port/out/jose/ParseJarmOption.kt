@@ -17,7 +17,35 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 
-fun interface ParseJarmOption {
+/**
+ * Models a function that parses three strings into a [JarmOption]
+ */
+interface ParseJarmOption {
 
-    operator fun invoke(jwsAlg: String?, jweAlg: String?, encryptionMethod: String?): JarmOption?
+    /**
+     *
+     * @param jwsAlg an optional string representing a JWS algorithm
+     * @param jweAlg an optional string representing a JWE algorithm
+     * @param encryptionMethod an optional string representing an encryption method
+     * @return a [JarmOption] or null
+     */
+    operator fun invoke(jwsAlg: String?, jweAlg: String?, encryptionMethod: String?): JarmOption? {
+        val signed: JarmOption.Signed? =
+            if (!jwsAlg.isNullOrBlank()) JarmOption.Signed(jwsAlgOf(jwsAlg)) else null
+        val encrypted: JarmOption.Encrypted? =
+            if (!jweAlg.isNullOrBlank() && !encryptionMethod.isNullOrBlank()) {
+                JarmOption.Encrypted(jweAlgOf(jweAlg), encMethodOf(encryptionMethod))
+            } else null
+
+        return when {
+            signed != null && encrypted != null -> JarmOption.SignedAndEncrypted(signed, encrypted)
+            signed != null && encrypted == null -> signed
+            signed == null && encrypted != null -> encrypted
+            else -> null
+        }
+    }
+
+    fun jwsAlgOf(s: String): String
+    fun jweAlgOf(s: String): String
+    fun encMethodOf(s: String): String
 }

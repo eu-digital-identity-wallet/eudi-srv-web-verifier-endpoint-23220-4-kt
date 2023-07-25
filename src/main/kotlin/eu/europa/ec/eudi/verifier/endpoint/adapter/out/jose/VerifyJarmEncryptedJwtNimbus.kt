@@ -39,22 +39,35 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
     private val logger: Logger = LoggerFactory.getLogger(VerifyJarmEncryptedJwtNimbus::class.java)
 
     override fun invoke(
-        encrypt: JarmOption.Encrypted,
+        jarmOption: JarmOption,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         jarmJwt: Jwt,
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
-        state: String?,
     ): Result<AuthorisationResponseTO> = runCatching {
-        processor(encrypt, ephemeralEcPrivateKey)
+        processor(jarmOption, ephemeralEcPrivateKey)
             .process(jarmJwt, null)
             .mapToDomain()
     }
 
     private fun processor(
+        jarmOption: JarmOption,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
+    ): JWTProcessor<SecurityContext> {
+        return when (jarmOption) {
+            is JarmOption.Signed -> error("Signed not supported yet")
+            is JarmOption.Encrypted -> {
+                require(ephemeralEcPrivateKey != null) { "Missing decryption key" }
+                encryptedProcessor(jarmOption, ephemeralEcPrivateKey)
+            }
+            is JarmOption.SignedAndEncrypted -> error("SignedAndEncrypted not supported yet")
+        }
+    }
+
+    private fun encryptedProcessor(
         encrypt: JarmOption.Encrypted,
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
     ): JWTProcessor<SecurityContext> = DefaultJWTProcessor<SecurityContext>().apply {
         jweKeySelector = JWEDecryptionKeySelector(
-            encrypt.nimbusAlg(),
+            encrypt.nimbusJWSAlgorithm(),
             encrypt.nimbusEnc(),
             ImmutableJWKSet(JWKSet(ephemeralEcPrivateKey.jwk())),
         )

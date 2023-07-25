@@ -23,9 +23,8 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 fun interface VerifyJarmJwtSignature {
 
     operator fun invoke(
-        encrypt: JarmOption.Encrypted,
+        jarmOption: JarmOption,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         jarmJwt: Jwt,
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
-        state: String?,
     ): Result<AuthorisationResponseTO>
 }
