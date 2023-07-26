@@ -19,18 +19,20 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.decodeFromStream
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBody
-import java.io.ByteArrayInputStream
 
 object VerifierApiClient {
+
+    private val log: Logger = LoggerFactory.getLogger(VerifierApiClient::class.java)
 
     fun loadInitTransactionTO(testResource: String): InitTransactionTO =
         Json.decodeFromString(TestUtils.loadResource(testResource))
@@ -43,9 +45,9 @@ object VerifierApiClient {
             .bodyValue(initTransactionTO)
             .exchange()
             .expectStatus().isOk()
-            .expectBody().returnResult().responseBodyContent!!.let { byteArray ->
-            ByteArrayInputStream(byteArray).use { Json.decodeFromStream(it) }
-        }
+            .expectBody<JwtSecuredAuthorizationRequestTO>()
+            .returnResult()
+            .responseBody!!
     }
 
     /**
@@ -59,7 +61,7 @@ object VerifierApiClient {
      * - (request) mdocVerification application Internet frontend to Internet Web Service, flow "18 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mdocVerification application Internet frontend, flow "20 return status and conditionally return data"
      */
-    fun getWalletResponse(client: WebTestClient, presentationId: PresentationId, nonce: Nonce): String {
+    fun getWalletResponse(client: WebTestClient, presentationId: PresentationId, nonce: Nonce): WalletResponseTO? {
         val walletResponseUri =
             VerifierApi.walletResponsePath.replace("{presentationId}", presentationId.value) + "?nonce=${nonce.value}"
 
@@ -67,16 +69,15 @@ object VerifierApiClient {
         val responseSpec = client.get().uri(walletResponseUri)
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
-        val returnResult = responseSpec.expectBody<JsonObject>().returnResult()
-        returnResult.status.also { println("response status: $it") }
-        returnResult.responseHeaders.also { println("response headers: $it") }
-        returnResult.responseBody?.also { responseBody ->
-            TestUtils.prettyPrintJson("response body:\n", responseBody)
-        }
+        val returnResult = responseSpec.expectBody<WalletResponseTO>().returnResult()
+        returnResult.status.also { log.info("response status: $it") }
+        returnResult.responseHeaders.also { log.info("response headers: $it") }
 
         // then
-        Assertions.assertEquals(HttpStatus.OK, returnResult.status)
+        assertEquals(HttpStatus.OK, returnResult.status)
 
-        return returnResult.responseBodyContent?.let { String(it) }!!
+        return returnResult.responseBody?.also { responseBody ->
+            log.info("response body:\n$responseBody")
+        }
     }
 }

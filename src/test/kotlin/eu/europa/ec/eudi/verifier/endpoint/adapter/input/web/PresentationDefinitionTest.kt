@@ -19,13 +19,17 @@ import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-internal class PresentationDefinitionTest() {
+internal class PresentationDefinitionTest {
+
+    private val log: Logger = LoggerFactory.getLogger(PresentationDefinitionTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -33,27 +37,27 @@ internal class PresentationDefinitionTest() {
     @Test
     fun `post presentation definition returns 200`() {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("00-presentationDefinition.json")
-        println("initTransaction: $initTransaction")
+        log.info("initTransaction: $initTransaction")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
-        println("transactionInitialized: $transactionInitialized")
+        log.info("transactionInitialized: $transactionInitialized")
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        println("requestId: ${requestId.value}")
+        log.info("requestId: ${requestId.value}")
     }
 
     @Test
     fun `get presentation definition returns 200`() {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("00-presentationDefinition.json")
-        println("initTransaction: $initTransaction")
+        log.info("initTransaction: $initTransaction")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
-        println("transactionInitialized: $transactionInitialized")
+        log.info("transactionInitialized: $transactionInitialized")
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        println("requestId: ${requestId.value}")
+        log.info("requestId: ${requestId.value}")
 
         val relativeRequestUri =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0")!!)
-        println("relativeRequestUri: $relativeRequestUri")
+        log.info("relativeRequestUri: $relativeRequestUri")
 
         // then
         val getResponse = client.get().uri(relativeRequestUri.value)
@@ -62,7 +66,7 @@ internal class PresentationDefinitionTest() {
             .expectStatus().isOk()
             .expectBody().returnResult()
         val getResponseString = String(getResponse.responseBodyContent!!)
-        println("response: $getResponseString")
+        log.info("response: $getResponseString")
 
         val (_, payload) = TestUtils.parseJWTIntoClaims(getResponseString)
 

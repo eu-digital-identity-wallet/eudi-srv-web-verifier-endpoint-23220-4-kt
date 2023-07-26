@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
@@ -45,6 +47,8 @@ import org.springframework.util.MultiValueMap
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
+
+    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectJwtTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient

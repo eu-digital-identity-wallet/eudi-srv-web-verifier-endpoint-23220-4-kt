@@ -17,6 +17,8 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBody
@@ -24,6 +26,8 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
 
 object WalletApiClient {
+
+    private val log: Logger = LoggerFactory.getLogger(WalletApiClient::class.java)
 
     /**
      * Wallet application to Verifier Backend, get presentation definition
@@ -62,7 +66,7 @@ object WalletApiClient {
     private fun getRequestObjectPair(client: WebTestClient, requestUri: String): Pair<JsonObject, JsonObject> {
         // update the request_uri to point to the local server
         val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
-        println("relative request_uri: $relativeRequestUri")
+        log.info("relative request_uri: $relativeRequestUri")
 
         // get the presentation definition
         val getResponse = client.get()
@@ -73,7 +77,7 @@ object WalletApiClient {
             .expectBody<String>().returnResult()
 
         assertNotNull(getResponse.responseBody, "getResponseString is null")
-        println("response: $getResponse.responseBody")
+        log.info("response: $getResponse.responseBody")
 
         return TestUtils.parseJWTIntoClaims(getResponse.responseBody!!)
     }

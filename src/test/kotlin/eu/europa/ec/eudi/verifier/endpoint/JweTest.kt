@@ -25,6 +25,8 @@ import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.security.interfaces.ECPrivateKey
@@ -38,6 +40,7 @@ import java.util.*
 @SpringBootTest
 internal class JweTest {
 
+    private val log: Logger = LoggerFactory.getLogger(JweTest::class.java)
     private fun ecdhEncrypt(alg: JWEAlgorithm, enc: EncryptionMethod, ecPublicKey: ECPublicKey, jwtClaims: JWTClaimsSet): String {
         // define JWE alg and enc
         // {
@@ -52,7 +55,7 @@ internal class JweTest {
 
         // Request JWT encrypted with ECDH-ES
         val jweHeader = JWEHeader(alg, enc)
-        println("header = ${jweHeader.toJSONObject()}")
+        log.info("header = ${jweHeader.toJSONObject()}")
 
         // Create the encrypted JWT object
         val encryptedJWT = EncryptedJWT(jweHeader, jwtClaims)
@@ -66,7 +69,7 @@ internal class JweTest {
         // Serialise to JWT compact form
         val jwtString: String = encryptedJWT.serialize()
 
-        println("jwtString = $jwtString")
+        log.info("jwtString = $jwtString")
         return jwtString
     }
 
@@ -89,16 +92,16 @@ internal class JweTest {
             .algorithm(JWEAlgorithm.ECDH_ES)
             .keyID("123")
         val ecKey = ecKeyGenerator.generate()
-        println("ecKey private: ${ecKey.toJSONString()}")
-        println("ecKey public : ${ecKey.toPublicJWK().toJSONString()}")
+        log.info("ecKey private: ${ecKey.toJSONString()}")
+        log.info("ecKey public : ${ecKey.toPublicJWK().toJSONString()}")
         val ecPublicKey = ecKey.toECPublicKey()
         val ecPrivateKey = ecKey.toECPrivateKey()
 
         // (Verifier, on the response of the request of the wallet to get the request object)
         // sends public key, alg and enc from verifier backend to wallet
-        println("ecKey alg (authorization_signed_response_alg) : $alg")
-        println("ecKey enc : $enc")
-        println("ecKey ec public : $ecPublicKey")
+        log.info("ecKey alg (authorization_signed_response_alg) : $alg")
+        log.info("ecKey enc : $enc")
+        log.info("ecKey ec public : $ecPublicKey")
 
         // (wallet) generate JWT with claims
         val now = Date()
@@ -112,14 +115,14 @@ internal class JweTest {
             .jwtID(UUID.randomUUID().toString())
             .claim("email", "john-doe@eudi.com")
             .build()
-        println("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
+        log.info("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
         // (wallet) encrypts with public key (of the verifier backend)
         val encrypted = ecdhEncrypt(alg, enc, ecPublicKey, jwtClaims)
-        println("encrypted = $encrypted")
+        log.info("encrypted = $encrypted")
 
         // (verifier backend) decrypt with private key
         val decryptedJwtClaimSet = ecdhDecrypt(ecPrivateKey, encrypted)
-        println("decryptedJwtClaimSet = ${decryptedJwtClaimSet.toJSONObject()}")
+        log.info("decryptedJwtClaimSet = ${decryptedJwtClaimSet.toJSONObject()}")
     }
 }

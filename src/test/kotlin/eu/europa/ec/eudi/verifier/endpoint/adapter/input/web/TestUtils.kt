@@ -26,9 +26,12 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.text.ParseException
 
 object TestUtils {
+    private val log: Logger = LoggerFactory.getLogger(TestUtils.javaClass)
 
     private val jsonFormat: Json = Json { prettyPrint = true }
     fun loadResource(f: String): String =
@@ -39,7 +42,7 @@ object TestUtils {
      * Pretty print json element
      */
     fun prettyPrintJson(msg: String? = null, e: JsonElement) {
-        println("${msg.orEmpty()}${jsonFormat.encodeToString(e)}")
+        log.info("${msg.orEmpty()}${jsonFormat.encodeToString(e)}")
     }
 
     /**
