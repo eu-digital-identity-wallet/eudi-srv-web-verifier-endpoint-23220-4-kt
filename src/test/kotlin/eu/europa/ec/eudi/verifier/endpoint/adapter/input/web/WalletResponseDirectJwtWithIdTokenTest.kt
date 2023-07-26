@@ -30,11 +30,14 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
@@ -61,6 +64,8 @@ import java.util.Date
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectJwtWithIdTokenTest {
+
+    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectJwtWithIdTokenTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -131,12 +136,10 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
             PresentationId(transactionInitialized.presentationId),
             Nonce(initTransaction.nonce!!),
         )
-        println("response: $response")
-        val walletResponse = decodeWalletResponseBody(response)
 
         // then
-        Assertions.assertNotNull(response, "response is null")
-        Assertions.assertEquals(idToken, walletResponse?.idToken, "unexpected response.id_token")
+        assertNotNull(response, "response is null")
+        assertEquals(idToken, response?.idToken, "unexpected response.id_token")
     }
 
     /**
@@ -212,13 +215,11 @@ internal class WalletResponseDirectJwtWithIdTokenTest {
             PresentationId(transactionInitialized.presentationId),
             Nonce(initTransaction.nonce!!),
         )
-        println("response: $response")
-        val walletResponse = decodeWalletResponseBody(response)
 
         // then
-        Assertions.assertNotNull(response, "response is null")
-        Assertions.assertEquals(error, walletResponse?.error, "unexpected response.error")
-        Assertions.assertEquals(errorDescription, walletResponse?.errorDescription, "unexpected response.errorDescription")
+        assertNotNull(response, "response is null")
+        assertEquals(error, response?.error, "unexpected response.error")
+        assertEquals(errorDescription, response?.errorDescription, "unexpected response.errorDescription")
     }
 
     /*

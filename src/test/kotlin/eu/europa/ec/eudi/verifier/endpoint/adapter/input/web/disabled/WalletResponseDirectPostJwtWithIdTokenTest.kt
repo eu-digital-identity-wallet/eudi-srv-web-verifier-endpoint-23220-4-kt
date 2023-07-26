@@ -189,7 +189,7 @@ internal class WalletResponseDirectPostJwtWithIdTokenTest {
         returnResult.status.also { println("response status: $it") }
         returnResult.responseHeaders.also { println("response headers: $it") }
         returnResult.responseBody?.also { jsonResponse ->
-            println("response body content:\n${TestUtils.prettyPrintJson(jsonResponse)}")
+            TestUtils.prettyPrintJson("response body content:\n", jsonResponse)
         }
 
         // then

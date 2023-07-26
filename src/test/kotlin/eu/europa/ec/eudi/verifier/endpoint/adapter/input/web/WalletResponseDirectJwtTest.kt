@@ -26,13 +26,14 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
@@ -59,6 +60,8 @@ import java.util.*
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectJwtTest {
+
+    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectJwtTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -103,11 +106,11 @@ internal class WalletResponseDirectJwtTest {
             .claim("vp_token", TestUtils.loadResource("02-vpToken.json"))
             .claim("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
             .build()
-        println("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
+        log.info("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
         // Request JWT encrypted with ECDH-ES
         val jweHeader = JWEHeader(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
-        println("header = ${jweHeader.toJSONObject()}")
+        log.info("header = ${jweHeader.toJSONObject()}")
 
         // Create the encrypted JWT object
         val encryptedJWT = EncryptedJWT(jweHeader, jwtClaims)
@@ -120,7 +123,7 @@ internal class WalletResponseDirectJwtTest {
 
         // Serialise to JWT compact form
         val jwtString: String = encryptedJWT.serialize()
-        println("jwtString = $jwtString")
+        log.info("jwtString = $jwtString")
 
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -135,18 +138,7 @@ internal class WalletResponseDirectJwtTest {
             PresentationId(transactionInitialized.presentationId),
             Nonce(initTransaction.nonce!!),
         )
-        println("Verifier retrieves the wallet response: $response")
-        val walletResponse = decodeWalletResponseBody(response)
-        println("wallet response to domain: $walletResponse")
-
         // then
         assertNotNull(response, "response is null")
-    }
-
-    /*
-     * decode WalletResponseTO from String
-     */
-    fun decodeWalletResponseBody(walletResponse: String): WalletResponseTO? = runBlocking {
-        Json.decodeFromString<WalletResponseTO>(walletResponse)
     }
 }

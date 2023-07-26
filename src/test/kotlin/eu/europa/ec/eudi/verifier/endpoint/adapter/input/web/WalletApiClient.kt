@@ -16,13 +16,18 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import kotlinx.serialization.json.JsonObject
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.test.web.reactive.server.expectBody
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
 
 object WalletApiClient {
+
+    private val log: Logger = LoggerFactory.getLogger(WalletApiClient::class.java)
 
     /**
      * Wallet application to Verifier Backend, get presentation definition
@@ -34,8 +39,8 @@ object WalletApiClient {
     fun getRequestObjectJsonResponse(client: WebTestClient, requestUri: String): JsonObject {
         val (header, payload) = getRequestObjectPair(client, requestUri)
         // debug
-        TestUtils.prettyPrintJson(header).also { println("prettyHeader:\n$it") }
-        TestUtils.prettyPrintJson(payload).also { println("prettyPayload:\n$it") }
+        TestUtils.prettyPrintJson("prettyHeader:\n", header)
+        TestUtils.prettyPrintJson("prettyPayload:\n", payload)
 
         return payload
     }
@@ -51,10 +56,8 @@ object WalletApiClient {
         val (header, payload) = getRequestObjectPair(client, requestUri)
 
         // debug
-        val prettyHeader = TestUtils.prettyPrintJson(header)
-        val prettyPayload = TestUtils.prettyPrintJson(payload)
-        println("WalletApi.getRequestObject.prettyHeader:\n$prettyHeader")
-        println("WalletApi.getRequestObject.prettyPayload:\n$prettyPayload")
+        TestUtils.prettyPrintJson("WalletApi.getRequestObject.prettyHeader:\n", header)
+        TestUtils.prettyPrintJson("WalletApi.getRequestObject.prettyPayload:\n", payload)
     }
 
     /**
@@ -63,7 +66,7 @@ object WalletApiClient {
     private fun getRequestObjectPair(client: WebTestClient, requestUri: String): Pair<JsonObject, JsonObject> {
         // update the request_uri to point to the local server
         val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
-        println("relative request_uri: $relativeRequestUri")
+        log.info("relative request_uri: $relativeRequestUri")
 
         // get the presentation definition
         val getResponse = client.get()
@@ -71,18 +74,12 @@ object WalletApiClient {
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
             .expectStatus().isOk()
-            .expectBody().returnResult()
+            .expectBody<String>().returnResult()
 
-        Assertions.assertNotNull(getResponse.responseBodyContent, "responseBodyContent is empty")
+        assertNotNull(getResponse.responseBody, "getResponseString is null")
+        log.info("response: $getResponse.responseBody")
 
-        val getResponseString = String(getResponse.responseBodyContent!!)
-        Assertions.assertNotNull(getResponseString, "getResponseString is null")
-
-        println("response: $getResponseString")
-
-        val (header, payload) = TestUtils.parseJWTIntoClaims(getResponseString)
-
-        return header to payload
+        return TestUtils.parseJWTIntoClaims(getResponse.responseBody!!)
     }
 
     /**

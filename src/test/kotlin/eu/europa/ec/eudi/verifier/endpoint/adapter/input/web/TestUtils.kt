@@ -15,8 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonMapperBuilder
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.JWKSet
@@ -25,32 +23,26 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.text.ParseException
 
 object TestUtils {
+    private val log: Logger = LoggerFactory.getLogger(TestUtils.javaClass)
 
-    val jsonFormat: Json = Json { prettyPrint = true }
+    private val jsonFormat: Json = Json { prettyPrint = true }
     fun loadResource(f: String): String =
         TestUtils::class.java.classLoader.getResourceAsStream(f)
             .let { String(it!!.readBytes()) }
 
-    fun prettyPrintJson(e: JsonElement): String {
-        return jsonFormat.encodeToString(e)
-    }
-
     /**
-     * Pretty print json string
+     * Pretty print json element
      */
-    private fun prettyPrintJson(jsonString: String?): String {
-        val mapper = jacksonMapperBuilder().build()
-        mapper.enable(SerializationFeature.INDENT_OUTPUT)
-        val json = when (jsonString) {
-            null, "" -> mapper.readValue("{}", Any::class.java)
-            else -> mapper.readValue(jsonString, Any::class.java)
-        }
-        return mapper.writeValueAsString(json)
+    fun prettyPrintJson(msg: String? = null, e: JsonElement) {
+        log.info("${msg.orEmpty()}${jsonFormat.encodeToString(e)}")
     }
 
     /**
@@ -68,12 +60,12 @@ object TestUtils {
     /**
      *  function to parse jwt token using nimbus
      */
-    fun parseJWTIntoClaims(accessToken: String): Pair<JsonObject, JsonObject> {
-        val (h, p) = parseJWT(accessToken)
-        val headerClaims = h.claims()
-        val payloadClaims = p.claims()
-
-        return headerClaims to payloadClaims
+    fun parseJWTIntoClaims(jwt: Jwt): Pair<JsonObject, JsonObject> {
+        val (h, p) = parseJWT(jwt)
+        return (h.claims() to p.claims()).also { (header, payload) ->
+            prettyPrintJson("header\n", header)
+            prettyPrintJson("payload\n", payload)
+        }
     }
 
     private fun JWTClaimsSet.claims(): JsonObject = jsonFormat.parseToJsonElement(toString()).jsonObject
