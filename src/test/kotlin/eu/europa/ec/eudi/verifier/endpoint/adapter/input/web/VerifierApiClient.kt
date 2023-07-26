@@ -71,7 +71,7 @@ object VerifierApiClient {
         returnResult.status.also { println("response status: $it") }
         returnResult.responseHeaders.also { println("response headers: $it") }
         returnResult.responseBody?.also { responseBody ->
-            println("response body:\n${TestUtils.prettyPrintJson(responseBody)}")
+            TestUtils.prettyPrintJson("response body:\n", responseBody)
         }
 
         // then
