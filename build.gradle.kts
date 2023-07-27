@@ -39,8 +39,12 @@ kotlin {
     jvmToolchain(17)
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+        }
+    }
 }
 
 springBoot {
