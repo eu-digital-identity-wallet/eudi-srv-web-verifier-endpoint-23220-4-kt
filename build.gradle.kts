@@ -20,7 +20,7 @@ repositories {
 }
 
 val presentationExchangeVersion = "0.1.0-SNAPSHOT"
-val nimbusSdkVersion = "10.9.1"
+val nimbusSdkVersion = "10.12"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
