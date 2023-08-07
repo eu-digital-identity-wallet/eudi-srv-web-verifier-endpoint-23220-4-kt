@@ -57,12 +57,25 @@ enum class IdTokenTypeTO {
     AttesterSigned,
 }
 
+/**
+ * Specifies the response_mode for a request
+ */
+@Serializable
+enum class ResponseModeTO {
+    @SerialName("direct_post")
+    DirectPost,
+
+    @SerialName("direct_post.jwt")
+    DirectPostJwt,
+}
+
 @Serializable
 data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
     @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null,
     @SerialName("nonce") val nonce: String? = null,
+    @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
 )
 
 /**
@@ -120,8 +133,11 @@ class InitTransactionLive(
             // validate input
             val (nonce, type) = initTransactionTO.toDomain().getOrThrow()
 
+            // get dynamic presentation properties, fallback to defaults if not provided
+            val responseMode = initTransactionTO.responseMode?.toDomain() ?: verifierConfig.responseModeOption
+
             // if response mode is direct post jwt then generate ephemeral key
-            val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(verifierConfig.responseModeOption)
+            val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
 
             // Initialize presentation
             val requestedPresentation = Presentation.Requested(
@@ -131,6 +147,7 @@ class InitTransactionLive(
                 type = type,
                 nonce = nonce,
                 ephemeralEcPrivateKey = newEphemeralEcPublicKey,
+                responseMode = responseMode,
             )
             // create request, which may update presentation
             val (updatedPresentation, request) = createRequest(requestedPresentation)
@@ -221,4 +238,12 @@ internal fun InitTransactionTO.toDomain(): Result<Pair<Nonce, PresentationType>>
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
+}
+
+/**
+ * Converts a [ResponseModeTO] to a [ResponseModeOption].
+ */
+private fun ResponseModeTO.toDomain(): ResponseModeOption = when (this) {
+    ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
+    ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
 }

@@ -115,6 +115,39 @@ class InitTransactionTest {
         testWithInvalidInput(input, ValidationError.MissingNonce)
     }
 
+    @Test
+    fun `when response_mode is provided this must take precedence over what is configured in VerifierConfig`() =
+        runBlocking {
+            val verifierConfig = VerifierConfig(
+                requestJarOption = EmbedOption.ByValue,
+                presentationDefinitionEmbedOption = EmbedOption.ByValue,
+                responseUriBuilder = { _ -> URL("https://foo") },
+                responseModeOption = ResponseModeOption.DirectPostJwt,
+                maxAge = Duration.ofDays(3),
+                clientMetaData = TestContext.clientMetaData,
+            )
+
+            val input = InitTransactionTO(
+                PresentationTypeTO.IdTokenRequest,
+                IdTokenTypeTO.SubjectSigned,
+                null,
+                "nonce",
+                ResponseModeTO.DirectPost,
+            )
+
+            val useCase: InitTransaction = TestContext.initTransaction(verifierConfig)
+
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
+            val presentation = loadPresentationById(testPresentationId)
+            Assertions.assertInstanceOf(Presentation.RequestObjectRetrieved::class.java, presentation)
+            Assertions.assertEquals(
+                ResponseModeOption.DirectPost,
+                (presentation as Presentation.RequestObjectRetrieved).responseMode,
+            )
+        }
+
 //
 
     private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) = input.toDomain().fold(

@@ -93,7 +93,7 @@ internal fun requestObjectFromDomain(
         aud = aud,
         nonce = presentation.nonce.value,
         state = presentation.requestId.value,
-        responseMode = when (verifierConfig.responseModeOption) {
+        responseMode = when (presentation.responseMode) {
             ResponseModeOption.DirectPost -> "direct_post"
             ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
         }, // or direct_post for direct submission
