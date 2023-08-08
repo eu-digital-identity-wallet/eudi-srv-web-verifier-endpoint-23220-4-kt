@@ -89,6 +89,7 @@ data class InitTransactionTO(
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
+    @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
 )
 
 /**
@@ -159,6 +160,7 @@ class InitTransactionLive(
                 nonce = nonce,
                 ephemeralEcPrivateKey = newEphemeralEcPublicKey,
                 responseMode = responseMode,
+                presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             )
             // create request, which may update presentation
             val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
@@ -233,6 +235,17 @@ class InitTransactionLive(
             EmbedModeTO.ByValue -> EmbedOption.ByValue
             EmbedModeTO.ByReference -> verifierConfig.requestJarByReference
             null -> verifierConfig.requestJarOption
+        }
+
+    /**
+     * Gets the PresentationDefinition [EmbedOption] for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.presentationDefinitionEmbedOption].
+     */
+    private fun presentationDefinitionMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
+        when (initTransaction.presentationDefinitionMode) {
+            EmbedModeTO.ByValue -> EmbedOption.ByValue
+            EmbedModeTO.ByReference -> verifierConfig.presentationDefinitionByReference
+            null -> verifierConfig.presentationDefinitionEmbedOption
         }
 }
 

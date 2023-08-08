@@ -137,6 +137,7 @@ sealed interface Presentation {
         val nonce: Nonce,
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,
+        val presentationDefinitionMode: EmbedOption<RequestId>,
     ) : Presentation
 
     /**

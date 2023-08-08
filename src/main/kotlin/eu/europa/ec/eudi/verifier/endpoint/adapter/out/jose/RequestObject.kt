@@ -60,13 +60,13 @@ internal fun requestObjectFromDomain(
     }
     val maybePresentationDefinition = type.presentationDefinitionOrNull
     val presentationDefinitionUri = maybePresentationDefinition?.let {
-        when (val option = verifierConfig.presentationDefinitionEmbedOption) {
+        when (val option = presentation.presentationDefinitionMode) {
             is EmbedOption.ByValue -> null
             is EmbedOption.ByReference -> option.buildUrl(presentation.requestId)
         }
     }
     val presentationDefinition = maybePresentationDefinition?.let { presentationDefinition ->
-        when (verifierConfig.presentationDefinitionEmbedOption) {
+        when (presentation.presentationDefinitionMode) {
             is EmbedOption.ByValue -> presentationDefinition
             is EmbedOption.ByReference -> null
         }
