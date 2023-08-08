@@ -26,6 +26,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
@@ -151,7 +152,9 @@ internal class WalletResponseDirectPostJwtTest {
     fun `with response_mode direct_post_jwt, direct_post wallet responses are rejected`(): Unit = runBlocking {
         // given
         val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition-direct_post_jwt.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO(
+            "02-presentationDefinition.json",
+        ).copy(responseMode = ResponseModeTO.DirectPostJwt)
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
