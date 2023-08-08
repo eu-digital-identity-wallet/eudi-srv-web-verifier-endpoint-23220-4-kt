@@ -69,6 +69,18 @@ enum class ResponseModeTO {
     DirectPostJwt,
 }
 
+/**
+ * Specifies whether a property of a request will be provided by value or by reference.
+ */
+@Serializable
+enum class EmbedModeTO {
+    @SerialName("by_value")
+    ByValue,
+
+    @SerialName("by_reference")
+    ByReference,
+}
+
 @Serializable
 data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
@@ -76,6 +88,7 @@ data class InitTransactionTO(
     @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null,
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
+    @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
 )
 
 /**
@@ -133,10 +146,8 @@ class InitTransactionLive(
             // validate input
             val (nonce, type) = initTransactionTO.toDomain().getOrThrow()
 
-            // get dynamic presentation properties, fallback to defaults if not provided
-            val responseMode = initTransactionTO.responseMode?.toDomain() ?: verifierConfig.responseModeOption
-
             // if response mode is direct post jwt then generate ephemeral key
+            val responseMode = responseMode(initTransactionTO)
             val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
 
             // Initialize presentation
@@ -150,7 +161,7 @@ class InitTransactionLive(
                 responseMode = responseMode,
             )
             // create request, which may update presentation
-            val (updatedPresentation, request) = createRequest(requestedPresentation)
+            val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
             storePresentation(updatedPresentation)
             request
@@ -170,13 +181,16 @@ class InitTransactionLive(
     /**
      * Creates a request and depending on the case updates also the [requestedPresentation]
      *
-     * If the verifier has been configured to use request parameter then
+     * If the [requestJarOption] or the verifier has been configured to use request parameter then
      * presentation will be updated to [Presentation.RequestObjectRetrieved].
      *
      * Otherwise, [requestedPresentation] will remain as is
      */
-    private fun createRequest(requestedPresentation: Presentation.Requested): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
-        when (val requestJarOption = verifierConfig.requestJarOption) {
+    private fun createRequest(
+        requestedPresentation: Presentation.Requested,
+        requestJarOption: EmbedOption<RequestId>,
+    ): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
+        when (requestJarOption) {
             is EmbedOption.ByValue -> {
                 val jwt = signRequestObject(verifierConfig, clock, requestedPresentation).getOrThrow()
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
@@ -197,6 +211,28 @@ class InitTransactionLive(
                     requestUri,
                 )
             }
+        }
+
+    /**
+     * Gets the [ResponseModeOption] for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.responseModeOption].
+     */
+    private fun responseMode(initTransaction: InitTransactionTO): ResponseModeOption =
+        when (initTransaction.responseMode) {
+            ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
+            ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
+            null -> verifierConfig.responseModeOption
+        }
+
+    /**
+     * Gets the JAR [EmbedOption] for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.requestJarOption].
+     */
+    private fun jarMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
+        when (initTransaction.jarMode) {
+            EmbedModeTO.ByValue -> EmbedOption.ByValue
+            EmbedModeTO.ByReference -> verifierConfig.requestJarByReference
+            null -> verifierConfig.requestJarOption
         }
 }
 
@@ -240,10 +276,9 @@ private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
 
-/**
- * Converts a [ResponseModeTO] to a [ResponseModeOption].
- */
-private fun ResponseModeTO.toDomain(): ResponseModeOption = when (this) {
-    ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
-    ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
-}
+private fun EmbedModeTO?.toDomain(default: EmbedOption<RequestId>): EmbedOption<RequestId> =
+    when (this) {
+        EmbedModeTO.ByValue -> EmbedOption.ByValue
+        EmbedModeTO.ByReference -> default
+        null -> default
+    }

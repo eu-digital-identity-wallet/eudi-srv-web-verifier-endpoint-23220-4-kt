@@ -247,10 +247,11 @@ private fun Environment.verifierConfig(): VerifierConfig {
     val clientId = getProperty("verifier.clientId", "verifier")
     val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered")
     val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
+    val requestJarByReference = WalletApi.requestJwtByReference(publicUrl)
     val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
             ByValue -> EmbedOption.ByValue
-            ByReference, null -> WalletApi.requestJwtByReference(publicUrl)
+            ByReference, null -> requestJarByReference
         }
     }
     val responseModeOption =
@@ -268,6 +269,7 @@ private fun Environment.verifierConfig(): VerifierConfig {
     return VerifierConfig(
         clientId = clientId,
         clientIdScheme = clientIdScheme,
+        requestJarByReference = requestJarByReference,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { WalletApi.directPost(publicUrl) },

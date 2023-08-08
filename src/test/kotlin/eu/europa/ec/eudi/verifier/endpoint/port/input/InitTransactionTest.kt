@@ -33,10 +33,12 @@ class InitTransactionTest {
     @Test
     fun `when request option is embed by value, request should be present and presentation should be RequestObjectRetrieved`() =
         runBlocking {
+            val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
+                requestJarByReference = EmbedOption.byReference { _ -> uri },
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { _ -> URL("https://foo") },
+                responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
@@ -64,6 +66,7 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
+                requestJarByReference = EmbedOption.byReference { _ -> uri },
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
@@ -115,13 +118,18 @@ class InitTransactionTest {
         testWithInvalidInput(input, ValidationError.MissingNonce)
     }
 
+    /**
+     * Verifies [InitTransactionTO.responseMode] takes precedence over [VerifierConfig.responseModeOption].
+     */
     @Test
     fun `when response_mode is provided this must take precedence over what is configured in VerifierConfig`() =
         runBlocking {
+            val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
+                requestJarByReference = EmbedOption.byReference { _ -> uri },
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { _ -> URL("https://foo") },
+                responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
@@ -141,11 +149,48 @@ class InitTransactionTest {
             Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
             Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
             val presentation = loadPresentationById(testPresentationId)
-            Assertions.assertInstanceOf(Presentation.RequestObjectRetrieved::class.java, presentation)
-            Assertions.assertEquals(
-                ResponseModeOption.DirectPost,
-                (presentation as Presentation.RequestObjectRetrieved).responseMode,
+            val requestObjectRetrieved =
+                Assertions.assertInstanceOf(Presentation.RequestObjectRetrieved::class.java, presentation)
+            Assertions.assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.responseMode)
+        }
+
+    /**
+     * Verifies [InitTransactionTO.jarMode] takes precedence over [VerifierConfig.requestJarOption].
+     */
+    @Test
+    fun `when jar_mode is provided this must take precedence over what is configured in VerifierConfig`() =
+        runBlocking {
+            val uri = URL("https://foo")
+            val verifierConfig = VerifierConfig(
+                requestJarByReference = EmbedOption.byReference { _ -> uri },
+                requestJarOption = EmbedOption.ByValue,
+                presentationDefinitionEmbedOption = EmbedOption.ByValue,
+                responseUriBuilder = { _ -> uri },
+                responseModeOption = ResponseModeOption.DirectPostJwt,
+                maxAge = Duration.ofDays(3),
+                clientMetaData = TestContext.clientMetaData,
             )
+
+            val input = InitTransactionTO(
+                PresentationTypeTO.IdTokenRequest,
+                IdTokenTypeTO.SubjectSigned,
+                null,
+                "nonce",
+                null,
+                EmbedModeTO.ByReference,
+            )
+
+            val useCase: InitTransaction = TestContext.initTransaction(verifierConfig)
+
+            // we expect the Authorization Request to contain a request_uri
+            // and the Presentation to be in state Requested
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertNull(jwtSecuredAuthorizationRequest.request)
+            Assertions.assertNotNull(jwtSecuredAuthorizationRequest.requestUri)
+            val presentation = loadPresentationById(testPresentationId)
+            Assertions.assertInstanceOf(Presentation.Requested::class.java, presentation)
+            Unit
         }
 
 //
