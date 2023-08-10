@@ -288,10 +288,3 @@ private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
-
-private fun EmbedModeTO?.toDomain(default: EmbedOption<RequestId>): EmbedOption<RequestId> =
-    when (this) {
-        EmbedModeTO.ByValue -> EmbedOption.ByValue
-        EmbedModeTO.ByReference -> default
-        null -> default
-    }
