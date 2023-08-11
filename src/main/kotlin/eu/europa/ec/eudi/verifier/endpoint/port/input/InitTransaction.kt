@@ -140,6 +140,8 @@ class InitTransactionLive(
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
     private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
+    private val requestJarByReference: EmbedOption.ByReference<RequestId>,
+    private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
 
 ) : InitTransaction {
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> =
@@ -233,7 +235,7 @@ class InitTransactionLive(
     private fun jarMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
         when (initTransaction.jarMode) {
             EmbedModeTO.ByValue -> EmbedOption.ByValue
-            EmbedModeTO.ByReference -> verifierConfig.requestJarByReference
+            EmbedModeTO.ByReference -> requestJarByReference
             null -> verifierConfig.requestJarOption
         }
 
@@ -244,7 +246,7 @@ class InitTransactionLive(
     private fun presentationDefinitionMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
         when (initTransaction.presentationDefinitionMode) {
             EmbedModeTO.ByValue -> EmbedOption.ByValue
-            EmbedModeTO.ByReference -> verifierConfig.presentationDefinitionByReference
+            EmbedModeTO.ByReference -> presentationDefinitionByReference
             null -> verifierConfig.presentationDefinitionEmbedOption
         }
 }

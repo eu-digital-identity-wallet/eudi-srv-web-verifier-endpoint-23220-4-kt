@@ -92,9 +92,7 @@ data class ClientMetaData(
 data class VerifierConfig(
     val clientId: String = "verifier-app",
     val clientIdScheme: String = "pre-registered",
-    val requestJarByReference: EmbedOption.ByReference<RequestId>,
     val requestJarOption: EmbedOption<RequestId>,
-    val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseModeOption: ResponseModeOption,
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,

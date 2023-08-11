@@ -37,9 +37,7 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
-                requestJarByReference = EmbedOption.byReference { _ -> uri },
                 requestJarOption = EmbedOption.ByValue,
-                presentationDefinitionByReference = EmbedOption.byReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
@@ -54,7 +52,11 @@ class InitTransactionTest {
                 "nonce",
             )
 
-            val useCase: InitTransaction = TestContext.initTransaction(verifierConfig)
+            val useCase: InitTransaction = TestContext.initTransaction(
+                verifierConfig,
+                EmbedOption.byReference { _ -> uri },
+                EmbedOption.byReference { _ -> uri },
+            )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
             Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
@@ -69,9 +71,7 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
-                requestJarByReference = EmbedOption.byReference { _ -> uri },
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
-                presentationDefinitionByReference = EmbedOption.byReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
@@ -86,7 +86,11 @@ class InitTransactionTest {
                 "nonce",
             )
 
-            val useCase = TestContext.initTransaction(verifierConfig)
+            val useCase = TestContext.initTransaction(
+                verifierConfig,
+                EmbedOption.byReference { _ -> uri },
+                EmbedOption.byReference { _ -> uri },
+            )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
             Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
@@ -130,9 +134,7 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
-                requestJarByReference = EmbedOption.byReference { _ -> uri },
                 requestJarOption = EmbedOption.ByValue,
-                presentationDefinitionByReference = EmbedOption.byReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
@@ -147,7 +149,11 @@ class InitTransactionTest {
                 responseMode = ResponseModeTO.DirectPost,
             )
 
-            val useCase: InitTransaction = TestContext.initTransaction(verifierConfig)
+            val useCase: InitTransaction = TestContext.initTransaction(
+                verifierConfig,
+                EmbedOption.byReference { _ -> uri },
+                EmbedOption.byReference { _ -> uri },
+            )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
             Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
@@ -166,9 +172,7 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
-                requestJarByReference = EmbedOption.byReference { _ -> uri },
                 requestJarOption = EmbedOption.ByValue,
-                presentationDefinitionByReference = EmbedOption.byReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
@@ -183,7 +187,11 @@ class InitTransactionTest {
                 jarMode = EmbedModeTO.ByReference,
             )
 
-            val useCase: InitTransaction = TestContext.initTransaction(verifierConfig)
+            val useCase: InitTransaction = TestContext.initTransaction(
+                verifierConfig,
+                EmbedOption.byReference { _ -> uri },
+                EmbedOption.byReference { _ -> uri },
+            )
 
             // we expect the Authorization Request to contain a request_uri
             // and the Presentation to be in state Requested
@@ -204,9 +212,7 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
-                requestJarByReference = EmbedOption.byReference { _ -> uri },
                 requestJarOption = EmbedOption.ByValue,
-                presentationDefinitionByReference = EmbedOption.byReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
@@ -218,7 +224,11 @@ class InitTransactionTest {
                 "00-presentationDefinition.json",
             ).copy(presentationDefinitionMode = EmbedModeTO.ByReference)
 
-            val useCase: InitTransaction = TestContext.initTransaction(verifierConfig)
+            val useCase: InitTransaction = TestContext.initTransaction(
+                verifierConfig,
+                EmbedOption.byReference { _ -> uri },
+                EmbedOption.byReference { _ -> uri },
+            )
 
             // we expect the Authorization Request to contain a request that contains a presentation_definition_uri
             // and the Presentation to be in state RequestedObjectRetrieved
