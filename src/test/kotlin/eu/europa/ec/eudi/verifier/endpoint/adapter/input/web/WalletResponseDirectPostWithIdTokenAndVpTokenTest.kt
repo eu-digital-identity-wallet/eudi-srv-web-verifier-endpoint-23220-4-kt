@@ -33,6 +33,7 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+import java.lang.AssertionError
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(
@@ -48,7 +49,7 @@ import org.springframework.util.MultiValueMap
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
-    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectJwtTest::class.java)
+    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostWithIdTokenAndVpTokenTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -112,5 +113,33 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
         // then
         Assertions.assertNotNull(response, "response is null")
+    }
+
+    /**
+     * Verifies that a Transaction expecting a direct_post Wallet response, doesn't accept a direct_post.jwt Wallet response.
+     */
+    @Test
+    @Order(value = 3)
+    fun `with response_mode direct_post, direct_post_jwt wallet responses are rejected`(): Unit = runBlocking {
+        // given
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
+        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
+
+        // At this point we don't generate an actual JARM response
+        // The response will be rejected before JARM parsing/verification takes place
+        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("response", "response")
+        formEncodedBody.add("state", requestId.value)
+
+        // send the wallet response
+        // we expect the response submission to fail
+        try {
+            WalletApiClient.directPostJwt(client, formEncodedBody)
+            Assertions.fail("Expected direct_post.jwt submission to fail for direct_post Presentation")
+        } catch (error: AssertionError) {
+            Assertions.assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
+        }
     }
 }

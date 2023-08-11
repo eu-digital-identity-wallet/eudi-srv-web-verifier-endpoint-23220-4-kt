@@ -60,13 +60,13 @@ internal fun requestObjectFromDomain(
     }
     val maybePresentationDefinition = type.presentationDefinitionOrNull
     val presentationDefinitionUri = maybePresentationDefinition?.let {
-        when (val option = verifierConfig.presentationDefinitionEmbedOption) {
+        when (val option = presentation.presentationDefinitionMode) {
             is EmbedOption.ByValue -> null
             is EmbedOption.ByReference -> option.buildUrl(presentation.requestId)
         }
     }
     val presentationDefinition = maybePresentationDefinition?.let { presentationDefinition ->
-        when (verifierConfig.presentationDefinitionEmbedOption) {
+        when (presentation.presentationDefinitionMode) {
             is EmbedOption.ByValue -> presentationDefinition
             is EmbedOption.ByReference -> null
         }
@@ -93,7 +93,7 @@ internal fun requestObjectFromDomain(
         aud = aud,
         nonce = presentation.nonce.value,
         state = presentation.requestId.value,
-        responseMode = when (verifierConfig.responseModeOption) {
+        responseMode = when (presentation.responseMode) {
             ResponseModeOption.DirectPost -> "direct_post"
             ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
         }, // or direct_post for direct submission

@@ -42,6 +42,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePr
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Lazy
@@ -117,6 +118,8 @@ class VerifierContext(environment: Environment) {
         signRequestObject: SignRequestObject,
         clock: Clock,
         generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
+        @Qualifier("requestJarByReference") requestJarByReference: EmbedOption.ByReference<RequestId>,
+        @Qualifier("presentationDefinitionByReference") presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     ): InitTransaction = InitTransactionLive(
         generatePresentationId,
         generateRequestId,
@@ -125,6 +128,8 @@ class VerifierContext(environment: Environment) {
         verifierConfig,
         clock,
         generateEphemeralEncryptionKeyPair,
+        requestJarByReference,
+        presentationDefinitionByReference,
     )
 
     @Bean
@@ -236,6 +241,16 @@ class VerifierContext(environment: Environment) {
     fun clock(): Clock {
         return Clock.systemDefaultZone()
     }
+
+    @Bean
+    @Qualifier("requestJarByReference")
+    fun requestJarByReference(environment: Environment): EmbedOption.ByReference<RequestId> =
+        WalletApi.requestJwtByReference(environment.publicUrl())
+
+    @Bean
+    @Qualifier("presentationDefinitionByReference")
+    fun presentationDefinitionByReference(environment: Environment): EmbedOption.ByReference<RequestId> =
+        WalletApi.presentationDefinitionByReference(environment.publicUrl())
 }
 
 private enum class EmbedOptionEnum {
@@ -246,11 +261,11 @@ private enum class EmbedOptionEnum {
 private fun Environment.verifierConfig(): VerifierConfig {
     val clientId = getProperty("verifier.clientId", "verifier")
     val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered")
-    val publicUrl = getProperty("verifier.publicUrl", "http://localhost:8080")
+    val publicUrl = publicUrl()
     val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
             ByValue -> EmbedOption.ByValue
-            ByReference, null -> WalletApi.requestJwtByReference(publicUrl)
+            ByReference, null -> WalletApi.requestJwtByReference(publicUrl())
         }
     }
     val responseModeOption =
@@ -311,3 +326,8 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
         ) ?: defaultJarmOption,
     )
 }
+
+/**
+ * Gets the public URL of the Verifier endpoint. Corresponds to `verifier.publicUrl` property.
+ */
+private fun Environment.publicUrl(): String = getProperty("verifier.publicUrl", "http://localhost:8080")

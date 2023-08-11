@@ -136,6 +136,8 @@ sealed interface Presentation {
         val requestId: RequestId,
         val nonce: Nonce,
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
+        val responseMode: ResponseModeOption,
+        val presentationDefinitionMode: EmbedOption<RequestId>,
     ) : Presentation
 
     /**
@@ -152,6 +154,7 @@ sealed interface Presentation {
         val requestObjectRetrievedAt: Instant,
         val nonce: Nonce,
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
+        val responseMode: ResponseModeOption,
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
@@ -168,6 +171,7 @@ sealed interface Presentation {
                         at,
                         requested.nonce,
                         requested.ephemeralEcPrivateKey,
+                        requested.responseMode,
                     )
                 }
         }

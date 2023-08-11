@@ -64,7 +64,11 @@ object TestContext {
     val storePresentation = repo.storePresentation
     val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus
 
-    fun initTransaction(verifierConfig: VerifierConfig): InitTransaction =
+    fun initTransaction(
+        verifierConfig: VerifierConfig,
+        requestJarByReference: EmbedOption.ByReference<RequestId>,
+        presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
+    ): InitTransaction =
         InitTransactionLive(
             generatedPresentationId,
             generateRequestId,
@@ -73,7 +77,10 @@ object TestContext {
             verifierConfig,
             testClock,
             generateEphemeralKey,
+            requestJarByReference,
+            presentationDefinitionByReference,
         )
+
     fun getRequestObject(verifierConfig: VerifierConfig, presentationInitiatedAt: Instant): GetRequestObject =
         GetRequestObjectLive(
             loadPresentationByRequestId,

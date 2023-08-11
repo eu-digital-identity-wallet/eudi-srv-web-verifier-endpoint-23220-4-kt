@@ -57,12 +57,39 @@ enum class IdTokenTypeTO {
     AttesterSigned,
 }
 
+/**
+ * Specifies the response_mode for a request
+ */
+@Serializable
+enum class ResponseModeTO {
+    @SerialName("direct_post")
+    DirectPost,
+
+    @SerialName("direct_post.jwt")
+    DirectPostJwt,
+}
+
+/**
+ * Specifies whether a property of a request will be provided by value or by reference.
+ */
+@Serializable
+enum class EmbedModeTO {
+    @SerialName("by_value")
+    ByValue,
+
+    @SerialName("by_reference")
+    ByReference,
+}
+
 @Serializable
 data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
     @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null,
     @SerialName("nonce") val nonce: String? = null,
+    @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
+    @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
+    @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
 )
 
 /**
@@ -113,6 +140,8 @@ class InitTransactionLive(
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
     private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
+    private val requestJarByReference: EmbedOption.ByReference<RequestId>,
+    private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
 
 ) : InitTransaction {
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> =
@@ -121,7 +150,8 @@ class InitTransactionLive(
             val (nonce, type) = initTransactionTO.toDomain().getOrThrow()
 
             // if response mode is direct post jwt then generate ephemeral key
-            val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(verifierConfig.responseModeOption)
+            val responseMode = responseMode(initTransactionTO)
+            val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
 
             // Initialize presentation
             val requestedPresentation = Presentation.Requested(
@@ -131,9 +161,11 @@ class InitTransactionLive(
                 type = type,
                 nonce = nonce,
                 ephemeralEcPrivateKey = newEphemeralEcPublicKey,
+                responseMode = responseMode,
+                presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             )
             // create request, which may update presentation
-            val (updatedPresentation, request) = createRequest(requestedPresentation)
+            val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
             storePresentation(updatedPresentation)
             request
@@ -153,13 +185,16 @@ class InitTransactionLive(
     /**
      * Creates a request and depending on the case updates also the [requestedPresentation]
      *
-     * If the verifier has been configured to use request parameter then
+     * If the [requestJarOption] or the verifier has been configured to use request parameter then
      * presentation will be updated to [Presentation.RequestObjectRetrieved].
      *
      * Otherwise, [requestedPresentation] will remain as is
      */
-    private fun createRequest(requestedPresentation: Presentation.Requested): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
-        when (val requestJarOption = verifierConfig.requestJarOption) {
+    private fun createRequest(
+        requestedPresentation: Presentation.Requested,
+        requestJarOption: EmbedOption<RequestId>,
+    ): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
+        when (requestJarOption) {
             is EmbedOption.ByValue -> {
                 val jwt = signRequestObject(verifierConfig, clock, requestedPresentation).getOrThrow()
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
@@ -180,6 +215,39 @@ class InitTransactionLive(
                     requestUri,
                 )
             }
+        }
+
+    /**
+     * Gets the [ResponseModeOption] for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.responseModeOption].
+     */
+    private fun responseMode(initTransaction: InitTransactionTO): ResponseModeOption =
+        when (initTransaction.responseMode) {
+            ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
+            ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
+            null -> verifierConfig.responseModeOption
+        }
+
+    /**
+     * Gets the JAR [EmbedOption] for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.requestJarOption].
+     */
+    private fun jarMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
+        when (initTransaction.jarMode) {
+            EmbedModeTO.ByValue -> EmbedOption.ByValue
+            EmbedModeTO.ByReference -> requestJarByReference
+            null -> verifierConfig.requestJarOption
+        }
+
+    /**
+     * Gets the PresentationDefinition [EmbedOption] for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.presentationDefinitionEmbedOption].
+     */
+    private fun presentationDefinitionMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
+        when (initTransaction.presentationDefinitionMode) {
+            EmbedModeTO.ByValue -> EmbedOption.ByValue
+            EmbedModeTO.ByReference -> presentationDefinitionByReference
+            null -> verifierConfig.presentationDefinitionEmbedOption
         }
 }
 

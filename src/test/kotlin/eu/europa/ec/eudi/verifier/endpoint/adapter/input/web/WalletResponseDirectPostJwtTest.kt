@@ -26,8 +26,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
@@ -42,6 +42,7 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+import java.lang.AssertionError
 import java.util.*
 
 /*
@@ -59,9 +60,9 @@ import java.util.*
 )
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
-internal class WalletResponseDirectJwtTest {
+internal class WalletResponseDirectPostJwtTest {
 
-    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectJwtTest::class.java)
+    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostJwtTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -129,6 +130,7 @@ internal class WalletResponseDirectJwtTest {
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("response", jwtString)
         formEncodedBody.add("state", requestId.value)
+
         // send the wallet response
         WalletApiClient.directPostJwt(client, formEncodedBody)
 
@@ -140,5 +142,46 @@ internal class WalletResponseDirectJwtTest {
         )
         // then
         assertNotNull(response, "response is null")
+    }
+
+    /**
+     * Verifies that a Transaction expecting a direct_post.jwt Wallet response, doesn't accept a direct_post Wallet response.
+     */
+    @Test
+    @Order(value = 2)
+    fun `with response_mode direct_post_jwt, direct_post wallet responses are rejected`(): Unit = runBlocking {
+        // given
+        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
+        val initTransaction = VerifierApiClient.loadInitTransactionTO(
+            "02-presentationDefinition.json",
+        ).copy(responseMode = ResponseModeTO.DirectPostJwt)
+        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val requestId =
+            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        val requestObjectJsonResponse =
+            WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
+
+        val jarmOption = assertInstanceOf(JarmOption.Encrypted::class.java, requestObjectJsonResponse.jarmOption())
+        val ecKey = requestObjectJsonResponse.ecKey()
+        assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
+        assertNotNull(ecKey)
+
+        // (wallet)
+        // create a post form url encoded body
+        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("state", requestId.value)
+        formEncodedBody.add("state", requestId.value)
+        formEncodedBody.add("id_token", idToken)
+        formEncodedBody.add("vp_token", TestUtils.loadResource("02-vpToken.json"))
+        formEncodedBody.add("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
+
+        // send the wallet response
+        // we expect the response submission to fail
+        try {
+            WalletApiClient.directPost(client, formEncodedBody)
+            fail("Expected direct_post submission to fail for direct_post.jwt Presentation")
+        } catch (error: AssertionError) {
+            assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
+        }
     }
 }

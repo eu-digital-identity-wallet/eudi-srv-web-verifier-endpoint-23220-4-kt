@@ -125,6 +125,13 @@ class PostWalletResponseLive(
     private suspend fun handleWalletResponse(walletResponse: AuthorisationResponse): Result<Presentation.Submitted> =
         runCatching {
             val presentation = loadPresentation(walletResponse)
+
+            // Verify the AuthorisationResponse matches what is expected for the Presentation
+            val expectedResponseMode = walletResponse.responseMode()
+            require(presentation.responseMode == expectedResponseMode) {
+                "Expected ${presentation.responseMode} but received $expectedResponseMode instead"
+            }
+
             val responseObject = responseObject(walletResponse, presentation)
             submit(presentation, responseObject).also { storePresentation(it) }
         }
@@ -167,4 +174,12 @@ class PostWalletResponseLive(
         val walletResponse = responseObject.toDomain(presentation).getOrThrow()
         return presentation.submit(clock, walletResponse).getOrThrow()
     }
+}
+
+/**
+ * Gets the [ResponseModeOption] that corresponds to the receiver [AuthorisationResponse].
+ */
+private fun AuthorisationResponse.responseMode(): ResponseModeOption = when (this) {
+    is AuthorisationResponse.DirectPost -> ResponseModeOption.DirectPost
+    is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
 }
