@@ -28,6 +28,11 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.Test
@@ -42,7 +47,6 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
-import java.lang.AssertionError
 import java.util.*
 
 /*
@@ -94,19 +98,14 @@ internal class WalletResponseDirectPostJwtTest {
         assertNotNull(ecKey)
 
         // (wallet) generate JWT with claims
-        val now = Date()
-        val jwtClaims: JWTClaimsSet = JWTClaimsSet.Builder()
-            .issuer("Verifier")
-            .audience(listOf("https://eudi.com", "https://eudi.org"))
-            .expirationTime(Date(now.time + 1000 * 60 * 10)) // expires in 10 minutes
-            .notBeforeTime(now)
-            .issueTime(now)
-            .jwtID(UUID.randomUUID().toString())
-            .claim("state", requestId.value)
-            .claim("id_token", idToken)
-            .claim("vp_token", TestUtils.loadResource("02-vpToken.json"))
-            .claim("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
-            .build()
+        val pd: JsonElement = Json.decodeFromString(TestUtils.loadResource("02-presentationSubmission.json"))
+        val jwtClaims: JWTClaimsSet = buildJsonObject {
+            put("state", requestId.value)
+            put("id_token", idToken)
+            put("vp_token", TestUtils.loadResource("02-vpToken.json"))
+            put("presentation_submission", pd)
+        }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
+
         log.info("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
         // Request JWT encrypted with ECDH-ES

@@ -19,6 +19,7 @@ import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.proc.JWEDecryptionKeySelector
 import com.nimbusds.jose.proc.SecurityContext
+import com.nimbusds.jose.shaded.gson.Gson
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.proc.JWTProcessor
@@ -78,9 +79,10 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
             state = getClaim("state")?.toString(),
             idToken = getClaim("id_token")?.toString(),
             vpToken = getClaim("vp_token")?.toString(),
-            presentationSubmission = getStringClaim("presentation_submission")?.let {
-                logger.debug("presentation_submission: $it")
-                PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
+            presentationSubmission = getJSONObjectClaim("presentation_submission")?.let {
+                val json = Gson().toJson(it)
+                logger.debug("presentation_submission: $json")
+                PresentationExchange.jsonParser.decodePresentationSubmission(json).getOrThrow()
             },
             error = getClaim("error")?.toString(),
             errorDescription = getClaim("error_description")?.toString(),
