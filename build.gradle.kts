@@ -47,7 +47,6 @@ kotlin {
     }
 }
 
-
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
@@ -64,7 +63,6 @@ tasks.named<BootBuildImage>("bootBuildImage") {
     imageName.set("$group/${project.name}")
 }
 
-
 spotless {
     val ktlintVersion = getVersionFromCatalog("ktlintVersion")
     kotlin {
@@ -75,7 +73,6 @@ spotless {
         ktlint(ktlintVersion)
     }
 }
-
 
 fun getVersionFromCatalog(lookup: String): String {
     val versionCatalog: VersionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
