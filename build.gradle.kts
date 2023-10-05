@@ -1,13 +1,15 @@
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+import kotlin.jvm.optionals.getOrNull
 
 plugins {
-    id("org.jetbrains.dokka") version "1.8.20"
-    id("org.springframework.boot") version "3.1.2"
-    id("io.spring.dependency-management") version "1.1.3"
-    kotlin("jvm") version "1.9.0"
-    kotlin("plugin.serialization") version "1.9.0"
-    kotlin("plugin.spring") version "1.9.0"
-    id("com.diffplug.spotless") version "6.20.0"
+    base
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.plugin.spring)
+    alias(libs.plugins.kotlin.plugin.serialization)
+    alias(libs.plugins.spotless)
 }
 
 repositories {
@@ -19,9 +21,6 @@ repositories {
     mavenLocal()
 }
 
-val presentationExchangeVersion = "0.1.0-SNAPSHOT"
-val nimbusSdkVersion = "10.13.2"
-
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -29,15 +28,25 @@ dependencies {
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
-    implementation("eu.europa.ec.eudi:eudi-lib-jvm-presentation-exchange-kt:$presentationExchangeVersion")
-    implementation("com.nimbusds:oauth2-oidc-sdk:$nimbusSdkVersion")
+    implementation(libs.presentation.exchange)
+    implementation(libs.nimbusds.oauth2.oidc.sdk)
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
 }
 
-kotlin {
-    jvmToolchain(17)
+java {
+    val javaVersion = getVersionFromCatalog("java")
+    sourceCompatibility = JavaVersion.toVersion(javaVersion)
 }
+
+kotlin {
+
+    jvmToolchain {
+        val javaVersion = getVersionFromCatalog("java")
+        languageVersion.set(JavaLanguageVersion.of(javaVersion))
+    }
+}
+
 
 testing {
     suites {
@@ -55,8 +64,9 @@ tasks.named<BootBuildImage>("bootBuildImage") {
     imageName.set("$group/${project.name}")
 }
 
-val ktlintVersion = "0.50.0"
+
 spotless {
+    val ktlintVersion = getVersionFromCatalog("ktlintVersion")
     kotlin {
         ktlint(ktlintVersion)
         licenseHeaderFile("FileHeader.txt")
@@ -64,4 +74,14 @@ spotless {
     kotlinGradle {
         ktlint(ktlintVersion)
     }
+}
+
+
+fun getVersionFromCatalog(lookup: String): String {
+    val versionCatalog: VersionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
+    return versionCatalog
+        .findVersion(lookup)
+        .getOrNull()
+        ?.requiredVersion
+        ?: throw GradleException("Version '$lookup' is not specified in the version catalog")
 }
