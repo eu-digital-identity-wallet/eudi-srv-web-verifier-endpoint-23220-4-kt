@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
   verifier:
-    image: docker.io/build/eudi-srv-web-verifier-endpoint-23220-4-kt:latest
+    image: ghcr.io/niscy-eudiw/eudi-srv-web-verifier-endpoint-23220-4-kt:v0.1.0
     container_name: verifier-backend
     ports:
       - "8080:8080"
@@ -11,8 +11,7 @@ services:
       VERIFIER_RESPONSE_MODE: "DirectPost"
 
   verifier-ui:
-    # image: niscy-eudiw/verifier-ui:latest
-    image: docker.io/library/eudi-web-verifier
+    image: ghcr.io/niscy-eudiw/eudi-web-verifier:v0.1.0
     container_name: verifier-ui
     ports:
       - "4300:4300"
