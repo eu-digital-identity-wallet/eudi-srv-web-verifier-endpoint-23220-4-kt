@@ -1,0 +1,132 @@
+name: publish-container
+
+# ref: https://github.com/niscy-eudiw/eudi-srv-web-verifier-endpoint-23220-4-kt/new/main?filename=.github%2Fworkflows%2Fdocker-publish.yml&workflow_template=ci%2Fdocker-publish
+# ref: https://github.com/quay/quay/blob/master/.github/workflows/build-and-publish.yaml
+on:
+  push:
+    branches:
+      - "main"
+      - "feature/publish_to_container_registry"
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+  #pull_request:
+  #  branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish'
+        required: true
+        default: 'v0.0.0'
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_URL: https://ghcr.io
+  REGISTRY_USERNAME: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  # ${{ github.repository }} as <account>/<repo>
+  # ${{ github.event.repository.name }} as <repo>
+  #IMAGE_NAME: eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: Build and publish
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.1.1
+        with:
+          cosign-release: 'v2.2.0'
+
+      # login to github packages
+      # ref: https://docs.docker.com/build/ci/github-actions/push-multi-registries/
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          #username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extract metadata (tags, labels) from git reference and github events for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5.0.0
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and publish with Gradle Wrapper
+        uses: gradle/gradle-build-action@v2.4.2
+        if: github.event_name != 'pull_request'
+        env:
+          BP_OCI_CREATED: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+          BP_OCI_DESCRIPTION: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.description'] }}
+          BP_OCI_LICENSES: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.licenses'] }}
+          BP_OCI_REVISION: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+          BP_OCI_SOURCE: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.source'] }}
+          BP_OCI_TITLE: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.title'] }}
+          BP_OCI_URL: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.url'] }}
+          BP_OCI_VERSION: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          # Paketo Buildpack for Image Labels 4.5.2
+          BP_OCI_AUTHORS: "https://digital-strategy.ec.europa.eu/en/policies/electronic-identification"
+          BP_OCI_REF_NAME: ${{ github.repository }}
+          BP_OCI_VENDOR: "https://digital-strategy.ec.europa.eu/en/policies/electronic-identification"
+          # run the JLink tool and install a minimal JRE for runtime, reducing both image size and attack surface
+          BP_JVM_JLINK_ENABLED : "true"
+        with:
+          arguments: |
+            build 
+            bootBuildImage
+            --imageName=${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+            --publishImage
+            --full-stacktrace
+
+      - name: Get image digest
+        id: get-digest
+        if: github.event_name != 'pull_request'
+        run: |
+          repo_digest=$(docker inspect ${{ fromJSON(steps.meta.outputs.json).tags[0] }} --format='{{index .RepoDigests 0}}')
+          digest=$(echo ${repo_digest} | sed 's/.*@//g' )
+          echo "digest=${digest}" > $GITHUB_OUTPUT
+
+      # Sign the resulting Docker image digest except on PRs.
+      # This will only write to the public Rekor transparency log when the Docker
+      # repository is public to avoid leaking data.  If you would like to publish
+      # transparency data even for private images, pass --force to cosign below.
+      # https://github.com/sigstore/cosign
+      - name: Sign the published Docker image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+          TAGS: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          DIGEST: ${{ steps.get-digest.outputs.digest }}
+        # This step uses the identity token to provision an ephemeral certificate
+        # against the sigstore community Fulcio instance.
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
