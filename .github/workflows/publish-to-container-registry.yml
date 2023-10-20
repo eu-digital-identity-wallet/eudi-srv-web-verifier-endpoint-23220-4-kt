@@ -1,4 +1,4 @@
-name: publish-to-container-registry
+name: Publish to container registry
 
 on:
   push:
