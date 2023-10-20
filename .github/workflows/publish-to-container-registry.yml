@@ -1,30 +1,16 @@
-name: publish-container
+name: publish-to-container-registry
 
-# ref: https://github.com/niscy-eudiw/eudi-srv-web-verifier-endpoint-23220-4-kt/new/main?filename=.github%2Fworkflows%2Fdocker-publish.yml&workflow_template=ci%2Fdocker-publish
-# ref: https://github.com/quay/quay/blob/master/.github/workflows/build-and-publish.yaml
 on:
   push:
-    branches:
-      - "main"
-      - "feature/publish_to_container_registry"
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
-  #pull_request:
-  #  branches: [ "main" ]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag to publish'
-        required: true
-        default: 'v0.0.0'
+
 env:
   REGISTRY: ghcr.io
   REGISTRY_URL: https://ghcr.io
   REGISTRY_USERNAME: ${{ github.actor }}
   REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-  # ${{ github.repository }} as <account>/<repo>
-  # ${{ github.event.repository.name }} as <repo>
-  #IMAGE_NAME: eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -48,14 +34,6 @@ jobs:
           java-version: '17'
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v1
-
-      # Install the cosign tool except on PR
-      # https://github.com/sigstore/cosign-installer
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@v3.1.1
-        with:
-          cosign-release: 'v2.2.0'
 
       # login to github packages
       # ref: https://docs.docker.com/build/ci/github-actions/push-multi-registries/
@@ -107,26 +85,3 @@ jobs:
             --imageName=${{ fromJSON(steps.meta.outputs.json).tags[0] }}
             --publishImage
             --full-stacktrace
-
-      - name: Get image digest
-        id: get-digest
-        if: github.event_name != 'pull_request'
-        run: |
-          repo_digest=$(docker inspect ${{ fromJSON(steps.meta.outputs.json).tags[0] }} --format='{{index .RepoDigests 0}}')
-          digest=$(echo ${repo_digest} | sed 's/.*@//g' )
-          echo "digest=${digest}" > $GITHUB_OUTPUT
-
-      # Sign the resulting Docker image digest except on PRs.
-      # This will only write to the public Rekor transparency log when the Docker
-      # repository is public to avoid leaking data.  If you would like to publish
-      # transparency data even for private images, pass --force to cosign below.
-      # https://github.com/sigstore/cosign
-      - name: Sign the published Docker image
-        if: ${{ github.event_name != 'pull_request' }}
-        env:
-          # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
-          TAGS: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
-          DIGEST: ${{ steps.get-digest.outputs.digest }}
-        # This step uses the identity token to provision an ephemeral certificate
-        # against the sigstore community Fulcio instance.
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
