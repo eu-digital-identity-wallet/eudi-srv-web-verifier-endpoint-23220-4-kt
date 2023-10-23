@@ -1,6 +1,6 @@
 [versions]
 coroutines = "1.7.3"
-dokka = "1.9.0"
+dokka = "1.9.10"
 kotlin = "1.9.10"
 foojay = "0.7.0"
 springboot = "3.1.4"
