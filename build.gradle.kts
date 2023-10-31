@@ -30,6 +30,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation(libs.presentation.exchange)
     implementation(libs.nimbusds.oauth2.oidc.sdk)
+    implementation(libs.spring.boot.security)
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
 }
