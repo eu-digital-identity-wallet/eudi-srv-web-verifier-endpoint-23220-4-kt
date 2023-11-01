@@ -4,7 +4,6 @@ dokka = "1.9.10"
 kotlin = "1.9.10"
 foojay = "0.7.0"
 springboot = "3.1.5"
-springbootsecurity = "3.1.5"
 springDependencyManagement = "1.1.3"
 spotless = "6.22.0"
 java = "17"
@@ -18,7 +17,6 @@ ktlintVersion="0.50.0"
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 nimbusds-oauth2-oidc-sdk = {module ="com.nimbusds:oauth2-oidc-sdk", version.ref="oauth2OidcSdk"}
 presentation-exchange =  {module ="eu.europa.ec.eudi:eudi-lib-jvm-presentation-exchange-kt", version.ref="presentationExchange"}
-spring-boot-security = { module = "org.springframework.boot:spring-boot-starter-security", version.ref = "springbootsecurity" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
