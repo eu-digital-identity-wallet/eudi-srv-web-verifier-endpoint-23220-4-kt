@@ -61,18 +61,22 @@ springBoot {
 }
 
 tasks.named<BootBuildImage>("bootBuildImage") {
-    imageName.set("${project.name}")
+    imageName.set("$group/${project.name}")
     publish.set(false)
-    docker {
-        publishRegistry {
-            url = System.getenv("REGISTRY_URL")
-            username = System.getenv("REGISTRY_USERNAME")
-            password = System.getenv("REGISTRY_PASSWORD")
-        }
-    }
     // get the BP_OCI_* from env, for https://github.com/paketo-buildpacks/image-labels
     // get the BP_JVM_* from env, jlink optimisation
     environment.set(System.getenv())
+    val env = environment.get()
+    docker {
+        publishRegistry {
+            env["REGISTRY_URL"]?.let { url = it }
+            env["REGISTRY_USERNAME"]?.let { username = it }
+            env["REGISTRY_PASSWORD"]?.let { password = it }
+        }
+        env["DOCKER_METADATA_OUTPUT_TAGS"]?.let { tagStr ->
+            tags = tagStr.split(delimiters = arrayOf("\n", " ")).onEach { println("Tag: $it") }
+        }
+    }
 }
 
 spotless {

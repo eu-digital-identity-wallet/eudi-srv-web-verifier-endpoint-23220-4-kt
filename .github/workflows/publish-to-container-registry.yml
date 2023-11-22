@@ -51,12 +51,10 @@ jobs:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-
+            type=semver,pattern=v{{version}}
+            type=edge
+      - name: Debug
+        run: echo ${{ steps.meta.outputs }}
       - name: Build and publish with Gradle Wrapper
         uses: gradle/gradle-build-action@v2.4.2
         if: github.event_name != 'pull_request'
