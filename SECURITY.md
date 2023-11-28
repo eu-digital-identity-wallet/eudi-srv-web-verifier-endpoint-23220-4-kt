@@ -20,9 +20,9 @@ reporting vulnerabilities, as well as what you can expect from us in return.
 * E-mail your findings to EC-VULNERABILITY-DISCLOSURE@ec.europa.eu, specifying whether or not you
   agree to your name or pseudonym being made publicly available as the discoverer of the problem.
 * Encrypt your findings using
-  our [PGP key](https://sks.hnet.se/pks/lookup?search=EC-VULNERABILITY-DISCLOSURE%40ec.europa.eu&fingerprint=on&op=index)
+  our [PGP key](https://pgp.mit.edu/pks/lookup?op=get&search=0x6773AACDF09F6628)
   to prevent this critical information from falling into the wrong hands.
-* Provide us sufficient information to reproduce the problem so that we can resolve it as quickly as
+* Provide us with sufficient information to reproduce the problem so that we can resolve it as quickly as
   possible. Usually, the IP address or the URL of the affected system and a description of the
   vulnerability will be sufficient, but complex vulnerabilities may require further explanation in
   terms of technical information or potential proof-of-concept code.
@@ -33,7 +33,7 @@ reporting vulnerabilities, as well as what you can expect from us in return.
 
 ## Please do not do the following
 
-* Do not take advantage of the vulnerability or problem you have discovered, for example by
+* Do not take advantage of the vulnerability or problem you have discovered, for example, by
   downloading more data than necessary to demonstrate the vulnerability, deleting, or modifying
   other people’s data.
 * Do not reveal any data downloaded during the discovery to any other parties.
