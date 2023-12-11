@@ -8,7 +8,7 @@ springDependencyManagement = "1.1.4"
 spotless = "6.23.2"
 java = "17"
 kotlinxSerialization = "1.6.1"
-oauth2OidcSdk="11.7"
+oauth2OidcSdk="11.7.1"
 presentationExchange="0.2.0-SNAPSHOT"
 ktlintVersion="0.50.0"
 
