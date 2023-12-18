@@ -43,6 +43,7 @@ class InitTransactionTest {
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
+                signingConfig = TestContext.signingConfig,
             )
 
             val input = InitTransactionTO(
@@ -77,6 +78,7 @@ class InitTransactionTest {
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
+                signingConfig = TestContext.signingConfig,
             )
 
             val input = InitTransactionTO(
@@ -140,6 +142,7 @@ class InitTransactionTest {
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
+                signingConfig = TestContext.signingConfig,
             )
 
             val input = InitTransactionTO(
@@ -178,6 +181,7 @@ class InitTransactionTest {
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
+                signingConfig = TestContext.signingConfig,
             )
 
             val input = InitTransactionTO(
@@ -218,6 +222,7 @@ class InitTransactionTest {
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
+                signingConfig = TestContext.signingConfig,
             )
 
             val input = VerifierApiClient.loadInitTransactionTO(

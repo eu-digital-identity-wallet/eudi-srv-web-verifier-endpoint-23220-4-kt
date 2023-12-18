@@ -103,6 +103,7 @@ data class SigningConfig(
 data class VerifierConfig(
     val clientId: String = "verifier-app",
     val clientIdScheme: ClientIdScheme = ClientIdScheme.PreRegistered,
+    val signingConfig: SigningConfig,
     val requestJarOption: EmbedOption<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseModeOption: ResponseModeOption,

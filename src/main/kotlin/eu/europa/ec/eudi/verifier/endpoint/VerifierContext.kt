@@ -45,10 +45,10 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentation
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
-import org.springframework.core.io.ResourceLoader
 import org.springframework.http.codec.ServerCodecConfigurer
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.web.reactive.config.EnableWebFlux
@@ -72,9 +72,13 @@ class MyConfig : WebFluxConfigurer {
 class ScheduleSupport
 
 @Configuration
-class VerifierContext(environment: Environment) {
+class VerifierContext {
 
-    val verifierConfig = environment.verifierConfig()
+    //
+    // Config
+    //
+    @Bean
+    fun verifierConfig(context: ApplicationContext): VerifierConfig = context.verifierConfig()
 
     //
     // End points
@@ -89,9 +93,9 @@ class VerifierContext(environment: Environment) {
         getRequestObject: GetRequestObject,
         getPresentationDefinition: GetPresentationDefinition,
         postWalletResponse: PostWalletResponse,
-        signingConfig: SigningConfig,
+        verifierConfig: VerifierConfig,
     ): WalletApi =
-        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, signingConfig.key)
+        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, verifierConfig.signingConfig.key)
 
     @Bean
     fun verifierApi(
@@ -123,6 +127,7 @@ class VerifierContext(environment: Environment) {
         generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
         @Qualifier("requestJarByReference") requestJarByReference: EmbedOption.ByReference<RequestId>,
         @Qualifier("presentationDefinitionByReference") presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
+        verifierConfig: VerifierConfig,
     ): InitTransaction = InitTransactionLive(
         generatePresentationId,
         generateRequestId,
@@ -141,6 +146,7 @@ class VerifierContext(environment: Environment) {
         signRequestObject: SignRequestObject,
         storePresentation: StorePresentation,
         clock: Clock,
+        verifierConfig: VerifierConfig,
     ): GetRequestObject = GetRequestObjectLive(
         loadPresentationByRequestId,
         storePresentation,
@@ -160,6 +166,7 @@ class VerifierContext(environment: Environment) {
         loadIncompletePresentationsOlderThan: LoadIncompletePresentationsOlderThan,
         storePresentation: StorePresentation,
         clock: Clock,
+        verifierConfig: VerifierConfig,
     ): TimeoutPresentations = TimeoutPresentationsLive(
         loadIncompletePresentationsOlderThan,
         storePresentation,
@@ -173,6 +180,7 @@ class VerifierContext(environment: Environment) {
         storePresentation: StorePresentation,
         verifyJarmJwtSignature: VerifyJarmJwtSignature,
         clock: Clock,
+        verifierConfig: VerifierConfig,
     ): PostWalletResponse = PostWalletResponseLive(
         loadPresentationByRequestId,
         storePresentation,
@@ -195,46 +203,8 @@ class VerifierContext(environment: Environment) {
     //
 
     @Bean
-    fun signingConfig(environment: Environment, loader: ResourceLoader, clock: Clock): SigningConfig {
-        val key = run {
-            fun loadFromKeystore(): JWK {
-                val keystoreResource =
-                    loader.getResource(environment.getRequiredProperty("verifier.signing.key.keystore"))
-                val keystoreType =
-                    environment.getProperty("verifier.signing.key.keystore.type", KeyStore.getDefaultType())
-                val keystorePassword =
-                    environment.getProperty("verifier.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
-                val keyAlias = environment.getRequiredProperty("verifier.signing.key.alias")
-                val keyPassword = environment.getProperty("verifier.signing.key.password")?.takeIf { it.isNotBlank() }
-
-                return keystoreResource.inputStream.use {
-                    val keystore = KeyStore.getInstance(keystoreType)
-                    keystore.load(it, keystorePassword?.toCharArray())
-                    JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
-                }
-            }
-
-            fun generateRandom(): RSAKey =
-                RSAKeyGenerator(2048)
-                    .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
-                    .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-                    .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
-                    .generate()
-
-            when (environment.getProperty("verifier.signing.key", SigningKeyEnum::class.java)) {
-                SigningKeyEnum.LoadFromKeystore -> loadFromKeystore()
-                null, SigningKeyEnum.GenerateRandom -> generateRandom()
-            }
-        }
-
-        val algorithm = environment.getRequiredProperty("verifier.signing.algorithm").let(JWSAlgorithm::parse)
-
-        return SigningConfig(key, algorithm)
-    }
-
-    @Bean
-    fun signRequestObject(signingConfig: SigningConfig): SignRequestObject =
-        SignRequestObjectNimbus(signingConfig.key, signingConfig.algorithm)
+    fun signRequestObject(verifierConfig: VerifierConfig): SignRequestObject =
+        SignRequestObjectNimbus(verifierConfig.signingConfig)
 
     @Bean
     fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmEncryptedJwtNimbus
@@ -295,37 +265,77 @@ private enum class SigningKeyEnum {
     LoadFromKeystore,
 }
 
-private fun Environment.verifierConfig(): VerifierConfig {
-    val clientId = getProperty("verifier.clientId", "verifier")
-    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered").let { ClientIdScheme.fromValue(it)!! }
-    val publicUrl = publicUrl()
-    val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
+private fun ApplicationContext.signingConfig(): SigningConfig {
+    val key = run {
+        fun loadFromKeystore(): JWK {
+            val keystoreResource =
+                getResource(environment.getRequiredProperty("verifier.signing.key.keystore"))
+            val keystoreType =
+                environment.getProperty("verifier.signing.key.keystore.type", KeyStore.getDefaultType())
+            val keystorePassword =
+                environment.getProperty("verifier.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
+            val keyAlias = environment.getRequiredProperty("verifier.signing.key.alias")
+            val keyPassword = environment.getProperty("verifier.signing.key.password")?.takeIf { it.isNotBlank() }
+
+            return keystoreResource.inputStream.use {
+                val keystore = KeyStore.getInstance(keystoreType)
+                keystore.load(it, keystorePassword?.toCharArray())
+                JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
+            }
+        }
+
+        fun generateRandom(): RSAKey =
+            RSAKeyGenerator(2048)
+                .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
+                .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
+                .issueTime(Date.from(getBean(Clock::class.java).instant())) // issued-at timestamp (optional)
+                .generate()
+
+        when (environment.getProperty("verifier.signing.key", SigningKeyEnum::class.java)) {
+            SigningKeyEnum.LoadFromKeystore -> loadFromKeystore()
+            null, SigningKeyEnum.GenerateRandom -> generateRandom()
+        }
+    }
+
+    val algorithm = environment.getRequiredProperty("verifier.signing.algorithm").let(JWSAlgorithm::parse)
+
+    return SigningConfig(key, algorithm)
+}
+
+private fun ApplicationContext.verifierConfig(): VerifierConfig {
+    val clientId = environment.getProperty("verifier.clientId", "verifier")
+    val clientIdScheme =
+        environment.getProperty("verifier.clientIdScheme", "pre-registered").let { ClientIdScheme.fromValue(it)!! }
+    val publicUrl = environment.publicUrl()
+    val requestJarOption = environment.getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
             ByValue -> EmbedOption.ByValue
-            ByReference, null -> WalletApi.requestJwtByReference(publicUrl())
+            ByReference, null -> WalletApi.requestJwtByReference(environment.publicUrl())
         }
     }
     val responseModeOption =
-        getProperty("verifier.response.mode", ResponseModeOption::class.java) ?: ResponseModeOption.DirectPostJwt
+        environment.getProperty("verifier.response.mode", ResponseModeOption::class.java)
+            ?: ResponseModeOption.DirectPostJwt
 
     val presentationDefinitionEmbedOption =
-        getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
+        environment.getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
             when (it) {
                 ByReference -> WalletApi.presentationDefinitionByReference(publicUrl)
                 ByValue, null -> EmbedOption.ByValue
             }
         }
-    val maxAge = getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
+    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
 
     return VerifierConfig(
         clientId = clientId,
         clientIdScheme = clientIdScheme,
+        signingConfig = signingConfig(),
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { WalletApi.directPost(publicUrl) },
         responseModeOption = responseModeOption,
         maxAge = maxAge,
-        clientMetaData = clientMetaData(publicUrl),
+        clientMetaData = environment.clientMetaData(publicUrl),
     )
 }
 
