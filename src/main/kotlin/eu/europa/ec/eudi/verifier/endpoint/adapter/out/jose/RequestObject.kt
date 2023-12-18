@@ -84,7 +84,7 @@ internal fun requestObjectFromDomain(
 
     return RequestObject(
         clientId = verifierConfig.clientId,
-        clientIdScheme = verifierConfig.clientIdScheme,
+        clientIdScheme = verifierConfig.clientIdScheme.value,
         scope = scope,
         idTokenType = idTokenType,
         presentationDefinitionUri = presentationDefinitionUri,

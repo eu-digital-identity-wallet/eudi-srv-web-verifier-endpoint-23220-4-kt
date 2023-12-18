@@ -66,6 +66,7 @@ sealed interface JarmOption {
             is SignedAndEncrypted -> encrypted.encode
             else -> null
         }
+
     data class Signed(val algorithm: String) : JarmOption
     data class Encrypted(val algorithm: String, val encode: String) : JarmOption
     data class SignedAndEncrypted(
@@ -101,7 +102,7 @@ data class SigningConfig(
  */
 data class VerifierConfig(
     val clientId: String = "verifier-app",
-    val clientIdScheme: String = "pre-registered",
+    val clientIdScheme: ClientIdScheme = ClientIdScheme.PreRegistered,
     val requestJarOption: EmbedOption<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseModeOption: ResponseModeOption,
@@ -109,3 +110,17 @@ data class VerifierConfig(
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,
 )
+
+/**
+ * Client Id verification schemes.
+ */
+enum class ClientIdScheme(val value: String) {
+    PreRegistered("pre-registered"),
+    X509SanDns("x509_san_dns"),
+    X509SanUri("x509_san_uri"),
+    ;
+
+    companion object {
+        fun fromValue(value: String): ClientIdScheme? = entries.firstOrNull { it.value == value }
+    }
+}

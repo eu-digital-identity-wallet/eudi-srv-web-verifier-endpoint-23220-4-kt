@@ -297,7 +297,7 @@ private enum class SigningKeyEnum {
 
 private fun Environment.verifierConfig(): VerifierConfig {
     val clientId = getProperty("verifier.clientId", "verifier")
-    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered")
+    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered").let { ClientIdScheme.fromValue(it)!! }
     val publicUrl = publicUrl()
     val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
