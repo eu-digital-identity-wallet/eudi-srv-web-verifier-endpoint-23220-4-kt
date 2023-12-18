@@ -89,9 +89,9 @@ class VerifierContext(private val environment: Environment) {
         getRequestObject: GetRequestObject,
         getPresentationDefinition: GetPresentationDefinition,
         postWalletResponse: PostWalletResponse,
-        rsaKey: RSAKey,
+        signingJwk: JWK,
     ): WalletApi =
-        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, rsaKey)
+        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, signingJwk)
 
     @Bean
     fun verifierApi(
@@ -203,7 +203,7 @@ class VerifierContext(private val environment: Environment) {
                 .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
                 .generate()
 
-        fun loadFromKeystore(): RSAKey {
+        fun loadFromKeystore(): JWK {
             val keystoreResource = loader.getResource(environment.getRequiredProperty("verifier.signing.key.keystore"))
             val keystoreType = environment.getProperty("verifier.signing.key.keystore.type", KeyStore.getDefaultType())
             val keystorePassword =
@@ -215,7 +215,7 @@ class VerifierContext(private val environment: Environment) {
                 val keystore = KeyStore.getInstance(keystoreType)
                 keystore.load(it, keystorePassword?.toCharArray())
                 JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
-            }.toRSAKey()
+            }
         }
 
         val signingKey = environment.getProperty("verifier.signing.key", SigningKeyEnum::class.java)
