@@ -55,6 +55,7 @@ import org.springframework.web.reactive.config.EnableWebFlux
 import org.springframework.web.reactive.config.WebFluxConfigurer
 import org.springframework.web.reactive.function.server.RouterFunction
 import java.security.KeyStore
+import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.util.*
@@ -326,10 +327,21 @@ private fun ApplicationContext.verifierConfig(): VerifierConfig {
         }
     val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
 
+    val signingConfig = signingConfig().also { signingConfig ->
+        clientIdScheme.sanType()?.let { sanType ->
+            val cert = signingConfig.key.parsedX509CertChain.first()
+            val san = cert.san(sanType).getOrThrow()
+            require(clientId in san) {
+                "Client Id '$clientId' not contained in Subject Alternative Names " +
+                    "of type '$sanType' of Signing Key. Valid Subject Alternative Names: '${san.joinToString()}'"
+            }
+        }
+    }
+
     return VerifierConfig(
         clientId = clientId,
         clientIdScheme = clientIdScheme,
-        signingConfig = signingConfig(),
+        signingConfig = signingConfig,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { WalletApi.directPost(publicUrl) },
@@ -378,3 +390,46 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
  * Gets the public URL of the Verifier endpoint. Corresponds to `verifier.publicUrl` property.
  */
 private fun Environment.publicUrl(): String = getProperty("verifier.publicUrl", "http://localhost:8080")
+
+/**
+ * Gets the [X509SubjectAlternativeNameType] that corresponds to this [ClientIdScheme].
+ */
+private fun ClientIdScheme.sanType(): X509SubjectAlternativeNameType? =
+    when (this) {
+        ClientIdScheme.X509SanDns -> X509SubjectAlternativeNameType.DNSName
+        ClientIdScheme.X509SanUri -> X509SubjectAlternativeNameType.UniformResourceIdentifier
+        else -> null
+    }
+
+/**
+ * Gets the Subject Alternative Names of the provided [type] from this [X509Certificate].
+ */
+private fun X509Certificate.san(type: X509SubjectAlternativeNameType): Result<List<String>> = runCatching {
+    buildList {
+        subjectAlternativeNames
+            ?.filter { subjectAltNames -> !subjectAltNames.isNullOrEmpty() && subjectAltNames.size == 2 }
+            ?.forEach { entry ->
+                val altNameType = entry[0] as Int
+                entry[1]?.takeIf { altNameType == type.asInt() }?.let { add(it as String) }
+            }
+    }
+}
+
+/**
+ * Types of Subject Alternative Names.
+ */
+private enum class X509SubjectAlternativeNameType {
+    UniformResourceIdentifier,
+    DNSName,
+}
+
+/**
+ * Gets the numeric value of this [X509SubjectAlternativeNameType].
+ *
+ * See also https://www.rfc-editor.org/rfc/rfc5280.html
+ *
+ */
+private fun X509SubjectAlternativeNameType.asInt() = when (this) {
+    X509SubjectAlternativeNameType.UniformResourceIdentifier -> 6
+    X509SubjectAlternativeNameType.DNSName -> 2
+}
