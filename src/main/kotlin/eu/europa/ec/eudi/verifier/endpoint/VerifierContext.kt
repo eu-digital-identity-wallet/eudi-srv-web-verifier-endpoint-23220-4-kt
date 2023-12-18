@@ -72,7 +72,7 @@ class MyConfig : WebFluxConfigurer {
 class ScheduleSupport
 
 @Configuration
-class VerifierContext(private val environment: Environment) {
+class VerifierContext(environment: Environment) {
 
     val verifierConfig = environment.verifierConfig()
 
@@ -89,9 +89,9 @@ class VerifierContext(private val environment: Environment) {
         getRequestObject: GetRequestObject,
         getPresentationDefinition: GetPresentationDefinition,
         postWalletResponse: PostWalletResponse,
-        signingJwk: JWK,
+        signingConfig: SigningConfig,
     ): WalletApi =
-        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, signingJwk)
+        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, signingConfig.key)
 
     @Bean
     fun verifierApi(
@@ -195,41 +195,46 @@ class VerifierContext(private val environment: Environment) {
     //
 
     @Bean
-    fun signingJwk(clock: Clock, loader: ResourceLoader): JWK {
-        fun generateRandom(): RSAKey =
-            RSAKeyGenerator(2048)
-                .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
-                .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-                .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
-                .generate()
+    fun signingConfig(environment: Environment, loader: ResourceLoader, clock: Clock): SigningConfig {
+        val key = run {
+            fun loadFromKeystore(): JWK {
+                val keystoreResource =
+                    loader.getResource(environment.getRequiredProperty("verifier.signing.key.keystore"))
+                val keystoreType =
+                    environment.getProperty("verifier.signing.key.keystore.type", KeyStore.getDefaultType())
+                val keystorePassword =
+                    environment.getProperty("verifier.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
+                val keyAlias = environment.getRequiredProperty("verifier.signing.key.alias")
+                val keyPassword = environment.getProperty("verifier.signing.key.password")?.takeIf { it.isNotBlank() }
 
-        fun loadFromKeystore(): JWK {
-            val keystoreResource = loader.getResource(environment.getRequiredProperty("verifier.signing.key.keystore"))
-            val keystoreType = environment.getProperty("verifier.signing.key.keystore.type", KeyStore.getDefaultType())
-            val keystorePassword =
-                environment.getProperty("verifier.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
-            val keyAlias = environment.getRequiredProperty("verifier.signing.key.alias")
-            val keyPassword = environment.getProperty("verifier.signing.key.password")?.takeIf { it.isNotBlank() }
+                return keystoreResource.inputStream.use {
+                    val keystore = KeyStore.getInstance(keystoreType)
+                    keystore.load(it, keystorePassword?.toCharArray())
+                    JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
+                }
+            }
 
-            return keystoreResource.inputStream.use {
-                val keystore = KeyStore.getInstance(keystoreType)
-                keystore.load(it, keystorePassword?.toCharArray())
-                JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
+            fun generateRandom(): RSAKey =
+                RSAKeyGenerator(2048)
+                    .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
+                    .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
+                    .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
+                    .generate()
+
+            when (environment.getProperty("verifier.signing.key", SigningKeyEnum::class.java)) {
+                SigningKeyEnum.LoadFromKeystore -> loadFromKeystore()
+                null, SigningKeyEnum.GenerateRandom -> generateRandom()
             }
         }
 
-        val signingKey = environment.getProperty("verifier.signing.key", SigningKeyEnum::class.java)
-        return when (signingKey) {
-            null, SigningKeyEnum.GenerateRandom -> generateRandom()
-            SigningKeyEnum.LoadFromKeystore -> loadFromKeystore()
-        }
+        val algorithm = environment.getRequiredProperty("verifier.signing.algorithm").let(JWSAlgorithm::parse)
+
+        return SigningConfig(key, algorithm)
     }
 
     @Bean
-    fun signRequestObject(signingJwk: JWK): SignRequestObject {
-        val signingAlgorithm = environment.getRequiredProperty("verifier.signing.algorithm").let(JWSAlgorithm::parse)
-        return SignRequestObjectNimbus(signingJwk, signingAlgorithm)
-    }
+    fun signRequestObject(signingConfig: SigningConfig): SignRequestObject =
+        SignRequestObjectNimbus(signingConfig.key, signingConfig.algorithm)
 
     @Bean
     fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmEncryptedJwtNimbus

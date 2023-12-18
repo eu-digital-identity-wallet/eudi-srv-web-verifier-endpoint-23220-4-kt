@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.jwk.JWK
 import java.net.URL
 import java.time.Duration
 
@@ -84,6 +86,14 @@ data class ClientMetaData(
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
     val jarmOption: JarmOption,
+)
+
+/**
+ * Configuration options for request object signing.
+ */
+data class SigningConfig(
+    val key: JWK,
+    val algorithm: JWSAlgorithm,
 )
 
 /**
