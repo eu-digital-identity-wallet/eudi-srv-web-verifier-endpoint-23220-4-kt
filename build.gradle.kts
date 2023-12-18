@@ -31,6 +31,7 @@ dependencies {
     implementation(libs.presentation.exchange)
     implementation(libs.nimbusds.oauth2.oidc.sdk)
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation(libs.bouncy.castle)
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
 }

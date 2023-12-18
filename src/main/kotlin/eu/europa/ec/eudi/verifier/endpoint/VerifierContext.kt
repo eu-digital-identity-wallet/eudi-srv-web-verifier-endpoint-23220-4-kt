@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
@@ -47,11 +48,13 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Lazy
 import org.springframework.core.env.Environment
+import org.springframework.core.io.ResourceLoader
 import org.springframework.http.codec.ServerCodecConfigurer
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.web.reactive.config.EnableWebFlux
 import org.springframework.web.reactive.config.WebFluxConfigurer
 import org.springframework.web.reactive.function.server.RouterFunction
+import java.security.KeyStore
 import java.time.Clock
 import java.time.Duration
 import java.util.*
@@ -69,7 +72,7 @@ class MyConfig : WebFluxConfigurer {
 class ScheduleSupport
 
 @Configuration
-class VerifierContext(environment: Environment) {
+class VerifierContext(private val environment: Environment) {
 
     val verifierConfig = environment.verifierConfig()
 
@@ -192,12 +195,35 @@ class VerifierContext(environment: Environment) {
     //
 
     @Bean
-    fun rsaJwk(clock: Clock): RSAKey =
-        RSAKeyGenerator(2048)
-            .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
-            .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-            .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
-            .generate()
+    fun rsaJwk(clock: Clock, loader: ResourceLoader): RSAKey {
+        fun generateRandom(): RSAKey =
+            RSAKeyGenerator(2048)
+                .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
+                .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
+                .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
+                .generate()
+
+        fun loadFromKeystore(): RSAKey {
+            val keystoreResource = loader.getResource(environment.getRequiredProperty("verifier.signing.key.keystore"))
+            val keystoreType = environment.getProperty("verifier.signing.key.keystore.type", KeyStore.getDefaultType())
+            val keystorePassword =
+                environment.getProperty("verifier.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
+            val keyAlias = environment.getRequiredProperty("verifier.signing.key.alias")
+            val keyPassword = environment.getProperty("verifier.signing.key.password")?.takeIf { it.isNotBlank() }
+
+            return keystoreResource.inputStream.use {
+                val keystore = KeyStore.getInstance(keystoreType)
+                keystore.load(it, keystorePassword?.toCharArray())
+                JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
+            }.toRSAKey()
+        }
+
+        val signingKey = environment.getProperty("verifier.signing.key", SigningKeyEnum::class.java)
+        return when (signingKey) {
+            null, SigningKeyEnum.GenerateRandom -> generateRandom()
+            SigningKeyEnum.LoadFromKeystore -> loadFromKeystore()
+        }
+    }
 
     @Lazy
     @Bean
@@ -256,6 +282,11 @@ class VerifierContext(environment: Environment) {
 private enum class EmbedOptionEnum {
     ByValue,
     ByReference,
+}
+
+private enum class SigningKeyEnum {
+    GenerateRandom,
+    LoadFromKeystore,
 }
 
 private fun Environment.verifierConfig(): VerifierConfig {

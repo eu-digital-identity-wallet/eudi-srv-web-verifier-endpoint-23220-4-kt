@@ -8,15 +8,17 @@ springDependencyManagement = "1.1.4"
 spotless = "6.23.2"
 java = "17"
 kotlinxSerialization = "1.6.1"
-oauth2OidcSdk="11.7"
-presentationExchange="0.2.0-SNAPSHOT"
-ktlintVersion="0.50.0"
+oauth2OidcSdk = "11.7"
+presentationExchange = "0.2.0-SNAPSHOT"
+ktlintVersion = "0.50.0"
+bouncyCastle = "1.77"
 
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
-nimbusds-oauth2-oidc-sdk = {module ="com.nimbusds:oauth2-oidc-sdk", version.ref="oauth2OidcSdk"}
-presentation-exchange =  {module ="eu.europa.ec.eudi:eudi-lib-jvm-presentation-exchange-kt", version.ref="presentationExchange"}
+nimbusds-oauth2-oidc-sdk = { module = "com.nimbusds:oauth2-oidc-sdk", version.ref = "oauth2OidcSdk" }
+presentation-exchange = { module = "eu.europa.ec.eudi:eudi-lib-jvm-presentation-exchange-kt", version.ref = "presentationExchange" }
+bouncy-castle = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncyCastle" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
