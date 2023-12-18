@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.RSAKey
@@ -46,7 +47,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentatio
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Lazy
 import org.springframework.core.env.Environment
 import org.springframework.core.io.ResourceLoader
 import org.springframework.http.codec.ServerCodecConfigurer
@@ -195,7 +195,7 @@ class VerifierContext(private val environment: Environment) {
     //
 
     @Bean
-    fun rsaJwk(clock: Clock, loader: ResourceLoader): RSAKey {
+    fun signingJwk(clock: Clock, loader: ResourceLoader): JWK {
         fun generateRandom(): RSAKey =
             RSAKeyGenerator(2048)
                 .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
@@ -225,10 +225,11 @@ class VerifierContext(private val environment: Environment) {
         }
     }
 
-    @Lazy
     @Bean
-    fun signRequestObject(rsaKey: RSAKey): SignRequestObject =
-        SignRequestObjectNimbus(rsaKey)
+    fun signRequestObject(signingJwk: JWK): SignRequestObject {
+        val signingAlgorithm = environment.getRequiredProperty("verifier.signing.algorithm").let(JWSAlgorithm::parse)
+        return SignRequestObjectNimbus(signingJwk, signingAlgorithm)
+    }
 
     @Bean
     fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmEncryptedJwtNimbus

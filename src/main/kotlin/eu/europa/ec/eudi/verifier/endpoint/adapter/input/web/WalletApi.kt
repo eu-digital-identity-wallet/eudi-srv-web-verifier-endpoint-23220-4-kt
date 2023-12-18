@@ -15,8 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
-import com.nimbusds.jose.jwk.RSAKey
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
@@ -39,7 +39,7 @@ class WalletApi(
     private val getRequestObject: GetRequestObject,
     private val getPresentationDefinition: GetPresentationDefinition,
     private val postWalletResponse: PostWalletResponse,
-    private val rsaKey: RSAKey,
+    private val signingKey: JWK,
 ) {
 
     private val logger: Logger = LoggerFactory.getLogger(WalletApi::class.java)
@@ -118,7 +118,7 @@ class WalletApi(
     }
 
     private suspend fun handleGetPublicJwkSet(): ServerResponse {
-        val publicJwkSet = JWKSet(rsaKey).toJSONObject(true)
+        val publicJwkSet = JWKSet(signingKey).toJSONObject(true)
         return ok()
             .contentType(MediaType.parseMediaType(JWKSet.MIME_TYPE))
             .bodyValueAndAwait(publicJwkSet)
