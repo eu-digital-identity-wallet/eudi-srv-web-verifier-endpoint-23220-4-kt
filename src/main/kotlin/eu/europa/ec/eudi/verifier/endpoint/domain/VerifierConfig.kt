@@ -16,7 +16,10 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.jwk.JWK
+import com.nimbusds.jose.crypto.ECDSASigner
+import com.nimbusds.jose.crypto.Ed25519Signer
+import com.nimbusds.jose.crypto.RSASSASigner
+import com.nimbusds.jose.jwk.*
 import java.net.URL
 import java.time.Duration
 
@@ -95,7 +98,21 @@ data class ClientMetaData(
 data class SigningConfig(
     val key: JWK,
     val algorithm: JWSAlgorithm,
-)
+) {
+    init {
+        require(key is AsymmetricJWK) { "Symmetric keys are not supported" }
+        require(key.isPrivate) { "A private key is required" }
+        val supportedAlgorithms = when (key) {
+            is RSAKey -> RSASSASigner.SUPPORTED_ALGORITHMS
+            is ECKey -> ECDSASigner.SUPPORTED_ALGORITHMS
+            is OctetKeyPair -> Ed25519Signer.SUPPORTED_ALGORITHMS
+            else -> emptyList<JWSAlgorithm>()
+        }
+        require(
+            algorithm in supportedAlgorithms,
+        ) { "Signing algorithm '${algorithm.name}' not compatible with key of type '${key.keyType.value}'" }
+    }
+}
 
 /**
  * Verifier configuration options

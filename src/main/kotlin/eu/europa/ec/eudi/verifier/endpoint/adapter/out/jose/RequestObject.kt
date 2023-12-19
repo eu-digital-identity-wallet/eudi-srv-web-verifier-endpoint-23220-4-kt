@@ -23,7 +23,7 @@ import java.time.Instant
 
 internal data class RequestObject(
     val clientId: String,
-    val clientIdScheme: String,
+    val clientIdScheme: ClientIdScheme,
     val responseType: List<String>,
     val presentationDefinitionUri: URL?,
     val presentationDefinition: PresentationDefinition? = null,
@@ -84,7 +84,7 @@ internal fun requestObjectFromDomain(
 
     return RequestObject(
         clientId = verifierConfig.clientId,
-        clientIdScheme = verifierConfig.clientIdScheme.value,
+        clientIdScheme = verifierConfig.clientIdScheme,
         scope = scope,
         idTokenType = idTokenType,
         presentationDefinitionUri = presentationDefinitionUri,

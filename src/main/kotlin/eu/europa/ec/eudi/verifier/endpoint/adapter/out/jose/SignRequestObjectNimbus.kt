@@ -16,10 +16,8 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jose.*
-import com.nimbusds.jose.crypto.ECDSASigner
-import com.nimbusds.jose.crypto.Ed25519Signer
-import com.nimbusds.jose.crypto.RSASSASigner
-import com.nimbusds.jose.jwk.*
+import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
+import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.oauth2.sdk.AuthorizationRequest
@@ -39,21 +37,10 @@ import java.util.*
 /**
  * An implementation of [SignRequestObject] that uses Nimbus SDK
  */
-class SignRequestObjectNimbus(private val config: SigningConfig) : SignRequestObject {
+class SignRequestObjectNimbus(config: SigningConfig) : SignRequestObject {
 
-    init {
-        require(config.key is AsymmetricJWK) { "Symmetric keys are not supported" }
-        require(config.key.isPrivate) { "A private key is required" }
-        val supportedAlgorithms = when (config.key) {
-            is RSAKey -> RSASSASigner.SUPPORTED_ALGORITHMS
-            is ECKey -> ECDSASigner.SUPPORTED_ALGORITHMS
-            is OctetKeyPair -> Ed25519Signer.SUPPORTED_ALGORITHMS
-            else -> emptyList<JWSAlgorithm>()
-        }
-        require(
-            config.algorithm in supportedAlgorithms,
-        ) { "Signing algorithm '${config.algorithm.name}' not compatible with key of type '${config.key.keyType.value}'" }
-    }
+    private val key = config.key
+    private val algorithm = config.algorithm
 
     override fun invoke(
         verifierConfig: VerifierConfig,
@@ -70,8 +57,13 @@ class SignRequestObjectNimbus(private val config: SigningConfig) : SignRequestOb
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
     ): Result<Jwt> = runCatching {
-        val header = JWSHeader.Builder(config.algorithm)
-            .keyID(config.key.keyID)
+        val header = JWSHeader.Builder(algorithm)
+            .apply {
+                when (requestObject.clientIdScheme) {
+                    ClientIdScheme.X509SanDns, ClientIdScheme.X509SanUri -> x509CertChain(key.x509CertChain)
+                    ClientIdScheme.PreRegistered -> keyID(key.keyID)
+                }
+            }
             .type(JOSEObjectType(AuthReqJwt))
             .build()
         val responseMode = requestObject.responseMode
@@ -79,12 +71,7 @@ class SignRequestObjectNimbus(private val config: SigningConfig) : SignRequestOb
 
         SignedJWT(header, claimSet)
             .apply {
-                val signer = when (config.key) {
-                    is RSAKey -> RSASSASigner(config.key.toRSAKey())
-                    is ECKey -> ECDSASigner(config.key.toECKey())
-                    is OctetKeyPair -> Ed25519Signer(config.key.toOctetKeyPair())
-                    else -> error("Unsupported key of type '${config.key.keyType.value}'")
-                }
+                val signer = DefaultJWSSignerFactory().createJWSSigner(key, algorithm)
                 sign(signer)
             }
             .serialize()
@@ -113,7 +100,7 @@ class SignRequestObjectNimbus(private val config: SigningConfig) : SignRequestOb
             issueTime(Date.from(r.issuedAt))
             audience(r.aud)
             claim("nonce", r.nonce)
-            claim("client_id_scheme", r.clientIdScheme)
+            claim("client_id_scheme", r.clientIdScheme.value)
             optionalClaim(
                 "id_token_type",
                 if (r.idTokenType.isEmpty()) {
@@ -139,7 +126,7 @@ class SignRequestObjectNimbus(private val config: SigningConfig) : SignRequestOb
         val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
             is ByValue -> {
                 val keySet = buildList {
-                    add(config.key)
+                    add(key)
                     ecPublicKey?.jwk()?.let { add(it) }
                 }
                 val jwkSet = JWKSet(keySet).toPublicJWKSet()

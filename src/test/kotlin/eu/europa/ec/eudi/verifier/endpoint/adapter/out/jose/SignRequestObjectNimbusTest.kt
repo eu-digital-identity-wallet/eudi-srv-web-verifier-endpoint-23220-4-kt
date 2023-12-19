@@ -26,6 +26,7 @@ import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
+import eu.europa.ec.eudi.verifier.endpoint.domain.ClientIdScheme
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -43,7 +44,7 @@ class SignRequestObjectNimbusTest {
     fun `given a request object, it should be signed and decoded`() {
         val requestObject = RequestObject(
             clientId = "client-id",
-            clientIdScheme = "pre-registered",
+            clientIdScheme = ClientIdScheme.PreRegistered,
             responseType = listOf("vp_token", "id_token"),
             presentationDefinitionUri = null,
             presentationDefinition = PresentationExchange.jsonParser.decodePresentationDefinition(pd).getOrThrow(),
@@ -81,7 +82,7 @@ class SignRequestObjectNimbusTest {
 
     private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c: JWTClaimsSet) {
         assertEquals(r.clientId, c.getStringClaim("client_id"))
-        assertEquals(r.clientIdScheme, c.getStringClaim("client_id_scheme"))
+        assertEquals(r.clientIdScheme.value, c.getStringClaim("client_id_scheme"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
         assertEquals(r.presentationDefinitionUri?.toExternalForm(), c.getStringClaim("presentation_definition_uri"))
         assertEquals(r.presentationDefinition, c.getJSONObjectClaim("presentation_definition"))
