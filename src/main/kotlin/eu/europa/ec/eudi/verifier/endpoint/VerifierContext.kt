@@ -16,10 +16,10 @@
 package eu.europa.ec.eudi.verifier.endpoint
 
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.jwk.JWK
-import com.nimbusds.jose.jwk.KeyUse
-import com.nimbusds.jose.jwk.RSAKey
+import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import com.nimbusds.jose.util.Base64
+import com.nimbusds.jose.util.X509CertUtils
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
@@ -281,7 +281,17 @@ private fun ApplicationContext.signingConfig(): SigningConfig {
             return keystoreResource.inputStream.use {
                 val keystore = KeyStore.getInstance(keystoreType)
                 keystore.load(it, keystorePassword?.toCharArray())
-                JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
+
+                val jwk = JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
+                val chain = keystore.getCertificateChain(keyAlias)
+                    .orEmpty()
+                    .toList()
+                    .map { certificate -> certificate as X509Certificate }
+
+                when {
+                    chain.isNotEmpty() -> jwk.withCertificateChain(chain)
+                    else -> jwk
+                }
             }
         }
 
@@ -432,4 +442,33 @@ private enum class X509SubjectAlternativeNameType {
 private fun X509SubjectAlternativeNameType.asInt() = when (this) {
     X509SubjectAlternativeNameType.UniformResourceIdentifier -> 6
     X509SubjectAlternativeNameType.DNSName -> 2
+}
+
+/**
+ * Converts this [X509Certificate] list to a [Base64] PEM encoded list.
+ */
+private fun List<X509Certificate>.toBase64PEMEncoded(): List<Base64> =
+    this.map { X509CertUtils.toPEMString(it) }.map { Base64.encode(it) }
+
+/**
+ * Creates a copy of this [JWK] and sets the provided [X509Certificate] certificate chain.
+ * For the operation to succeed the following must hold true:
+ * 1. [chain] cannot be empty
+ * 2. the leaf certificate of the [chain] must match the leaf certificate of this [JWK]
+ */
+private fun JWK.withCertificateChain(chain: List<X509Certificate>): JWK {
+    require(this.parsedX509CertChain.isNotEmpty()) { "jwk must has a leaf certificate" }
+    require(chain.isNotEmpty()) { "chain cannot be empty" }
+    require(
+        this.parsedX509CertChain.first() == chain.first(),
+    ) { "leaf certificate of provided chain does not match leaf certificate of jwk" }
+
+    val encodedChain = chain.toBase64PEMEncoded()
+    return when (this) {
+        is RSAKey -> RSAKey.Builder(this).x509CertChain(encodedChain).build()
+        is ECKey -> ECKey.Builder(this).x509CertChain(encodedChain).build()
+        is OctetKeyPair -> OctetKeyPair.Builder(this).x509CertChain(encodedChain).build()
+        is OctetSequenceKey -> OctetSequenceKey.Builder(this).x509CertChain(encodedChain).build()
+        else -> error("Unexpected JWK type '${this.keyType.value}'/'${this.javaClass}'")
+    }
 }
