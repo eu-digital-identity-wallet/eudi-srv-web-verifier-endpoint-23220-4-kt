@@ -33,12 +33,14 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.net.URL
 import java.util.*
+import kotlin.math.sign
 
 class SignRequestObjectNimbusTest {
 
     private val signRequestObject = TestContext.singRequestObject
     private val verifier = TestContext.singRequestObjectVerifier
     private val clientMetaData = TestContext.clientMetaData
+    private val signingConfig = TestContext.signingConfig
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
@@ -66,7 +68,7 @@ class SignRequestObjectNimbusTest {
             .keyID(UUID.randomUUID().toString())
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
-        val jwt = signRequestObject.sign(clientMetaData, ecPublicKey, requestObject).getOrThrow().also { println(it) }
+        val jwt = signRequestObject.sign(clientMetaData, ecPublicKey, requestObject, signingConfig).getOrThrow().also { println(it) }
         val claimSet = decode(jwt).getOrThrow().also { println(it) }
 
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)

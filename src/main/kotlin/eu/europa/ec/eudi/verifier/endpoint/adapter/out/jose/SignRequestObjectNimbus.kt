@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
+import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
@@ -37,10 +38,7 @@ import java.util.*
 /**
  * An implementation of [SignRequestObject] that uses Nimbus SDK
  */
-class SignRequestObjectNimbus(config: SigningConfig) : SignRequestObject {
-
-    private val key = config.key
-    private val algorithm = config.algorithm
+class SignRequestObjectNimbus : SignRequestObject {
 
     override fun invoke(
         verifierConfig: VerifierConfig,
@@ -49,14 +47,16 @@ class SignRequestObjectNimbus(config: SigningConfig) : SignRequestObject {
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey
-        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
+        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject, verifierConfig.signingConfig)
     }
 
     internal fun sign(
         clientMetaData: ClientMetaData,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
+        signingConfig: SigningConfig,
     ): Result<Jwt> = runCatching {
+        val (key, algorithm) = signingConfig
         val header = JWSHeader.Builder(algorithm)
             .apply {
                 when (requestObject.clientIdScheme) {
@@ -67,7 +67,7 @@ class SignRequestObjectNimbus(config: SigningConfig) : SignRequestObject {
             .type(JOSEObjectType(AuthReqJwt))
             .build()
         val responseMode = requestObject.responseMode
-        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, ecPublicKey), requestObject)
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, key, ecPublicKey), requestObject)
 
         SignedJWT(header, claimSet)
             .apply {
@@ -121,12 +121,13 @@ class SignRequestObjectNimbus(config: SigningConfig) : SignRequestObject {
     private fun toNimbus(
         c: ClientMetaData,
         responseMode: String,
+        signingKey: JWK,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
     ): OIDCClientMetadata {
         val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
             is ByValue -> {
                 val keySet = buildList {
-                    add(key)
+                    add(signingKey)
                     ecPublicKey?.jwk()?.let { add(it) }
                 }
                 val jwkSet = JWKSet(keySet).toPublicJWKSet()

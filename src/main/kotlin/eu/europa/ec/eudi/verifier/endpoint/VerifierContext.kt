@@ -204,8 +204,7 @@ class VerifierContext {
     //
 
     @Bean
-    fun signRequestObject(verifierConfig: VerifierConfig): SignRequestObject =
-        SignRequestObjectNimbus(verifierConfig.signingConfig)
+    fun signRequestObject(verifierConfig: VerifierConfig): SignRequestObject = SignRequestObjectNimbus()
 
     @Bean
     fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmEncryptedJwtNimbus

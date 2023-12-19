@@ -58,7 +58,7 @@ object TestContext {
         jarmOption = ParseJarmOptionNimbus(null, "ECDH_ES", "A256GCM")!!,
     )
     val signingConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
-    val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus(signingConfig)
+    val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus()
     val singRequestObjectVerifier = RSASSAVerifier(signingConfig.key.toRSAKey().toRSAPublicKey())
     private val repo = PresentationInMemoryRepo()
     val loadPresentationById = repo.loadPresentationById
