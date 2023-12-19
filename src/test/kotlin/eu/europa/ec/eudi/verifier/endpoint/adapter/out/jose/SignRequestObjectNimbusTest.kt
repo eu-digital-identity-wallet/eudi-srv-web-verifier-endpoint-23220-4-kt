@@ -26,27 +26,24 @@ import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
-import eu.europa.ec.eudi.verifier.endpoint.domain.ClientIdScheme
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.net.URL
 import java.util.*
-import kotlin.math.sign
 
 class SignRequestObjectNimbusTest {
 
     private val signRequestObject = TestContext.singRequestObject
     private val verifier = TestContext.singRequestObjectVerifier
     private val clientMetaData = TestContext.clientMetaData
-    private val signingConfig = TestContext.signingConfig
+    private val clientIdScheme = TestContext.clientIdScheme
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
         val requestObject = RequestObject(
-            clientId = "client-id",
-            clientIdScheme = ClientIdScheme.PreRegistered,
+            clientIdScheme = clientIdScheme,
             responseType = listOf("vp_token", "id_token"),
             presentationDefinitionUri = null,
             presentationDefinition = PresentationExchange.jsonParser.decodePresentationDefinition(pd).getOrThrow(),
@@ -58,7 +55,6 @@ class SignRequestObjectNimbusTest {
             state = TestContext.testRequestId.value,
             aud = emptyList(),
             issuedAt = TestContext.testClock.instant(),
-
         )
 
         // responseMode is direct_post.jwt, so we need to generate an ephemeral key
@@ -68,7 +64,8 @@ class SignRequestObjectNimbusTest {
             .keyID(UUID.randomUUID().toString())
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
-        val jwt = signRequestObject.sign(clientMetaData, ecPublicKey, requestObject, signingConfig).getOrThrow().also { println(it) }
+        val jwt = signRequestObject.sign(clientMetaData, ecPublicKey, requestObject).getOrThrow()
+            .also { println(it) }
         val claimSet = decode(jwt).getOrThrow().also { println(it) }
 
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)
@@ -83,8 +80,8 @@ class SignRequestObjectNimbusTest {
     }
 
     private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c: JWTClaimsSet) {
-        assertEquals(r.clientId, c.getStringClaim("client_id"))
-        assertEquals(r.clientIdScheme.value, c.getStringClaim("client_id_scheme"))
+        assertEquals(r.clientIdScheme.clientId, c.getStringClaim("client_id"))
+        assertEquals(r.clientIdScheme.name, c.getStringClaim("client_id_scheme"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
         assertEquals(r.presentationDefinitionUri?.toExternalForm(), c.getStringClaim("presentation_definition_uri"))
         assertEquals(r.presentationDefinition, c.getJSONObjectClaim("presentation_definition"))

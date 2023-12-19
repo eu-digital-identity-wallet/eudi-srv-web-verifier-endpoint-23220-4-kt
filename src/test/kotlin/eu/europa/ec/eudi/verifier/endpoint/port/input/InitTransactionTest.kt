@@ -37,13 +37,13 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
+                clientIdScheme = TestContext.clientIdScheme,
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
-                signingConfig = TestContext.signingConfig,
             )
 
             val input = InitTransactionTO(
@@ -60,7 +60,7 @@ class InitTransactionTest {
             )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
             Assertions.assertTrue(
                 loadPresentationById(testPresentationId)?.let { it is Presentation.RequestObjectRetrieved } ?: false,
@@ -72,13 +72,13 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
+                clientIdScheme = TestContext.clientIdScheme,
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
-                signingConfig = TestContext.signingConfig,
             )
 
             val input = InitTransactionTO(
@@ -95,7 +95,7 @@ class InitTransactionTest {
             )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             Assertions.assertEquals(uri.toExternalForm(), jwtSecuredAuthorizationRequest.requestUri)
             Assertions.assertTrue(
                 loadPresentationById(testPresentationId)?.let { it is Presentation.Requested } ?: false,
@@ -136,13 +136,13 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
+                clientIdScheme = TestContext.clientIdScheme,
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
-                signingConfig = TestContext.signingConfig,
             )
 
             val input = InitTransactionTO(
@@ -159,7 +159,7 @@ class InitTransactionTest {
             )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
             val presentation = loadPresentationById(testPresentationId)
             val requestObjectRetrieved =
@@ -175,13 +175,13 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
+                clientIdScheme = TestContext.clientIdScheme,
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
-                signingConfig = TestContext.signingConfig,
             )
 
             val input = InitTransactionTO(
@@ -200,7 +200,7 @@ class InitTransactionTest {
             // we expect the Authorization Request to contain a request_uri
             // and the Presentation to be in state Requested
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             Assertions.assertNull(jwtSecuredAuthorizationRequest.request)
             Assertions.assertNotNull(jwtSecuredAuthorizationRequest.requestUri)
             val presentation = loadPresentationById(testPresentationId)
@@ -216,13 +216,13 @@ class InitTransactionTest {
         runBlocking {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
+                clientIdScheme = TestContext.clientIdScheme,
                 requestJarOption = EmbedOption.ByValue,
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> uri },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
-                signingConfig = TestContext.signingConfig,
             )
 
             val input = VerifierApiClient.loadInitTransactionTO(
@@ -238,7 +238,7 @@ class InitTransactionTest {
             // we expect the Authorization Request to contain a request that contains a presentation_definition_uri
             // and the Presentation to be in state RequestedObjectRetrieved
             val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientId)
+            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
             val claims = SignedJWT.parse(jwtSecuredAuthorizationRequest.request).payload!!.toJSONObject()!!
             Assertions.assertEquals(uri.toExternalForm(), claims["presentation_definition_uri"])

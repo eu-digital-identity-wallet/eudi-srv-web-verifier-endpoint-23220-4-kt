@@ -200,7 +200,7 @@ class InitTransactionLive(
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(
                     requestedPresentation.id.value,
-                    verifierConfig.clientId,
+                    verifierConfig.clientIdScheme.clientId,
                     jwt,
                     null,
                 )
@@ -210,7 +210,7 @@ class InitTransactionLive(
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId).toExternalForm()
                 requestedPresentation to JwtSecuredAuthorizationRequestTO(
                     requestedPresentation.id.value,
-                    verifierConfig.clientId,
+                    verifierConfig.clientIdScheme.clientId,
                     null,
                     requestUri,
                 )

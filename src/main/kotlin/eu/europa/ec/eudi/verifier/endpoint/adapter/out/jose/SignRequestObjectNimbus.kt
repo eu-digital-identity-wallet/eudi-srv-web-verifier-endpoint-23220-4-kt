@@ -47,21 +47,20 @@ class SignRequestObjectNimbus : SignRequestObject {
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey
-        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject, verifierConfig.signingConfig)
+        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
     }
 
     internal fun sign(
         clientMetaData: ClientMetaData,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
-        signingConfig: SigningConfig,
     ): Result<Jwt> = runCatching {
-        val (key, algorithm) = signingConfig
+        val (key, algorithm) = requestObject.clientIdScheme.jarSigning
         val header = JWSHeader.Builder(algorithm)
             .apply {
                 when (requestObject.clientIdScheme) {
-                    ClientIdScheme.X509SanDns, ClientIdScheme.X509SanUri -> x509CertChain(key.x509CertChain)
-                    ClientIdScheme.PreRegistered -> keyID(key.keyID)
+                    is ClientIdScheme.PreRegistered -> keyID(key.keyID)
+                    is ClientIdScheme.X509SanDns, is ClientIdScheme.X509SanUri -> x509CertChain(key.x509CertChain)
                 }
             }
             .type(JOSEObjectType(AuthReqJwt))
@@ -70,10 +69,7 @@ class SignRequestObjectNimbus : SignRequestObject {
         val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, key, ecPublicKey), requestObject)
 
         SignedJWT(header, claimSet)
-            .apply {
-                val signer = DefaultJWSSignerFactory().createJWSSigner(key, algorithm)
-                sign(signer)
-            }
+            .apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
             .serialize()
     }
 
@@ -82,7 +78,7 @@ class SignRequestObjectNimbus : SignRequestObject {
      */
     private fun asClaimSet(clientMetaData: OIDCClientMetadata?, r: RequestObject): JWTClaimsSet {
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
-        val clientId = ClientID(r.clientId)
+        val clientId = ClientID(r.clientIdScheme.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
         val state = State(r.state)
 
@@ -100,7 +96,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             issueTime(Date.from(r.issuedAt))
             audience(r.aud)
             claim("nonce", r.nonce)
-            claim("client_id_scheme", r.clientIdScheme.value)
+            claim("client_id_scheme", r.clientIdScheme.name)
             optionalClaim(
                 "id_token_type",
                 if (r.idTokenType.isEmpty()) {

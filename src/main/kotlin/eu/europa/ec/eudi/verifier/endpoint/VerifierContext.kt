@@ -96,7 +96,12 @@ class VerifierContext {
         postWalletResponse: PostWalletResponse,
         verifierConfig: VerifierConfig,
     ): WalletApi =
-        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, verifierConfig.signingConfig.key)
+        WalletApi(
+            getRequestObject,
+            getPresentationDefinition,
+            postWalletResponse,
+            verifierConfig.clientIdScheme.jarSigning.key,
+        )
 
     @Bean
     fun verifierApi(
@@ -265,17 +270,19 @@ private enum class SigningKeyEnum {
     LoadFromKeystore,
 }
 
-private fun ApplicationContext.signingConfig(): SigningConfig {
+private fun ApplicationContext.jarSigningConfig(): SigningConfig {
     val key = run {
         fun loadFromKeystore(): JWK {
             val keystoreResource =
-                getResource(environment.getRequiredProperty("verifier.signing.key.keystore"))
+                getResource(environment.getRequiredProperty("verifier.jar.signing.key.keystore"))
             val keystoreType =
-                environment.getProperty("verifier.signing.key.keystore.type", KeyStore.getDefaultType())
+                environment.getProperty("verifier.jar.signing.key.keystore.type", KeyStore.getDefaultType())
             val keystorePassword =
-                environment.getProperty("verifier.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
-            val keyAlias = environment.getRequiredProperty("verifier.signing.key.alias")
-            val keyPassword = environment.getProperty("verifier.signing.key.password")?.takeIf { it.isNotBlank() }
+                environment.getProperty("verifier.jar.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
+            val keyAlias =
+                environment.getRequiredProperty("verifier.jar.signing.key.alias")
+            val keyPassword =
+                environment.getProperty("verifier.jar.signing.key.password")?.takeIf { it.isNotBlank() }
 
             return keystoreResource.inputStream.use {
                 val keystore = KeyStore.getInstance(keystoreType)
@@ -284,8 +291,8 @@ private fun ApplicationContext.signingConfig(): SigningConfig {
                 val jwk = JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
                 val chain = keystore.getCertificateChain(keyAlias)
                     .orEmpty()
-                    .toList()
                     .map { certificate -> certificate as X509Certificate }
+                    .toList()
 
                 when {
                     chain.isNotEmpty() -> jwk.withCertificateChain(chain)
@@ -295,27 +302,38 @@ private fun ApplicationContext.signingConfig(): SigningConfig {
         }
 
         fun generateRandom(): RSAKey =
-            RSAKeyGenerator(2048)
+            RSAKeyGenerator(4096, false)
                 .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
                 .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
                 .issueTime(Date.from(getBean(Clock::class.java).instant())) // issued-at timestamp (optional)
                 .generate()
 
-        when (environment.getProperty("verifier.signing.key", SigningKeyEnum::class.java)) {
+        when (environment.getProperty("verifier.jar.signing.key", SigningKeyEnum::class.java)) {
             SigningKeyEnum.LoadFromKeystore -> loadFromKeystore()
             null, SigningKeyEnum.GenerateRandom -> generateRandom()
         }
     }
 
-    val algorithm = environment.getRequiredProperty("verifier.signing.algorithm").let(JWSAlgorithm::parse)
+    val algorithm = environment.getProperty("verifier.jar.signing.algorithm", "RS256").let(JWSAlgorithm::parse)
 
     return SigningConfig(key, algorithm)
 }
 
 private fun ApplicationContext.verifierConfig(): VerifierConfig {
-    val clientId = environment.getProperty("verifier.clientId", "verifier")
-    val clientIdScheme =
-        environment.getProperty("verifier.clientIdScheme", "pre-registered").let { ClientIdScheme.fromValue(it)!! }
+    val clientIdScheme = run {
+        val clientId = environment.getProperty("verifier.clientId", "verifier")
+        val jarSigning = jarSigningConfig()
+
+        val factory =
+            when (val clientIdScheme = environment.getProperty("verifier.clientIdScheme", "pre-registered")) {
+                "pre-registered" -> ClientIdScheme::PreRegistered
+                "x509_san_dns" -> ClientIdScheme::X509SanDns
+                "x509_san_uri" -> ClientIdScheme::X509SanUri
+                else -> error("Unknown clientIdScheme '$clientIdScheme'")
+            }
+        factory(clientId, jarSigning)
+    }
+
     val publicUrl = environment.publicUrl()
     val requestJarOption = environment.getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
@@ -336,21 +354,8 @@ private fun ApplicationContext.verifierConfig(): VerifierConfig {
         }
     val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
 
-    val signingConfig = signingConfig().also { signingConfig ->
-        clientIdScheme.sanType()?.let { sanType ->
-            val cert = signingConfig.key.parsedX509CertChain.first()
-            val san = cert.san(sanType).getOrThrow()
-            require(clientId in san) {
-                "Client Id '$clientId' not contained in Subject Alternative Names " +
-                    "of type '$sanType' of Signing Key. Valid Subject Alternative Names: '${san.joinToString()}'"
-            }
-        }
-    }
-
     return VerifierConfig(
-        clientId = clientId,
         clientIdScheme = clientIdScheme,
-        signingConfig = signingConfig,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { WalletApi.directPost(publicUrl) },
@@ -399,49 +404,6 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
  * Gets the public URL of the Verifier endpoint. Corresponds to `verifier.publicUrl` property.
  */
 private fun Environment.publicUrl(): String = getProperty("verifier.publicUrl", "http://localhost:8080")
-
-/**
- * Gets the [X509SubjectAlternativeNameType] that corresponds to this [ClientIdScheme].
- */
-private fun ClientIdScheme.sanType(): X509SubjectAlternativeNameType? =
-    when (this) {
-        ClientIdScheme.X509SanDns -> X509SubjectAlternativeNameType.DNSName
-        ClientIdScheme.X509SanUri -> X509SubjectAlternativeNameType.UniformResourceIdentifier
-        else -> null
-    }
-
-/**
- * Gets the Subject Alternative Names of the provided [type] from this [X509Certificate].
- */
-private fun X509Certificate.san(type: X509SubjectAlternativeNameType): Result<List<String>> = runCatching {
-    buildList {
-        subjectAlternativeNames
-            ?.filter { subjectAltNames -> !subjectAltNames.isNullOrEmpty() && subjectAltNames.size == 2 }
-            ?.forEach { entry ->
-                val altNameType = entry[0] as Int
-                entry[1]?.takeIf { altNameType == type.asInt() }?.let { add(it as String) }
-            }
-    }
-}
-
-/**
- * Types of Subject Alternative Names.
- */
-private enum class X509SubjectAlternativeNameType {
-    UniformResourceIdentifier,
-    DNSName,
-}
-
-/**
- * Gets the numeric value of this [X509SubjectAlternativeNameType].
- *
- * See also https://www.rfc-editor.org/rfc/rfc5280.html
- *
- */
-private fun X509SubjectAlternativeNameType.asInt() = when (this) {
-    X509SubjectAlternativeNameType.UniformResourceIdentifier -> 6
-    X509SubjectAlternativeNameType.DNSName -> 2
-}
 
 /**
  * Converts this [X509Certificate] list to a [Base64] PEM encoded list.
