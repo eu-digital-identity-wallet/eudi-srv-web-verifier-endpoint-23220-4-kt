@@ -34,7 +34,7 @@ internal class GetJarmJwksLive(private val loadPresentationByRequestId: LoadPres
         when (val presentation = loadPresentationByRequestId(id)) {
             null -> QueryResponse.NotFound
             is Presentation.RequestObjectRetrieved -> presentation.ephemeralEcPubKey()
-                ?.let { QueryResponse.Found(it)}
+                ?.let { QueryResponse.Found(it) }
                 ?: QueryResponse.InvalidState
             else -> QueryResponse.InvalidState
         }

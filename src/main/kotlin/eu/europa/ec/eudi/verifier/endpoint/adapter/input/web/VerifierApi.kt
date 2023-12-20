@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.raise.either
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
@@ -44,16 +45,13 @@ class VerifierApi(
         suspend fun transactionInitiated(jar: JwtSecuredAuthorizationRequestTO) =
             ok().json().bodyValueAndAwait(jar)
 
-        suspend fun failed(t: Throwable) = when (t) {
-            is ValidationException -> t.error.asBadRequest()
-            else -> badRequest().buildAndAwait()
-        }
+        suspend fun failed(e: ValidationError) = e.asBadRequest()
 
         val input = req.awaitBody<InitTransactionTO>()
 
-        return initTransaction(input).fold(
-            onSuccess = { transactionInitiated(it) },
-            onFailure = { failed(it) },
+        return either { initTransaction(input) }.fold(
+            ifRight = { transactionInitiated(it) },
+            ifLeft = { failed(it) },
         )
     }
 

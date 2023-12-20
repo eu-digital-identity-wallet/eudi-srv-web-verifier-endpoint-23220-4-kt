@@ -17,16 +17,16 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.getOrElse
+import arrow.core.raise.either
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApiClient
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
+import kotlinx.coroutines.test.runTest
 import java.net.URL
 import java.time.Duration
+import kotlin.test.*
 
 class InitTransactionTest {
 
@@ -34,7 +34,7 @@ class InitTransactionTest {
 
     @Test
     fun `when request option is embed by value, request should be present and presentation should be RequestObjectRetrieved`() =
-        runBlocking {
+        runTest {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
                 clientIdScheme = TestContext.clientIdScheme,
@@ -59,17 +59,17 @@ class InitTransactionTest {
                 EmbedOption.byReference { _ -> uri },
             )
 
-            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
-            Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
-            Assertions.assertTrue(
-                loadPresentationById(testPresentationId)?.let { it is Presentation.RequestObjectRetrieved } ?: false,
-            )
+            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertNotNull(jwtSecuredAuthorizationRequest.request)
+            assertTrue {
+                loadPresentationById(testPresentationId)?.let { it is Presentation.RequestObjectRetrieved } ?: false
+            }
         }
 
     @Test
     fun `when request option is embed by ref, request_uri should be present and presentation should be Requested`() =
-        runBlocking {
+        runTest {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
                 clientIdScheme = TestContext.clientIdScheme,
@@ -94,16 +94,16 @@ class InitTransactionTest {
                 EmbedOption.byReference { _ -> uri },
             )
 
-            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
-            Assertions.assertEquals(uri.toExternalForm(), jwtSecuredAuthorizationRequest.requestUri)
-            Assertions.assertTrue(
-                loadPresentationById(testPresentationId)?.let { it is Presentation.Requested } ?: false,
-            )
+            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertEquals(uri.toExternalForm(), jwtSecuredAuthorizationRequest.requestUri)
+            assertTrue {
+                loadPresentationById(testPresentationId)?.let { it is Presentation.Requested } ?: false
+            }
         }
 
     @Test
-    fun `when input misses presentation definition validation error is raised`() = runBlocking {
+    fun `when input misses presentation definition validation error is raised`() = runTest {
         // Input is invalid.
         //  Misses presentation definition
         val input = InitTransactionTO(
@@ -116,7 +116,7 @@ class InitTransactionTest {
     }
 
     @Test
-    fun `when input misses nonce validation error is raised`() = runBlocking {
+    fun `when input misses nonce validation error is raised`() = runTest {
         // Input is invalid.
         //  Misses presentation definition
         val input = InitTransactionTO(
@@ -133,7 +133,7 @@ class InitTransactionTest {
      */
     @Test
     fun `when response_mode is provided this must take precedence over what is configured in VerifierConfig`() =
-        runBlocking {
+        runTest {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
                 clientIdScheme = TestContext.clientIdScheme,
@@ -158,13 +158,12 @@ class InitTransactionTest {
                 EmbedOption.byReference { _ -> uri },
             )
 
-            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
-            Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
+            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertNotNull(jwtSecuredAuthorizationRequest.request)
             val presentation = loadPresentationById(testPresentationId)
-            val requestObjectRetrieved =
-                Assertions.assertInstanceOf(Presentation.RequestObjectRetrieved::class.java, presentation)
-            Assertions.assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.responseMode)
+            val requestObjectRetrieved = assertIs<Presentation.RequestObjectRetrieved>(presentation)
+            assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.responseMode)
         }
 
     /**
@@ -172,7 +171,7 @@ class InitTransactionTest {
      */
     @Test
     fun `when jar_mode is provided this must take precedence over what is configured in VerifierConfig`() =
-        runBlocking {
+        runTest {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
                 clientIdScheme = TestContext.clientIdScheme,
@@ -199,12 +198,12 @@ class InitTransactionTest {
 
             // we expect the Authorization Request to contain a request_uri
             // and the Presentation to be in state Requested
-            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
-            Assertions.assertNull(jwtSecuredAuthorizationRequest.request)
-            Assertions.assertNotNull(jwtSecuredAuthorizationRequest.requestUri)
+            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertNull(jwtSecuredAuthorizationRequest.request)
+            assertNotNull(jwtSecuredAuthorizationRequest.requestUri)
             val presentation = loadPresentationById(testPresentationId)
-            Assertions.assertInstanceOf(Presentation.Requested::class.java, presentation)
+            assertIs<Presentation.Requested>(presentation)
             Unit
         }
 
@@ -213,7 +212,7 @@ class InitTransactionTest {
      */
     @Test
     fun `when presentation_definition_mode is provided this must take precedence over what is configured in VerifierConfig`() =
-        runBlocking {
+        runTest {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
                 clientIdScheme = TestContext.clientIdScheme,
@@ -237,28 +236,23 @@ class InitTransactionTest {
 
             // we expect the Authorization Request to contain a request that contains a presentation_definition_uri
             // and the Presentation to be in state RequestedObjectRetrieved
-            val jwtSecuredAuthorizationRequest = useCase(input).getOrThrow()
-            Assertions.assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
-            Assertions.assertNotNull(jwtSecuredAuthorizationRequest.request)
+            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertNotNull(jwtSecuredAuthorizationRequest.request)
             val claims = SignedJWT.parse(jwtSecuredAuthorizationRequest.request).payload!!.toJSONObject()!!
-            Assertions.assertEquals(uri.toExternalForm(), claims["presentation_definition_uri"])
+            assertEquals(uri.toExternalForm(), claims["presentation_definition_uri"])
             val presentation = loadPresentationById(testPresentationId)
-            Assertions.assertInstanceOf(Presentation.RequestObjectRetrieved::class.java, presentation)
+            assertIs<Presentation.RequestObjectRetrieved>(presentation)
             Unit
         }
 
 //
 
-    private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) = input.toDomain().fold(
-        onSuccess = { fail { "Invalid input accepted" } },
-        onFailure = { throwable ->
-            if (throwable is ValidationException) {
-                Assertions.assertEquals(expectedError, throwable.error)
-            } else {
-                fail(throwable)
-            }
-        },
-    )
+    private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) =
+        either { input.toDomain() }.fold(
+            ifRight = { fail("Invalid input accepted") },
+            ifLeft = { error -> assertEquals(expectedError, error) },
+        )
 
     private suspend fun loadPresentationById(id: PresentationId) =
         TestContext.loadPresentationById(id)
