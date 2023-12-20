@@ -115,11 +115,12 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         responseMode: String,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
     ): OIDCClientMetadata {
-        val (jwkSet, jwkSetUri) =
+        val (jwkSet, jwkSetUri) = if (ecPublicKey != null) {
             when (val option = c.jwkOption) {
-                is ByValue -> JWKSet(ecPublicKey?.jwk()?.let { listOf(it) }.orEmpty()).toPublicJWKSet() to null
+                is ByValue -> JWKSet(listOf(ecPublicKey.jwk())).toPublicJWKSet() to null
                 is ByReference -> null to option.buildUrl(requestId)
             }
+        } else null to null
 
         return OIDCClientMetadata().apply {
             idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
