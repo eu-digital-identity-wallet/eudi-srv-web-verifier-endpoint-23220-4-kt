@@ -47,7 +47,6 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
-import java.util.*
 
 /*
   https://jira.intrasoft-intl.com/browse/EUDIW-693
@@ -60,6 +59,7 @@ import java.util.*
         "verifier.clientMetadata.authorizationSignedResponseAlg=",
         "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
         "verifier.clientMetadata.authorizationEncryptedResponseEnc=A256GCM",
+        "verifier.jwk.embed=ByValue",
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)

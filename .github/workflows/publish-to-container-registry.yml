@@ -53,6 +53,7 @@ jobs:
           tags: |
             type=semver,pattern=v{{version}}
             type=edge
+            type=ref,event=branch
       - name: Debug
         run: echo ${{ steps.meta.outputs }}
       - name: Build and publish with Gradle Wrapper

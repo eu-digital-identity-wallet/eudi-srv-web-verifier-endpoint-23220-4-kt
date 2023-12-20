@@ -47,10 +47,11 @@ class SignRequestObjectNimbus : SignRequestObject {
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey
-        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
+        return sign(presentation.requestId, verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
     }
 
     internal fun sign(
+        requestId: RequestId,
         clientMetaData: ClientMetaData,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
@@ -66,7 +67,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             .type(JOSEObjectType(AuthReqJwt))
             .build()
         val responseMode = requestObject.responseMode
-        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, key, ecPublicKey), requestObject)
+        val claimSet = asClaimSet(toNimbus(requestId, clientMetaData, responseMode, ecPublicKey), requestObject)
 
         SignedJWT(header, claimSet)
             .apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
@@ -115,30 +116,24 @@ class SignRequestObjectNimbus : SignRequestObject {
     }
 
     private fun toNimbus(
+        requestId: RequestId,
         c: ClientMetaData,
         responseMode: String,
-        signingKey: JWK,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
     ): OIDCClientMetadata {
-        val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
-            is ByValue -> {
-                val keySet = buildList {
-                    add(signingKey)
-                    ecPublicKey?.jwk()?.let { add(it) }
-                }
-                val jwkSet = JWKSet(keySet).toPublicJWKSet()
-                jwkSet to null
+        val (jwkSet, jwkSetUri) = if (ecPublicKey != null) {
+            when (val option = c.jwkOption) {
+                is ByValue -> JWKSet(listOf(ecPublicKey.jwk())).toPublicJWKSet() to null
+                is ByReference -> null to option.buildUrl(requestId)
             }
-
-            is ByReference -> null to option.buildUrl.invoke(Unit)
-        }
+        } else null to null
 
         return OIDCClientMetadata().apply {
             idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
             idTokenJWEAlg = JWEAlgorithm.parse(c.idTokenEncryptedResponseAlg)
             idTokenJWEEnc = EncryptionMethod.parse(c.idTokenEncryptedResponseEnc)
-            jwkSet = vJwkSet
-            jwkSetURI = vJwkSetURI?.toURI()
+            jwkSet?.let { this.jwkSet = it }
+            jwkSetUri?.let { this.jwkSetURI = it.toURI() }
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
 
             if ("direct_post.jwt" == responseMode) {
