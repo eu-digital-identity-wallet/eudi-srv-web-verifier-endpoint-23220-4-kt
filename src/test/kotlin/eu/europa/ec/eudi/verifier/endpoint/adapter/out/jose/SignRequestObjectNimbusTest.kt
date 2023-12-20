@@ -19,16 +19,20 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
+import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import net.minidev.json.JSONObject
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.net.URL
 import java.util.*
@@ -65,10 +69,18 @@ class SignRequestObjectNimbusTest {
             .keyID(UUID.randomUUID().toString())
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
-        val jwt = signRequestObject.sign(clientMetaData, ecPublicKey, requestObject).getOrThrow().also { println(it) }
+        val jwt = signRequestObject.sign(RequestId("r"), clientMetaData, ecPublicKey, requestObject)
+            .getOrThrow()
+            .also { println(it) }
         val claimSet = decode(jwt).getOrThrow().also { println(it) }
-
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)
+
+        if (clientMetaData.jwkOption == EmbedOption.ByValue) {
+            assertTrue(claimSet.claims.containsKey("client_metadata"))
+            val clientMetadata = OIDCClientMetadata.parse(JSONObject(claimSet.getJSONObjectClaim("client_metadata")))
+            assertNull(clientMetadata.jwkSetURI)
+            assertEquals(JWKSet(ecPublicKey.jwk()).toPublicJWKSet(), clientMetadata.jwkSet)
+        }
     }
 
     private fun decode(jwt: String): Result<JWTClaimsSet> {

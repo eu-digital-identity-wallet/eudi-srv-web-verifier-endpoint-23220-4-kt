@@ -39,6 +39,7 @@ class WalletApi(
     private val getRequestObject: GetRequestObject,
     private val getPresentationDefinition: GetPresentationDefinition,
     private val postWalletResponse: PostWalletResponse,
+    private val getJarmJwks: GetJarmJwks,
     private val rsaKey: RSAKey,
 ) {
 
@@ -55,6 +56,7 @@ class WalletApi(
             this@WalletApi::handlePostWalletResponse,
         )
         GET(getPublicJwkSetPath) { _ -> handleGetPublicJwkSet() }
+        GET(jarmJwksPath, this@WalletApi::handleGetJarmJwks)
     }
 
     /**
@@ -124,6 +126,20 @@ class WalletApi(
             .bodyValueAndAwait(publicJwkSet)
     }
 
+    /**
+     * Handles the GET request for fetching the JWKS to be used for JARM.
+     */
+    private suspend fun handleGetJarmJwks(request: ServerRequest): ServerResponse {
+        val requestId = request.requestId().also { logger.info("Handling GetJarmJwks for $it...") }
+        return when (val queryResponse = getJarmJwks(requestId)) {
+            is NotFound -> notFound().buildAndAwait()
+            is InvalidState -> badRequest().buildAndAwait()
+            is Found -> ok()
+                .contentType(MediaType.parseMediaType(JWKSet.MIME_TYPE))
+                .bodyValueAndAwait(queryResponse.value.toJSONObject(true))
+        }
+    }
+
     companion object {
         const val getPublicJwkSetPath = "/wallet/public-keys.json"
 
@@ -138,6 +154,11 @@ class WalletApi(
          * getting the presentation definition
          */
         const val presentationDefinitionPath = "/wallet/pd/{requestId}"
+
+        /**
+         * Path template for the route for getting the JWKS that contains the Ephemeral Key for JARM.
+         */
+        const val jarmJwksPath = "/wallet/jarm/{requestId}/jwks.json"
 
         /**
          * Path template for the route for
@@ -181,6 +202,8 @@ class WalletApi(
                 .build()
                 .toURL()
         }
+
+        fun jarmJwksByReference(baseUrl: String): EmbedOption.ByReference<RequestId> = urlBuilder(baseUrl, jarmJwksPath)
 
         fun directPost(baseUrl: String): URL =
             DefaultUriBuilderFactory(baseUrl)

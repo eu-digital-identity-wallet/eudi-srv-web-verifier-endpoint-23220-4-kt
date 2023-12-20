@@ -64,6 +64,7 @@ sealed interface JarmOption {
             is SignedAndEncrypted -> encrypted.encode
             else -> null
         }
+
     data class Signed(val algorithm: String) : JarmOption
     data class Encrypted(val algorithm: String, val encode: String) : JarmOption
     data class SignedAndEncrypted(
@@ -78,7 +79,7 @@ sealed interface JarmOption {
  * @see <a href="https://openid.net/specs/openid-connect-registration-1_0.html">OpenID Connect Dynamic Client Registration specification</a>
  */
 data class ClientMetaData(
-    val jwkOption: EmbedOption<Any>,
+    val jwkOption: EmbedOption<RequestId>,
     val idTokenSignedResponseAlg: String,
     val idTokenEncryptedResponseAlg: String,
     val idTokenEncryptedResponseEnc: String,

@@ -86,9 +86,10 @@ class VerifierContext(environment: Environment) {
         getRequestObject: GetRequestObject,
         getPresentationDefinition: GetPresentationDefinition,
         postWalletResponse: PostWalletResponse,
+        getJarmJwks: GetJarmJwks,
         rsaKey: RSAKey,
     ): WalletApi =
-        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, rsaKey)
+        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, getJarmJwks, rsaKey)
 
     @Bean
     fun verifierApi(
@@ -186,6 +187,10 @@ class VerifierContext(environment: Environment) {
         loadPresentationById: LoadPresentationById,
     ): GetWalletResponse =
         GetWalletResponseLive(loadPresentationById)
+
+    @Bean
+    fun getJarmJwks(loadPresentationByRequestId: LoadPresentationByRequestId): GetJarmJwks =
+        GetJarmJwksLive(loadPresentationByRequestId)
 
     //
     // JOSE
@@ -295,7 +300,7 @@ private fun Environment.verifierConfig(): VerifierConfig {
 private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
     val jwkOption = getProperty("verifier.jwk.embed", EmbedOptionEnum::class.java).let {
         when (it) {
-            ByReference -> WalletApi.publicJwkSet(publicUrl)
+            ByReference -> WalletApi.jarmJwksByReference(publicUrl)
             ByValue, null -> EmbedOption.ByValue
         }
     }
