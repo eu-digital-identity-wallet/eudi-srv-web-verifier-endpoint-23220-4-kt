@@ -67,7 +67,7 @@ class SignRequestObjectNimbusTest {
             .algorithm(JWEAlgorithm.ECDH_ES)
             .keyID(UUID.randomUUID().toString())
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
-        
+
         val jwt = signRequestObject.sign(RequestId("r"), clientMetaData, ecPublicKey, requestObject)
             .getOrThrow()
             .also { println(it) }

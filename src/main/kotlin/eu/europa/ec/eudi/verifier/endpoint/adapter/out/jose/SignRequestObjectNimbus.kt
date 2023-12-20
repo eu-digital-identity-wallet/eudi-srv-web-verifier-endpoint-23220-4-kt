@@ -17,7 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
-import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
