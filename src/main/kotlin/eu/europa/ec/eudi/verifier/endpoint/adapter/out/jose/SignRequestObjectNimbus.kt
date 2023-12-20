@@ -113,25 +113,18 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         responseMode: String,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
     ): OIDCClientMetadata {
-        val (vJwkSet, vJwkSetURI) = when (val option = c.jwkOption) {
-            is ByValue -> {
-                val keySet = buildList {
-                    add(rsaJWK)
-                    ecPublicKey?.jwk()?.let { add(it) }
-                }
-                val jwkSet = JWKSet(keySet).toPublicJWKSet()
-                jwkSet to null
+        val (jwkSet, jwkSetUri) =
+            when (val option = c.jwkOption) {
+                is ByValue -> JWKSet(ecPublicKey?.jwk()?.let { listOf(it) }.orEmpty()).toPublicJWKSet() to null
+                is ByReference -> null to option.buildUrl(Unit)
             }
-
-            is ByReference -> null to option.buildUrl.invoke(Unit)
-        }
 
         return OIDCClientMetadata().apply {
             idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
             idTokenJWEAlg = JWEAlgorithm.parse(c.idTokenEncryptedResponseAlg)
             idTokenJWEEnc = EncryptionMethod.parse(c.idTokenEncryptedResponseEnc)
-            jwkSet = vJwkSet
-            jwkSetURI = vJwkSetURI?.toURI()
+            jwkSet?.let { this.jwkSet = it }
+            jwkSetUri?.let { this.jwkSetURI = it.toURI() }
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
 
             if ("direct_post.jwt" == responseMode) {
