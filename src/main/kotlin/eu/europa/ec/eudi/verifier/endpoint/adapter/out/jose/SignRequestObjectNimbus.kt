@@ -16,9 +16,8 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import com.nimbusds.jose.*
-import com.nimbusds.jose.crypto.RSASSASigner
+import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWKSet
-import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.oauth2.sdk.AuthorizationRequest
@@ -38,7 +37,7 @@ import java.util.*
 /**
  * An implementation of [SignRequestObject] that uses Nimbus SDK
  */
-class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
+class SignRequestObjectNimbus : SignRequestObject {
 
     override fun invoke(
         verifierConfig: VerifierConfig,
@@ -56,16 +55,22 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
     ): Result<Jwt> = runCatching {
-        val header = JWSHeader.Builder(JWSAlgorithm.RS256)
-            .keyID(rsaJWK.keyID)
+        val (key, algorithm) = requestObject.clientIdScheme.jarSigning
+        val header = JWSHeader.Builder(algorithm)
+            .apply {
+                when (requestObject.clientIdScheme) {
+                    is ClientIdScheme.PreRegistered -> keyID(key.keyID)
+                    is ClientIdScheme.X509SanDns, is ClientIdScheme.X509SanUri -> x509CertChain(key.x509CertChain)
+                }
+            }
             .type(JOSEObjectType(AuthReqJwt))
             .build()
         val responseMode = requestObject.responseMode
         val claimSet = asClaimSet(toNimbus(requestId, clientMetaData, responseMode, ecPublicKey), requestObject)
-        with(SignedJWT(header, claimSet)) {
-            sign(RSASSASigner(rsaJWK))
-            serialize()
-        }
+
+        SignedJWT(header, claimSet)
+            .apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
+            .serialize()
     }
 
     /**
@@ -73,7 +78,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
      */
     private fun asClaimSet(clientMetaData: OIDCClientMetadata?, r: RequestObject): JWTClaimsSet {
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
-        val clientId = ClientID(r.clientId)
+        val clientId = ClientID(r.clientIdScheme.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
         val state = State(r.state)
 
@@ -91,7 +96,7 @@ class SignRequestObjectNimbus(private val rsaJWK: RSAKey) : SignRequestObject {
             issueTime(Date.from(r.issuedAt))
             audience(r.aud)
             claim("nonce", r.nonce)
-            claim("client_id_scheme", r.clientIdScheme)
+            claim("client_id_scheme", r.clientIdScheme.name)
             optionalClaim(
                 "id_token_type",
                 if (r.idTokenType.isEmpty()) {

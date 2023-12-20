@@ -15,9 +15,11 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import com.nimbusds.jose.jwk.KeyUse
-import com.nimbusds.jose.jwk.RSAKey
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import com.nimbusds.jose.util.Base64
+import com.nimbusds.jose.util.X509CertUtils
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
@@ -43,15 +45,17 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentation
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Lazy
 import org.springframework.core.env.Environment
 import org.springframework.http.codec.ServerCodecConfigurer
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.web.reactive.config.EnableWebFlux
 import org.springframework.web.reactive.config.WebFluxConfigurer
 import org.springframework.web.reactive.function.server.RouterFunction
+import java.security.KeyStore
+import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.util.*
@@ -69,9 +73,13 @@ class MyConfig : WebFluxConfigurer {
 class ScheduleSupport
 
 @Configuration
-class VerifierContext(environment: Environment) {
+class VerifierContext {
 
-    val verifierConfig = environment.verifierConfig()
+    //
+    // Config
+    //
+    @Bean
+    fun verifierConfig(context: ApplicationContext): VerifierConfig = context.verifierConfig()
 
     //
     // End points
@@ -87,9 +95,15 @@ class VerifierContext(environment: Environment) {
         getPresentationDefinition: GetPresentationDefinition,
         postWalletResponse: PostWalletResponse,
         getJarmJwks: GetJarmJwks,
-        rsaKey: RSAKey,
+        verifierConfig: VerifierConfig,
     ): WalletApi =
-        WalletApi(getRequestObject, getPresentationDefinition, postWalletResponse, getJarmJwks, rsaKey)
+        WalletApi(
+            getRequestObject,
+            getPresentationDefinition,
+            postWalletResponse,
+            getJarmJwks,
+            verifierConfig.clientIdScheme.jarSigning.key,
+        )
 
     @Bean
     fun verifierApi(
@@ -121,6 +135,7 @@ class VerifierContext(environment: Environment) {
         generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
         @Qualifier("requestJarByReference") requestJarByReference: EmbedOption.ByReference<RequestId>,
         @Qualifier("presentationDefinitionByReference") presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
+        verifierConfig: VerifierConfig,
     ): InitTransaction = InitTransactionLive(
         generatePresentationId,
         generateRequestId,
@@ -139,6 +154,7 @@ class VerifierContext(environment: Environment) {
         signRequestObject: SignRequestObject,
         storePresentation: StorePresentation,
         clock: Clock,
+        verifierConfig: VerifierConfig,
     ): GetRequestObject = GetRequestObjectLive(
         loadPresentationByRequestId,
         storePresentation,
@@ -158,6 +174,7 @@ class VerifierContext(environment: Environment) {
         loadIncompletePresentationsOlderThan: LoadIncompletePresentationsOlderThan,
         storePresentation: StorePresentation,
         clock: Clock,
+        verifierConfig: VerifierConfig,
     ): TimeoutPresentations = TimeoutPresentationsLive(
         loadIncompletePresentationsOlderThan,
         storePresentation,
@@ -171,6 +188,7 @@ class VerifierContext(environment: Environment) {
         storePresentation: StorePresentation,
         verifyJarmJwtSignature: VerifyJarmJwtSignature,
         clock: Clock,
+        verifierConfig: VerifierConfig,
     ): PostWalletResponse = PostWalletResponseLive(
         loadPresentationByRequestId,
         storePresentation,
@@ -197,17 +215,7 @@ class VerifierContext(environment: Environment) {
     //
 
     @Bean
-    fun rsaJwk(clock: Clock): RSAKey =
-        RSAKeyGenerator(2048)
-            .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
-            .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-            .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
-            .generate()
-
-    @Lazy
-    @Bean
-    fun signRequestObject(rsaKey: RSAKey): SignRequestObject =
-        SignRequestObjectNimbus(rsaKey)
+    fun signRequestObject(verifierConfig: VerifierConfig): SignRequestObject = SignRequestObjectNimbus()
 
     @Bean
     fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmEncryptedJwtNimbus
@@ -263,37 +271,103 @@ private enum class EmbedOptionEnum {
     ByReference,
 }
 
-private fun Environment.verifierConfig(): VerifierConfig {
-    val clientId = getProperty("verifier.clientId", "verifier")
-    val clientIdScheme = getProperty("verifier.clientIdScheme", "pre-registered")
-    val publicUrl = publicUrl()
-    val requestJarOption = getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
+private enum class SigningKeyEnum {
+    GenerateRandom,
+    LoadFromKeystore,
+}
+
+private fun ApplicationContext.jarSigningConfig(): SigningConfig {
+    val key = run {
+        fun loadFromKeystore(): JWK {
+            val keystoreResource =
+                getResource(environment.getRequiredProperty("verifier.jar.signing.key.keystore"))
+            val keystoreType =
+                environment.getProperty("verifier.jar.signing.key.keystore.type", KeyStore.getDefaultType())
+            val keystorePassword =
+                environment.getProperty("verifier.jar.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
+            val keyAlias =
+                environment.getRequiredProperty("verifier.jar.signing.key.alias")
+            val keyPassword =
+                environment.getProperty("verifier.jar.signing.key.password")?.takeIf { it.isNotBlank() }
+
+            return keystoreResource.inputStream.use {
+                val keystore = KeyStore.getInstance(keystoreType)
+                keystore.load(it, keystorePassword?.toCharArray())
+
+                val jwk = JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
+                val chain = keystore.getCertificateChain(keyAlias)
+                    .orEmpty()
+                    .map { certificate -> certificate as X509Certificate }
+                    .toList()
+
+                when {
+                    chain.isNotEmpty() -> jwk.withCertificateChain(chain)
+                    else -> jwk
+                }
+            }
+        }
+
+        fun generateRandom(): RSAKey =
+            RSAKeyGenerator(4096, false)
+                .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
+                .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
+                .issueTime(Date.from(getBean(Clock::class.java).instant())) // issued-at timestamp (optional)
+                .generate()
+
+        when (environment.getProperty("verifier.jar.signing.key", SigningKeyEnum::class.java)) {
+            SigningKeyEnum.LoadFromKeystore -> loadFromKeystore()
+            null, SigningKeyEnum.GenerateRandom -> generateRandom()
+        }
+    }
+
+    val algorithm = environment.getProperty("verifier.jar.signing.algorithm", "RS256").let(JWSAlgorithm::parse)
+
+    return SigningConfig(key, algorithm)
+}
+
+private fun ApplicationContext.verifierConfig(): VerifierConfig {
+    val clientIdScheme = run {
+        val clientId = environment.getProperty("verifier.clientId", "verifier")
+        val jarSigning = jarSigningConfig()
+
+        val factory =
+            when (val clientIdScheme = environment.getProperty("verifier.clientIdScheme", "pre-registered")) {
+                "pre-registered" -> ClientIdScheme::PreRegistered
+                "x509_san_dns" -> ClientIdScheme::X509SanDns
+                "x509_san_uri" -> ClientIdScheme::X509SanUri
+                else -> error("Unknown clientIdScheme '$clientIdScheme'")
+            }
+        factory(clientId, jarSigning)
+    }
+
+    val publicUrl = environment.publicUrl()
+    val requestJarOption = environment.getProperty("verifier.requestJwt.embed", EmbedOptionEnum::class.java).let {
         when (it) {
             ByValue -> EmbedOption.ByValue
-            ByReference, null -> WalletApi.requestJwtByReference(publicUrl())
+            ByReference, null -> WalletApi.requestJwtByReference(environment.publicUrl())
         }
     }
     val responseModeOption =
-        getProperty("verifier.response.mode", ResponseModeOption::class.java) ?: ResponseModeOption.DirectPostJwt
+        environment.getProperty("verifier.response.mode", ResponseModeOption::class.java)
+            ?: ResponseModeOption.DirectPostJwt
 
     val presentationDefinitionEmbedOption =
-        getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
+        environment.getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
             when (it) {
                 ByReference -> WalletApi.presentationDefinitionByReference(publicUrl)
                 ByValue, null -> EmbedOption.ByValue
             }
         }
-    val maxAge = getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
+    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
 
     return VerifierConfig(
-        clientId = clientId,
         clientIdScheme = clientIdScheme,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { WalletApi.directPost(publicUrl) },
         responseModeOption = responseModeOption,
         maxAge = maxAge,
-        clientMetaData = clientMetaData(publicUrl),
+        clientMetaData = environment.clientMetaData(publicUrl),
     )
 }
 
@@ -336,3 +410,32 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
  * Gets the public URL of the Verifier endpoint. Corresponds to `verifier.publicUrl` property.
  */
 private fun Environment.publicUrl(): String = getProperty("verifier.publicUrl", "http://localhost:8080")
+
+/**
+ * Converts this [X509Certificate] list to a [Base64] PEM encoded list.
+ */
+private fun List<X509Certificate>.toBase64PEMEncoded(): List<Base64> =
+    this.map { X509CertUtils.toPEMString(it) }.map { Base64.encode(it) }
+
+/**
+ * Creates a copy of this [JWK] and sets the provided [X509Certificate] certificate chain.
+ * For the operation to succeed the following must hold true:
+ * 1. [chain] cannot be empty
+ * 2. the leaf certificate of the [chain] must match the leaf certificate of this [JWK]
+ */
+private fun JWK.withCertificateChain(chain: List<X509Certificate>): JWK {
+    require(this.parsedX509CertChain.isNotEmpty()) { "jwk must has a leaf certificate" }
+    require(chain.isNotEmpty()) { "chain cannot be empty" }
+    require(
+        this.parsedX509CertChain.first() == chain.first(),
+    ) { "leaf certificate of provided chain does not match leaf certificate of jwk" }
+
+    val encodedChain = chain.toBase64PEMEncoded()
+    return when (this) {
+        is RSAKey -> RSAKey.Builder(this).x509CertChain(encodedChain).build()
+        is ECKey -> ECKey.Builder(this).x509CertChain(encodedChain).build()
+        is OctetKeyPair -> OctetKeyPair.Builder(this).x509CertChain(encodedChain).build()
+        is OctetSequenceKey -> OctetSequenceKey.Builder(this).x509CertChain(encodedChain).build()
+        else -> error("Unexpected JWK type '${this.keyType.value}'/'${this.javaClass}'")
+    }
+}

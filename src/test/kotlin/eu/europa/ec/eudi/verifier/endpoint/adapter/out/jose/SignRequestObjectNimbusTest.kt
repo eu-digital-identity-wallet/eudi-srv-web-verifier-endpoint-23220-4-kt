@@ -42,12 +42,12 @@ class SignRequestObjectNimbusTest {
     private val signRequestObject = TestContext.singRequestObject
     private val verifier = TestContext.singRequestObjectVerifier
     private val clientMetaData = TestContext.clientMetaData
+    private val clientIdScheme = TestContext.clientIdScheme
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
         val requestObject = RequestObject(
-            clientId = "client-id",
-            clientIdScheme = "pre-registered",
+            clientIdScheme = clientIdScheme,
             responseType = listOf("vp_token", "id_token"),
             presentationDefinitionUri = null,
             presentationDefinition = PresentationExchange.jsonParser.decodePresentationDefinition(pd).getOrThrow(),
@@ -59,7 +59,6 @@ class SignRequestObjectNimbusTest {
             state = TestContext.testRequestId.value,
             aud = emptyList(),
             issuedAt = TestContext.testClock.instant(),
-
         )
 
         // responseMode is direct_post.jwt, so we need to generate an ephemeral key
@@ -92,8 +91,8 @@ class SignRequestObjectNimbusTest {
     }
 
     private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c: JWTClaimsSet) {
-        assertEquals(r.clientId, c.getStringClaim("client_id"))
-        assertEquals(r.clientIdScheme, c.getStringClaim("client_id_scheme"))
+        assertEquals(r.clientIdScheme.clientId, c.getStringClaim("client_id"))
+        assertEquals(r.clientIdScheme.name, c.getStringClaim("client_id_scheme"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
         assertEquals(r.presentationDefinitionUri?.toExternalForm(), c.getStringClaim("presentation_definition_uri"))
         assertEquals(r.presentationDefinition, c.getJSONObjectClaim("presentation_definition"))

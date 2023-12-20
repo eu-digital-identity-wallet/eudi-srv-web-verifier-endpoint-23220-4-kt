@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 import kotlin.jvm.optionals.getOrNull
 
@@ -31,6 +32,11 @@ dependencies {
     implementation(libs.presentation.exchange)
     implementation(libs.nimbusds.oauth2.oidc.sdk)
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation(libs.bouncy.castle)
+    implementation(libs.arrow.core)
+    implementation(libs.arrow.fx.coroutines)
+    testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
 }
@@ -45,6 +51,13 @@ kotlin {
     jvmToolchain {
         val javaVersion = getVersionFromCatalog("java")
         languageVersion.set(JavaLanguageVersion.of(javaVersion))
+    }
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    kotlinOptions {
+        freeCompilerArgs += "-Xcontext-receivers"
+        freeCompilerArgs += "-Xjsr305=strict"
     }
 }
 

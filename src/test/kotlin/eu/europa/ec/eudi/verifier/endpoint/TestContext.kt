@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
@@ -56,8 +57,10 @@ object TestContext {
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
         jarmOption = ParseJarmOptionNimbus(null, "ECDH_ES", "A256GCM")!!,
     )
-    val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus(rsaJwk)
-    val singRequestObjectVerifier = RSASSAVerifier(rsaJwk.toRSAPublicKey())
+    val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
+    val clientIdScheme = ClientIdScheme.PreRegistered("client-id", jarSigningConfig)
+    val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus()
+    val singRequestObjectVerifier = RSASSAVerifier(rsaJwk)
     private val repo = PresentationInMemoryRepo()
     val loadPresentationById = repo.loadPresentationById
     val loadPresentationByRequestId = repo.loadPresentationByRequestId

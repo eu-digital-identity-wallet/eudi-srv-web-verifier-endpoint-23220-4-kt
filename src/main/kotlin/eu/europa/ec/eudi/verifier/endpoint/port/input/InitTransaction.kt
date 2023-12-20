@@ -15,6 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.raise.Raise
+import arrow.core.raise.ensure
+import arrow.core.raise.ensureNotNull
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
@@ -101,11 +104,6 @@ enum class ValidationError {
 }
 
 /**
- * Carrier of [ValidationError]
- */
-data class ValidationException(val error: ValidationError) : RuntimeException()
-
-/**
  * The return value of successfully [initializing][InitTransaction] a [Presentation]
  *
  */
@@ -126,7 +124,9 @@ data class JwtSecuredAuthorizationRequestTO(
  * Use case will initialize a [Presentation] process
  */
 fun interface InitTransaction {
-    suspend operator fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO>
+
+    context(Raise<ValidationError>)
+    suspend operator fun invoke(initTransactionTO: InitTransactionTO): JwtSecuredAuthorizationRequestTO
 }
 
 /**
@@ -144,32 +144,33 @@ class InitTransactionLive(
     private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
 
 ) : InitTransaction {
-    override suspend fun invoke(initTransactionTO: InitTransactionTO): Result<JwtSecuredAuthorizationRequestTO> =
-        runCatching {
-            // validate input
-            val (nonce, type) = initTransactionTO.toDomain().getOrThrow()
 
-            // if response mode is direct post jwt then generate ephemeral key
-            val responseMode = responseMode(initTransactionTO)
-            val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
+    context(Raise<ValidationError>)
+    override suspend fun invoke(initTransactionTO: InitTransactionTO): JwtSecuredAuthorizationRequestTO {
+        // validate input
+        val (nonce, type) = initTransactionTO.toDomain()
 
-            // Initialize presentation
-            val requestedPresentation = Presentation.Requested(
-                id = generatePresentationId(),
-                initiatedAt = clock.instant(),
-                requestId = generateRequestId(),
-                type = type,
-                nonce = nonce,
-                ephemeralEcPrivateKey = newEphemeralEcPublicKey,
-                responseMode = responseMode,
-                presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
-            )
-            // create request, which may update presentation
-            val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
+        // if response mode is direct post jwt then generate ephemeral key
+        val responseMode = responseMode(initTransactionTO)
+        val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
 
-            storePresentation(updatedPresentation)
-            request
-        }
+        // Initialize presentation
+        val requestedPresentation = Presentation.Requested(
+            id = generatePresentationId(),
+            initiatedAt = clock.instant(),
+            requestId = generateRequestId(),
+            type = type,
+            nonce = nonce,
+            ephemeralEcPrivateKey = newEphemeralEcPublicKey,
+            responseMode = responseMode,
+            presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
+        )
+        // create request, which may update presentation
+        val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
+
+        storePresentation(updatedPresentation)
+        return request
+    }
 
     private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
         when (responseModeOption) {
@@ -200,7 +201,7 @@ class InitTransactionLive(
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(
                     requestedPresentation.id.value,
-                    verifierConfig.clientId,
+                    verifierConfig.clientIdScheme.clientId,
                     jwt,
                     null,
                 )
@@ -210,7 +211,7 @@ class InitTransactionLive(
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId).toExternalForm()
                 requestedPresentation to JwtSecuredAuthorizationRequestTO(
                     requestedPresentation.id.value,
-                    verifierConfig.clientId,
+                    verifierConfig.clientIdScheme.clientId,
                     null,
                     requestUri,
                 )
@@ -251,39 +252,36 @@ class InitTransactionLive(
         }
 }
 
-internal fun InitTransactionTO.toDomain(): Result<Pair<Nonce, PresentationType>> {
+context(Raise<ValidationError>)
+internal fun InitTransactionTO.toDomain(): Pair<Nonce, PresentationType> {
     fun requiredIdTokenType() =
-        Result.success(idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList())
+        idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
     fun requiredPresentationDefinition() =
-        if (presentationDefinition != null) {
-            Result.success(presentationDefinition)
-        } else Result.failure(ValidationException(ValidationError.MissingPresentationDefinition))
+        ensureNotNull(presentationDefinition) { ValidationError.MissingPresentationDefinition }
 
-    fun requiredNonce() =
-        if (!nonce.isNullOrBlank()) {
-            Result.success(Nonce(nonce))
-        } else Result.failure(ValidationException(ValidationError.MissingNonce))
-
-    return runCatching {
-        val presentationType = when (type) {
-            PresentationTypeTO.IdTokenRequest ->
-                PresentationType.IdTokenRequest(requiredIdTokenType().getOrThrow())
-
-            PresentationTypeTO.VpTokenRequest ->
-                PresentationType.VpTokenRequest(requiredPresentationDefinition().getOrThrow())
-
-            PresentationTypeTO.IdAndVpTokenRequest -> {
-                val idTokenTypes = requiredIdTokenType().getOrThrow()
-                val pd = requiredPresentationDefinition().getOrThrow()
-                PresentationType.IdAndVpToken(idTokenTypes, pd)
-            }
-        }
-
-        val nonce = requiredNonce().getOrThrow()
-
-        nonce to presentationType
+    fun requiredNonce(): Nonce {
+        ensure(!nonce.isNullOrBlank()) { ValidationError.MissingNonce }
+        return Nonce(nonce)
     }
+
+    val presentationType = when (type) {
+        PresentationTypeTO.IdTokenRequest ->
+            PresentationType.IdTokenRequest(requiredIdTokenType())
+
+        PresentationTypeTO.VpTokenRequest ->
+            PresentationType.VpTokenRequest(requiredPresentationDefinition())
+
+        PresentationTypeTO.IdAndVpTokenRequest -> {
+            val idTokenTypes = requiredIdTokenType()
+            val pd = requiredPresentationDefinition()
+            PresentationType.IdAndVpToken(idTokenTypes, pd)
+        }
+    }
+
+    val nonce = requiredNonce()
+
+    return nonce to presentationType
 }
 
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {

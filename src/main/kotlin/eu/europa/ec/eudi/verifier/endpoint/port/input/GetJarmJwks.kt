@@ -33,14 +33,13 @@ internal class GetJarmJwksLive(private val loadPresentationByRequestId: LoadPres
     override suspend fun invoke(id: RequestId): QueryResponse<JWKSet> =
         when (val presentation = loadPresentationByRequestId(id)) {
             null -> QueryResponse.NotFound
-            is Presentation.RequestObjectRetrieved -> {
-                if (presentation.ephemeralEcPrivateKey != null) {
-                    QueryResponse.Found(JWKSet(listOf(presentation.ephemeralEcPrivateKey.jwk())).toPublicJWKSet())
-                } else {
-                    QueryResponse.InvalidState
-                }
-            }
-
+            is Presentation.RequestObjectRetrieved -> presentation.ephemeralEcPubKey()
+                ?.let { QueryResponse.Found(it) }
+                ?: QueryResponse.InvalidState
             else -> QueryResponse.InvalidState
         }
+
+    private fun Presentation.RequestObjectRetrieved.ephemeralEcPubKey(): JWKSet? =
+        if (ephemeralEcPrivateKey != null) JWKSet(listOf(ephemeralEcPrivateKey.jwk())).toPublicJWKSet()
+        else null
 }

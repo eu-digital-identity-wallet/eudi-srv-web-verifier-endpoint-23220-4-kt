@@ -15,7 +15,11 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
+import com.nimbusds.jose.jwk.JWK
 import java.net.URL
+import java.security.cert.X509Certificate
 import java.time.Duration
 
 typealias PresentationRelatedUrlBuilder<ID> = (ID) -> URL
@@ -88,11 +92,85 @@ data class ClientMetaData(
 )
 
 /**
+ * Configuration options for signing.
+ */
+data class SigningConfig(
+    val key: JWK,
+    val algorithm: JWSAlgorithm,
+) {
+    init {
+        // Verify only asymmetric signature algorithms are accepted
+        require(algorithm in JWSAlgorithm.Family.SIGNATURE) { "'${algorithm.name}' is not a valid signature algorithm" }
+
+        // Verify a JWSSigner can be instantiated with the provided key/algorithm combo
+        runCatching {
+            DefaultJWSSignerFactory().createJWSSigner(key, algorithm)
+        }.getOrElse { throw IllegalArgumentException("Invalid configuration", it) }
+    }
+
+    /**
+     * The signing [X509Certificate].
+     */
+    val certificate: X509Certificate
+        get() = key.parsedX509CertChain.first()
+}
+
+/**
+ * Client Id schemes that can be used by Verifier.
+ */
+sealed interface ClientIdScheme {
+    val clientId: String
+    val jarSigning: SigningConfig
+    val name: String
+
+    /**
+     * 'pre-registered' Client Id scheme.
+     */
+    data class PreRegistered(
+        override val clientId: String,
+        override val jarSigning: SigningConfig,
+    ) : ClientIdScheme {
+        override val name: String = "pre-registered"
+    }
+
+    /**
+     * 'x509_san_dns' Client Id scheme.
+     */
+    data class X509SanDns(
+        override val clientId: String,
+        override val jarSigning: SigningConfig,
+    ) : ClientIdScheme {
+        init {
+            require(jarSigning.certificate.containsSanDns(clientId)) {
+                "Client Id '$clientId' not contained in 'DNS' Subject Alternative Names of JAR Signing Certificate."
+            }
+        }
+
+        override val name: String = "x509_san_dns"
+    }
+
+    /**
+     * 'x509_san_uri' Client Id scheme.
+     */
+    data class X509SanUri(
+        override val clientId: String,
+        override val jarSigning: SigningConfig,
+    ) : ClientIdScheme {
+        init {
+            require(jarSigning.certificate.containsSanUri(clientId)) {
+                "Client Id '$clientId' not contained in 'URI' Subject Alternative Names of JAR Signing Certificate."
+            }
+        }
+
+        override val name: String = "x509_san_uri"
+    }
+}
+
+/**
  * Verifier configuration options
  */
 data class VerifierConfig(
-    val clientId: String = "verifier-app",
-    val clientIdScheme: String = "pre-registered",
+    val clientIdScheme: ClientIdScheme,
     val requestJarOption: EmbedOption<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseModeOption: ResponseModeOption,
@@ -100,3 +178,54 @@ data class VerifierConfig(
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,
 )
+
+/**
+ * Checks if [value] is a Subject Alternative Name of [type] in this [X509Certificate].
+ */
+private fun X509Certificate.containsSan(value: String, type: SanType) =
+    value in this.san(type)
+
+/**
+ * Checks if [value] is a 'DNS' Subject Alternative Name in this [X509Certificate].
+ */
+private fun X509Certificate.containsSanDns(value: String) =
+    containsSan(value, SanType.DNS)
+
+/**
+ * Checks if [value] is a 'URI' Subject Alternative Name in this [X509Certificate].
+ */
+private fun X509Certificate.containsSanUri(value: String) =
+    containsSan(value, SanType.URI)
+
+/**
+ * Gets the Subject Alternative Names of the provided [type] from this [X509Certificate].
+ */
+private fun X509Certificate.san(type: SanType) =
+    buildList {
+        subjectAlternativeNames
+            ?.filter { subjectAltNames -> !subjectAltNames.isNullOrEmpty() && subjectAltNames.size == 2 }
+            ?.forEach { entry ->
+                val altNameType = entry[0] as Int
+                entry[1]?.takeIf { altNameType == type.asInt() }?.let { add(it as String) }
+            }
+    }
+
+/**
+ * Types of Subject Alternative Names.
+ */
+private enum class SanType {
+    URI,
+    DNS,
+}
+
+/**
+ * Gets the numeric value of this [SanType].
+ *
+ * See also https://www.rfc-editor.org/rfc/rfc5280.html
+ *
+ */
+private fun SanType.asInt() =
+    when (this) {
+        SanType.URI -> 6
+        SanType.DNS -> 2
+    }
