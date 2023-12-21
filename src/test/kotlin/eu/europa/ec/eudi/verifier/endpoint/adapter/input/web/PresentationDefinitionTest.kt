@@ -16,17 +16,17 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.prex.PresentationExchange
+import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@VerifierApplicationTest
 internal class PresentationDefinitionTest {
 
     private val log: Logger = LoggerFactory.getLogger(PresentationDefinitionTest::class.java)
@@ -76,9 +76,6 @@ internal class PresentationDefinitionTest {
         // get presentation definition from initTransaction as json string
         val requestPresentationDefinition = initTransaction.presentationDefinition
 
-        assertEquals(
-            requestPresentationDefinition,
-            responsePresentationDefinition,
-        ) { "presentationDefinition of response is not equal to presentationDefinition of request" }
+        assertEquals(requestPresentationDefinition, responsePresentationDefinition)
     }
 }

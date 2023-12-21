@@ -15,26 +15,26 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.annotation.Order
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+import kotlin.test.Test
+import kotlin.test.assertNotNull
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@VerifierApplicationTest
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -61,7 +61,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
      */
     @Test
     @Order(value = 1)
-    fun `post wallet response (only idToken) - confirm returns 200`(): Unit = runBlocking {
+    fun `post wallet response (only idToken) - confirm returns 200`() = runTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
@@ -86,7 +86,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
      */
     @Test
     @Order(value = 2)
-    fun `get authorisation response - confirm returns 200`(): Unit = runBlocking {
+    fun `get authorisation response - confirm returns 200`() = runTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
@@ -108,6 +108,6 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         )
 
         // then
-        Assertions.assertNotNull(response, "response is null")
+        assertNotNull(response)
     }
 }

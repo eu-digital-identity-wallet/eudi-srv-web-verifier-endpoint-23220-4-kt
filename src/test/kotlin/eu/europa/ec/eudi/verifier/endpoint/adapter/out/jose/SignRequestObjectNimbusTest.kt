@@ -32,10 +32,12 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import net.minidev.json.JSONObject
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
 import java.net.URL
 import java.util.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class SignRequestObjectNimbusTest {
 
@@ -75,7 +77,7 @@ class SignRequestObjectNimbusTest {
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)
 
         if (clientMetaData.jwkOption == EmbedOption.ByValue) {
-            assertTrue(claimSet.claims.containsKey("client_metadata"))
+            assertTrue { claimSet.claims.containsKey("client_metadata") }
             val clientMetadata = OIDCClientMetadata.parse(JSONObject(claimSet.getJSONObjectClaim("client_metadata")))
             assertNull(clientMetadata.jwkSetURI)
             assertEquals(JWKSet(ecPublicKey.jwk()).toPublicJWKSet(), clientMetadata.jwkSet)
@@ -106,10 +108,11 @@ class SignRequestObjectNimbusTest {
 
     private fun assertEquals(pd: PresentationDefinition?, c: MutableMap<String, Any?>?) {
         val pd2 = c?.let { PresentationDefinitionJackson.fromJsonObject(c).getOrThrow() }
-        assertTrue(pd == pd2)
+        assertEquals(pd, pd2)
     }
 
-    val pd = """{
+    private val pd = """
+        {
   "type": "vp_token id_token",
   "id_token_type": "subject_signed_id_token",
   "presentation_definition": {
@@ -134,5 +137,6 @@ class SignRequestObjectNimbusTest {
       }
     ]
   }
-}"""
+}
+"""
 }

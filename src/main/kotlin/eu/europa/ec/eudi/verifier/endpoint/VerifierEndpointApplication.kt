@@ -17,10 +17,22 @@ package eu.europa.ec.eudi.verifier.endpoint
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.support.BeanDefinitionDsl
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.web.reactive.config.EnableWebFlux
+import java.time.Clock
 
+@EnableScheduling
+@EnableWebFlux
 @SpringBootApplication(proxyBeanMethods = false)
 class VerifierApplication
 
+internal fun BeanDefinitionDsl.initializer(): ApplicationContextInitializer<GenericApplicationContext> =
+    ApplicationContextInitializer<GenericApplicationContext> { initialize(it) }
 fun main(args: Array<String>) {
-    runApplication<VerifierApplication>(*args)
+    runApplication<VerifierApplication>(*args) {
+        addInitializers(beans(Clock.systemDefaultZone()).initializer())
+    }
 }
