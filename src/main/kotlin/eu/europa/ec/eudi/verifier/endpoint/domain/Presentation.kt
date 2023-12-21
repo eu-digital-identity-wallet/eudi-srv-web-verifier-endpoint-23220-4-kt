@@ -141,8 +141,8 @@ sealed interface Presentation {
     ) : Presentation
 
     /**
-     * A presentation process for which the wallet has obtained the request object
-     * Depending on the configuration of the verifier this can be done
+     * A presentation process for which the wallet has obtained the request object.
+     * Depending on the configuration of the verifier, this can be done
      * as part of the initialization of the process (when using request JAR parameter)
      * or later on (when using request_uri JAR parameter)
      */
