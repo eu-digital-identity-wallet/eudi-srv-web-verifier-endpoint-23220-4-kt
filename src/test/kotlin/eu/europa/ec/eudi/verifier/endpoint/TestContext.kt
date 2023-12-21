@@ -33,11 +33,19 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.annotation.AliasFor
+import org.springframework.test.context.ContextConfiguration
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.*
+import kotlin.reflect.KClass
 
 object TestContext {
     val testDate = LocalDate.of(1974, 11, 2).atTime(10, 5, 33)
@@ -94,4 +102,34 @@ object TestContext {
             verifierConfig,
             Clock.fixed(presentationInitiatedAt.plusSeconds(1 * 60), testClock.zone),
         )
+}
+
+/**
+ * Meta annotation to be used with integration tests of [PidIssuerApplication].
+ */
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+@SpringBootTest(
+    classes = [VerifierApplication::class],
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+)
+@ContextConfiguration(initializers = [BeansDslApplicationContextInitializer::class])
+internal annotation class VerifierApplicationTest(
+
+    /**
+     * [Configuration] classes that contain extra bean definitions.
+     * Useful for bean overriding using [Primary] annotation.
+     */
+    @get:AliasFor(annotation = ContextConfiguration::class)
+    val classes: Array<KClass<*>> = [],
+
+)
+
+/**
+ * [ApplicationContextInitializer] for use with [SpringBootTest]/[ContextConfiguration]
+ */
+internal class BeansDslApplicationContextInitializer : ApplicationContextInitializer<GenericApplicationContext> {
+    override fun initialize(applicationContext: GenericApplicationContext) {
+        beans(Clock.systemDefaultZone()).initializer().initialize(applicationContext)
+    }
 }

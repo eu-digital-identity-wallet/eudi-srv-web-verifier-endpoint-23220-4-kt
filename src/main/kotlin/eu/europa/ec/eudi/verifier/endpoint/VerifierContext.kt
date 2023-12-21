@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
@@ -35,235 +37,119 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJ
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
-import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
-import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePresentationsOlderThan
-import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
-import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.ApplicationContext
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import org.springframework.context.support.beans
 import org.springframework.core.env.Environment
+import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.http.codec.ServerCodecConfigurer
-import org.springframework.scheduling.annotation.EnableScheduling
-import org.springframework.web.reactive.config.EnableWebFlux
+import org.springframework.http.codec.json.KotlinSerializationJsonDecoder
+import org.springframework.http.codec.json.KotlinSerializationJsonEncoder
 import org.springframework.web.reactive.config.WebFluxConfigurer
-import org.springframework.web.reactive.function.server.RouterFunction
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.util.*
 
-@Configuration
-@EnableWebFlux
-class MyConfig : WebFluxConfigurer {
-    override fun configureHttpMessageCodecs(configurer: ServerCodecConfigurer) {
-        configurer.defaultCodecs().enableLoggingRequestDetails(true)
+internal fun beans(clock: Clock) = beans {
+    //
+    // JOSE
+    //
+    bean { SignRequestObjectNimbus() }
+    bean { VerifyJarmEncryptedJwtNimbus }
+
+    //
+    // Persistence
+    //
+    bean { GeneratePresentationIdNimbus(64) }
+    bean { GenerateRequestIdNimbus(64) }
+    with(PresentationInMemoryRepo()) {
+        bean { loadPresentationById }
+        bean { loadPresentationByRequestId }
+        bean { storePresentation }
+        bean { loadIncompletePresentationsOlderThan }
     }
-}
 
-@Configuration
-@EnableScheduling
-class ScheduleSupport
+    //
+    // Use cases
+    //
+    bean {
+        InitTransactionLive(
+            ref(),
+            ref(),
+            ref(),
+            ref(),
+            ref(),
+            clock,
+            ref(),
+            WalletApi.requestJwtByReference(env.publicUrl()),
+            WalletApi.presentationDefinitionByReference(env.publicUrl()),
+        )
+    }
 
-@Configuration
-class VerifierContext {
+    bean { GetRequestObjectLive(ref(), ref(), ref(), ref(), clock) }
+
+    bean { GetPresentationDefinitionLive(ref()) }
+    bean {
+        TimeoutPresentationsLive(
+            ref(),
+            ref(),
+            ref<VerifierConfig>().maxAge,
+            clock,
+        )
+    }
+
+    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref()) }
+    bean { GenerateEphemeralEncryptionKeyPairNimbus }
+    bean { GetWalletResponseLive(ref()) }
+    bean { GetJarmJwksLive(ref()) }
+
+    //
+    // Scheduled
+    //
+    bean { ScheduleTimeoutPresentations(ref()) }
 
     //
     // Config
     //
-    @Bean
-    fun verifierConfig(context: ApplicationContext): VerifierConfig = context.verifierConfig()
+    bean { verifierConfig(env, clock) }
 
     //
     // End points
     //
 
-    @Bean
-    fun route(webApi: WalletApi, verifierApi: VerifierApi, staticContent: StaticContent): RouterFunction<*> =
-        webApi.route.and(verifierApi.route).and(staticContent.route)
-
-    @Bean
-    fun webApi(
-        getRequestObject: GetRequestObject,
-        getPresentationDefinition: GetPresentationDefinition,
-        postWalletResponse: PostWalletResponse,
-        getJarmJwks: GetJarmJwks,
-        verifierConfig: VerifierConfig,
-    ): WalletApi =
-        WalletApi(
-            getRequestObject,
-            getPresentationDefinition,
-            postWalletResponse,
-            getJarmJwks,
-            verifierConfig.clientIdScheme.jarSigning.key,
+    bean {
+        val walletApi = WalletApi(
+            ref(),
+            ref(),
+            ref(),
+            ref(),
+            ref<VerifierConfig>().clientIdScheme.jarSigning.key,
         )
-
-    @Bean
-    fun verifierApi(
-        initTransaction: InitTransaction,
-        getWalletResponse: GetWalletResponse,
-    ): VerifierApi = VerifierApi(initTransaction, getWalletResponse)
-
-    @Bean
-    fun staticApi(): StaticContent = StaticContent()
-
-    //
-    // Scheduled
-    //
-    @Bean
-    fun scheduleTimeoutPresentations(timeoutPresentations: TimeoutPresentations): ScheduleTimeoutPresentations =
-        ScheduleTimeoutPresentations(timeoutPresentations)
-
-    //
-    // Use cases
-    //
-
-    @Bean
-    fun initTransaction(
-        generatePresentationId: GeneratePresentationId,
-        generateRequestId: GenerateRequestId,
-        storePresentation: StorePresentation,
-        signRequestObject: SignRequestObject,
-        clock: Clock,
-        generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
-        @Qualifier("requestJarByReference") requestJarByReference: EmbedOption.ByReference<RequestId>,
-        @Qualifier("presentationDefinitionByReference") presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
-        verifierConfig: VerifierConfig,
-    ): InitTransaction = InitTransactionLive(
-        generatePresentationId,
-        generateRequestId,
-        storePresentation,
-        signRequestObject,
-        verifierConfig,
-        clock,
-        generateEphemeralEncryptionKeyPair,
-        requestJarByReference,
-        presentationDefinitionByReference,
-    )
-
-    @Bean
-    fun getRequestObject(
-        loadPresentationByRequestId: LoadPresentationByRequestId,
-        signRequestObject: SignRequestObject,
-        storePresentation: StorePresentation,
-        clock: Clock,
-        verifierConfig: VerifierConfig,
-    ): GetRequestObject = GetRequestObjectLive(
-        loadPresentationByRequestId,
-        storePresentation,
-        signRequestObject,
-        verifierConfig,
-        clock,
-    )
-
-    @Bean
-    fun getPresentationDefinition(
-        loadPresentationByRequestId: LoadPresentationByRequestId,
-    ): GetPresentationDefinition =
-        GetPresentationDefinitionLive(loadPresentationByRequestId)
-
-    @Bean
-    fun timeoutPresentations(
-        loadIncompletePresentationsOlderThan: LoadIncompletePresentationsOlderThan,
-        storePresentation: StorePresentation,
-        clock: Clock,
-        verifierConfig: VerifierConfig,
-    ): TimeoutPresentations = TimeoutPresentationsLive(
-        loadIncompletePresentationsOlderThan,
-        storePresentation,
-        verifierConfig.maxAge,
-        clock,
-    )
-
-    @Bean
-    fun postAuthorisationResponse(
-        loadPresentationByRequestId: LoadPresentationByRequestId,
-        storePresentation: StorePresentation,
-        verifyJarmJwtSignature: VerifyJarmJwtSignature,
-        clock: Clock,
-        verifierConfig: VerifierConfig,
-    ): PostWalletResponse = PostWalletResponseLive(
-        loadPresentationByRequestId,
-        storePresentation,
-        verifyJarmJwtSignature,
-        clock,
-        verifierConfig,
-    )
-
-    @Bean
-    fun generateEphemeralKey(): GenerateEphemeralEncryptionKeyPair = GenerateEphemeralEncryptionKeyPairNimbus
-
-    @Bean
-    fun getWalletResponse(
-        loadPresentationById: LoadPresentationById,
-    ): GetWalletResponse =
-        GetWalletResponseLive(loadPresentationById)
-
-    @Bean
-    fun getJarmJwks(loadPresentationByRequestId: LoadPresentationByRequestId): GetJarmJwks =
-        GetJarmJwksLive(loadPresentationByRequestId)
-
-    //
-    // JOSE
-    //
-
-    @Bean
-    fun signRequestObject(verifierConfig: VerifierConfig): SignRequestObject = SignRequestObjectNimbus()
-
-    @Bean
-    fun verifyJarmJwtSignature(): VerifyJarmJwtSignature = VerifyJarmEncryptedJwtNimbus
-
-    //
-    // Persistence
-    //
-
-    @Bean
-    fun generatePresentationId(): GeneratePresentationId = GeneratePresentationIdNimbus(64)
-
-    @Bean
-    fun generateRequestId(): GenerateRequestId = GenerateRequestIdNimbus(64)
-
-    @Bean
-    fun loadPresentationById(presentationInMemoryRepo: PresentationInMemoryRepo): LoadPresentationById =
-        presentationInMemoryRepo.loadPresentationById
-
-    @Bean
-    fun loadPresentationByRequestId(presentationInMemoryRepo: PresentationInMemoryRepo): LoadPresentationByRequestId =
-        presentationInMemoryRepo.loadPresentationByRequestId
-
-    @Bean
-    fun storePresentation(presentationInMemoryRepo: PresentationInMemoryRepo): StorePresentation =
-        presentationInMemoryRepo.storePresentation
-
-    @Bean
-    fun loadIncompletePresentationsOlderThan(presentationInMemoryRepo: PresentationInMemoryRepo): LoadIncompletePresentationsOlderThan =
-        presentationInMemoryRepo.loadIncompletePresentationsOlderThan
-
-    @Bean
-    fun presentationInMemoryRepo(): PresentationInMemoryRepo =
-        PresentationInMemoryRepo()
-
-    @Bean
-    fun clock(): Clock {
-        return Clock.systemDefaultZone()
+        val verifierApi = VerifierApi(ref(), ref())
+        val staticContent = StaticContent()
+        walletApi.route.and(verifierApi.route).and(staticContent.route)
     }
 
-    @Bean
-    @Qualifier("requestJarByReference")
-    fun requestJarByReference(environment: Environment): EmbedOption.ByReference<RequestId> =
-        WalletApi.requestJwtByReference(environment.publicUrl())
+    //
+    // Other
+    //
+    bean {
+        object : WebFluxConfigurer {
+            @OptIn(ExperimentalSerializationApi::class)
+            override fun configureHttpMessageCodecs(configurer: ServerCodecConfigurer) {
+                val json = Json {
+                    explicitNulls = false
+                    ignoreUnknownKeys = true
+                }
 
-    @Bean
-    @Qualifier("presentationDefinitionByReference")
-    fun presentationDefinitionByReference(environment: Environment): EmbedOption.ByReference<RequestId> =
-        WalletApi.presentationDefinitionByReference(environment.publicUrl())
+                configurer.defaultCodecs().kotlinSerializationJsonDecoder(KotlinSerializationJsonDecoder(json))
+                configurer.defaultCodecs().kotlinSerializationJsonEncoder(KotlinSerializationJsonEncoder(json))
+                configurer.defaultCodecs().enableLoggingRequestDetails(true)
+            }
+        }
+    }
 }
 
 private enum class EmbedOptionEnum {
@@ -276,11 +162,12 @@ private enum class SigningKeyEnum {
     LoadFromKeystore,
 }
 
-private fun ApplicationContext.jarSigningConfig(): SigningConfig {
+private fun jarSigningConfig(environment: Environment, clock: Clock): SigningConfig {
     val key = run {
         fun loadFromKeystore(): JWK {
             val keystoreResource =
-                getResource(environment.getRequiredProperty("verifier.jar.signing.key.keystore"))
+                DefaultResourceLoader().getResource((environment.getRequiredProperty("verifier.jar.signing.key.keystore")))
+
             val keystoreType =
                 environment.getProperty("verifier.jar.signing.key.keystore.type", KeyStore.getDefaultType())
             val keystorePassword =
@@ -290,9 +177,9 @@ private fun ApplicationContext.jarSigningConfig(): SigningConfig {
             val keyPassword =
                 environment.getProperty("verifier.jar.signing.key.password")?.takeIf { it.isNotBlank() }
 
-            return keystoreResource.inputStream.use {
+            return keystoreResource.inputStream.use { inputStream ->
                 val keystore = KeyStore.getInstance(keystoreType)
-                keystore.load(it, keystorePassword?.toCharArray())
+                keystore.load(inputStream, keystorePassword?.toCharArray())
 
                 val jwk = JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
                 val chain = keystore.getCertificateChain(keyAlias)
@@ -311,7 +198,7 @@ private fun ApplicationContext.jarSigningConfig(): SigningConfig {
             RSAKeyGenerator(4096, false)
                 .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
                 .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-                .issueTime(Date.from(getBean(Clock::class.java).instant())) // issued-at timestamp (optional)
+                .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
                 .generate()
 
         when (environment.getProperty("verifier.jar.signing.key", SigningKeyEnum::class.java)) {
@@ -325,10 +212,10 @@ private fun ApplicationContext.jarSigningConfig(): SigningConfig {
     return SigningConfig(key, algorithm)
 }
 
-private fun ApplicationContext.verifierConfig(): VerifierConfig {
+private fun verifierConfig(environment: Environment, clock: Clock): VerifierConfig {
     val clientIdScheme = run {
         val clientId = environment.getProperty("verifier.clientId", "verifier")
-        val jarSigning = jarSigningConfig()
+        val jarSigning = jarSigningConfig(environment, clock)
 
         val factory =
             when (val clientIdScheme = environment.getProperty("verifier.clientIdScheme", "pre-registered")) {
@@ -380,23 +267,22 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
     }
 
     val authorizationSignedResponseAlg =
-        getProperty("verifier.clientMetadata.authorizationSignedResponseAlg", String::class.java) ?: null
+        getProperty("verifier.clientMetadata.authorizationSignedResponseAlg")
     val authorizationEncryptedResponseAlg =
-        getProperty("verifier.clientMetadata.authorizationEncryptedResponseAlg", String::class.java) ?: null
+        getProperty("verifier.clientMetadata.authorizationEncryptedResponseAlg")
     val authorizationEncryptedResponseEnc =
-        getProperty("verifier.clientMetadata.authorizationEncryptedResponseEnc", String::class.java) ?: null
+        getProperty("verifier.clientMetadata.authorizationEncryptedResponseEnc")
 
-    val defaultJarmOption = ParseJarmOptionNimbus(null, "ECDH-ES", "A256GCM")!!
+    val defaultJarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, EncryptionMethod.A256GCM.name)
+    checkNotNull(defaultJarmOption)
 
     return ClientMetaData(
         jwkOption = jwkOption,
-        idTokenSignedResponseAlg = "RS256",
-        idTokenEncryptedResponseAlg = "RS256",
-        idTokenEncryptedResponseEnc = "A128CBC-HS256",
+        idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
+        idTokenEncryptedResponseAlg = JWEAlgorithm.RSA_OAEP_256.name,
+        idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,
         subjectSyntaxTypesSupported = listOf(
             "urn:ietf:params:oauth:jwk-thumbprint",
-            "did:example",
-            "did:key",
         ),
         jarmOption = ParseJarmOptionNimbus.invoke(
             authorizationSignedResponseAlg,
@@ -419,9 +305,9 @@ private fun List<X509Certificate>.toBase64PEMEncoded(): List<Base64> =
 
 /**
  * Creates a copy of this [JWK] and sets the provided [X509Certificate] certificate chain.
- * For the operation to succeed the following must hold true:
+ * For the operation to succeed, the following must hold true:
  * 1. [chain] cannot be empty
- * 2. the leaf certificate of the [chain] must match the leaf certificate of this [JWK]
+ * 2. The leaf certificate of the [chain] must match the leaf certificate of this [JWK]
  */
 private fun JWK.withCertificateChain(chain: List<X509Certificate>): JWK {
     require(this.parsedX509CertChain.isNotEmpty()) { "jwk must has a leaf certificate" }

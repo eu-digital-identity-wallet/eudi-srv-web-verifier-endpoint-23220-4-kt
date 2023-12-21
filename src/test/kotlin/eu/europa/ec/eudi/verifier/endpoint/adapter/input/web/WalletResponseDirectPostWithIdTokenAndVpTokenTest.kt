@@ -15,27 +15,29 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.annotation.Order
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import java.lang.AssertionError
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.fail
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@VerifierApplicationTest
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -62,7 +64,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
      */
     @Test
     @Order(value = 1)
-    fun `post wallet response (only idToken) - confirm returns 200`(): Unit = runBlocking {
+    fun `post wallet response (only idToken) - confirm returns 200`() = runTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
@@ -80,7 +82,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         WalletApiClient.directPost(client, formEncodedBody)
 
         // then
-        Assertions.assertNotNull(presentationId)
+        assertNotNull(presentationId)
     }
 
     /**
@@ -92,7 +94,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
      */
     @Test
     @Order(value = 2)
-    fun `get authorisation response - confirm returns 200`(): Unit = runBlocking {
+    fun `get authorisation response - confirm returns 200`() = runTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
@@ -112,7 +114,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val response = VerifierApiClient.getWalletResponse(client, presentationId, Nonce(initTransaction.nonce!!))
 
         // then
-        Assertions.assertNotNull(response, "response is null")
+        assertNotNull(response)
     }
 
     /**
@@ -120,7 +122,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
      */
     @Test
     @Order(value = 3)
-    fun `with response_mode direct_post, direct_post_jwt wallet responses are rejected`(): Unit = runBlocking {
+    fun `with response_mode direct_post, direct_post_jwt wallet responses are rejected`() = runTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
@@ -137,9 +139,9 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         // we expect the response submission to fail
         try {
             WalletApiClient.directPostJwt(client, formEncodedBody)
-            Assertions.fail("Expected direct_post.jwt submission to fail for direct_post Presentation")
+            fail("Expected direct_post.jwt submission to fail for direct_post Presentation")
         } catch (error: AssertionError) {
-            Assertions.assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
+            assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
         }
     }
 }

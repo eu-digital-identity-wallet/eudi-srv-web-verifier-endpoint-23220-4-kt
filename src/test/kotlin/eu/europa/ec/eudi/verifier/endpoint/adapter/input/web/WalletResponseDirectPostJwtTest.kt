@@ -20,6 +20,7 @@ import com.nimbusds.jose.JWEHeader
 import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
+import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusEnc
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusJWSAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
@@ -28,30 +29,29 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.annotation.Order
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+import kotlin.test.*
 
 /*
   https://jira.intrasoft-intl.com/browse/EUDIW-693
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@VerifierApplicationTest
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -82,7 +82,7 @@ internal class WalletResponseDirectPostJwtTest {
      */
     @Test
     @Order(value = 1)
-    fun `direct_post_jwt vp_token end to end`(): Unit = runBlocking {
+    fun `direct_post_jwt vp_token end to end`() = runTest {
         // given
         val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
@@ -92,7 +92,7 @@ internal class WalletResponseDirectPostJwtTest {
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        val jarmOption = assertInstanceOf(JarmOption.Encrypted::class.java, requestObjectJsonResponse.jarmOption())
+        val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
         val ecKey = requestObjectJsonResponse.ecKey()
         assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
         assertNotNull(ecKey)
@@ -160,7 +160,7 @@ internal class WalletResponseDirectPostJwtTest {
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        val jarmOption = assertInstanceOf(JarmOption.Encrypted::class.java, requestObjectJsonResponse.jarmOption())
+        val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
         val ecKey = requestObjectJsonResponse.ecKey()
         assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
         assertNotNull(ecKey)

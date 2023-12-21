@@ -15,27 +15,25 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertNull
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.core.annotation.Order
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
+import kotlin.test.Test
+import kotlin.test.assertNull
 
 /**
  * https://jira.intrasoft-intl.com/browse/EUDIW-693
  *
  * when response mode is direct_post the ResponseObject must not contain JARM parameters
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@VerifierApplicationTest
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -48,8 +46,6 @@ import org.springframework.test.web.reactive.server.WebTestClient
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
 internal class WalletResponseDirectTest {
-
-    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -64,7 +60,7 @@ internal class WalletResponseDirectTest {
      */
     @Test
     @Order(value = 1)
-    fun `get request object when request mode is direct_post, confirm headers do not exist`(): Unit = runBlocking {
+    fun `get request object when request mode is direct_post, confirm headers do not exist`() = runTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
@@ -73,6 +69,6 @@ internal class WalletResponseDirectTest {
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
         assertNull(requestObjectJsonResponse.jarmOption())
-        assertNull(requestObjectJsonResponse.ecKey()) { "jwks must not contain EC key" }
+        assertNull(requestObjectJsonResponse.ecKey(), "jwks must not contain EC key")
     }
 }
