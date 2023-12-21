@@ -94,7 +94,7 @@ object WalletApiClient {
      * - (response) Internet Web Service to mDocApp, flow "14 OK: HTTP 200 with redirect_uri"
      */
     fun directPost(client: WebTestClient, formEncodedBody: MultiValueMap<String, Any>) {
-        client.post().uri(WalletApi.walletResponsePath)
+        client.post().uri(WalletApi.WALLET_RESPONSE_PATH)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(formEncodedBody))
@@ -110,7 +110,7 @@ object WalletApiClient {
      * @see: <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-response-mode-direct_postjw">OpenId4vp Response Mode "direct_post.jwt</a>
      */
     fun directPostJwt(client: WebTestClient, formEncodedBody: MultiValueMap<String, Any>) {
-        client.post().uri(WalletApi.walletResponsePath)
+        client.post().uri(WalletApi.WALLET_RESPONSE_PATH)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(formEncodedBody))

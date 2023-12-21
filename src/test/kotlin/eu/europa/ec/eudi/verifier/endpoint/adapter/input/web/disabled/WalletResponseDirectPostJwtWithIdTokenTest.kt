@@ -139,7 +139,7 @@ internal class WalletResponseDirectPostJwtWithIdTokenTest {
             }
         """
 
-        client.post().uri(WalletApi.walletResponsePath)
+        client.post().uri(WalletApi.WALLET_RESPONSE_PATH)
             .contentType(MediaType.APPLICATION_JSON)
             // .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)

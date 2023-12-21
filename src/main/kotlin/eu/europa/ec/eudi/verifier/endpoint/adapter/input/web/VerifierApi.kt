@@ -20,6 +20,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
+import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON
@@ -44,23 +45,21 @@ class VerifierApi(
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
     }
 
-    private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse {
-        suspend fun transactionInitiated(jar: JwtSecuredAuthorizationRequestTO) =
-            ok().json().bodyValueAndAwait(jar)
-
-        suspend fun failed(e: ValidationError) = e.asBadRequest()
-
-        val input = req.awaitBody<InitTransactionTO>().also { logger.info("Handling InitTransaction nonce=${it.nonce}") }
-
-        return either { initTransaction(input) }.fold(
-            ifRight = { transactionInitiated(it) },
-            ifLeft = { failed(it) },
+    private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
+        val input = req.awaitBody<InitTransactionTO>()
+        logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
+        either { initTransaction(input) }.fold(
+            ifRight = { ok().json().bodyValueAndAwait(it) },
+            ifLeft = { it.asBadRequest() },
         )
+    } catch (t: SerializationException) {
+        logger.warn("While handling InitTransaction", t)
+        badRequest().buildAndAwait()
     }
 
     /**
      * Handles a request placed by verifier, input order to obtain
-     * the wallet authorisation response
+     * the wallet authorization response
      */
     private suspend fun handleGetWalletResponse(req: ServerRequest): ServerResponse {
         suspend fun found(walletResponse: WalletResponseTO) = ok().json().bodyValueAndAwait(walletResponse)
@@ -71,12 +70,10 @@ class VerifierApi(
         logger.info("Handling GetWalletResponse for $presentationId and $nonce ...")
         return if (nonce == null) {
             ValidationError.MissingNonce.asBadRequest()
-        } else {
-            when (val result = getWalletResponse(presentationId, nonce)) {
-                is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
-                is QueryResponse.InvalidState -> badRequest().buildAndAwait()
-                is QueryResponse.Found -> found(result.value)
-            }
+        } else when (val result = getWalletResponse(presentationId, nonce)) {
+            is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
+            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.Found -> found(result.value)
         }
     }
 
