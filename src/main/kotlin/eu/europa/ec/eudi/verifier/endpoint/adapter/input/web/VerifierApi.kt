@@ -20,6 +20,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
@@ -31,14 +33,15 @@ class VerifierApi(
     private val getWalletResponse: GetWalletResponse,
 ) {
 
+    private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
     val route = coRouter {
 
         POST(
-            initTransactionPath,
+            INIT_TRANSACTION_PATH,
             contentType(APPLICATION_JSON) and accept(APPLICATION_JSON),
             this@VerifierApi::handleInitTransaction,
         )
-        GET(walletResponsePath, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
+        GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
     }
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse {
@@ -47,7 +50,7 @@ class VerifierApi(
 
         suspend fun failed(e: ValidationError) = e.asBadRequest()
 
-        val input = req.awaitBody<InitTransactionTO>()
+        val input = req.awaitBody<InitTransactionTO>().also { logger.info("Handling InitTransaction nonce=${it.nonce}") }
 
         return either { initTransaction(input) }.fold(
             ifRight = { transactionInitiated(it) },
@@ -65,6 +68,7 @@ class VerifierApi(
         val presentationId = req.presentationId()
         val nonce = req.queryParam("nonce").getOrNull()?.let { Nonce(it) }
 
+        logger.info("Handling GetWalletResponse for $presentationId and $nonce ...")
         return if (nonce == null) {
             ValidationError.MissingNonce.asBadRequest()
         } else {
@@ -77,8 +81,8 @@ class VerifierApi(
     }
 
     companion object {
-        const val initTransactionPath = "/ui/presentations"
-        const val walletResponsePath = "/ui/presentations/{presentationId}"
+        const val INIT_TRANSACTION_PATH = "/ui/presentations"
+        const val WALLET_RESPONSE_PATH = "/ui/presentations/{presentationId}"
 
         /**
          * Extracts from the request the [RequestId]
