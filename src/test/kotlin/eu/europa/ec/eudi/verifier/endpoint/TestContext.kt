@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.KeyUse
@@ -51,11 +53,11 @@ object TestContext {
         .generate()
     val clientMetaData = ClientMetaData(
         jwkOption = ByValue,
-        idTokenSignedResponseAlg = "RS256",
-        idTokenEncryptedResponseAlg = "RS256",
-        idTokenEncryptedResponseEnc = "A128CBC-HS256",
+        idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
+        idTokenEncryptedResponseAlg = JWEAlgorithm.RSA_OAEP_256.name,
+        idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
-        jarmOption = ParseJarmOptionNimbus(null, "ECDH_ES", "A256GCM")!!,
+        jarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, "A256GCM")!!,
     )
     val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
     val clientIdScheme = ClientIdScheme.PreRegistered("client-id", jarSigningConfig)
