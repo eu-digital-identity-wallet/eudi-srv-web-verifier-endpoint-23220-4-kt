@@ -39,7 +39,7 @@ object VerifierApiClient {
 
     @OptIn(ExperimentalSerializationApi::class)
     fun initTransaction(client: WebTestClient, initTransactionTO: InitTransactionTO): JwtSecuredAuthorizationRequestTO {
-        return client.post().uri(VerifierApi.initTransactionPath)
+        return client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
             .bodyValue(initTransactionTO)
@@ -63,7 +63,7 @@ object VerifierApiClient {
      */
     fun getWalletResponse(client: WebTestClient, presentationId: PresentationId, nonce: Nonce): WalletResponseTO? {
         val walletResponseUri =
-            VerifierApi.walletResponsePath.replace("{presentationId}", presentationId.value) + "?nonce=${nonce.value}"
+            VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId.value) + "?nonce=${nonce.value}"
 
         // when
         val responseSpec = client.get().uri(walletResponseUri)

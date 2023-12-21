@@ -57,7 +57,7 @@ internal class WalletResponseDirectPostJwtWithIdTokenTest {
         val presentationDefinitionBody = TestUtils.loadResource("01-presentationDefinition.json")
         println("presentationDefinitionBody=$presentationDefinitionBody")
         // when / then
-        val requestUri = client.post().uri(VerifierApi.initTransactionPath)
+        val requestUri = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(presentationDefinitionBody))
@@ -139,7 +139,7 @@ internal class WalletResponseDirectPostJwtWithIdTokenTest {
             }
         """
 
-        client.post().uri(WalletApi.walletResponsePath)
+        client.post().uri(WalletApi.WALLET_RESPONSE_PATH)
             .contentType(MediaType.APPLICATION_JSON)
             // .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
@@ -180,7 +180,7 @@ internal class WalletResponseDirectPostJwtWithIdTokenTest {
         Assertions.assertNotNull(presentationId)
 
         // when: the wallet response is retrieved
-        val requestUri = VerifierApi.walletResponsePath.replace("{presentationId}", presentationId)
+        val requestUri = VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId)
 
         val responseSpec = client.get().uri(requestUri)
             .accept(MediaType.APPLICATION_JSON)

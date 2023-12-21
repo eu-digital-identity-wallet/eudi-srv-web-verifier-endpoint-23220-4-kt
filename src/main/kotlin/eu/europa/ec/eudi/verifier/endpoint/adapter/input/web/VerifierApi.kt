@@ -20,6 +20,9 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
+import kotlinx.serialization.SerializationException
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
@@ -31,33 +34,32 @@ class VerifierApi(
     private val getWalletResponse: GetWalletResponse,
 ) {
 
+    private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
     val route = coRouter {
 
         POST(
-            initTransactionPath,
+            INIT_TRANSACTION_PATH,
             contentType(APPLICATION_JSON) and accept(APPLICATION_JSON),
             this@VerifierApi::handleInitTransaction,
         )
-        GET(walletResponsePath, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
+        GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
     }
 
-    private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse {
-        suspend fun transactionInitiated(jar: JwtSecuredAuthorizationRequestTO) =
-            ok().json().bodyValueAndAwait(jar)
-
-        suspend fun failed(e: ValidationError) = e.asBadRequest()
-
+    private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
         val input = req.awaitBody<InitTransactionTO>()
-
-        return either { initTransaction(input) }.fold(
-            ifRight = { transactionInitiated(it) },
-            ifLeft = { failed(it) },
+        logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
+        either { initTransaction(input) }.fold(
+            ifRight = { ok().json().bodyValueAndAwait(it) },
+            ifLeft = { it.asBadRequest() },
         )
+    } catch (t: SerializationException) {
+        logger.warn("While handling InitTransaction", t)
+        badRequest().buildAndAwait()
     }
 
     /**
      * Handles a request placed by verifier, input order to obtain
-     * the wallet authorisation response
+     * the wallet authorization response
      */
     private suspend fun handleGetWalletResponse(req: ServerRequest): ServerResponse {
         suspend fun found(walletResponse: WalletResponseTO) = ok().json().bodyValueAndAwait(walletResponse)
@@ -65,20 +67,19 @@ class VerifierApi(
         val presentationId = req.presentationId()
         val nonce = req.queryParam("nonce").getOrNull()?.let { Nonce(it) }
 
+        logger.info("Handling GetWalletResponse for $presentationId and $nonce ...")
         return if (nonce == null) {
             ValidationError.MissingNonce.asBadRequest()
-        } else {
-            when (val result = getWalletResponse(presentationId, nonce)) {
-                is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
-                is QueryResponse.InvalidState -> badRequest().buildAndAwait()
-                is QueryResponse.Found -> found(result.value)
-            }
+        } else when (val result = getWalletResponse(presentationId, nonce)) {
+            is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
+            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.Found -> found(result.value)
         }
     }
 
     companion object {
-        const val initTransactionPath = "/ui/presentations"
-        const val walletResponsePath = "/ui/presentations/{presentationId}"
+        const val INIT_TRANSACTION_PATH = "/ui/presentations"
+        const val WALLET_RESPONSE_PATH = "/ui/presentations/{presentationId}"
 
         /**
          * Extracts from the request the [RequestId]

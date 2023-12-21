@@ -15,6 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.raise.Raise
+import arrow.core.raise.ensure
+import arrow.core.raise.ensureNotNull
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
@@ -41,61 +44,56 @@ sealed interface AuthorisationResponse {
     data class DirectPostJwt(val state: String?, val jarm: Jwt) : AuthorisationResponse
 }
 
-/**
- * Carrier of [ValidationError]
- */
-data class WalletResponseValidationException(val error: WalletResponseValidationError) : RuntimeException()
+sealed interface WalletResponseValidationError {
+    data object MissingState : WalletResponseValidationError
+    data class PresentationDefinitionNotFound(val requestId: RequestId) : WalletResponseValidationError
 
-enum class WalletResponseValidationError {
-    MissingIdToken,
-    MissingVpTokenOrPresentationSubmission,
-    MissingIdTokenOrVpTokenOrPresentationSubmission,
+    data class UnexpectedResponseMode(
+        val requestId: RequestId,
+        val expected: ResponseModeOption,
+        val actual: ResponseModeOption,
+    ) : WalletResponseValidationError
+
+    data class PresentationNotInExpectedState(val requestId: RequestId) : WalletResponseValidationError
+
+    data object IncorrectStateInJarm : WalletResponseValidationError
+    data object MissingIdToken : WalletResponseValidationError
+    data object MissingVpTokenOrPresentationSubmission : WalletResponseValidationError
 }
 
-internal fun AuthorisationResponseTO.toDomain(presentation: RequestObjectRetrieved): Result<WalletResponse> {
-    fun requiredIdToken() =
-        if (idToken != null) {
-            Result.success(WalletResponse.IdToken(idToken))
-        } else Result.failure(WalletResponseValidationException(WalletResponseValidationError.MissingIdToken))
+context(Raise<WalletResponseValidationError>)
+internal fun AuthorisationResponseTO.toDomain(presentation: RequestObjectRetrieved): WalletResponse {
+    fun requiredIdToken(): WalletResponse.IdToken {
+        ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
+        return WalletResponse.IdToken(idToken)
+    }
 
-    fun requiredVpToken() =
-        if (vpToken != null && presentationSubmission != null) {
-            Result.success(WalletResponse.VpToken(vpToken, presentationSubmission))
-        } else Result.failure(WalletResponseValidationException(WalletResponseValidationError.MissingVpTokenOrPresentationSubmission))
+    fun requiredVpToken(): WalletResponse.VpToken {
+        ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpTokenOrPresentationSubmission }
+        ensureNotNull(presentationSubmission) { WalletResponseValidationError.MissingVpTokenOrPresentationSubmission }
+        return WalletResponse.VpToken(vpToken, presentationSubmission)
+    }
 
-    fun requiredIdAndVpToken() =
-        if (idToken != null && vpToken != null && presentationSubmission != null) {
-            Result.success(
-                WalletResponse.IdAndVpToken(
-                    idToken = idToken,
-                    vpToken = vpToken,
-                    presentationSubmission = presentationSubmission,
-                ),
-            )
-        } else Result.failure(
-            WalletResponseValidationException(WalletResponseValidationError.MissingIdTokenOrVpTokenOrPresentationSubmission),
-        )
+    fun requiredIdAndVpToken(): WalletResponse.IdAndVpToken {
+        val a = requiredIdToken()
+        val b = requiredVpToken()
+        return WalletResponse.IdAndVpToken(a.idToken, b.vpToken, b.presentationSubmission)
+    }
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
 
-    return if (maybeError != null) {
-        Result.success(maybeError)
-    } else {
-        runCatching {
-            when (presentation.type) {
-                is PresentationType.IdTokenRequest -> WalletResponse.IdToken(requiredIdToken().getOrThrow().idToken)
-                is PresentationType.VpTokenRequest -> WalletResponse.VpToken(
-                    requiredVpToken().getOrThrow().vpToken,
-                    requiredVpToken().getOrThrow().presentationSubmission,
-                )
+    return maybeError ?: when (presentation.type) {
+        is PresentationType.IdTokenRequest -> WalletResponse.IdToken(requiredIdToken().idToken)
+        is PresentationType.VpTokenRequest -> WalletResponse.VpToken(
+            requiredVpToken().vpToken,
+            requiredVpToken().presentationSubmission,
+        )
 
-                is PresentationType.IdAndVpToken -> WalletResponse.IdAndVpToken(
-                    requiredIdAndVpToken().getOrThrow().idToken,
-                    requiredIdAndVpToken().getOrThrow().vpToken,
-                    requiredIdAndVpToken().getOrThrow().presentationSubmission,
-                )
-            }
-        }
+        is PresentationType.IdAndVpToken -> WalletResponse.IdAndVpToken(
+            requiredIdAndVpToken().idToken,
+            requiredIdAndVpToken().vpToken,
+            requiredIdAndVpToken().presentationSubmission,
+        )
     }
 }
 
@@ -105,7 +103,9 @@ internal fun AuthorisationResponseTO.toDomain(presentation: RequestObjectRetriev
  * The caller (wallet) may POST the [AuthorisationResponseTO] to the verifier back-end
  */
 fun interface PostWalletResponse {
-    suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String>
+
+    context(Raise<WalletResponseValidationError>)
+    suspend operator fun invoke(walletResponse: AuthorisationResponse)
 }
 
 class PostWalletResponseLive(
@@ -116,38 +116,44 @@ class PostWalletResponseLive(
     private val verifierConfig: VerifierConfig,
 ) : PostWalletResponse {
 
-    override suspend operator fun invoke(walletResponse: AuthorisationResponse): QueryResponse<String> =
-        handleWalletResponse(walletResponse).fold(
-            onSuccess = { QueryResponse.Found("OK") },
-            onFailure = { QueryResponse.InvalidState },
-        )
+    context(Raise<WalletResponseValidationError>)
+    override suspend operator fun invoke(walletResponse: AuthorisationResponse) {
+        val presentation = loadPresentation(walletResponse)
 
-    private suspend fun handleWalletResponse(walletResponse: AuthorisationResponse): Result<Presentation.Submitted> =
-        runCatching {
-            val presentation = loadPresentation(walletResponse)
-
-            // Verify the AuthorisationResponse matches what is expected for the Presentation
-            val expectedResponseMode = walletResponse.responseMode()
-            require(presentation.responseMode == expectedResponseMode) {
-                "Expected ${presentation.responseMode} but received $expectedResponseMode instead"
-            }
-
-            val responseObject = responseObject(walletResponse, presentation)
-            submit(presentation, responseObject).also { storePresentation(it) }
+        // Verify the AuthorisationResponse matches what is expected for the Presentation
+        val responseMode = walletResponse.responseMode()
+        ensure(presentation.responseMode == responseMode) {
+            WalletResponseValidationError.UnexpectedResponseMode(
+                presentation.requestId,
+                expected = presentation.responseMode,
+                actual = responseMode,
+            )
         }
 
+        val responseObject = responseObject(walletResponse, presentation)
+        submit(presentation, responseObject).also { storePresentation(it) }
+    }
+
+    context(Raise<WalletResponseValidationError>)
     private suspend fun loadPresentation(walletResponse: AuthorisationResponse): RequestObjectRetrieved {
-        val requestId = when (walletResponse) {
+        val state = when (walletResponse) {
             is AuthorisationResponse.DirectPost -> walletResponse.response.state
             is AuthorisationResponse.DirectPostJwt -> walletResponse.state
-        }?.let { RequestId(it) } ?: throw IllegalArgumentException("Missing state")
+        }
+        ensureNotNull(state) { WalletResponseValidationError.MissingState }
+        val requestId = RequestId(state)
 
         val presentation = loadPresentationByRequestId(requestId)
-            ?: throw IllegalArgumentException("Presentation not found for requestId $requestId")
-        require(presentation is RequestObjectRetrieved) { "Invalid state for requestId $requestId" }
+        ensureNotNull(presentation) { WalletResponseValidationError.PresentationDefinitionNotFound(requestId) }
+        ensure(presentation is RequestObjectRetrieved) {
+            WalletResponseValidationError.PresentationNotInExpectedState(
+                requestId,
+            )
+        }
         return presentation
     }
 
+    context(Raise<WalletResponseValidationError>)
     private fun responseObject(
         walletResponse: AuthorisationResponse,
         presentation: RequestObjectRetrieved,
@@ -159,19 +165,18 @@ class PostWalletResponseLive(
                 ephemeralEcPrivateKey = presentation.ephemeralEcPrivateKey,
                 jarmJwt = walletResponse.jarm,
             ).getOrThrow()
-            require(response.state == walletResponse.state) {
-                "State is not the same in wallet response and inside JARM"
-            }
+            ensure(response.state == walletResponse.state) { WalletResponseValidationError.IncorrectStateInJarm }
             response
         }
     }
 
+    context(Raise<WalletResponseValidationError>)
     private fun submit(
         presentation: RequestObjectRetrieved,
         responseObject: AuthorisationResponseTO,
     ): Presentation.Submitted {
         // add the wallet response to the presentation
-        val walletResponse = responseObject.toDomain(presentation).getOrThrow()
+        val walletResponse = responseObject.toDomain(presentation)
         return presentation.submit(clock, walletResponse).getOrThrow()
     }
 }
