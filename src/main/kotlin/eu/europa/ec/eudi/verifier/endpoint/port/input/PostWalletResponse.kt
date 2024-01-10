@@ -147,10 +147,10 @@ class PostWalletResponseLive(
         val responseObject = responseObject(walletResponse, presentation)
         val submitted = submit(presentation, responseObject).also { storePresentation(it) }
 
-        return when (val queryWalletResponseMethod = presentation.getWalletResponseMethod) {
+        return when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
             is GetWalletResponseMethod.Redirect ->
                 with(createQueryWalletResponseRedirectUri) {
-                    val redirectUri = queryWalletResponseMethod.redirectUri(submitted.responseCode)
+                    val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
                     WalletResponseAcceptedTO(redirectUri.toExternalForm()).some()
                 }
 
