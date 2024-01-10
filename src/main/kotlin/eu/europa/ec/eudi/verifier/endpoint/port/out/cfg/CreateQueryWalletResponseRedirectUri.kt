@@ -29,9 +29,11 @@ interface CreateQueryWalletResponseRedirectUri {
     fun String.validTemplate(): Boolean = redirectUri(this, ResponseCode("test")).isSuccess
 
     companion object {
+        const val RESPONSE_CODE_PLACE_HOLDER = "{RESPONSE_CODE}"
         val Simple: CreateQueryWalletResponseRedirectUri = object : CreateQueryWalletResponseRedirectUri {
             override fun redirectUri(template: String, responseCode: ResponseCode): Result<URL> = runCatching {
-                val url = template.replace("{RESPONSE_CODE}", responseCode.value)
+                require(template.contains(RESPONSE_CODE_PLACE_HOLDER)) { "Expected response_code place holder not found in template" }
+                val url = template.replace(RESPONSE_CODE_PLACE_HOLDER, responseCode.value)
                 URL(url)
             }
         }

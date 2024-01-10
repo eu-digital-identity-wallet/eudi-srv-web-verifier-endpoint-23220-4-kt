@@ -23,6 +23,7 @@ import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApiClient
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import kotlinx.coroutines.test.runTest
 import java.net.URL
 import java.time.Duration
@@ -32,20 +33,20 @@ class InitTransactionTest {
 
     private val testPresentationId = TestContext.testPresentationId
 
+    private val uri = URL("https://foo")
+    private val verifierConfig = VerifierConfig(
+        clientIdScheme = TestContext.clientIdScheme,
+        requestJarOption = EmbedOption.ByValue,
+        presentationDefinitionEmbedOption = EmbedOption.ByValue,
+        responseUriBuilder = { _ -> uri },
+        responseModeOption = ResponseModeOption.DirectPostJwt,
+        maxAge = Duration.ofDays(3),
+        clientMetaData = TestContext.clientMetaData,
+    )
+
     @Test
     fun `when request option is embed by value, request should be present and presentation should be RequestObjectRetrieved`() =
         runTest {
-            val uri = URL("https://foo")
-            val verifierConfig = VerifierConfig(
-                clientIdScheme = TestContext.clientIdScheme,
-                requestJarOption = EmbedOption.ByValue,
-                presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { _ -> uri },
-                responseModeOption = ResponseModeOption.DirectPostJwt,
-                maxAge = Duration.ofDays(3),
-                clientMetaData = TestContext.clientMetaData,
-            )
-
             val input = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
@@ -134,17 +135,6 @@ class InitTransactionTest {
     @Test
     fun `when response_mode is provided this must take precedence over what is configured in VerifierConfig`() =
         runTest {
-            val uri = URL("https://foo")
-            val verifierConfig = VerifierConfig(
-                clientIdScheme = TestContext.clientIdScheme,
-                requestJarOption = EmbedOption.ByValue,
-                presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { _ -> uri },
-                responseModeOption = ResponseModeOption.DirectPostJwt,
-                maxAge = Duration.ofDays(3),
-                clientMetaData = TestContext.clientMetaData,
-            )
-
             val input = InitTransactionTO(
                 type = PresentationTypeTO.IdTokenRequest,
                 idTokenType = IdTokenTypeTO.SubjectSigned,
@@ -172,17 +162,6 @@ class InitTransactionTest {
     @Test
     fun `when jar_mode is provided this must take precedence over what is configured in VerifierConfig`() =
         runTest {
-            val uri = URL("https://foo")
-            val verifierConfig = VerifierConfig(
-                clientIdScheme = TestContext.clientIdScheme,
-                requestJarOption = EmbedOption.ByValue,
-                presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { _ -> uri },
-                responseModeOption = ResponseModeOption.DirectPostJwt,
-                maxAge = Duration.ofDays(3),
-                clientMetaData = TestContext.clientMetaData,
-            )
-
             val input = InitTransactionTO(
                 type = PresentationTypeTO.IdTokenRequest,
                 idTokenType = IdTokenTypeTO.SubjectSigned,
@@ -213,17 +192,6 @@ class InitTransactionTest {
     @Test
     fun `when presentation_definition_mode is provided this must take precedence over what is configured in VerifierConfig`() =
         runTest {
-            val uri = URL("https://foo")
-            val verifierConfig = VerifierConfig(
-                clientIdScheme = TestContext.clientIdScheme,
-                requestJarOption = EmbedOption.ByValue,
-                presentationDefinitionEmbedOption = EmbedOption.ByValue,
-                responseUriBuilder = { _ -> uri },
-                responseModeOption = ResponseModeOption.DirectPostJwt,
-                maxAge = Duration.ofDays(3),
-                clientMetaData = TestContext.clientMetaData,
-            )
-
             val input = VerifierApiClient.loadInitTransactionTO(
                 "00-presentationDefinition.json",
             ).copy(presentationDefinitionMode = EmbedModeTO.ByReference)
@@ -246,7 +214,98 @@ class InitTransactionTest {
             Unit
         }
 
-//
+    @Test
+    fun `when wallet_response_redirect_uri_template is invalid, validation error InvalidWalletResponseTemplate should be raised`() =
+        runTest {
+            val useCase: InitTransaction = TestContext.initTransaction(
+                verifierConfig,
+                EmbedOption.byReference { _ -> uri },
+                EmbedOption.byReference { _ -> uri },
+            )
+
+            val invalidPlaceHolderInput = InitTransactionTO(
+                PresentationTypeTO.IdTokenRequest,
+                IdTokenTypeTO.SubjectSigned,
+                null,
+                "nonce",
+                redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
+            )
+
+            either { useCase(invalidPlaceHolderInput) }
+                .onLeft {
+                    assertTrue(
+                        "Should fail with ValidationError.InvalidWalletResponseTemplate",
+                    ) { it == ValidationError.InvalidWalletResponseTemplate }
+                }
+                .onRight {
+                    fail("Should fail with ValidationError.InvalidWalletResponseTemplate")
+                }
+
+            val invalidUrlInput = InitTransactionTO(
+                PresentationTypeTO.IdTokenRequest,
+                IdTokenTypeTO.SubjectSigned,
+                null,
+                "nonce",
+                redirectUriTemplate =
+                    "hts:/client.example.org/cb%response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+            )
+
+            either { useCase(invalidUrlInput) }
+                .onLeft {
+                    assertTrue(
+                        "Should fail with ValidationError.InvalidWalletResponseTemplate",
+                    ) { it == ValidationError.InvalidWalletResponseTemplate }
+                }
+                .onRight {
+                    fail("Should fail with ValidationError.InvalidWalletResponseTemplate")
+                }
+        }
+
+    @Test
+    fun `when wallet_response_redirect_uri_template is valid, then get wallet response method should be REDIRECT`() =
+        runTest {
+            val input = InitTransactionTO(
+                PresentationTypeTO.IdTokenRequest,
+                IdTokenTypeTO.SubjectSigned,
+                null,
+                "nonce",
+                redirectUriTemplate =
+                    "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+            )
+
+            val useCase: InitTransaction = TestContext.initTransaction(
+                verifierConfig,
+                EmbedOption.byReference { _ -> uri },
+                EmbedOption.byReference { _ -> uri },
+            )
+
+            either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            val presentation = loadPresentationById(testPresentationId)
+            assertIs<Presentation.RequestObjectRetrieved>(presentation)
+            assertIs<GetWalletResponseMethod.Redirect>(presentation.getWalletResponseMethod)
+        }
+
+    @Test
+    fun `when wallet_response_redirect_uri_template is not passed, then get wallet response method should be POLL`() =
+        runTest {
+            val input = InitTransactionTO(
+                PresentationTypeTO.IdTokenRequest,
+                IdTokenTypeTO.SubjectSigned,
+                null,
+                "nonce",
+            )
+
+            val useCase: InitTransaction = TestContext.initTransaction(
+                verifierConfig,
+                EmbedOption.byReference { _ -> uri },
+                EmbedOption.byReference { _ -> uri },
+            )
+
+            either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            val presentation = loadPresentationById(testPresentationId)
+            assertIs<Presentation.RequestObjectRetrieved>(presentation)
+            assertIs<GetWalletResponseMethod.Poll>(presentation.getWalletResponseMethod)
+        }
 
     private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) =
         either { input.toDomain() }.fold(

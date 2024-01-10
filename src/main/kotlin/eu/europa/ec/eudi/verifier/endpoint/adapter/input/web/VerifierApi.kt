@@ -16,9 +16,9 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import arrow.core.raise.either
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
@@ -65,12 +65,10 @@ class VerifierApi(
         suspend fun found(walletResponse: WalletResponseTO) = ok().json().bodyValueAndAwait(walletResponse)
 
         val presentationId = req.presentationId()
-        val nonce = req.queryParam("nonce").getOrNull()?.let { Nonce(it) }
+        val responseCode = req.queryParam("response_code").getOrNull()?.let { ResponseCode(it) }
 
-        logger.info("Handling GetWalletResponse for $presentationId and $nonce ...")
-        return if (nonce == null) {
-            ValidationError.MissingNonce.asBadRequest()
-        } else when (val result = getWalletResponse(presentationId, nonce)) {
+        logger.info("Handling GetWalletResponse for $presentationId and response_code: $responseCode ...")
+        return when (val result = getWalletResponse(presentationId, responseCode)) {
             is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
             is QueryResponse.Found -> found(result.value)

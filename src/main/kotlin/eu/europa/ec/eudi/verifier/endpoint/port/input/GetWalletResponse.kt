@@ -16,10 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import eu.europa.ec.eudi.prex.PresentationSubmission
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
-import eu.europa.ec.eudi.verifier.endpoint.domain.WalletResponse
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import kotlinx.serialization.SerialName
@@ -61,20 +58,22 @@ private fun WalletResponse.toTO(): WalletResponseTO {
  * Given a [PresentationId] and a [Nonce] returns the [WalletResponse]
  */
 interface GetWalletResponse {
-    suspend operator fun invoke(presentationId: PresentationId, nonce: Nonce): QueryResponse<WalletResponseTO>
+    suspend operator fun invoke(presentationId: PresentationId, responseCode: ResponseCode?): QueryResponse<WalletResponseTO>
 }
 
 class GetWalletResponseLive(
     private val loadPresentationById: LoadPresentationById,
 ) : GetWalletResponse {
-    override suspend fun invoke(presentationId: PresentationId, nonce: Nonce): QueryResponse<WalletResponseTO> {
+    override suspend fun invoke(presentationId: PresentationId, responseCode: ResponseCode?): QueryResponse<WalletResponseTO> {
         return when (val presentation = loadPresentationById(presentationId)) {
             null -> NotFound
             is Presentation.Submitted ->
-                if (nonce == presentation.nonce) {
-                    Found(presentation.walletResponse.toTO())
-                } else {
-                    InvalidState
+                when {
+                    presentation.responseCode != null && responseCode == null -> InvalidState
+                    presentation.responseCode == null && responseCode != null -> InvalidState
+                    presentation.responseCode == null && responseCode == null -> Found(presentation.walletResponse.toTO())
+                    presentation.responseCode == responseCode -> Found(presentation.walletResponse.toTO())
+                    else -> InvalidState
                 }
             else -> InvalidState
         }

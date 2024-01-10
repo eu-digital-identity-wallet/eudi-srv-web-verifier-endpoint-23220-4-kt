@@ -93,13 +93,18 @@ object WalletApiClient {
      * - (request) mDocApp to Internet Web Service, flow "12 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mDocApp, flow "14 OK: HTTP 200 with redirect_uri"
      */
-    fun directPost(client: WebTestClient, formEncodedBody: MultiValueMap<String, Any>) {
+    fun directPost(
+        client: WebTestClient,
+        formEncodedBody: MultiValueMap<String, Any>,
+        vararg consumers: WebTestClient.ResponseSpec.ResponseSpecConsumer,
+    ) {
         client.post().uri(WalletApi.WALLET_RESPONSE_PATH)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(formEncodedBody))
             .exchange()
             // then
+            .expectAll(*consumers)
             .expectStatus().isOk()
     }
 

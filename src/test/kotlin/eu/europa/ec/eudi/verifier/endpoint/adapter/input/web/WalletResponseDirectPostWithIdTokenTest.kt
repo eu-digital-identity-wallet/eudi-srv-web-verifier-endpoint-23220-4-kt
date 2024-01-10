@@ -19,6 +19,11 @@ import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.IdTokenTypeTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.PresentationTypeTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseAcceptedTO
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.TestMethodOrder
@@ -109,5 +114,33 @@ internal class WalletResponseDirectPostWithIdTokenTest {
 
         // then
         assertNotNull(response)
+    }
+
+    @Test
+    @Order(value = 3)
+    fun `when get_wallet_response method is REDIRECT then response should contain a valid redirect_uri`() = runTest {
+        // given
+        val initTransaction = InitTransactionTO(
+            PresentationTypeTO.IdTokenRequest,
+            IdTokenTypeTO.SubjectSigned,
+            null,
+            "nonce",
+            redirectUriTemplate =
+                "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+        )
+        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val requestId =
+            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
+
+        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("state", requestId.value)
+        formEncodedBody.add("id_token", "value 1")
+
+        WalletApiClient.directPost(
+            client,
+            formEncodedBody,
+            { responseSpec -> responseSpec.expectBody(WalletResponseAcceptedTO::class.java) },
+        )
     }
 }

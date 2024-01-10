@@ -150,6 +150,7 @@ class PostWalletResponseLive(
         return when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
             is GetWalletResponseMethod.Redirect ->
                 with(createQueryWalletResponseRedirectUri) {
+                    requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
                     val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
                     WalletResponseAcceptedTO(redirectUri.toExternalForm()).some()
                 }
@@ -201,7 +202,10 @@ class PostWalletResponseLive(
     ): Presentation.Submitted {
         // add the wallet response to the presentation
         val walletResponse = responseObject.toDomain(presentation)
-        val responseCode = generateResponseCode()
+        val responseCode = when (presentation.getWalletResponseMethod) {
+            GetWalletResponseMethod.Poll -> null
+            is GetWalletResponseMethod.Redirect -> generateResponseCode()
+        }
         return presentation.submit(clock, walletResponse, responseCode).getOrThrow()
     }
 }

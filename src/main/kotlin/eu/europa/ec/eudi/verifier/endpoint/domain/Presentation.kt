@@ -200,7 +200,7 @@ sealed interface Presentation {
         var submittedAt: Instant,
         val walletResponse: WalletResponse,
         val nonce: Nonce,
-        val responseCode: ResponseCode,
+        val responseCode: ResponseCode?,
     ) : Presentation {
 
         init {
@@ -212,7 +212,7 @@ sealed interface Presentation {
                 requestObjectRetrieved: RequestObjectRetrieved,
                 at: Instant,
                 walletResponse: WalletResponse,
-                responseCode: ResponseCode,
+                responseCode: ResponseCode?,
             ): Result<Submitted> = runCatching {
                 with(requestObjectRetrieved) {
                     Submitted(
@@ -294,7 +294,7 @@ fun Presentation.RequestObjectRetrieved.timedOut(clock: Clock): Result<Presentat
 fun Presentation.RequestObjectRetrieved.submit(
     clock: Clock,
     walletResponse: WalletResponse,
-    responseCode: ResponseCode,
+    responseCode: ResponseCode?,
 ): Result<Presentation.Submitted> =
     Presentation.Submitted.submitted(this, clock.instant(), walletResponse, responseCode)
 
