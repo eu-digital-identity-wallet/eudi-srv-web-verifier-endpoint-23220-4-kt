@@ -32,8 +32,8 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObjectLive
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
-import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.annotation.Configuration
@@ -52,7 +52,7 @@ object TestContext {
     val testDate = LocalDate.of(1974, 11, 2).atTime(10, 5, 33)
     val testClock = Clock.fixed(testDate.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
     val testPresentationId = TransactionId("SamplePresentationId")
-    val generatedPresentationId = GeneratePresentationId.fixed(testPresentationId)
+    val generatedPresentationId = GenerateTransactionId.fixed(testPresentationId)
     val testRequestId = RequestId("SampleRequestId")
     val generateRequestId = GenerateRequestId.fixed(testRequestId)
     val rsaJwk = RSAKeyGenerator(2048)

@@ -18,9 +18,9 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.cfg
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 
 /**
- * A port for generating [PresentationId]
+ * A port for generating [TransactionId]
  */
-fun interface GeneratePresentationId {
+fun interface GenerateTransactionId {
     suspend operator fun invoke(): TransactionId
 
     companion object {
@@ -28,6 +28,6 @@ fun interface GeneratePresentationId {
         /**
          * Fixed generator, useful input tests
          */
-        fun fixed(id: TransactionId): GeneratePresentationId = GeneratePresentationId { id }
+        fun fixed(id: TransactionId): GenerateTransactionId = GenerateTransactionId { id }
     }
 }

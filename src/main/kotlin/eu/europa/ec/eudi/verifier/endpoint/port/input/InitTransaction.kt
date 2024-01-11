@@ -21,8 +21,8 @@ import arrow.core.raise.ensureNotNull
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
-import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
@@ -136,7 +136,7 @@ fun interface InitTransaction {
  * The default implementation of the use case
  */
 class InitTransactionLive(
-    private val generatePresentationId: GeneratePresentationId,
+    private val generateTransactionId: GenerateTransactionId,
     private val generateRequestId: GenerateRequestId,
     private val storePresentation: StorePresentation,
     private val signRequestObject: SignRequestObject,
@@ -161,7 +161,7 @@ class InitTransactionLive(
 
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
-            id = generatePresentationId(),
+            id = generateTransactionId(),
             initiatedAt = clock.instant(),
             requestId = generateRequestId(),
             type = type,
