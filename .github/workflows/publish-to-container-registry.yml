@@ -72,8 +72,6 @@ jobs:
           BP_OCI_AUTHORS: "https://digital-strategy.ec.europa.eu/en/policies/electronic-identification"
           BP_OCI_REF_NAME: ${{ github.repository }}
           BP_OCI_VENDOR: "https://digital-strategy.ec.europa.eu/en/policies/electronic-identification"
-          # run the JLink tool and install a minimal JRE for runtime, reducing both image size and attack surface
-          BP_JVM_JLINK_ENABLED : "true"
         with:
           arguments: |
             build 
