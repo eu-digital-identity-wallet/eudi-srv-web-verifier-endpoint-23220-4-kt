@@ -15,8 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
@@ -62,9 +62,9 @@ object VerifierApiClient {
      * - (request) mdocVerification application Internet frontend to Internet Web Service, flow "18 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mdocVerification application Internet frontend, flow "20 return status and conditionally return data"
      */
-    fun getWalletResponse(client: WebTestClient, presentationId: PresentationId, responseCode: ResponseCode? = null): WalletResponseTO? {
+    fun getWalletResponse(client: WebTestClient, presentationId: TransactionId, responseCode: ResponseCode? = null): WalletResponseTO? {
         val walletResponseUri =
-            VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId.value) +
+            VerifierApi.WALLET_RESPONSE_PATH.replace("{transactionId}", presentationId.value) +
                 (responseCode?.let { "?response_code=${it.value}" } ?: "")
 
         // when
@@ -85,11 +85,11 @@ object VerifierApiClient {
 
     fun getWalletResponseNoValidation(
         client: WebTestClient,
-        presentationId: PresentationId,
+        transactionId: TransactionId,
         responseCode: ResponseCode? = null,
     ): EntityExchangeResult<WalletResponseTO> {
         val walletResponseUri =
-            VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId.value) +
+            VerifierApi.WALLET_RESPONSE_PATH.replace("{transactionId}", transactionId.value) +
                 (responseCode?.let { "?response_code=${it.value}" } ?: "")
 
         // when

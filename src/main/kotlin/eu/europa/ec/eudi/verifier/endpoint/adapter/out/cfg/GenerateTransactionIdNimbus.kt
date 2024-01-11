@@ -13,21 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.cfg
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
+import com.nimbusds.oauth2.sdk.id.Identifier
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
 
-/**
- * A port for generating [PresentationId]
- */
-fun interface GeneratePresentationId {
-    suspend operator fun invoke(): PresentationId
+class GenerateTransactionIdNimbus(private val byteLength: Int) : GenerateTransactionId {
 
-    companion object {
-
-        /**
-         * Fixed generator, useful input tests
-         */
-        fun fixed(id: PresentationId): GeneratePresentationId = GeneratePresentationId { id }
+    init {
+        require(byteLength >= 32) { "Value should be greater or equal to 32" }
     }
+
+    override suspend fun invoke(): TransactionId = TransactionId(Identifier(byteLength).value)
 }

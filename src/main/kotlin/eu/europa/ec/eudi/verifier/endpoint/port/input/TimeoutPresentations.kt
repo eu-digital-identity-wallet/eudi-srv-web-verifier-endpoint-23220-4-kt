@@ -16,7 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.timedOut
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePresentationsOlderThan
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
@@ -25,7 +25,7 @@ import java.time.Duration
 
 fun interface TimeoutPresentations {
 
-    suspend operator fun invoke(): List<PresentationId>
+    suspend operator fun invoke(): List<TransactionId>
 }
 
 class TimeoutPresentationsLive(
@@ -34,7 +34,7 @@ class TimeoutPresentationsLive(
     private val maxAge: Duration,
     private val clock: Clock,
 ) : TimeoutPresentations {
-    override suspend operator fun invoke(): List<PresentationId> {
+    override suspend operator fun invoke(): List<TransactionId> {
         val expireBefore = clock.instant().minusSeconds(maxAge.toSeconds())
         return loadIncompletePresentationsOlderThan(expireBefore).mapNotNull { timeout(it)?.id }
     }

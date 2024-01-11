@@ -21,7 +21,7 @@ import java.time.Clock
 import java.time.Instant
 
 @JvmInline
-value class PresentationId(val value: String) {
+value class TransactionId(val value: String) {
     init {
         require(value.isNotBlank())
     }
@@ -130,7 +130,7 @@ sealed interface GetWalletResponseMethod {
  * The entity that represents the presentation process
  */
 sealed interface Presentation {
-    val id: PresentationId
+    val id: TransactionId
     val initiatedAt: Instant
     val type: PresentationType
 
@@ -138,7 +138,7 @@ sealed interface Presentation {
      * A presentation process that has been just requested
      */
     class Requested(
-        override val id: PresentationId,
+        override val id: TransactionId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestId: RequestId,
@@ -156,7 +156,7 @@ sealed interface Presentation {
      * or later on (when using request_uri JAR parameter)
      */
     class RequestObjectRetrieved private constructor(
-        override val id: PresentationId,
+        override val id: TransactionId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestId: RequestId,
@@ -192,7 +192,7 @@ sealed interface Presentation {
      * A presentation process that has been just submitted by the wallet to the verifier backend
      */
     class Submitted private constructor(
-        override val id: PresentationId,
+        override val id: TransactionId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestId: RequestId,
@@ -232,7 +232,7 @@ sealed interface Presentation {
     }
 
     class TimedOut private constructor(
-        override val id: PresentationId,
+        override val id: TransactionId,
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestObjectRetrievedAt: Instant? = null,

@@ -31,7 +31,7 @@ import kotlin.test.*
 
 class InitTransactionTest {
 
-    private val testPresentationId = TestContext.testPresentationId
+    private val testTransactionId = TestContext.testTransactionId
 
     private val uri = URL("https://foo")
     private val verifierConfig = VerifierConfig(
@@ -64,7 +64,7 @@ class InitTransactionTest {
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             assertTrue {
-                loadPresentationById(testPresentationId)?.let { it is Presentation.RequestObjectRetrieved } ?: false
+                loadPresentationById(testTransactionId)?.let { it is Presentation.RequestObjectRetrieved } ?: false
             }
         }
 
@@ -99,7 +99,7 @@ class InitTransactionTest {
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertEquals(uri.toExternalForm(), jwtSecuredAuthorizationRequest.requestUri)
             assertTrue {
-                loadPresentationById(testPresentationId)?.let { it is Presentation.Requested } ?: false
+                loadPresentationById(testTransactionId)?.let { it is Presentation.Requested } ?: false
             }
         }
 
@@ -151,7 +151,7 @@ class InitTransactionTest {
             val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
-            val presentation = loadPresentationById(testPresentationId)
+            val presentation = loadPresentationById(testTransactionId)
             val requestObjectRetrieved = assertIs<Presentation.RequestObjectRetrieved>(presentation)
             assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.responseMode)
         }
@@ -181,7 +181,7 @@ class InitTransactionTest {
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertNull(jwtSecuredAuthorizationRequest.request)
             assertNotNull(jwtSecuredAuthorizationRequest.requestUri)
-            val presentation = loadPresentationById(testPresentationId)
+            val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.Requested>(presentation)
             Unit
         }
@@ -209,7 +209,7 @@ class InitTransactionTest {
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             val claims = SignedJWT.parse(jwtSecuredAuthorizationRequest.request).payload!!.toJSONObject()!!
             assertEquals(uri.toExternalForm(), claims["presentation_definition_uri"])
-            val presentation = loadPresentationById(testPresentationId)
+            val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.RequestObjectRetrieved>(presentation)
             Unit
         }
@@ -280,7 +280,7 @@ class InitTransactionTest {
             )
 
             either { useCase(input) }.getOrElse { fail("Unexpected $it") }
-            val presentation = loadPresentationById(testPresentationId)
+            val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.RequestObjectRetrieved>(presentation)
             assertIs<GetWalletResponseMethod.Redirect>(presentation.getWalletResponseMethod)
         }
@@ -302,7 +302,7 @@ class InitTransactionTest {
             )
 
             either { useCase(input) }.getOrElse { fail("Unexpected $it") }
-            val presentation = loadPresentationById(testPresentationId)
+            val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.RequestObjectRetrieved>(presentation)
             assertIs<GetWalletResponseMethod.Poll>(presentation.getWalletResponseMethod)
         }
@@ -313,6 +313,6 @@ class InitTransactionTest {
             ifLeft = { error -> assertEquals(expectedError, error) },
         )
 
-    private suspend fun loadPresentationById(id: PresentationId) =
+    private suspend fun loadPresentationById(id: TransactionId) =
         TestContext.loadPresentationById(id)
 }

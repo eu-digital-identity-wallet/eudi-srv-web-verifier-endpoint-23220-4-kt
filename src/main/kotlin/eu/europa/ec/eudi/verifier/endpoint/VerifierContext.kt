@@ -28,8 +28,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPr
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.StaticContent
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GeneratePresentationIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
@@ -64,7 +64,7 @@ internal fun beans(clock: Clock) = beans {
     //
     // Persistence
     //
-    bean { GeneratePresentationIdNimbus(64) }
+    bean { GenerateTransactionIdNimbus(64) }
     bean { GenerateRequestIdNimbus(64) }
     with(PresentationInMemoryRepo()) {
         bean { loadPresentationById }

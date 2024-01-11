@@ -16,8 +16,8 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
-import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.TestMethodOrder
@@ -68,7 +68,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        val presentationId = transactionInitialized.presentationId
+        val presentationId = transactionInitialized.transactionId
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -97,8 +97,9 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
-        val presentationId = PresentationId(transactionInitialized.presentationId)
-        val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        val presentationId = TransactionId(transactionInitialized.transactionId)
+        val requestId =
+            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
