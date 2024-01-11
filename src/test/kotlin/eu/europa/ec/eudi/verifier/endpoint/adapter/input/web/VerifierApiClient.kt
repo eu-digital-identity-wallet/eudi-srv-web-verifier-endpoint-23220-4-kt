@@ -64,7 +64,7 @@ object VerifierApiClient {
      */
     fun getWalletResponse(client: WebTestClient, presentationId: TransactionId, responseCode: ResponseCode? = null): WalletResponseTO? {
         val walletResponseUri =
-            VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId.value) +
+            VerifierApi.WALLET_RESPONSE_PATH.replace("{transactionId}", presentationId.value) +
                 (responseCode?.let { "?response_code=${it.value}" } ?: "")
 
         // when
@@ -85,11 +85,11 @@ object VerifierApiClient {
 
     fun getWalletResponseNoValidation(
         client: WebTestClient,
-        presentationId: TransactionId,
+        transactionId: TransactionId,
         responseCode: ResponseCode? = null,
     ): EntityExchangeResult<WalletResponseTO> {
         val walletResponseUri =
-            VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId.value) +
+            VerifierApi.WALLET_RESPONSE_PATH.replace("{transactionId}", transactionId.value) +
                 (responseCode?.let { "?response_code=${it.value}" } ?: "")
 
         // when

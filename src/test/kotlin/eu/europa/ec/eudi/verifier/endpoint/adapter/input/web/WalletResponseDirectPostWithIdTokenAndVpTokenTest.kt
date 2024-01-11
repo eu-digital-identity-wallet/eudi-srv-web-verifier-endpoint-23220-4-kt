@@ -68,7 +68,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        val presentationId = transactionInitialized.presentationId
+        val presentationId = transactionInitialized.transactionId
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
@@ -97,7 +97,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
-        val presentationId = TransactionId(transactionInitialized.presentationId)
+        val presentationId = TransactionId(transactionInitialized.transactionId)
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)

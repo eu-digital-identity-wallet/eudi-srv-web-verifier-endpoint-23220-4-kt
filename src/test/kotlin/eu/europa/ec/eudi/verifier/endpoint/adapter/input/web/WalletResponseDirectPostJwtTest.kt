@@ -135,7 +135,7 @@ internal class WalletResponseDirectPostJwtTest {
         // when
         val response = VerifierApiClient.getWalletResponse(
             client,
-            TransactionId(transactionInitialized.presentationId),
+            TransactionId(transactionInitialized.transactionId),
         )
         // then
         assertNotNull(response, "response is null")

@@ -113,7 +113,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         // when
         val response = VerifierApiClient.getWalletResponse(
             client,
-            TransactionId(transactionInitialized.presentationId),
+            TransactionId(transactionInitialized.transactionId),
         )
 
         // then
@@ -175,7 +175,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         // when
         val returnResult = VerifierApiClient.getWalletResponseNoValidation(
             client,
-            TransactionId(transactionInitialized.presentationId),
+            TransactionId(transactionInitialized.transactionId),
             ResponseCode("yszZvb3IoEnSYcRI7R7xZ01_n59AvhBTdr71uSCaqDaT7kF32spauGdn3KRHg0NiR2qtxA5_JeA4xd-Tu6oqhQ"),
         )
 
@@ -209,7 +209,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         // when
         val returnResult = VerifierApiClient.getWalletResponseNoValidation(
             client,
-            TransactionId(transactionInitialized.presentationId),
+            TransactionId(transactionInitialized.transactionId),
         )
 
         // then
@@ -253,7 +253,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         // when
         val response = VerifierApiClient.getWalletResponseNoValidation(
             client,
-            TransactionId(transactionInitialized.presentationId),
+            TransactionId(transactionInitialized.transactionId),
             ResponseCode(responseCode!!),
         )
 

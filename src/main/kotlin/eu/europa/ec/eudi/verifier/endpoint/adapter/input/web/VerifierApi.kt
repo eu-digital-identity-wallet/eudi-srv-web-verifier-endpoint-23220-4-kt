@@ -49,7 +49,10 @@ class VerifierApi(
         val input = req.awaitBody<InitTransactionTO>()
         logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
         either { initTransaction(input) }.fold(
-            ifRight = { ok().json().bodyValueAndAwait(it) },
+            ifRight = { it ->
+                logger.info("Initiated transaction ${it.transactionId}")
+                ok().json().bodyValueAndAwait(it)
+            },
             ifLeft = { it.asBadRequest() },
         )
     } catch (t: SerializationException) {
@@ -64,11 +67,11 @@ class VerifierApi(
     private suspend fun handleGetWalletResponse(req: ServerRequest): ServerResponse {
         suspend fun found(walletResponse: WalletResponseTO) = ok().json().bodyValueAndAwait(walletResponse)
 
-        val presentationId = req.presentationId()
+        val transactionId = req.transactionId()
         val responseCode = req.queryParam("response_code").getOrNull()?.let { ResponseCode(it) }
 
-        logger.info("Handling GetWalletResponse for $presentationId and response_code: $responseCode ...")
-        return when (val result = getWalletResponse(presentationId, responseCode)) {
+        logger.info("Handling GetWalletResponse for $transactionId and response_code: $responseCode ...")
+        return when (val result = getWalletResponse(transactionId, responseCode)) {
             is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
             is QueryResponse.Found -> found(result.value)
@@ -77,12 +80,12 @@ class VerifierApi(
 
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
-        const val WALLET_RESPONSE_PATH = "/ui/presentations/{presentationId}"
+        const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
 
         /**
          * Extracts from the request the [RequestId]
          */
-        private fun ServerRequest.presentationId() = TransactionId(pathVariable("presentationId"))
+        private fun ServerRequest.transactionId() = TransactionId(pathVariable("transactionId"))
         private suspend fun ValidationError.asBadRequest() =
             badRequest().json().bodyValueAndAwait(mapOf("error" to this))
     }

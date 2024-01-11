@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.raise.Raise
@@ -26,6 +28,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -112,7 +115,7 @@ enum class ValidationError {
  */
 @Serializable
 data class JwtSecuredAuthorizationRequestTO(
-    @Required @SerialName("presentation_id") val presentationId: String,
+    @Required @SerialName("presentation_id") val transactionId: String,
     @Required @SerialName("client_id") val clientId: String,
     @SerialName("request") val request: String? = null,
     @SerialName("request_uri") val requestUri: String?,

@@ -49,13 +49,13 @@ import java.util.*
 import kotlin.reflect.KClass
 
 object TestContext {
-    val testDate = LocalDate.of(1974, 11, 2).atTime(10, 5, 33)
+    private val testDate = LocalDate.of(1974, 11, 2).atTime(10, 5, 33)
     val testClock = Clock.fixed(testDate.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
-    val testPresentationId = TransactionId("SamplePresentationId")
-    val generatedPresentationId = GenerateTransactionId.fixed(testPresentationId)
+    val testTransactionId = TransactionId("SampleTxId")
+    private val generatedTransactionId = GenerateTransactionId.fixed(testTransactionId)
     val testRequestId = RequestId("SampleRequestId")
-    val generateRequestId = GenerateRequestId.fixed(testRequestId)
-    val rsaJwk = RSAKeyGenerator(2048)
+    private val generateRequestId = GenerateRequestId.fixed(testRequestId)
+    private val rsaJwk = RSAKeyGenerator(2048)
         .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
         .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
         .issueTime(Date()) // issued-at timestamp (optional)
@@ -84,7 +84,7 @@ object TestContext {
         presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     ): InitTransaction =
         InitTransactionLive(
-            generatedPresentationId,
+            generatedTransactionId,
             generateRequestId,
             storePresentation,
             singRequestObject,
