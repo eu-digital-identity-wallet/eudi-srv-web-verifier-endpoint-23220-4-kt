@@ -37,6 +37,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJ
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.springframework.context.support.beans
@@ -71,6 +73,8 @@ internal fun beans(clock: Clock) = beans {
         bean { loadIncompletePresentationsOlderThan }
     }
 
+    bean { CreateQueryWalletResponseRedirectUri.Simple }
+
     //
     // Use cases
     //
@@ -85,6 +89,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             WalletApi.requestJwtByReference(env.publicUrl()),
             WalletApi.presentationDefinitionByReference(env.publicUrl()),
+            ref(),
         )
     }
 
@@ -100,7 +105,8 @@ internal fun beans(clock: Clock) = beans {
         )
     }
 
-    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref()) }
+    bean { GenerateResponseCode.Random }
+    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref()) }
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
     bean { GetWalletResponseLive(ref()) }
     bean { GetJarmJwksLive(ref()) }

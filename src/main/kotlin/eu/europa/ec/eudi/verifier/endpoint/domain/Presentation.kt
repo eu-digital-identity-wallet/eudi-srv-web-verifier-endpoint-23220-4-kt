@@ -118,6 +118,14 @@ value class EphemeralEncryptionKeyPairJWK(val value: String) {
     companion object
 }
 
+@JvmInline
+value class ResponseCode(val value: String)
+
+sealed interface GetWalletResponseMethod {
+    data object Poll : GetWalletResponseMethod
+    data class Redirect(val redirectUriTemplate: String) : GetWalletResponseMethod
+}
+
 /**
  * The entity that represents the presentation process
  */
@@ -138,6 +146,7 @@ sealed interface Presentation {
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,
         val presentationDefinitionMode: EmbedOption<RequestId>,
+        val getWalletResponseMethod: GetWalletResponseMethod,
     ) : Presentation
 
     /**
@@ -155,6 +164,7 @@ sealed interface Presentation {
         val nonce: Nonce,
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,
+        val getWalletResponseMethod: GetWalletResponseMethod,
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
@@ -172,6 +182,7 @@ sealed interface Presentation {
                         requested.nonce,
                         requested.ephemeralEcPrivateKey,
                         requested.responseMode,
+                        requested.getWalletResponseMethod,
                     )
                 }
         }
@@ -189,6 +200,7 @@ sealed interface Presentation {
         var submittedAt: Instant,
         val walletResponse: WalletResponse,
         val nonce: Nonce,
+        val responseCode: ResponseCode?,
     ) : Presentation {
 
         init {
@@ -200,6 +212,7 @@ sealed interface Presentation {
                 requestObjectRetrieved: RequestObjectRetrieved,
                 at: Instant,
                 walletResponse: WalletResponse,
+                responseCode: ResponseCode?,
             ): Result<Submitted> = runCatching {
                 with(requestObjectRetrieved) {
                     Submitted(
@@ -211,6 +224,7 @@ sealed interface Presentation {
                         at,
                         walletResponse,
                         nonce,
+                        responseCode,
                     )
                 }
             }
@@ -280,8 +294,9 @@ fun Presentation.RequestObjectRetrieved.timedOut(clock: Clock): Result<Presentat
 fun Presentation.RequestObjectRetrieved.submit(
     clock: Clock,
     walletResponse: WalletResponse,
+    responseCode: ResponseCode?,
 ): Result<Presentation.Submitted> =
-    Presentation.Submitted.submitted(this, clock.instant(), walletResponse)
+    Presentation.Submitted.submitted(this, clock.instant(), walletResponse, responseCode)
 
 fun Presentation.Submitted.timedOut(clock: Clock): Result<Presentation.TimedOut> =
     Presentation.TimedOut.timeOut(this, clock.instant())

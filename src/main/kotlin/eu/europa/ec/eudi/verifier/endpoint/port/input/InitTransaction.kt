@@ -20,6 +20,7 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
@@ -93,6 +94,7 @@ data class InitTransactionTO(
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
+    @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
 )
 
 /**
@@ -101,6 +103,7 @@ data class InitTransactionTO(
 enum class ValidationError {
     MissingPresentationDefinition,
     MissingNonce,
+    InvalidWalletResponseTemplate,
 }
 
 /**
@@ -142,6 +145,7 @@ class InitTransactionLive(
     private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
     private val requestJarByReference: EmbedOption.ByReference<RequestId>,
     private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
+    private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
 
 ) : InitTransaction {
 
@@ -153,6 +157,7 @@ class InitTransactionLive(
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
         val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
+        val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO)
 
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
@@ -164,6 +169,7 @@ class InitTransactionLive(
             ephemeralEcPrivateKey = newEphemeralEcPublicKey,
             responseMode = responseMode,
             presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
+            getWalletResponseMethod = getWalletResponseMethod,
         )
         // create request, which may update presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
@@ -217,6 +223,16 @@ class InitTransactionLive(
                 )
             }
         }
+
+    context(Raise<ValidationError>)
+    private fun getWalletResponseMethod(initTransactionTO: InitTransactionTO): GetWalletResponseMethod =
+        initTransactionTO.redirectUriTemplate
+            ?.let { template ->
+                with(createQueryWalletResponseRedirectUri) {
+                    ensure(template.validTemplate()) { ValidationError.InvalidWalletResponseTemplate }
+                }
+                GetWalletResponseMethod.Redirect(template)
+            } ?: GetWalletResponseMethod.Poll
 
     /**
      * Gets the [ResponseModeOption] for the provided [InitTransactionTO].

@@ -15,15 +15,22 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.None
+import arrow.core.Option
 import arrow.core.raise.Raise
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import arrow.core.some
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import java.time.Clock
 
 /**
@@ -97,6 +104,11 @@ internal fun AuthorisationResponseTO.toDomain(presentation: RequestObjectRetriev
     }
 }
 
+@Serializable
+data class WalletResponseAcceptedTO(
+    @SerialName("redirect_uri") val redirectUri: String,
+)
+
 /**
  * This is use case 12 of the [Presentation] process.
  *
@@ -105,7 +117,7 @@ internal fun AuthorisationResponseTO.toDomain(presentation: RequestObjectRetriev
 fun interface PostWalletResponse {
 
     context(Raise<WalletResponseValidationError>)
-    suspend operator fun invoke(walletResponse: AuthorisationResponse)
+    suspend operator fun invoke(walletResponse: AuthorisationResponse): Option<WalletResponseAcceptedTO>
 }
 
 class PostWalletResponseLive(
@@ -114,10 +126,12 @@ class PostWalletResponseLive(
     private val verifyJarmJwtSignature: VerifyJarmJwtSignature,
     private val clock: Clock,
     private val verifierConfig: VerifierConfig,
+    private val generateResponseCode: GenerateResponseCode,
+    private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
 ) : PostWalletResponse {
 
     context(Raise<WalletResponseValidationError>)
-    override suspend operator fun invoke(walletResponse: AuthorisationResponse) {
+    override suspend operator fun invoke(walletResponse: AuthorisationResponse): Option<WalletResponseAcceptedTO> {
         val presentation = loadPresentation(walletResponse)
 
         // Verify the AuthorisationResponse matches what is expected for the Presentation
@@ -131,7 +145,18 @@ class PostWalletResponseLive(
         }
 
         val responseObject = responseObject(walletResponse, presentation)
-        submit(presentation, responseObject).also { storePresentation(it) }
+        val submitted = submit(presentation, responseObject).also { storePresentation(it) }
+
+        return when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
+            is GetWalletResponseMethod.Redirect ->
+                with(createQueryWalletResponseRedirectUri) {
+                    requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
+                    val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
+                    WalletResponseAcceptedTO(redirectUri.toExternalForm()).some()
+                }
+
+            GetWalletResponseMethod.Poll -> None
+        }
     }
 
     context(Raise<WalletResponseValidationError>)
@@ -171,13 +196,17 @@ class PostWalletResponseLive(
     }
 
     context(Raise<WalletResponseValidationError>)
-    private fun submit(
+    private suspend fun submit(
         presentation: RequestObjectRetrieved,
         responseObject: AuthorisationResponseTO,
     ): Presentation.Submitted {
         // add the wallet response to the presentation
         val walletResponse = responseObject.toDomain(presentation)
-        return presentation.submit(clock, walletResponse).getOrThrow()
+        val responseCode = when (presentation.getWalletResponseMethod) {
+            GetWalletResponseMethod.Poll -> null
+            is GetWalletResponseMethod.Redirect -> generateResponseCode()
+        }
+        return presentation.submit(clock, walletResponse, responseCode).getOrThrow()
     }
 }
 

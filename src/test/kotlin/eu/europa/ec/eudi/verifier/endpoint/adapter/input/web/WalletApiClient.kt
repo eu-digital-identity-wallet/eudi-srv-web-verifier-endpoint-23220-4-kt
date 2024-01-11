@@ -21,6 +21,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec.ResponseSpecConsumer
 import org.springframework.test.web.reactive.server.expectBody
 import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.BodyInserters
@@ -93,13 +94,18 @@ object WalletApiClient {
      * - (request) mDocApp to Internet Web Service, flow "12 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mDocApp, flow "14 OK: HTTP 200 with redirect_uri"
      */
-    fun directPost(client: WebTestClient, formEncodedBody: MultiValueMap<String, Any>) {
+    fun directPost(
+        client: WebTestClient,
+        formEncodedBody: MultiValueMap<String, Any>,
+        vararg consumers: ResponseSpecConsumer,
+    ) {
         client.post().uri(WalletApi.WALLET_RESPONSE_PATH)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(formEncodedBody))
             .exchange()
             // then
+            .expectAll(*consumers)
             .expectStatus().isOk()
     }
 

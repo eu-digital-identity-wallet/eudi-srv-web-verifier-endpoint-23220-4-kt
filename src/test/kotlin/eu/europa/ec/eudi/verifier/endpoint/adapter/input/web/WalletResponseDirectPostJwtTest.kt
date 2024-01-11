@@ -24,7 +24,6 @@ import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusEnc
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusJWSAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
@@ -137,7 +136,6 @@ internal class WalletResponseDirectPostJwtTest {
         val response = VerifierApiClient.getWalletResponse(
             client,
             PresentationId(transactionInitialized.presentationId),
-            Nonce(initTransaction.nonce!!),
         )
         // then
         assertNotNull(response, "response is null")

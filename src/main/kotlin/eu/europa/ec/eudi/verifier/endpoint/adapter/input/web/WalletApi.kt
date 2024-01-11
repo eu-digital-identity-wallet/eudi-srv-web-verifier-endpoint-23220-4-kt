@@ -107,7 +107,14 @@ class WalletApi(
         val walletResponse = req.awaitFormData().walletResponse()
         val outcome = either { postWalletResponse(walletResponse) }
         outcome.fold(
-            ifRight = { ok().buildAndAwait() },
+            ifRight = { response ->
+                logger.info("PostWalletResponse processed")
+                logger.info(response.fold({ "Verifier UI will poll for Wallet Response" }, { "Wallet must redirect to ${it.redirectUri}" }))
+                response.fold(
+                    ifEmpty = { ok().buildAndAwait() },
+                    ifSome = { ok().json().bodyValueAndAwait(it) },
+                )
+            },
             ifLeft = { error ->
                 logger.error("$error while handling post of wallet response ")
                 badRequest().buildAndAwait()

@@ -31,6 +31,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObjectLive
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
+import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GeneratePresentationId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import org.springframework.boot.test.context.SpringBootTest
@@ -92,6 +93,7 @@ object TestContext {
             generateEphemeralKey,
             requestJarByReference,
             presentationDefinitionByReference,
+            CreateQueryWalletResponseRedirectUri.Simple,
         )
 
     fun getRequestObject(verifierConfig: VerifierConfig, presentationInitiatedAt: Instant): GetRequestObject =

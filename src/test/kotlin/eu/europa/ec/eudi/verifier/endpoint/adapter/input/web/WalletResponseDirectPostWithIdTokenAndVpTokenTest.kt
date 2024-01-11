@@ -16,7 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import kotlinx.coroutines.test.runTest
@@ -111,7 +110,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         WalletApiClient.directPost(client, formEncodedBody)
 
         // when
-        val response = VerifierApiClient.getWalletResponse(client, presentationId, Nonce(initTransaction.nonce!!))
+        val response = VerifierApiClient.getWalletResponse(client, presentationId)
 
         // then
         assertNotNull(response)
