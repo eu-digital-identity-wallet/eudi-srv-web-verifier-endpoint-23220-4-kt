@@ -16,9 +16,9 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import arrow.core.raise.either
-import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
@@ -82,7 +82,7 @@ class VerifierApi(
         /**
          * Extracts from the request the [RequestId]
          */
-        private fun ServerRequest.presentationId() = PresentationId(pathVariable("presentationId"))
+        private fun ServerRequest.presentationId() = TransactionId(pathVariable("presentationId"))
         private suspend fun ValidationError.asBadRequest() =
             badRequest().json().bodyValueAndAwait(mapOf("error" to this))
     }

@@ -313,6 +313,6 @@ class InitTransactionTest {
             ifLeft = { error -> assertEquals(expectedError, error) },
         )
 
-    private suspend fun loadPresentationById(id: PresentationId) =
+    private suspend fun loadPresentationById(id: TransactionId) =
         TestContext.loadPresentationById(id)
 }

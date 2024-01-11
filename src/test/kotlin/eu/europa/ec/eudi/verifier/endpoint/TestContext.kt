@@ -51,7 +51,7 @@ import kotlin.reflect.KClass
 object TestContext {
     val testDate = LocalDate.of(1974, 11, 2).atTime(10, 5, 33)
     val testClock = Clock.fixed(testDate.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
-    val testPresentationId = PresentationId("SamplePresentationId")
+    val testPresentationId = TransactionId("SamplePresentationId")
     val generatedPresentationId = GeneratePresentationId.fixed(testPresentationId)
     val testRequestId = RequestId("SampleRequestId")
     val generateRequestId = GenerateRequestId.fixed(testRequestId)
