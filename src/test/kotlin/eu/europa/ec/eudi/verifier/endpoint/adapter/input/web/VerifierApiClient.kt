@@ -15,8 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
@@ -27,6 +27,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.test.web.reactive.server.EntityExchangeResult
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBody
 
@@ -61,9 +62,10 @@ object VerifierApiClient {
      * - (request) mdocVerification application Internet frontend to Internet Web Service, flow "18 HTTPs POST to response_uri [section B.3.2.2]
      * - (response) Internet Web Service to mdocVerification application Internet frontend, flow "20 return status and conditionally return data"
      */
-    fun getWalletResponse(client: WebTestClient, presentationId: PresentationId, nonce: Nonce): WalletResponseTO? {
+    fun getWalletResponse(client: WebTestClient, presentationId: PresentationId, responseCode: ResponseCode? = null): WalletResponseTO? {
         val walletResponseUri =
-            VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId.value) + "?nonce=${nonce.value}"
+            VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId.value) +
+                (responseCode?.let { "?response_code=${it.value}" } ?: "")
 
         // when
         val responseSpec = client.get().uri(walletResponseUri)
@@ -79,5 +81,21 @@ object VerifierApiClient {
         return returnResult.responseBody?.also { responseBody ->
             log.info("response body:\n$responseBody")
         }
+    }
+
+    fun getWalletResponseNoValidation(
+        client: WebTestClient,
+        presentationId: PresentationId,
+        responseCode: ResponseCode? = null,
+    ): EntityExchangeResult<WalletResponseTO> {
+        val walletResponseUri =
+            VerifierApi.WALLET_RESPONSE_PATH.replace("{presentationId}", presentationId.value) +
+                (responseCode?.let { "?response_code=${it.value}" } ?: "")
+
+        // when
+        val responseSpec = client.get().uri(walletResponseUri)
+            .accept(MediaType.APPLICATION_JSON)
+            .exchange()
+        return responseSpec.expectBody<WalletResponseTO>().returnResult()
     }
 }

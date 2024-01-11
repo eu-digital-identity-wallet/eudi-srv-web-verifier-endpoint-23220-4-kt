@@ -16,15 +16,16 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationId
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.input.IdTokenTypeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.PresentationTypeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseAcceptedTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
@@ -32,12 +33,16 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.core.annotation.Order
+import org.springframework.http.HttpStatus
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.test.web.reactive.server.expectBody
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
+import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @VerifierApplicationTest
 @TestPropertySource(
@@ -109,7 +114,6 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         val response = VerifierApiClient.getWalletResponse(
             client,
             PresentationId(transactionInitialized.presentationId),
-            Nonce(initTransaction.nonce!!),
         )
 
         // then
@@ -118,8 +122,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
 
     @Test
     @Order(value = 3)
-    fun `when get_wallet_response method is REDIRECT then response should contain a valid redirect_uri`() = runTest {
-        // given
+    fun `when method to get wallet response is REDIRECT then response should contain a valid redirect_uri`() = runTest {
         val initTransaction = InitTransactionTO(
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
@@ -140,7 +143,121 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         WalletApiClient.directPost(
             client,
             formEncodedBody,
-            { responseSpec -> responseSpec.expectBody(WalletResponseAcceptedTO::class.java) },
+            { responseSpec ->
+                val returnResult = responseSpec
+                    .expectBody<WalletResponseAcceptedTO>()
+                    .returnResult()
+                    .responseBody
+                val uri = URI.create(returnResult!!.redirectUri)
+                assertTrue { uri.scheme == "https" }
+                assertTrue { uri.host == "client.example.org" }
+                assertTrue { uri.fragment.contains("response_code") }
+            },
         )
+    }
+
+    @Test
+    @Order(value = 4)
+    fun `when method to get wallet response does not require response_code and code is provided, BAD_REQUEST is responded`() = runTest {
+        // given
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
+        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val requestId =
+            RequestId(transactionInitialized.requestUri!!.removePrefix("http://localhost:0/wallet/request.jwt/"))
+        WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
+
+        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("state", requestId.value)
+        formEncodedBody.add("id_token", "value 1")
+
+        WalletApiClient.directPost(client, formEncodedBody)
+
+        // when
+        val returnResult = VerifierApiClient.getWalletResponseNoValidation(
+            client,
+            PresentationId(transactionInitialized.presentationId),
+            ResponseCode("yszZvb3IoEnSYcRI7R7xZ01_n59AvhBTdr71uSCaqDaT7kF32spauGdn3KRHg0NiR2qtxA5_JeA4xd-Tu6oqhQ"),
+        )
+
+        // then
+        Assertions.assertEquals(HttpStatus.BAD_REQUEST, returnResult.status)
+    }
+
+    @Test
+    @Order(value = 5)
+    fun `when method to get wallet response does require response_code and no code is provided, BAD_REQUEST is responded`() = runTest {
+        // given
+        val initTransaction = InitTransactionTO(
+            PresentationTypeTO.IdTokenRequest,
+            IdTokenTypeTO.SubjectSigned,
+            null,
+            "nonce",
+            redirectUriTemplate =
+                "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+        )
+        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val requestId =
+            RequestId(transactionInitialized.requestUri!!.removePrefix("http://localhost:0/wallet/request.jwt/"))
+        WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
+
+        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("state", requestId.value)
+        formEncodedBody.add("id_token", "value 1")
+
+        WalletApiClient.directPost(client, formEncodedBody)
+
+        // when
+        val returnResult = VerifierApiClient.getWalletResponseNoValidation(
+            client,
+            PresentationId(transactionInitialized.presentationId),
+        )
+
+        // then
+        Assertions.assertEquals(HttpStatus.BAD_REQUEST, returnResult.status)
+    }
+
+    @Test
+    @Order(value = 6)
+    fun `when method to get wallet response does require response_code and code is provided, wallet response is returned`() = runTest {
+        // given
+        val initTransaction = InitTransactionTO(
+            PresentationTypeTO.IdTokenRequest,
+            IdTokenTypeTO.SubjectSigned,
+            null,
+            "nonce",
+            redirectUriTemplate =
+                "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
+        )
+        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val requestId =
+            RequestId(transactionInitialized.requestUri!!.removePrefix("http://localhost:0/wallet/request.jwt/"))
+        WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
+
+        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+        formEncodedBody.add("state", requestId.value)
+        formEncodedBody.add("id_token", "value 1")
+
+        var responseCode: String? = null
+        WalletApiClient.directPost(
+            client,
+            formEncodedBody,
+            { responseSpec ->
+                val returnResult = responseSpec
+                    .expectBody<WalletResponseAcceptedTO>()
+                    .returnResult()
+                    .responseBody
+                responseCode = returnResult?.redirectUri?.removePrefix("https://client.example.org/cb#response_code=")
+            },
+        )
+
+        // when
+        val response = VerifierApiClient.getWalletResponseNoValidation(
+            client,
+            PresentationId(transactionInitialized.presentationId),
+            ResponseCode(responseCode!!),
+        )
+
+        // then
+        assertNotNull(response, "response is null")
     }
 }
