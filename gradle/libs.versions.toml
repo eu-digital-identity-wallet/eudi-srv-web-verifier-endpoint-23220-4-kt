@@ -1,7 +1,7 @@
 [versions]
 coroutines = "1.7.3"
 dokka = "1.9.10"
-kotlin = "1.9.21"
+kotlin = "1.9.22"
 foojay = "0.7.0"
 springboot = "3.2.1"
 springDependencyManagement = "1.1.4"
