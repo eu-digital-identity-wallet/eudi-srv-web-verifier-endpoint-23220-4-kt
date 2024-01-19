@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.getOrElse
 import arrow.core.raise.either
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
@@ -25,6 +26,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.JsonObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -110,10 +112,7 @@ class WalletApi(
             ifRight = { response ->
                 logger.info("PostWalletResponse processed")
                 logger.info(response.fold({ "Verifier UI will poll for Wallet Response" }, { "Wallet must redirect to ${it.redirectUri}" }))
-                response.fold(
-                    ifEmpty = { ok().buildAndAwait() },
-                    ifSome = { ok().json().bodyValueAndAwait(it) },
-                )
+                ok().json().bodyValueAndAwait(response.getOrElse { JsonObject(emptyMap()) })
             },
             ifLeft = { error ->
                 logger.error("$error while handling post of wallet response ")
