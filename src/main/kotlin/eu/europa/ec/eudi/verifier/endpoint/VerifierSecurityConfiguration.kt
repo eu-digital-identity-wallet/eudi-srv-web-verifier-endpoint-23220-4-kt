@@ -15,9 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.env.Environment
+import org.springframework.core.env.getProperty
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.config.web.server.invoke
@@ -29,34 +30,34 @@ import org.springframework.web.cors.reactive.CorsConfigurationSource
 @EnableWebFluxSecurity
 class VerifierSecurityConfiguration {
 
-    @Value("\${cors.originPatterns:default}")
-    private val corsOriginPatterns: String = ""
-
-    @Value("\${cors.origins:default}")
-    private val corsOrigins: String = ""
-
-    @Value("\${cors.methods:GET,POST,PUT,DELETE,OPTIONS,PATCH}")
-    private val corsMethods: String = ""
-
-    @Value("\${cors.headers:*}")
-    private val corsHeaders: String = ""
-
     @Bean
-    fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+    fun springSecurityFilterChain(http: ServerHttpSecurity, env: Environment): SecurityWebFilterChain {
         return http {
             cors { // cross-origin resource sharing configuration
                 configurationSource = CorsConfigurationSource {
-                    val corsConfiguration = CorsConfiguration()
-                    corsConfiguration.allowedOriginPatterns = corsOriginPatterns.split(",").toList()
-                    corsConfiguration.allowedOrigins = corsOrigins.split(",").toList()
-                    corsConfiguration.allowedMethods = corsMethods.split(",").toList()
-                    corsConfiguration.allowedHeaders = corsHeaders.split(",").toList()
-                    corsConfiguration.allowCredentials = true
-                    corsConfiguration.maxAge = 3600L
-                    corsConfiguration
+                    CorsConfiguration().apply {
+                        allowedOrigins = env.getOptionalList("cors.origins")
+                        allowedOriginPatterns = env.getOptionalList("cors.originPatterns")
+                        allowedMethods = env.getOptionalList("cors.methods")
+                        run {
+                            val headers = env.getOptionalList("cors.headers")
+                            allowedHeaders = headers
+                            exposedHeaders = headers
+                        }
+                        allowCredentials = env.getProperty<Boolean>("cors.credentials")
+                        maxAge = env.getProperty<Long>("cors.maxAge")
+                    }
                 }
             }
             csrf { disable() } // cross-site request forgery disabled
         }
     }
 }
+
+private fun Environment.getOptionalList(name: String): List<String>? =
+    this.getProperty(name)
+        ?.split(",")
+        ?.filter { it.isNotBlank() }
+        ?.map { it.trim() }
+        ?.toList()
+        ?.takeIf { it.isNotEmpty() }
