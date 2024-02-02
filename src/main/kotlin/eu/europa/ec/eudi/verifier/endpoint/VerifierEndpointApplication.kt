@@ -21,16 +21,19 @@ import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.support.BeanDefinitionDsl
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.web.reactive.config.EnableWebFlux
 import java.time.Clock
 
 @EnableScheduling
 @EnableWebFlux
+@EnableWebFluxSecurity
 @SpringBootApplication(proxyBeanMethods = false)
 class VerifierApplication
 
 internal fun BeanDefinitionDsl.initializer(): ApplicationContextInitializer<GenericApplicationContext> =
     ApplicationContextInitializer<GenericApplicationContext> { initialize(it) }
+
 fun main(args: Array<String>) {
     runApplication<VerifierApplication>(*args) {
         addInitializers(beans(Clock.systemDefaultZone()).initializer())
