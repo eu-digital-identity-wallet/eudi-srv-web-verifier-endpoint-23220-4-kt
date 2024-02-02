@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import arrow.core.NonEmptyList
+import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
@@ -41,19 +43,24 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletRespons
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import org.springframework.boot.web.codec.CodecCustomizer
 import org.springframework.context.support.beans
 import org.springframework.core.env.Environment
+import org.springframework.core.env.getProperty
 import org.springframework.core.io.DefaultResourceLoader
-import org.springframework.http.codec.ServerCodecConfigurer
 import org.springframework.http.codec.json.KotlinSerializationJsonDecoder
 import org.springframework.http.codec.json.KotlinSerializationJsonEncoder
-import org.springframework.web.reactive.config.WebFluxConfigurer
+import org.springframework.security.config.web.server.ServerHttpSecurity
+import org.springframework.security.config.web.server.invoke
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.reactive.CorsConfigurationSource
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.util.*
 
+@OptIn(ExperimentalSerializationApi::class)
 internal fun beans(clock: Clock) = beans {
     //
     // JOSE
@@ -142,18 +149,40 @@ internal fun beans(clock: Clock) = beans {
     // Other
     //
     bean {
-        object : WebFluxConfigurer {
-            @OptIn(ExperimentalSerializationApi::class)
-            override fun configureHttpMessageCodecs(configurer: ServerCodecConfigurer) {
-                val json = Json {
-                    explicitNulls = false
-                    ignoreUnknownKeys = true
-                }
-
-                configurer.defaultCodecs().kotlinSerializationJsonDecoder(KotlinSerializationJsonDecoder(json))
-                configurer.defaultCodecs().kotlinSerializationJsonEncoder(KotlinSerializationJsonEncoder(json))
-                configurer.defaultCodecs().enableLoggingRequestDetails(true)
+        CodecCustomizer {
+            val json = Json {
+                explicitNulls = false
+                ignoreUnknownKeys = true
             }
+
+            it.defaultCodecs().kotlinSerializationJsonDecoder(KotlinSerializationJsonDecoder(json))
+            it.defaultCodecs().kotlinSerializationJsonEncoder(KotlinSerializationJsonEncoder(json))
+            it.defaultCodecs().enableLoggingRequestDetails(true)
+        }
+    }
+    bean {
+        val http = ref<ServerHttpSecurity>()
+        http {
+            cors { // cross-origin resource sharing configuration
+                configurationSource = CorsConfigurationSource {
+                    CorsConfiguration().apply {
+                        fun getOptionalList(name: String): NonEmptyList<String>? =
+                            env.getOptionalList(name = name, filter = { it.isNotBlank() }, transform = { it.trim() })
+
+                        allowedOrigins = getOptionalList("cors.origins")
+                        allowedOriginPatterns = getOptionalList("cors.originPatterns")
+                        allowedMethods = getOptionalList("cors.methods")
+                        run {
+                            val headers = getOptionalList("cors.headers")
+                            allowedHeaders = headers
+                            exposedHeaders = headers
+                        }
+                        allowCredentials = env.getProperty<Boolean>("cors.credentials")
+                        maxAge = env.getProperty<Long>("cors.maxAge")
+                    }
+                }
+            }
+            csrf { disable() } // cross-site request forgery disabled
         }
     }
 }
@@ -331,3 +360,22 @@ private fun JWK.withCertificateChain(chain: List<X509Certificate>): JWK {
         else -> error("Unexpected JWK type '${this.keyType.value}'/'${this.javaClass}'")
     }
 }
+
+/**
+ * Gets the value of a property that contains a comma-separated list. A list is returned when it contains values.
+ *
+ * @receiver the configured Spring [Environment] from which to load the property
+ * @param name the property to load
+ * @param filter optional filter to apply to the list value
+ * @param transform optional mapping to apply to the list values
+ */
+private fun Environment.getOptionalList(
+    name: String,
+    filter: (String) -> Boolean = { true },
+    transform: (String) -> String = { it },
+): NonEmptyList<String>? =
+    this.getProperty(name)
+        ?.split(",")
+        ?.filter { filter(it) }
+        ?.map { transform(it) }
+        ?.toNonEmptyListOrNull()
