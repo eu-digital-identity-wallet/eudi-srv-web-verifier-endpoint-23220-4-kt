@@ -31,6 +31,7 @@ class VerifierApplication
 
 internal fun BeanDefinitionDsl.initializer(): ApplicationContextInitializer<GenericApplicationContext> =
     ApplicationContextInitializer<GenericApplicationContext> { initialize(it) }
+
 fun main(args: Array<String>) {
     runApplication<VerifierApplication>(*args) {
         addInitializers(beans(Clock.systemDefaultZone()).initializer())

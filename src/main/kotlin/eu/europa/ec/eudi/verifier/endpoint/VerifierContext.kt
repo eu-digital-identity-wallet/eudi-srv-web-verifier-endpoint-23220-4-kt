@@ -15,8 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import arrow.core.NonEmptyList
-import arrow.core.toNonEmptyListOrNull
+import arrow.core.*
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
@@ -43,11 +42,13 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletRespons
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
 import org.springframework.boot.web.codec.CodecCustomizer
 import org.springframework.context.support.beans
 import org.springframework.core.env.Environment
 import org.springframework.core.env.getProperty
 import org.springframework.core.io.DefaultResourceLoader
+import org.springframework.core.io.FileSystemResource
 import org.springframework.http.codec.json.KotlinSerializationJsonDecoder
 import org.springframework.http.codec.json.KotlinSerializationJsonEncoder
 import org.springframework.security.config.web.server.ServerHttpSecurity
@@ -59,6 +60,8 @@ import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.util.*
+
+private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
 @OptIn(ExperimentalSerializationApi::class)
 internal fun beans(clock: Clock) = beans {
@@ -197,11 +200,27 @@ private enum class SigningKeyEnum {
     LoadFromKeystore,
 }
 
+private const val keystoreDefaultLocation = "/keystore.jks"
+
 private fun jarSigningConfig(environment: Environment, clock: Clock): SigningConfig {
     val key = run {
         fun loadFromKeystore(): JWK {
-            val keystoreResource =
-                DefaultResourceLoader().getResource((environment.getRequiredProperty("verifier.jar.signing.key.keystore")))
+            val keystoreResource = run {
+                val keystoreLocation = environment.getRequiredProperty("verifier.jar.signing.key.keystore")
+                log.info("Will try to load Keystore from: '{}'", keystoreLocation)
+                val keystoreResource = DefaultResourceLoader().getResource(keystoreLocation)
+                    .some()
+                    .filter { it.exists() }
+                    .recover {
+                        log.warn("Could not find Keystore at '{}'. Fallback to '{}'", keystoreLocation, keystoreDefaultLocation)
+                        FileSystemResource(keystoreDefaultLocation)
+                            .some()
+                            .filter { it.exists() }
+                            .bind()
+                    }
+                    .getOrNull()
+                checkNotNull(keystoreResource) { "Could not load Keystore either from '$keystoreLocation' or '$keystoreDefaultLocation'" }
+            }
 
             val keystoreType =
                 environment.getProperty("verifier.jar.signing.key.keystore.type", KeyStore.getDefaultType())
