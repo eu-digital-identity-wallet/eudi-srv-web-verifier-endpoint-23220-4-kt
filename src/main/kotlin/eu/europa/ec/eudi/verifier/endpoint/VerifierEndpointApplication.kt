@@ -21,11 +21,13 @@ import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.support.BeanDefinitionDsl
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.web.reactive.config.EnableWebFlux
 import java.time.Clock
 
 @EnableScheduling
 @EnableWebFlux
+@EnableWebFluxSecurity
 @SpringBootApplication(proxyBeanMethods = false)
 class VerifierApplication
 
