@@ -11,6 +11,7 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 * [Disclaimer](#disclaimer)
 * [Sequence Diagram](#sequence-diagram)
 * [How to use](#how-to-use)
+* [Configuration](#configuration)
 * [Examples](#examples)
 * [How to contribute](#how-to-contribute)
 * [License](#license)
@@ -193,6 +194,131 @@ Note: If the Verifier's Response Endpoint did not return a redirect_uri in step 
 ```bash
 ./gradlew bootRun
 ```
+
+## Configuration
+
+The Verifier Endpoint application can be configured using the following *environment* variables:
+
+Variable: `SPRING_WEBFLUX_BASE_PATH`  
+Description: Context path for the Verifier Endpoint application.  
+Default value: `/`
+
+Variable: `SERVER_PORT`  
+Description: Port for the HTTP listener of the Verifier Endpoint application  
+Default value: `8080`
+
+Variable: `VERIFIER_CLIENT_ID`  
+Description: Client Id of the Verifier Endpoint application  
+Default value: `Verifier`
+
+Variable: `VERIFIER_CLIENT_ID_SCHEME`  
+Description: Client Id Scheme used by the Verifier Endpoint application  
+Possible values: `pre-registered`, `x509_san_dns`, `x509_san_uri`  
+Default value: `pre-registered`  
+
+Variable: `VERIFIER_JAR_SIGNING_ALGORITHM`  
+Description: Algorithm used to sign Authorization Request   
+Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
+https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms   
+Note: The configured signing algorithm must be compatible with the configured signing key  
+Default value: `RS256`  
+
+Variable: `VERIFIER_JAR_SIGNING_KEY`  
+Description: Key to use for Authorization Request signing  
+Possible values: `GenerateRandom`, `LoadFromKeystore`  
+Setting this value to `GenerateRandom` will result in the generation of a random `RSA` key   
+Note: The configured signing key must be compatible with the configured signing algorithm  
+Default value: `GenerateRandom`  
+
+Variable: `VERIFIER_PUBLIC_URL`  
+Description: Public URL of the Verifier Endpoint application  
+Default value: `http://localhost:${SERVER_PORT}`
+
+Variable: `VERIFIER_REQUEST_JWT_EMBED`  
+Description: How Authorization Requests will be provided    
+Possible values: `ByValue`, `ByReference`  
+Default value: `ByReference`  
+
+Variable: `VERIFIER_JWK_EMBED`  
+Description: How the Ephemeral Keys used for Authorization Response Encryption will be provided in Authorization Requests    
+Possible values: `ByValue`, `ByReference`  
+Default value: `ByReference`  
+
+Variable: `VERIFIER_PRESENTATION_DEFINITION_EMBED`  
+Description: How Presentation Definitions will be provided in Authorization Requests    
+Possible values: `ByValue`, `ByReference`  
+Default value: `ByValue`  
+
+Variable: `VERIFIER_RESPONSE_MODE`  
+Description: How Authorization Responses are expected    
+Possible values: `DirectPost`, `DirectPostJwt`  
+Default value: `DirectPostJwt`  
+
+Variable: `VERIFIER_MAX_AGE`  
+Description: TTL of an Authorization Request  
+Notes: Provide a value using Java Duration syntax  
+Example: `PT6400M`  
+Default value: `PT6400M`  
+
+Variable: `VERIFIER_CLIENT_METADATA_AUTHORIZATION_SIGNED_RESPONSE_ALG`  
+Description: Accept only Authorization Responses that are _signed_ using this algorithm  
+Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
+https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms
+
+Variable: `VERIFIER_CLIENT_METADATA_AUTHORIZATION_ENCRYPTED_RESPONSE_ALG`  
+Description: Accept only Authorization Responses that are _encrypted_ using this algorithm  
+Possible values: Any `Algorithm Name` of an IANA registered asymmetric encryption algorithm (i.e. Usage is `alg`):
+https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms  
+Default value: `ECDH-ES`  
+
+Variable: `VERIFIER_CLIENT_METADATA_AUTHORIZATION_ENCRYPTED_RESPONSE_ENC`  
+Description: Accept only Authorization Responses that are _encrypted_ using this method  
+Possible values: Any `Algorithm Name` of an IANA registered asymmetric encryption method (i.e. Usage is `enc`):
+https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms    
+Default value: `A128CBC-HS256`  
+
+Variable: `CORS_ORIGINS`  
+Description: Comma separated list of allowed Origins for cross-origin requests  
+Default value: `*`  
+
+Variable: `CORS_ORIGIN_PATTERNS`  
+Description: Comma separated list of patterns used for more fine grained matching of allowed Origins for cross-origin requests  
+Default value: `*`  
+
+Variable: `CORS_METHODS`  
+Description: Comma separated list of HTTP methods allowed for cross-origin requests  
+Default value: `*`  
+
+Variable: `CORS_HEADERS`  
+Description: Comma separated list of allowed and exposed HTTP Headers for cross-origin requests  
+Default value: `*`
+
+Variable: `CORS_CREDENTIALS`  
+Description: Whether credentials (i.e. Cookies or Authorization Header) are allowed for cross-origin requests
+Default value: `false`  
+
+Variable: `CORS_MAX_AGE`  
+Description: Time in seconds of how long pre-flight request responses can be cached by clients  
+Default value: `3600`  
+
+### When `VERIFIER_JAR_SIGNING_KEY` is set to `LoadFromKeystore` the following environment variables must also be configured.
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE`  
+Description: URL of the Keystore from which to load the Key to use for JAR signing  
+Examples: `classpath:keystore.jks`, `file:///keystore.jks`
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE_TYPE`  
+Description: Type of the Keystore from which to load the Key to use for JAR signing  
+Examples: `JKS`, `P12`
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE_PASSWORD`  
+Description: Password of the Keystore from which to load the Key to use for JAR signing
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_ALIAS`  
+Description: Alias of the Key to use for JAR signing, in the configured Keystore
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
+Description: Password of the Key to use for JAR signing, in the configured Keystore
 
 ## Examples
 
