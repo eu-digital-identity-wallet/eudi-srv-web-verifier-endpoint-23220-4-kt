@@ -10,9 +10,9 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 * [Overview](#overview)
 * [Disclaimer](#disclaimer) 
 * [How to use](#how-to-use)
+* [Endpoints](#endpoints)
+* [Presentation Flows](#presentation-flows)
 * [Configuration](#configuration)
-* [API](#api)
-* [Examples](#examples)
 * [How to contribute](#how-to-contribute)
 * [License](#license)
 
@@ -61,6 +61,228 @@ The released software is a initial development release version:
 ./gradlew bootRun
 ```
 
+## Endpoints
+
+### Initialize transaction endpoint
+
+- _Method_: POST
+- _URL_: http://localhost:8080/ui/presentations
+
+An endpoint to control the content of the authorization request that will be prepared from the verifier backend service. Payload of this request is a json object with the following acceptable attributes:
+- `type`: The type of the response to the authorization request. Allowed values are one of: `id_token`, `vp_token` or `vp_token id_token`.
+- `id_token_type`: In case type is `id_token` controls the type of id_token that will be requested from wallet. Allowed values are one of `subject_signed_id_token` or `attester_signed_id_token`. 
+- `presentation_definition`: A json object that depicting the presentation definition to be included in the OpenId4VP authorization request in case `type` is 'vp_token'. 
+- `nonce`: Nonce value to be included in the OpenId4VP authorization request.
+- `response_mode`: Controls the `response_mode` attribute of the OpenId4VP authorization request. Allowed values are one of `direct_post` or `direct_post.jwt`.  
+- `jar_mode`: Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if `by_reference` a `request_uri` url will be returned.  
+- `presentation_definition_mode`: Controls how the presentation definition will be embedded in the request. If 'by_value' it will be embedded inline, if `by_reference` a `presentation_definition_uri` url will be embedded in the request.
+- `wallet_response_redirect_uri_template`: If provided will be used to construct the response to wallet, when it posts its response to the authorization request.   
+
+**Usage:**
+```bash
+curl -X POST -H "Content-type: application/json" -d '{
+  "type": "vp_token",  
+  "presentation_definition": {
+        "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
+        "input_descriptors": [
+            {
+                "constraints": {
+                    "fields": [
+                        {
+                            "filter": {
+                                "const": "eu.europa.ec.eudiw.pid.1",
+                                "type": "string"
+                            },
+                            "path": [
+                                "$.mdoc.doctype"
+                            ]
+                        },
+                        {
+                            "filter": {
+                                "const": "eu.europa.ec.eudiw.pid.1",
+                                "type": "string"
+                            },
+                            "path": [
+                                "$.mdoc.namespace"
+                            ]
+                        },
+                        {
+                            "intent_to_retain": false,
+                            "path": [
+                                "$.mdoc.family_name"
+                            ]
+                        }
+                    ]
+                },
+                "id": "eudi_pid",
+                "name": "EUDI PID",
+                "purpose": "We need to verify your identity"
+            }
+        ]
+    },
+  "nonce": "nonce"
+}' 'http://localhost:8080/ui/presentations'
+```
+
+**Returns:**
+```json
+{
+  "presentation_id": "STMMbidoCQTtyk9id5IcoL8CqdC8rxgks5FF8cqqUrHvw0IL3AaIHGnwxvrvcEyUJ6uUPNdoBQDa7yCqpjtKaw",
+  "client_id": "dev.verifier-backend.eudiw.dev",
+  "request_uri": "https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw"
+}
+```
+
+### Get authorization request
+
+- _Method_: GET
+- _URL_: http://localhost:8080/wallet/request.jwt/{transactionId}
+- _Parameters_
+  - `transactionId`: The initialized transaction's identifier
+
+An endpoint to be used by wallet when the OpenId4VP authorization request is passed to wallet by reference as a request_uri. 
+The identifier returned from calling [Initialize transaction endpoint](#initialize-transaction-endpoint) end-point should be used to identify the request.  
+
+**Usage:**
+```bash
+curl https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw
+```
+**Returns:** The authorization request payload as a signed JWT. 
+
+### Get presentation definition
+
+- _Method_: GET
+- _URL_: http://localhost:8080/wallet/pd/{transactionId}
+- _Parameters_
+    - `transactionId`: The initialized transaction's identifier
+
+An endpoint to be used by wallet when the presentation definition of the OpenId4VP authorization request is not embedded inline in the request but by reference as a `presentation_definition_uri`.
+
+**Usage:**
+```bash
+curl https://localhost:8080/wallet/pd/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw
+```
+
+**Returns:** The presentation definition of the authorization request as JSON.
+
+### Send wallet response
+
+- _Method_: POST
+- _URL_: http://localhost:8080/wallet/direct_post
+
+An endpoint available to wallet to post its response. Based on the `response_mode` of the OpenId4VP authorization request this endpoint can 
+accept 2 type of payloads:
+
+_**response_mode = direct_post**_
+
+A form post (application/x-www-form-urlencoded encoding) with the following form parameters:
+- `state`: The state claim included in the authorization request JWT.
+- `id_token`: The requested id_token if authorization request 'response_type' attribute contains `id_token`.
+- `vp_token`: The requested vp_token if authorization request 'response_type' attribute contains `vp_token`.
+- `presentation_submission`: The presentation submission accompanying the vp_token in case 'response_type' attribute of authorization request contains `vp_token`.
+
+_**response_mode = direct_post.jwt**_
+
+A form post (application/x-www-form-urlencoded encoding) with the following form parameters:
+- `state`: The state claim included in the authorization request JWT.
+- `response`: A string representing an encrypted JWT (JWE) that contains as claims the form parameters mentioned in the case above    
+
+**Usage:**
+```bash
+STATE=IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA
+curl -v -X POST 'http://localhost:8080/wallet/direct_post' \
+  -H "Content-type: application/x-www-form-urlencoded" \
+  -H "Accept: application/json" \
+  --data-urlencode "state=$STATE" \
+  --data-urlencode 'vp_token={"id": "123456"}' \
+  --data-urlencode presentation_submission@- << EOF
+{
+  "id": "a30e3b91-fb77-4d22-95fa-871689c322e2",
+  "definition_id": "32f54163-7166-48f1-93d8-ff217bdb0653",
+  "descriptor_map": [
+    {
+      "id": "employment_input",
+      "format": "jwt_vc",
+      "path": "$.verifiableCredential[0]"
+    }
+  ]
+}
+EOF
+```
+**Returns:**
+
+* Same device case
+```HTTP
+HTTP/1.1 200 OK
+{
+  "redirect_uri" : "https://dev.verifier.eudiw.dev/get-wallet-code?response_code=5272d373-ebab-40ec-b44d-0a9909d0da69"
+}
+```
+* Cross device case
+```HTTP
+HTTP/1.1 200 OK
+```
+
+### Get wallet response
+
+- Method: GET
+- URL: http://localhost:8080/ui/presentations/{transactionId}?response_code={responseCode}
+- Parameters
+  - `transactionId`: The initialized transaction's identifier
+  - `responseCode`: (OPTIONAL) Response code generated in case of 'same device' case 
+
+```bash
+curl http://localhost:8080/ui/presentations/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw?response_code=5272d373-ebab-40ec-b44d-0a9909d0da69
+```
+
+**Returns:** The wallet submitted response as JSON.
+
+## Presentation Flows
+
+### Same device
+
+```mermaid
+sequenceDiagram    
+    participant UA as User Agent
+    participant W as Wallet
+    participant V as Verifier
+    participant VE as Verifier Endpoint
+    UA->>V: Trigger presentation 
+    
+    V->>+VE: [1]    Initiate transaction
+    VE-->>-V: Authorization request as request_url
+    
+    V->>UA: Render request as deep link
+    UA->>W: Trigger wallet and pass request
+    
+    W->>+VE: [2] Get authorization request via request_uri 
+    VE-->>-W: authorization_request
+    
+    W->>W: Parse authorization request
+    
+    W->>+VE: [3] Get presentation definition 
+    VE-->>-W: presentation_definition
+    
+    W->>W: Prepare response     
+    
+    W->>+VE: [4] Post vp_token response 
+    VE->>VE: Validate response and prepare response_code
+    VE-->>-W: Return redirect_uri with response_code
+    
+    W->>UA: Refresh user agent to follow redirect_uri
+    UA->>V: Follow redirect_uri passing response_code
+    
+    V->>+VE: [5] Get wallet response passing response_code 
+    VE->>VE: Validate response_code matches wallet response
+    VE-->>-V: Return wallet response
+    
+    V->UA: Render wallet response 
+```
+
+### Cross device
+
+TBD
+
 ## Configuration
 
 The Verifier Endpoint application can be configured using the following *environment* variables:
@@ -80,21 +302,21 @@ Default value: `Verifier`
 Variable: `VERIFIER_CLIENT_ID_SCHEME`  
 Description: Client Id Scheme used by the Verifier Endpoint application  
 Possible values: `pre-registered`, `x509_san_dns`, `x509_san_uri`  
-Default value: `pre-registered`  
+Default value: `pre-registered`
 
 Variable: `VERIFIER_JAR_SIGNING_ALGORITHM`  
 Description: Algorithm used to sign Authorization Request   
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms   
 Note: The configured signing algorithm must be compatible with the configured signing key  
-Default value: `RS256`  
+Default value: `RS256`
 
 Variable: `VERIFIER_JAR_SIGNING_KEY`  
 Description: Key to use for Authorization Request signing  
 Possible values: `GenerateRandom`, `LoadFromKeystore`  
 Setting this value to `GenerateRandom` will result in the generation of a random `RSA` key   
 Note: The configured signing key must be compatible with the configured signing algorithm  
-Default value: `GenerateRandom`  
+Default value: `GenerateRandom`
 
 Variable: `VERIFIER_PUBLIC_URL`  
 Description: Public URL of the Verifier Endpoint application  
@@ -103,28 +325,28 @@ Default value: `http://localhost:${SERVER_PORT}`
 Variable: `VERIFIER_REQUEST_JWT_EMBED`  
 Description: How Authorization Requests will be provided    
 Possible values: `ByValue`, `ByReference`  
-Default value: `ByReference`  
+Default value: `ByReference`
 
 Variable: `VERIFIER_JWK_EMBED`  
 Description: How the Ephemeral Keys used for Authorization Response Encryption will be provided in Authorization Requests    
 Possible values: `ByValue`, `ByReference`  
-Default value: `ByReference`  
+Default value: `ByReference`
 
 Variable: `VERIFIER_PRESENTATION_DEFINITION_EMBED`  
 Description: How Presentation Definitions will be provided in Authorization Requests    
 Possible values: `ByValue`, `ByReference`  
-Default value: `ByValue`  
+Default value: `ByValue`
 
 Variable: `VERIFIER_RESPONSE_MODE`  
 Description: How Authorization Responses are expected    
 Possible values: `DirectPost`, `DirectPostJwt`  
-Default value: `DirectPostJwt`  
+Default value: `DirectPostJwt`
 
 Variable: `VERIFIER_MAX_AGE`  
 Description: TTL of an Authorization Request  
 Notes: Provide a value using Java Duration syntax  
 Example: `PT6400M`  
-Default value: `PT6400M`  
+Default value: `PT6400M`
 
 Variable: `VERIFIER_CLIENT_METADATA_AUTHORIZATION_SIGNED_RESPONSE_ALG`  
 Description: Accept only Authorization Responses that are _signed_ using this algorithm  
@@ -135,25 +357,25 @@ Variable: `VERIFIER_CLIENT_METADATA_AUTHORIZATION_ENCRYPTED_RESPONSE_ALG`
 Description: Accept only Authorization Responses that are _encrypted_ using this algorithm  
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric encryption algorithm (i.e. Usage is `alg`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms  
-Default value: `ECDH-ES`  
+Default value: `ECDH-ES`
 
 Variable: `VERIFIER_CLIENT_METADATA_AUTHORIZATION_ENCRYPTED_RESPONSE_ENC`  
 Description: Accept only Authorization Responses that are _encrypted_ using this method  
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric encryption method (i.e. Usage is `enc`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms    
-Default value: `A128CBC-HS256`  
+Default value: `A128CBC-HS256`
 
 Variable: `CORS_ORIGINS`  
 Description: Comma separated list of allowed Origins for cross-origin requests  
-Default value: `*`  
+Default value: `*`
 
 Variable: `CORS_ORIGIN_PATTERNS`  
 Description: Comma separated list of patterns used for more fine grained matching of allowed Origins for cross-origin requests  
-Default value: `*`  
+Default value: `*`
 
 Variable: `CORS_METHODS`  
 Description: Comma separated list of HTTP methods allowed for cross-origin requests  
-Default value: `*`  
+Default value: `*`
 
 Variable: `CORS_HEADERS`  
 Description: Comma separated list of allowed and exposed HTTP Headers for cross-origin requests  
@@ -161,11 +383,11 @@ Default value: `*`
 
 Variable: `CORS_CREDENTIALS`  
 Description: Whether credentials (i.e. Cookies or Authorization Header) are allowed for cross-origin requests
-Default value: `false`  
+Default value: `false`
 
 Variable: `CORS_MAX_AGE`  
 Description: Time in seconds of how long pre-flight request responses can be cached by clients  
-Default value: `3600`  
+Default value: `3600`
 
 ### When `VERIFIER_JAR_SIGNING_KEY` is set to `LoadFromKeystore` the following environment variables must also be configured.
 
@@ -186,52 +408,6 @@ Description: Alias of the Key to use for JAR signing, in the configured Keystore
 Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
 Description: Password of the Key to use for JAR signing, in the configured Keystore
 
-## API
-
-
-## Examples
-
-### Requesting a vp_token (same device)
-
-
-```mermaid
-zenuml
-    title Request
-    UA as "User Agent"
-    V as Verifier
-    W as Wallet
-    VE as "Verifier Endpoint"
-    UA->V: Trigger presentation 
-    V->VE."[1]    Initiate transaction"  {
-        @return
-        VE->V: Authorization request as request_url
-    }
-    V->UA: Render request as deep link
-    UA->W: Trigger wallet and pass request 
-    W->VE."[2] Get authorization request via request_uri" {
-        @return
-        VE->W: authorization_request
-    }
-    W->W: Parse authorization request
-    W->VE."[3] Get presentation definition" {
-        @return
-        VE->W: presentation_definition
-    } 
-    W->W: Prepare response     
-    W->VE."[4] Post vp_token response" {
-        VE->VE: Validate response and prepare response_code
-        @return
-        VE->W: Return redirect_uri with response_code 
-    }
-    W->UA: Refresh user agent to follow redirect_uri
-    UA->V: Follow redirect_uri passing response_code
-    V->VE."[5] Get wallet response passing response_code" {
-        VE->VE: Validate response_code matches wallet response
-        @return
-        VE->V: Return wallet response
-    }
-    V->UA: Render wallet response 
-```
 
 ## How to contribute
 
