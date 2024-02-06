@@ -8,10 +8,10 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 ## Table of contents
 
 * [Overview](#overview)
-* [Disclaimer](#disclaimer) 
+* [Disclaimer](#disclaimer)
+* [Presentation Flows](#presentation-flows)
 * [How to use](#how-to-use)
 * [Endpoints](#endpoints)
-* [Presentation Flows](#presentation-flows)
 * [Configuration](#configuration)
 * [How to contribute](#how-to-contribute)
 * [License](#license)
@@ -61,12 +61,98 @@ The released software is a initial development release version:
 ./gradlew bootRun
 ```
 
+## Presentation Flows
+
+### Same device
+
+```mermaid
+sequenceDiagram    
+    participant UA as User Agent
+    participant W as Wallet
+    participant V as Verifier
+    participant VE as Verifier Endpoint
+    UA->>V: Trigger presentation 
+    
+    V->>+VE: [1]    Initiate transaction
+    VE-->>-V: Authorization request as request_url
+    
+    V->>UA: Render request as deep link
+    UA->>W: Trigger wallet and pass request
+    
+    W->>+VE: [2] Get authorization request via request_uri 
+    VE-->>-W: authorization_request
+    
+    W->>W: Parse authorization request
+    
+    W->>+VE: [3] Get presentation definition 
+    VE-->>-W: presentation_definition
+    
+    W->>W: Prepare response     
+    
+    W->>+VE: [4] Post vp_token response 
+    VE->>VE: Validate response and prepare response_code
+    VE-->>-W: Return redirect_uri with response_code
+    
+    W->>UA: Refresh user agent to follow redirect_uri
+    UA->>V: Follow redirect_uri passing response_code
+    
+    V->>+VE: [5] Get wallet response passing response_code 
+    VE->>VE: Validate response_code matches wallet response
+    VE-->>-V: Return wallet response
+    
+    V->>UA: Render wallet response 
+```
+
+### Cross device
+
+```mermaid
+sequenceDiagram    
+    participant UA as User Agent
+    participant W as Wallet
+    participant V as Verifier
+    participant VE as Verifier Endpoint
+    UA->>V: Trigger presentation 
+    
+    V->>+VE: [1]    Initiate transaction
+    VE-->>-V: Authorization request as request_url
+    
+    V->>UA: Render request as QR Code
+
+    loop
+    V->>+VE: Get wallet response
+    VE-->>-V: Return wallet response
+    Note over V,VE: Verifier starts polling Verifier Endpoint for Wallet Response
+    end
+
+    UA->>W: Scan QR Code, trigger wallet, and pass request
+    
+    W->>+VE: [2] Get authorization request via request_uri 
+    VE-->>-W: authorization_request
+    
+    W->>W: Parse authorization request
+    
+    W->>+VE: [3] Get presentation definition 
+    VE-->>-W: presentation_definition
+    
+    W->>W: Prepare response     
+    
+    W->>+VE: [4] Post vp_token response 
+    VE->>VE: Validate response
+
+    loop
+    V->>+VE: Get wallet response
+    VE-->>-V: Return wallet response
+    end
+    
+    V->>UA: Render wallet response
+```
 ## Endpoints
 
 ### Initialize transaction endpoint
 
 - _Method_: POST
 - _URL_: http://localhost:8080/ui/presentations
+- _Actor_: [Verifier](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/VerifierApi.kt)
 
 An endpoint to control the content of the authorization request that will be prepared from the verifier backend service. Payload of this request is a json object with the following acceptable attributes:
 - `type`: The type of the response to the authorization request. Allowed values are one of: `id_token`, `vp_token` or `vp_token id_token`.
@@ -139,6 +225,7 @@ curl -X POST -H "Content-type: application/json" -d '{
 - _URL_: http://localhost:8080/wallet/request.jwt/{transactionId}
 - _Parameters_
   - `transactionId`: The initialized transaction's identifier
+- _Actor_: [Wallet](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
 
 An endpoint to be used by wallet when the OpenId4VP authorization request is passed to wallet by reference as a request_uri. 
 The identifier returned from calling [Initialize transaction endpoint](#initialize-transaction-endpoint) end-point should be used to identify the request.  
@@ -155,6 +242,7 @@ curl https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxw
 - _URL_: http://localhost:8080/wallet/pd/{transactionId}
 - _Parameters_
     - `transactionId`: The initialized transaction's identifier
+- _Actor_: [Wallet](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
 
 An endpoint to be used by wallet when the presentation definition of the OpenId4VP authorization request is not embedded inline in the request but by reference as a `presentation_definition_uri`.
 
@@ -169,6 +257,7 @@ curl https://localhost:8080/wallet/pd/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnG
 
 - _Method_: POST
 - _URL_: http://localhost:8080/wallet/direct_post
+- _Actor_: [Wallet](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
 
 An endpoint available to wallet to post its response. Based on the `response_mode` of the OpenId4VP authorization request this endpoint can 
 accept 2 type of payloads:
@@ -230,58 +319,13 @@ HTTP/1.1 200 OK
 - Parameters
   - `transactionId`: The initialized transaction's identifier
   - `responseCode`: (OPTIONAL) Response code generated in case of 'same device' case 
+- _Actor_: [Verifier](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/VerifierApi.kt)
 
 ```bash
 curl http://localhost:8080/ui/presentations/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw?response_code=5272d373-ebab-40ec-b44d-0a9909d0da69
 ```
 
 **Returns:** The wallet submitted response as JSON.
-
-## Presentation Flows
-
-### Same device
-
-```mermaid
-sequenceDiagram    
-    participant UA as User Agent
-    participant W as Wallet
-    participant V as Verifier
-    participant VE as Verifier Endpoint
-    UA->>V: Trigger presentation 
-    
-    V->>+VE: [1]    Initiate transaction
-    VE-->>-V: Authorization request as request_url
-    
-    V->>UA: Render request as deep link
-    UA->>W: Trigger wallet and pass request
-    
-    W->>+VE: [2] Get authorization request via request_uri 
-    VE-->>-W: authorization_request
-    
-    W->>W: Parse authorization request
-    
-    W->>+VE: [3] Get presentation definition 
-    VE-->>-W: presentation_definition
-    
-    W->>W: Prepare response     
-    
-    W->>+VE: [4] Post vp_token response 
-    VE->>VE: Validate response and prepare response_code
-    VE-->>-W: Return redirect_uri with response_code
-    
-    W->>UA: Refresh user agent to follow redirect_uri
-    UA->>V: Follow redirect_uri passing response_code
-    
-    V->>+VE: [5] Get wallet response passing response_code 
-    VE->>VE: Validate response_code matches wallet response
-    VE-->>-V: Return wallet response
-    
-    V->UA: Render wallet response 
-```
-
-### Cross device
-
-TBD
 
 ## Configuration
 
