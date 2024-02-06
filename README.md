@@ -73,30 +73,30 @@ sequenceDiagram
     participant VE as Verifier Endpoint
     UA->>V: Trigger presentation 
     
-    V->>+VE: [1]    Initiate transaction
+    V->>+VE: Initiate transaction
     VE-->>-V: Authorization request as request_url
     
     V->>UA: Render request as deep link
     UA->>W: Trigger wallet and pass request
     
-    W->>+VE: [2] Get authorization request via request_uri 
+    W->>+VE: Get authorization request via request_uri 
     VE-->>-W: authorization_request
     
     W->>W: Parse authorization request
     
-    W->>+VE: [3] Get presentation definition 
+    W->>+VE: Get presentation definition 
     VE-->>-W: presentation_definition
     
     W->>W: Prepare response     
     
-    W->>+VE: [4] Post vp_token response 
+    W->>+VE: Post vp_token response 
     VE->>VE: Validate response and prepare response_code
     VE-->>-W: Return redirect_uri with response_code
     
     W->>UA: Refresh user agent to follow redirect_uri
     UA->>V: Follow redirect_uri passing response_code
     
-    V->>+VE: [5] Get wallet response passing response_code 
+    V->>+VE: Get wallet response passing response_code 
     VE->>VE: Validate response_code matches wallet response
     VE-->>-V: Return wallet response
     
@@ -113,7 +113,7 @@ sequenceDiagram
     participant VE as Verifier Endpoint
     UA->>V: Trigger presentation 
     
-    V->>+VE: [1]    Initiate transaction
+    V->>+VE:  Initiate transaction
     VE-->>-V: Authorization request as request_url
     
     V->>UA: Render request as QR Code
@@ -126,17 +126,17 @@ sequenceDiagram
 
     UA->>W: Scan QR Code, trigger wallet, and pass request
     
-    W->>+VE: [2] Get authorization request via request_uri 
+    W->>+VE: Get authorization request via request_uri 
     VE-->>-W: authorization_request
     
     W->>W: Parse authorization request
     
-    W->>+VE: [3] Get presentation definition 
+    W->>+VE: Get presentation definition 
     VE-->>-W: presentation_definition
     
     W->>W: Prepare response     
     
-    W->>+VE: [4] Post vp_token response 
+    W->>+VE: Post vp_token response 
     VE->>VE: Validate response
 
     loop
