@@ -13,6 +13,8 @@ presentationExchange = "0.2.0-SNAPSHOT"
 ktlintVersion = "0.50.0"
 bouncyCastle = "1.77"
 arrow = "1.2.1"
+sonarqube = "4.4.1.3373"
+dependencycheck = "9.0.9"
 
 
 [libraries]
@@ -33,4 +35,6 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-plugin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
 kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "dependencycheck" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
 
