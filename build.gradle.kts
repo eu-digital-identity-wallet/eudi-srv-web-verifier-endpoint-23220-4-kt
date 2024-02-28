@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.kotlin.plugin.spring)
     alias(libs.plugins.kotlin.plugin.serialization)
     alias(libs.plugins.spotless)
+    jacoco
 }
 
 repositories {
@@ -61,12 +62,30 @@ tasks.withType<KotlinCompile>().configureEach {
     }
 }
 
+tasks.test {
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+
+    reports {
+        xml.required = true
+        csv.required = true
+        html.required = true
+    }
+}
+
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
         }
     }
+}
+
+jacoco {
+    toolVersion = libs.versions.jacoco.get()
 }
 
 springBoot {
