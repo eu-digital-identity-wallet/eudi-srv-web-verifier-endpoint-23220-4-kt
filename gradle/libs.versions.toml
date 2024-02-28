@@ -15,6 +15,7 @@ bouncyCastle = "1.77"
 arrow = "1.2.1"
 sonarqube = "4.4.1.3373"
 dependencycheck = "9.0.9"
+jacoco = "0.8.11"
 
 
 [libraries]
