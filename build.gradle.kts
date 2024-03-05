@@ -15,7 +15,6 @@ plugins {
     alias(libs.plugins.sonarqube)
     alias(libs.plugins.dependencycheck)
     jacoco
-
 }
 
 repositories {
