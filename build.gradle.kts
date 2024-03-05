@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.owasp.dependencycheck.gradle.extension.DependencyCheckExtension
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 import kotlin.jvm.optionals.getOrNull
 
@@ -11,7 +12,10 @@ plugins {
     alias(libs.plugins.kotlin.plugin.spring)
     alias(libs.plugins.kotlin.plugin.serialization)
     alias(libs.plugins.spotless)
+    alias(libs.plugins.sonarqube)
+    alias(libs.plugins.dependencycheck)
     jacoco
+
 }
 
 repositories {
@@ -129,4 +133,11 @@ fun getVersionFromCatalog(lookup: String): String {
         .getOrNull()
         ?.requiredVersion
         ?: throw GradleException("Version '$lookup' is not specified in the version catalog")
+}
+
+val nvdApiKey: String? = System.getenv("NVD_API_KEY") ?: properties["nvdApiKey"]?.toString()
+val dependencyCheckExtension = extensions.findByType(DependencyCheckExtension::class.java)
+dependencyCheckExtension?.apply {
+    formats = mutableListOf("XML", "HTML")
+    nvd.apiKey = nvdApiKey ?: ""
 }
