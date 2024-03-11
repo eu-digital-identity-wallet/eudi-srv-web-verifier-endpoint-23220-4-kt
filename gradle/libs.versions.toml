@@ -1,5 +1,5 @@
 [versions]
-coroutines = "1.7.3"
+coroutines = "1.8.0"
 dokka = "1.9.10"
 kotlin = "1.9.22"
 foojay = "0.8.0"
