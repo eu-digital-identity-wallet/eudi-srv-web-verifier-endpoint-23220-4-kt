@@ -15,14 +15,16 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import arrow.core.*
+import arrow.core.NonEmptyList
+import arrow.core.recover
+import arrow.core.some
+import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.nimbusds.jose.util.Base64
-import com.nimbusds.jose.util.X509CertUtils
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
@@ -212,7 +214,11 @@ private fun jarSigningConfig(environment: Environment, clock: Clock): SigningCon
                     .some()
                     .filter { it.exists() }
                     .recover {
-                        log.warn("Could not find Keystore at '{}'. Fallback to '{}'", keystoreLocation, keystoreDefaultLocation)
+                        log.warn(
+                            "Could not find Keystore at '{}'. Fallback to '{}'",
+                            keystoreLocation,
+                            keystoreDefaultLocation,
+                        )
                         FileSystemResource(keystoreDefaultLocation)
                             .some()
                             .filter { it.exists() }
@@ -352,12 +358,6 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
 private fun Environment.publicUrl(): String = getProperty("verifier.publicUrl", "http://localhost:8080")
 
 /**
- * Converts this [X509Certificate] list to a [Base64] PEM encoded list.
- */
-private fun List<X509Certificate>.toBase64PEMEncoded(): List<Base64> =
-    this.map { X509CertUtils.toPEMString(it) }.map { Base64.encode(it) }
-
-/**
  * Creates a copy of this [JWK] and sets the provided [X509Certificate] certificate chain.
  * For the operation to succeed, the following must hold true:
  * 1. [chain] cannot be empty
@@ -370,7 +370,7 @@ private fun JWK.withCertificateChain(chain: List<X509Certificate>): JWK {
         this.parsedX509CertChain.first() == chain.first(),
     ) { "leaf certificate of provided chain does not match leaf certificate of jwk" }
 
-    val encodedChain = chain.toBase64PEMEncoded()
+    val encodedChain = chain.map { Base64.encode(it.encoded) }
     return when (this) {
         is RSAKey -> RSAKey.Builder(this).x509CertChain(encodedChain).build()
         is ECKey -> ECKey.Builder(this).x509CertChain(encodedChain).build()

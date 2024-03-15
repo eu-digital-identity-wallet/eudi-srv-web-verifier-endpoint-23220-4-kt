@@ -19,8 +19,7 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.RSASSAVerifier
-import com.nimbusds.jose.jwk.KeyUse
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import com.nimbusds.jose.jwk.RSAKey
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
@@ -40,7 +39,9 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.annotation.AliasFor
+import org.springframework.core.io.ClassPathResource
 import org.springframework.test.context.ContextConfiguration
+import java.security.KeyStore
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -55,11 +56,14 @@ object TestContext {
     private val generatedTransactionId = GenerateTransactionId.fixed(testTransactionId)
     val testRequestId = RequestId("SampleRequestId")
     private val generateRequestId = GenerateRequestId.fixed(testRequestId)
-    private val rsaJwk = RSAKeyGenerator(2048)
-        .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
-        .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-        .issueTime(Date()) // issued-at timestamp (optional)
-        .generate()
+    private val rsaJwk = run {
+        ClassPathResource("test-cert.jks").inputStream.use {
+            val keystore = KeyStore.getInstance("JKS").apply {
+                load(it, "".toCharArray())
+            }
+            RSAKey.load(keystore, "client-id", "".toCharArray())
+        }
+    }
     val clientMetaData = ClientMetaData(
         jwkOption = ByValue,
         idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
@@ -69,7 +73,7 @@ object TestContext {
         jarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, "A256GCM")!!,
     )
     val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
-    val clientIdScheme = ClientIdScheme.PreRegistered("client-id", jarSigningConfig)
+    val clientIdScheme = ClientIdScheme.X509SanDns("client-id", jarSigningConfig)
     val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus()
     val singRequestObjectVerifier = RSASSAVerifier(rsaJwk)
     private val repo = PresentationInMemoryRepo()

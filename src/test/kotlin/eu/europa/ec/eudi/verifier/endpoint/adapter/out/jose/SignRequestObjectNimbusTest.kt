@@ -17,11 +17,14 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWEAlgorithm
+import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
+import com.nimbusds.jose.util.X509CertUtils
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
@@ -34,10 +37,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import net.minidev.json.JSONObject
 import java.net.URL
 import java.util.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class SignRequestObjectNimbusTest {
 
@@ -73,7 +73,9 @@ class SignRequestObjectNimbusTest {
         val jwt = signRequestObject.sign(RequestId("r"), clientMetaData, ecPublicKey, requestObject)
             .getOrThrow()
             .also { println(it) }
-        val claimSet = decode(jwt).getOrThrow().also { println(it) }
+        val signedJwt = decode(jwt).getOrThrow().also { println(it) }
+        assertX5cHeaderClaimDoesNotContainPEM(signedJwt.header)
+        val claimSet = signedJwt.jwtClaimsSet
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)
 
         if (clientMetaData.jwkOption == EmbedOption.ByValue) {
@@ -84,11 +86,11 @@ class SignRequestObjectNimbusTest {
         }
     }
 
-    private fun decode(jwt: String): Result<JWTClaimsSet> {
+    private fun decode(jwt: String): Result<SignedJWT> {
         return runCatching {
             val signedJWT = SignedJWT.parse(jwt)
             signedJWT.verify(verifier)
-            signedJWT.jwtClaimsSet
+            signedJWT
         }
     }
 
@@ -104,6 +106,17 @@ class SignRequestObjectNimbusTest {
         assertEquals(r.responseMode, c.getStringClaim("response_mode"))
         assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim("response_uri"))
         assertEquals(r.state, c.getStringClaim("state"))
+    }
+
+    private fun assertX5cHeaderClaimDoesNotContainPEM(header: JWSHeader) {
+        val chain = assertNotNull(header.x509CertChain?.toNonEmptyListOrNull())
+        chain.forEach {
+            // Ensure it is not a base64 encoded PEM
+            assertNull(X509CertUtils.parse(it.decodeToString()))
+
+            // Ensure it is a base64 encoded DER
+            assertNotNull(X509CertUtils.parse(it.decode()))
+        }
     }
 
     private fun assertEquals(pd: PresentationDefinition?, c: MutableMap<String, Any?>?) {
