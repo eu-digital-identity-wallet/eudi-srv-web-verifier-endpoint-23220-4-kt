@@ -1,6 +1,5 @@
 [versions]
 coroutines = "1.8.0"
-dokka = "1.9.10"
 kotlin = "1.9.23"
 foojay = "0.8.0"
 springboot = "3.2.3"
@@ -29,7 +28,6 @@ arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref 
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
-dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 spring-boot = { id = "org.springframework.boot", version.ref = "springboot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
