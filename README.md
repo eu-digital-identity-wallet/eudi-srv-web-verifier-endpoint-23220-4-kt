@@ -175,32 +175,24 @@ curl -X POST -H "Content-type: application/json" -d '{
                 "constraints": {
                     "fields": [
                         {
-                            "filter": {
-                                "const": "eu.europa.ec.eudiw.pid.1",
-                                "type": "string"
-                            },
-                            "path": [
-                                "$.mdoc.doctype"
-                            ]
-                        },
-                        {
-                            "filter": {
-                                "const": "eu.europa.ec.eudiw.pid.1",
-                                "type": "string"
-                            },
-                            "path": [
-                                "$.mdoc.namespace"
-                            ]
-                        },
-                        {
                             "intent_to_retain": false,
                             "path": [
-                                "$.mdoc.family_name"
+                                "$['eu.europa.ec.eudiw.pid.1']['family_name']"
                             ]
                         }
                     ]
                 },
-                "id": "eudi_pid",
+                "id": "eu.europa.ec.eudiw.pid.1",
+                "format": {
+                  "mso_mdoc": {
+                    "alg": [
+                      "ES256",
+                      "ES384",
+                      "ES512",
+                      "EdDSA"
+                    ]
+                  }
+                }
                 "name": "EUDI PID",
                 "purpose": "We need to verify your identity"
             }
