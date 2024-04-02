@@ -12,7 +12,7 @@ presentationExchange = "0.3.0"
 ktlintVersion = "0.50.0"
 bouncyCastle = "1.77"
 arrow = "1.2.3"
-sonarqube = "4.4.1.3373"
+sonarqube = "5.0.0.4638"
 dependencycheck = "9.0.10"
 jacoco = "0.8.11"
 
