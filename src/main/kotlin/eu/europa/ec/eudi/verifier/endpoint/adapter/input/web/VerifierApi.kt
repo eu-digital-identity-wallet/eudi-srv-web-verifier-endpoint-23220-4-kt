@@ -49,7 +49,7 @@ class VerifierApi(
         val input = req.awaitBody<InitTransactionTO>()
         logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
         either { initTransaction(input) }.fold(
-            ifRight = { it ->
+            ifRight = {
                 logger.info("Initiated transaction ${it.transactionId}")
                 ok().json().bodyValueAndAwait(it)
             },

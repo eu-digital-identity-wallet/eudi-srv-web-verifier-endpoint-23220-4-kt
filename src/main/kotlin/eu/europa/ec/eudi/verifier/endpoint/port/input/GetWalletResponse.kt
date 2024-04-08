@@ -55,17 +55,17 @@ private fun WalletResponse.toTO(): WalletResponseTO {
 }
 
 /**
- * Given a [PresentationId] and a [Nonce] returns the [WalletResponse]
+ * Given a [TransactionId] and a [Nonce] returns the [WalletResponse]
  */
-interface GetWalletResponse {
-    suspend operator fun invoke(presentationId: TransactionId, responseCode: ResponseCode?): QueryResponse<WalletResponseTO>
+fun interface GetWalletResponse {
+    suspend operator fun invoke(transactionId: TransactionId, responseCode: ResponseCode?): QueryResponse<WalletResponseTO>
 }
 
 class GetWalletResponseLive(
     private val loadPresentationById: LoadPresentationById,
 ) : GetWalletResponse {
-    override suspend fun invoke(presentationId: TransactionId, responseCode: ResponseCode?): QueryResponse<WalletResponseTO> {
-        return when (val presentation = loadPresentationById(presentationId)) {
+    override suspend fun invoke(transactionId: TransactionId, responseCode: ResponseCode?): QueryResponse<WalletResponseTO> {
+        return when (val presentation = loadPresentationById(transactionId)) {
             null -> NotFound
             is Presentation.Submitted ->
                 when {
