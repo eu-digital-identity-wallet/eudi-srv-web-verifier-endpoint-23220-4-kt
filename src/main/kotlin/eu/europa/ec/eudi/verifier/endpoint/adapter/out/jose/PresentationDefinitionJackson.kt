@@ -23,7 +23,7 @@ import eu.europa.ec.eudi.prex.PresentationExchange
 /**
  * Nimbus library depends on Jackson for JSON parsing
  * On the other hand, [PresentationDefinition] depends on [PresentationExchange.jsonParser]
- * which is based on Kotlinx Serialization library.
+ * which is based on the Kotlinx Serialization library.
  *
  * This class offers two util methods for [mapping][PresentationDefinitionJackson.toJsonObject]
  * a [PresentationDefinition] to a jackson compatible object
@@ -38,7 +38,7 @@ object PresentationDefinitionJackson {
         return objectMapper.readValue<Any>(jsonStr)
     }
 
-    fun fromJsonObject(o: MutableMap<String, Any?>): Result<PresentationDefinition> = runCatching {
+    fun fromJsonObject(o: Map<String, Any?>): Result<PresentationDefinition> = runCatching {
         val jsonStr = objectMapper.writeValueAsString(o)
         PresentationExchange.jsonParser.decodePresentationDefinition(jsonStr).getOrThrow()
     }
