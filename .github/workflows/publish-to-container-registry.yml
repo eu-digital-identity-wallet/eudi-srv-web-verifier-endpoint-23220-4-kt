@@ -30,7 +30,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v2
+        uses: gradle/wrapper-validation-action@v3
 
       # login to github packages
       # ref: https://docs.docker.com/build/ci/github-actions/push-multi-registries/
@@ -57,7 +57,7 @@ jobs:
       - name: Debug
         run: echo ${{ steps.meta.outputs }}
       - name: Build and publish with Gradle Wrapper
-        uses: gradle/gradle-build-action@v3.2.1
+        uses: gradle/gradle-build-action@v3.3.0
         if: github.event_name != 'pull_request'
         env:
           BP_OCI_CREATED: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
