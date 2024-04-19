@@ -57,7 +57,7 @@ jobs:
       - name: Debug
         run: echo ${{ steps.meta.outputs }}
       - name: Build and publish with Gradle Wrapper
-        uses: gradle/gradle-build-action@v3.3.0
+        uses: gradle/gradle-build-action@v3.3.1
         if: github.event_name != 'pull_request'
         env:
           BP_OCI_CREATED: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
