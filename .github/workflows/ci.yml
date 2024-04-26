@@ -22,7 +22,7 @@ jobs:
       - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v3
       - name: Build with Gradle Wrapper
-        uses: gradle/gradle-build-action@v3.3.0
+        uses: gradle/actions/setup-gradle@v3
         with:
           arguments: build --full-stacktrace
 
