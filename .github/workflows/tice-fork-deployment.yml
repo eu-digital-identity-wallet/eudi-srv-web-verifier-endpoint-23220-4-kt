@@ -1,0 +1,53 @@
+name: TICE-Fork-Deployment
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+    inputs:
+      staging:
+        description: 'Production? (otherwise staging)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: 'deployment'
+  cancel-in-progress: true
+
+jobs:
+  verification:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: 'Deploy using SSH'
+    runs-on: ubuntu-latest
+    needs: [verification]
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_KEY" > ~/.ssh/sshkey.key
+          chmod 600 ~/.ssh/sshkey.key
+          cat >>~/.ssh/config <<END
+          Host sshhost
+            HostName $SSH_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/sshkey.key
+            StrictHostKeyChecking no
+          END
+        env:
+          SSH_USER: ${{ inputs.production == true && secrets.PRODUCTION_SSH_USER || secrets.STAGING_SSH_USER }}
+          SSH_KEY: ${{ inputs.production == true && secrets.PRODUCTION_SSH_KEY || secrets.STAGING_SSH_KEY }}
+          SSH_HOST: ${{ inputs.production == true && secrets.PRODUCTION_SSH_HOST || secrets.STAGING_SSH_HOST }}
+
+      - name: Run deploy commands on remote server
+        run: |
+          ssh sshhost << EOF
+            cd ${{ inputs.production == true && 'VerifierServer-production' || 'VerifierServer-staging' }}
+            git fetch
+            git checkout main
+            git pull
+            docker compose up -d --no-deps --force-recreate --wait --wait-timeout 100 backend
+          EOF
+
+      - name: Clean up disk space if necessary
+        run: ssh sshhost 'df . | awk "NR==2{if(\$4<=20*1024*1024) { system(\"docker system prune -f\") } else { system(\"echo \\\"Enough space left. No need to prune docker.\\\"\") } }"'

@@ -2,7 +2,9 @@ name: CI
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-  push:
+# deactivate on push because we run this workflow from tice-fork-deployment workflow
+#  push:
+  workflow_call:
 
 permissions:
   contents: read
