@@ -34,6 +34,7 @@ class VerifierApi(
     private val getWalletResponse: GetWalletResponse,
 ) {
 
+// TODO: test
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
     val route = coRouter {
 
