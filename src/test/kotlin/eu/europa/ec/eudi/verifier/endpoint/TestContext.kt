@@ -26,8 +26,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNim
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
-import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObject
-import eu.europa.ec.eudi.verifier.endpoint.port.input.GetRequestObjectLive
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -43,15 +41,13 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.test.context.ContextConfiguration
 import java.security.KeyStore
 import java.time.Clock
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import java.util.*
 import kotlin.reflect.KClass
 
 object TestContext {
     private val testDate = LocalDate.of(1974, 11, 2).atTime(10, 5, 33)
-    val testClock = Clock.fixed(testDate.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
+    val testClock: Clock = Clock.fixed(testDate.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
     val testTransactionId = TransactionId("SampleTxId")
     private val generatedTransactionId = GenerateTransactionId.fixed(testTransactionId)
     val testRequestId = RequestId("SampleRequestId")
@@ -72,15 +68,14 @@ object TestContext {
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
         jarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, "A256GCM")!!,
     )
-    val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
+    private val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
     val clientIdScheme = ClientIdScheme.X509SanDns("client-id", jarSigningConfig)
     val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus()
     val singRequestObjectVerifier = RSASSAVerifier(rsaJwk)
     private val repo = PresentationInMemoryRepo()
     val loadPresentationById = repo.loadPresentationById
-    val loadPresentationByRequestId = repo.loadPresentationByRequestId
-    val storePresentation = repo.storePresentation
-    val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus
+    private val storePresentation = repo.storePresentation
+    private val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus
 
     fun initTransaction(
         verifierConfig: VerifierConfig,
@@ -99,19 +94,10 @@ object TestContext {
             presentationDefinitionByReference,
             CreateQueryWalletResponseRedirectUri.Simple,
         )
-
-    fun getRequestObject(verifierConfig: VerifierConfig, presentationInitiatedAt: Instant): GetRequestObject =
-        GetRequestObjectLive(
-            loadPresentationByRequestId,
-            storePresentation,
-            singRequestObject,
-            verifierConfig,
-            Clock.fixed(presentationInitiatedAt.plusSeconds(1 * 60), testClock.zone),
-        )
 }
 
 /**
- * Meta annotation to be used with integration tests of [PidIssuerApplication].
+ * Meta annotation to be used with integration tests of the applicaiton
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
