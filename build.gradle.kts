@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.owasp.dependencycheck.gradle.extension.DependencyCheckExtension
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 import kotlin.jvm.optionals.getOrNull
@@ -51,12 +50,11 @@ kotlin {
         val javaVersion = getVersionFromCatalog("java")
         languageVersion.set(JavaLanguageVersion.of(javaVersion))
     }
-}
 
-tasks.withType<KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs += "-Xcontext-receivers"
-        freeCompilerArgs += "-Xjsr305=strict"
+    compilerOptions {
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        freeCompilerArgs.add("-Xcontext-receivers")
+        freeCompilerArgs.add("-Xjsr305=strict")
     }
 }
 
