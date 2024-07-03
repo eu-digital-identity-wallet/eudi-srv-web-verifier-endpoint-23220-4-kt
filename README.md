@@ -10,7 +10,7 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 * [Overview](#overview)
 * [Disclaimer](#disclaimer)
 * [Presentation Flows](#presentation-flows)
-* [How to use](#how-to-use)
+* [How to build and run](#how-to-build-and-run)
 * [Run all verifier components together](#run-all-verifier-components-together)
 * [Endpoints](#endpoints)
 * [Configuration](#configuration)
@@ -58,7 +58,7 @@ The released software is a initial development release version:
 -  We strongly recommend to not put this version of the software into production use.
 -  Only the latest version of the software will be supported
 
-## How to use
+## How to build and run
 
 To start the service locally you can execute 
 ```bash
