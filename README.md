@@ -10,7 +10,8 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 * [Overview](#overview)
 * [Disclaimer](#disclaimer)
 * [Presentation Flows](#presentation-flows)
-* [How to use](#how-to-use)
+* [How to build and run](#how-to-build-and-run)
+* [Run all verifier components together](#run-all-verifier-components-together)
 * [Endpoints](#endpoints)
 * [Configuration](#configuration)
 * [How to contribute](#how-to-contribute)
@@ -19,8 +20,10 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
  
 ## Overview
 
-This is a Web application (Backend Restful service) that acts
-as a Verifier/RP trusted end-point.
+This is a Web application (Backend Restful service) that acts as a Verifier/RP trusted end-point. 
+This backend service is accompanied by a Web UI application implemented [here](https://github.com/eu-digital-identity-wallet/eudi-web-verifier). 
+
+See section [Run all verifier components together](#run-all-verifier-components-together) on how to boot both applications together.
 
 Application exposes two APIs
 * [Verifier API](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/VerifierApi.kt)
@@ -55,10 +58,75 @@ The released software is a initial development release version:
 -  We strongly recommend to not put this version of the software into production use.
 -  Only the latest version of the software will be supported
 
-## How to use
+## How to build and run
 
+To start the service locally you can execute 
 ```bash
 ./gradlew bootRun
+```
+To build a local docker image of the service execute
+```bash
+./gradlew bootBuildImage
+```
+
+## Run all verifier components together
+
+To start both verifier UI and verifier backend services together a docker compose file has been implemented that can be found [here](docker/docker-compose.yaml)
+Running the command below will start the following service:
+- verifier: The Verifier/RP trusted end-point 
+- verifier-ui: The Verifier's UI application
+- haproxy: A reverse proxy for SSL termination 
+  - To change the ssl certificate update [haproxy.pem](docker/haproxy.pem)  
+  - To reconfigure haproxy update file [haproxy.conf](docker/haproxy.conf)  
+
+To start the docker compose environment
+```bash
+# From project root directory 
+cd docker
+docker-compose up -d
+```
+To stop the docker compose environment
+```bash
+# From project root directory 
+cd docker
+docker-compose down
+```
+
+The 'verifier' service can be configured by setting its configuration properties described [here](#configuration) by setting them as environment 
+variables of the service in [docker-compose.yaml](docker/docker-compose.yaml)  
+
+**Example:**
+```yaml
+  verifier:
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt:latest
+    container_name: verifier-backend
+    ports:
+      - "8080:8080"
+    environment:
+      VERIFIER_PUBLICURL: "https://10.240.174.10"
+      VERIFIER_RESPONSE_MODE: "DirectPost"
+      VERIFIER_JAR_SIGNING_KEY_KEYSTORE: file:///keystore.jks
+```
+
+### Mount external keystore to be used with Authorization Request signing 
+When property `VERIFIER_JAR_SIGNING_KEY` is set to `LoadFromKeystore` the service can be configured (as described [here](#when-verifier_jar_signing_key-is-set-to-loadfromkeystore-the-following-environment-variables-must-also-be-configured))
+to read from a keystore the certificate used for signing authorization requests. 
+To provide an external keystore mount it to the path designated by the value of property `VERIFIER_JAR_SIGNING_KEY_KEYSTORE`.   
+
+**Example:**
+```yaml
+  verifier:
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt:latest
+    container_name: verifier-backend
+    ports:
+      - "8080:8080"
+    environment:
+      VERIFIER_PUBLICURL: "https://10.240.174.10"
+      VERIFIER_RESPONSE_MODE: "DirectPost"
+      VERIFIER_JAR_SIGNING_KEY_KEYSTORE: file:///certs/keystore.jks
+    volumes:
+      - <PATH OF KEYSTORE IN HOST MACHINE>/keystore.jks:/certs/keystore.jks
+      
 ```
 
 ## Presentation Flows
