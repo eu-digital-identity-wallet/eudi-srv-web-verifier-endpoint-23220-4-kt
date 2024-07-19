@@ -13,7 +13,7 @@ ktlintVersion = "0.50.0"
 bouncyCastle = "1.78.1"
 arrow = "1.2.4"
 sonarqube = "5.0.0.4638"
-dependencycheck = "9.2.0"
+dependencycheck = "10.0.3"
 jacoco = "0.8.11"
 
 
