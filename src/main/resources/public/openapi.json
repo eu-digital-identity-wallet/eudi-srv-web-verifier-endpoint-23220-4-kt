@@ -1,0 +1,721 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "EUDI Verifier Endpoint",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "..",
+      "description": "Current server"
+    }
+  ],
+  "paths": {
+    "/ui/presentations": {
+      "post": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Initialize a new Transaction",
+        "operationId": "initializeTransaction",
+        "requestBody": {
+          "description": "The details of the new Transaction to initialize.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitTransaction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitTransactionError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/ui/presentations/{transactionId}": {
+      "get": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Gets the response of a Transaction.",
+        "operationId": "getTransactionResponse",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PresentationId"
+            },
+            "allowEmptyValue": false,
+            "description": "The unique identifier of the Transaction."
+          },
+          {
+            "name": "response_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ResponseCode"
+            },
+            "allowEmptyValue": false,
+            "description": "Response code generated in case of 'same device' case."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Server error."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PresentationType": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "id_token",
+          "vp_token",
+          "vp_token id_token"
+        ]
+      },
+      "IdTokenType": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "subject_signed_id_token",
+          "attester_signed_id_token"
+        ]
+      },
+      "Nonce": {
+        "type": "string",
+        "nullable": false
+      },
+      "ResponseMode": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "direct_post",
+          "direct_post.jwt"
+        ]
+      },
+      "EmbedMode": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "by_value",
+          "by_reference"
+        ]
+      },
+      "UriTemplate": {
+        "type": "string",
+        "nullable": false,
+        "format": "uri"
+      },
+      "InitIdTokenTransaction": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "description": "The type of the response to the authorization request.",
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "id_token"
+            ]
+          },
+          "id_token_type": {
+            "allOf": [
+              {
+                "description": "Controls the type of 'id_token' that will be requested from the wallet."
+              },
+              {
+                "$ref": "#/components/schemas/IdTokenType"
+              }
+            ]
+          },
+          "nonce": {
+            "allOf": [
+              {
+                "description": "Nonce value to be included in the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/Nonce"
+              }
+            ]
+          },
+          "response_mode": {
+            "allOf": [
+              {
+                "description": "Controls the 'response_mode' attribute of the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/ResponseMode"
+              }
+            ]
+          },
+          "jar_mode": {
+            "allOf": [
+              {
+                "description": "Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if 'by_reference' a 'request_uri' url will be returned."
+              },
+              {
+                "$ref": "#/components/schemas/EmbedMode"
+              }
+            ]
+          },
+          "wallet_response_redirect_uri_template": {
+            "allOf": [
+              {
+                "description": "Template used to create a url the wallet must send the holder to, after completing the authorization request. The placeholder '{RESPONSE_CODE}' must be present, and is replace by a unique code generated by the Verifier Endpoint."
+              },
+              {
+                "$ref": "#/components/schemas/UriTemplate"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "id_token_type",
+          "nonce"
+        ],
+        "additionalProperties": false
+      },
+      "PresentationDefinition": {
+        "type": "object",
+        "nullable": false,
+        "additionalProperties": true
+      },
+      "InitVpTokenTransaction": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "description": "The type of the response to the authorization request.",
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "vp_token"
+            ]
+          },
+          "presentation_definition": {
+            "allOf": [
+              {
+                "description": "A json object that depicting the presentation definition to be included in the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/PresentationDefinition"
+              }
+            ]
+          },
+          "nonce": {
+            "allOf": [
+              {
+                "description": "Nonce value to be included in the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/Nonce"
+              }
+            ]
+          },
+          "response_mode": {
+            "allOf": [
+              {
+                "description": "Controls the 'response_mode' attribute of the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/ResponseMode"
+              }
+            ]
+          },
+          "jar_mode": {
+            "allOf": [
+              {
+                "description": "Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if 'by_reference' a 'request_uri' url will be returned."
+              },
+              {
+                "$ref": "#/components/schemas/EmbedMode"
+              }
+            ]
+          },
+          "presentation_definition_mode": {
+            "allOf": [
+              {
+                "description": "Controls how the presentation definition will be embedded in the request. If 'by_value' it will be embedded inline, if 'by_reference' a 'presentation_definition_uri' url will be embedded in the request."
+              },
+              {
+                "$ref": "#/components/schemas/EmbedMode"
+              }
+            ]
+          },
+          "wallet_response_redirect_uri_template": {
+            "allOf": [
+              {
+                "description": "Template used to create a url the wallet must send the holder to, after completing the authorization request. The placeholder '{RESPONSE_CODE}' must be present, and is replace by a unique code generated by the Verifier Endpoint."
+              },
+              {
+                "$ref": "#/components/schemas/UriTemplate"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "presentation_definition",
+          "nonce"
+        ],
+        "additionalProperties": false
+      },
+      "InitIdTokenAndVpTokenTransaction": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "description": "The type of the response to the authorization request.",
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "vp_token id_token"
+            ]
+          },
+          "id_token_type": {
+            "allOf": [
+              {
+                "description": "Controls the type of 'id_token' that will be requested from the wallet."
+              },
+              {
+                "$ref": "#/components/schemas/IdTokenType"
+              }
+            ]
+          },
+          "presentation_definition": {
+            "allOf": [
+              {
+                "description": "A json object that depicting the presentation definition to be included in the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/PresentationDefinition"
+              }
+            ]
+          },
+          "nonce": {
+            "allOf": [
+              {
+                "description": "Nonce value to be included in the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/Nonce"
+              }
+            ]
+          },
+          "response_mode": {
+            "allOf": [
+              {
+                "description": "Controls the 'response_mode' attribute of the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/ResponseMode"
+              }
+            ]
+          },
+          "jar_mode": {
+            "allOf": [
+              {
+                "description": "Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if 'by_reference' a 'request_uri' url will be returned."
+              },
+              {
+                "$ref": "#/components/schemas/EmbedMode"
+              }
+            ]
+          },
+          "presentation_definition_mode": {
+            "allOf": [
+              {
+                "description": "Controls how the presentation definition will be embedded in the request. If 'by_value' it will be embedded inline, if 'by_reference' a 'presentation_definition_uri' url will be embedded in the request."
+              },
+              {
+                "$ref": "#/components/schemas/EmbedMode"
+              }
+            ]
+          },
+          "wallet_response_redirect_uri_template": {
+            "allOf": [
+              {
+                "description": "Template used to create a url the wallet must send the holder to, after completing the authorization request. The placeholder '{RESPONSE_CODE}' must be present, and is replace by a unique code generated by the Verifier Endpoint."
+              },
+              {
+                "$ref": "#/components/schemas/UriTemplate"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "id_token_type",
+          "presentation_definition",
+          "nonce"
+        ],
+        "additionalProperties": false
+      },
+      "InitTransaction": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/InitIdTokenTransaction"
+          },
+          {
+            "$ref": "#/components/schemas/InitVpTokenTransaction"
+          },
+          {
+            "$ref": "#/components/schemas/InitIdTokenAndVpTokenTransaction"
+          }
+        ]
+      },
+      "PresentationId": {
+        "type": "string",
+        "nullable": false
+      },
+      "ClientId": {
+        "type": "string",
+        "nullable": false
+      },
+      "Request": {
+        "type": "string",
+        "nullable": false
+      },
+      "RequestUri": {
+        "type": "string",
+        "nullable": false,
+        "format": "uri"
+      },
+      "TransactionByValue": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "presentation_id": {
+            "allOf": [
+              {
+                "description": "The unique identifier of the newly initialized Transaction."
+              },
+              {
+                "$ref": "#/components/schemas/PresentationId"
+              }
+            ]
+          },
+          "client_id": {
+            "allOf": [
+              {
+                "description": "The identifier of this Verifier Endpoint."
+              },
+              {
+                "$ref": "#/components/schemas/ClientId"
+              }
+            ]
+          },
+          "request": {
+            "allOf": [
+              {
+                "description": "The generated authorization request, serialized as a json object."
+              },
+              {
+                "$ref": "#/components/schemas/Request"
+              }
+            ]
+          }
+        },
+        "required": [
+          "presentation_id",
+          "client_id",
+          "request"
+        ],
+        "additionalProperties": false
+      },
+      "TransactionByReference": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "presentation_id": {
+            "allOf": [
+              {
+                "description": "The unique identifier of the newly initialized Transaction."
+              },
+              {
+                "$ref": "#/components/schemas/PresentationId"
+              }
+            ]
+          },
+          "client_id": {
+            "allOf": [
+              {
+                "description": "The identifier of this Verifier Endpoint."
+              },
+              {
+                "$ref": "#/components/schemas/ClientId"
+              }
+            ]
+          },
+          "request_uri": {
+            "allOf": [
+              {
+                "description": "URI from which the wallet can fetch the generated authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/RequestUri"
+              }
+            ]
+          }
+        },
+        "required": [
+          "presentation_id",
+          "client_id",
+          "request_uri"
+        ],
+        "additionalProperties": false
+      },
+      "Transaction": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TransactionByValue"
+          },
+          {
+            "$ref": "#/components/schemas/TransactionByReference"
+          }
+        ]
+      },
+      "ValidationError": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "MissingPresentationDefinition",
+          "MissingNonce",
+          "InvalidWalletResponseTemplate"
+        ]
+      },
+      "InitTransactionError": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "error": {
+            "allOf": [
+              {
+                "description": "The validation error that prevented the initialization of the new Transaction."
+              },
+              {
+                "$ref": "#/components/schemas/ValidationError"
+              }
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "ResponseCode": {
+        "type": "string",
+        "nullable": false
+      },
+      "IdToken": {
+        "type": "string",
+        "nullable": false
+      },
+      "IdTokenTransactionResponse": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "id_token": {
+            "allOf": [
+              {
+                "description": "The ID Token provided by the Wallet."
+              },
+              {
+                "$ref": "#/components/schemas/IdToken"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id_token"
+        ],
+        "additionalProperties": false
+      },
+      "VpToken": {
+        "type": "string",
+        "nullable": false
+      },
+      "PresentationSubmission": {
+        "type": "object",
+        "nullable": false,
+        "additionalProperties": true
+      },
+      "VpTokenTransactionResponse": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "vp_token": {
+            "allOf": [
+              {
+                "description": "The VP Token provided by the Wallet."
+              },
+              {
+                "$ref": "#/components/schemas/VpToken"
+              }
+            ]
+          },
+          "presentation_submission": {
+            "allOf": [
+              {
+                "description": "The Verifiable Presentation providedy by the Wallet."
+              },
+              {
+                "$ref": "#/components/schemas/PresentationSubmission"
+              }
+            ]
+          }
+        },
+        "required": [
+          "vp_token",
+          "presentation_submission"
+        ],
+        "additionalProperties": false
+      },
+      "IdTokenAndVpTokenTransactionResponse": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "id_token": {
+            "allOf": [
+              {
+                "description": "The ID Token provided by the Wallet."
+              },
+              {
+                "$ref": "#/components/schemas/IdToken"
+              }
+            ]
+          },
+          "vp_token": {
+            "allOf": [
+              {
+                "description": "The VP Token provided by the Wallet."
+              },
+              {
+                "$ref": "#/components/schemas/VpToken"
+              }
+            ]
+          },
+          "presentation_submission": {
+            "allOf": [
+              {
+                "description": "The Verifiable Presentation providedy by the Wallet."
+              },
+              {
+                "$ref": "#/components/schemas/PresentationSubmission"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id_token",
+          "vp_token",
+          "presentation_submission"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "string",
+        "nullable": false
+      },
+      "ErrorDescription": {
+        "type": "string",
+        "nullable": false
+      },
+      "ErrorTransactionResponse": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "error": {
+            "allOf": [
+              {
+                "description": "The error that occurred."
+              },
+              {
+                "$ref": "#/components/schemas/Error"
+              }
+            ]
+          },
+          "error_description": {
+            "allOf": [
+              {
+                "description": "Short description of the error that occurred."
+              },
+              {
+                "$ref": "#/components/schemas/ErrorDescription"
+              }
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "TransactionResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/IdTokenTransactionResponse"
+          },
+          {
+            "$ref": "#/components/schemas/VpTokenTransactionResponse"
+          },
+          {
+            "$ref": "#/components/schemas/IdTokenAndVpTokenTransactionResponse"
+          },
+          {
+            "$ref": "#/components/schemas/ErrorTransactionResponse"
+          }
+        ]
+      }
+    }
+  }
+}
