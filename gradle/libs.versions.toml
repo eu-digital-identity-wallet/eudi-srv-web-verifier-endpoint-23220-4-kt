@@ -15,7 +15,7 @@ arrow = "1.2.4"
 sonarqube = "5.0.0.4638"
 dependencycheck = "10.0.3"
 jacoco = "0.8.11"
-
+swaggerUi = "5.17.14"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -25,6 +25,7 @@ presentation-exchange = { module = "eu.europa.ec.eudi:eudi-lib-jvm-presentation-
 bouncy-castle = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncyCastle" }
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
+swagger-ui = { module = "org.webjars:swagger-ui", version.ref = "swaggerUi" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }

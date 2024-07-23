@@ -1,0 +1,39 @@
+<!--/*@thymesVar id="publicResourcesBasePath" type="java.lang.String"*/-->
+<!--/*@thymesVar id="webJarResourcesBasePath" type="java.lang.String"*/-->
+
+<!DOCTYPE html>
+
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Swagger UI</title>
+    <link rel="stylesheet" type="text/css" th:href="@{${webJarResourcesBasePath} + '/swagger-ui/swagger-ui.css'}"/>
+    <link rel="icon" type="image/png" th:href="@{${webJarResourcesBasePath} + '/swagger-ui/favicon-32x32.png'}" sizes="32x32"/>
+    <link rel="icon" type="image/png" th:href="@{${webJarResourcesBasePath} + '/swagger-ui/favicon-16x16.png'}" sizes="16x16"/>
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script type="application/javascript" th:src="@{${webJarResourcesBasePath} + '/swagger-ui/swagger-ui-bundle.js'}" charset="UTF-8"></script>
+<script type="application/javascript" th:src="@{${webJarResourcesBasePath} + '/swagger-ui/swagger-ui-standalone-preset.js'}" charset="UTF-8"></script>
+<script type="application/javascript" th:inline="javascript" charset="UTF-8">
+    /*<![CDATA[*/
+    window.onload = function() {
+        window.ui = SwaggerUIBundle({
+            url: "[(@{${publicResourcesBasePath} + '/openapi.json'})]",
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+            ],
+            plugins: [
+                SwaggerUIBundle.plugins.DownloadUrl
+            ],
+            layout: "StandaloneLayout"
+        });
+    };
+    /*]]>*/
+</script>
+</body>
+</html>
