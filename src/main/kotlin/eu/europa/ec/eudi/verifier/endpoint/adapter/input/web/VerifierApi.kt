@@ -20,6 +20,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -27,11 +28,15 @@ import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.badRequest
 import org.springframework.web.reactive.function.server.ServerResponse.ok
+import java.time.Clock
 import kotlin.jvm.optionals.getOrNull
 
 class VerifierApi(
     private val initTransaction: InitTransaction,
     private val getWalletResponse: GetWalletResponse,
+    private val getPresentationEvents: GetPresentationEvents,
+    private val publishPresentationEvent: PublishPresentationEvent,
+    private val clock: Clock,
 ) {
 
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
@@ -43,6 +48,7 @@ class VerifierApi(
             this@VerifierApi::handleInitTransaction,
         )
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
+        GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
     }
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
@@ -78,9 +84,27 @@ class VerifierApi(
         }
     }
 
+    /**
+     * Handles a request placed by verifier, input order to obtain
+     * presentation logs
+     */
+    private suspend fun handleGetPresentationEvents(req: ServerRequest): ServerResponse {
+        suspend fun found(events: PresentationEventsTO) = ok().json().bodyValueAndAwait(events)
+
+        val transactionId = req.transactionId()
+
+        logger.info("Handling Get PresentationEvents for $transactionId")
+        return when (val result = getPresentationEvents(transactionId)) {
+            is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
+            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.Found -> found(result.value)
+        }
+    }
+
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
+        const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
 
         /**
          * Extracts from the request the [RequestId]

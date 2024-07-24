@@ -23,6 +23,7 @@ import com.nimbusds.jose.jwk.RSAKey
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationEventsInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
@@ -76,6 +77,7 @@ object TestContext {
     val loadPresentationById = repo.loadPresentationById
     private val storePresentation = repo.storePresentation
     private val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus
+    private val presentationEventsInMemoryRepo = PresentationEventsInMemoryRepo()
 
     fun initTransaction(
         verifierConfig: VerifierConfig,

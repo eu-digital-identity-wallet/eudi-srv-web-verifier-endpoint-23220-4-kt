@@ -38,6 +38,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEnc
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationEventsInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -85,6 +86,10 @@ internal fun beans(clock: Clock) = beans {
         bean { storePresentation }
         bean { loadIncompletePresentationsOlderThan }
     }
+    with(PresentationEventsInMemoryRepo()) {
+        bean { loadPresentationEvents }
+        bean { publishPresentationEvent }
+    }
 
     bean { CreateQueryWalletResponseRedirectUri.Simple }
 
@@ -123,6 +128,7 @@ internal fun beans(clock: Clock) = beans {
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
     bean { GetWalletResponseLive(ref()) }
     bean { GetJarmJwksLive(ref()) }
+    bean { GetPresentationEventsLive(clock, ref(), ref()) }
 
     //
     // Scheduled
@@ -146,7 +152,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref<VerifierConfig>().clientIdScheme.jarSigning.key,
         )
-        val verifierApi = VerifierApi(ref(), ref())
+        val verifierApi = VerifierApi(ref(), ref(), ref(), ref(), clock)
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
