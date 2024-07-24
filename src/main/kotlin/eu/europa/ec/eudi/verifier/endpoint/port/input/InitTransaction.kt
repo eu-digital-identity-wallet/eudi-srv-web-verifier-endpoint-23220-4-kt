@@ -27,6 +27,8 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
@@ -149,6 +151,7 @@ class InitTransactionLive(
     private val requestJarByReference: EmbedOption.ByReference<RequestId>,
     private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
+    private val publishPresentationEvent: PublishPresentationEvent,
 
 ) : InitTransaction {
 
@@ -178,6 +181,7 @@ class InitTransactionLive(
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
         storePresentation(updatedPresentation)
+        logTransactionInitialized(updatedPresentation, request)
         return request
     }
 
@@ -269,6 +273,11 @@ class InitTransactionLive(
             EmbedModeTO.ByReference -> presentationDefinitionByReference
             null -> verifierConfig.presentationDefinitionEmbedOption
         }
+
+    private suspend fun logTransactionInitialized(p: Presentation, request: JwtSecuredAuthorizationRequestTO) {
+        val event = PresentationEvent.TransactionInitialized(p.id, clock.instant(), request)
+        publishPresentationEvent(event)
+    }
 }
 
 context(Raise<ValidationError>)

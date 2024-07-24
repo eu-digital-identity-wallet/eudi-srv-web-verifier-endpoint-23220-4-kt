@@ -95,6 +95,7 @@ object TestContext {
             requestJarByReference,
             presentationDefinitionByReference,
             CreateQueryWalletResponseRedirectUri.Simple,
+            presentationEventsInMemoryRepo.publishPresentationEvent,
         )
 }
 

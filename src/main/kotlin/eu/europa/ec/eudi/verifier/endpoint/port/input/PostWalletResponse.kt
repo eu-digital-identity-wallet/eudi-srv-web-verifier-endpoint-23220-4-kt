@@ -28,7 +28,10 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletRespons
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.Clock
@@ -128,10 +131,13 @@ class PostWalletResponseLive(
     private val verifierConfig: VerifierConfig,
     private val generateResponseCode: GenerateResponseCode,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
+    private val publishPresentationEvent: PublishPresentationEvent,
 ) : PostWalletResponse {
 
     context(Raise<WalletResponseValidationError>)
-    override suspend operator fun invoke(walletResponse: AuthorisationResponse): Option<WalletResponseAcceptedTO> {
+    override suspend operator fun invoke(
+        walletResponse: AuthorisationResponse,
+    ): Option<WalletResponseAcceptedTO> = coroutineScope {
         val presentation = loadPresentation(walletResponse)
 
         // Verify the AuthorisationResponse matches what is expected for the Presentation
@@ -147,7 +153,7 @@ class PostWalletResponseLive(
         val responseObject = responseObject(walletResponse, presentation)
         val submitted = submit(presentation, responseObject).also { storePresentation(it) }
 
-        return when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
+        val accepted = when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
             is GetWalletResponseMethod.Redirect ->
                 with(createQueryWalletResponseRedirectUri) {
                     requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
@@ -157,6 +163,8 @@ class PostWalletResponseLive(
 
             GetWalletResponseMethod.Poll -> None
         }
+        logWalletResponsePosted(submitted, accepted)
+        accepted
     }
 
     context(Raise<WalletResponseValidationError>)
@@ -207,6 +215,11 @@ class PostWalletResponseLive(
             is GetWalletResponseMethod.Redirect -> generateResponseCode()
         }
         return presentation.submit(clock, walletResponse, responseCode).getOrThrow()
+    }
+
+    private suspend fun logWalletResponsePosted(p: Presentation.Submitted, accepted: Option<WalletResponseAcceptedTO>) {
+        val event = PresentationEvent.WalletResponsePosted(p.id, p.submittedAt, p.walletResponse.toTO(), accepted.getOrNull())
+        publishPresentationEvent(event)
     }
 }
 

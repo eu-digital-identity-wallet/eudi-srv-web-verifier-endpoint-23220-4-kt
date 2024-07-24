@@ -15,8 +15,11 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.persistence
 
+import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseAcceptedTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import java.time.Instant
 
@@ -33,16 +36,20 @@ sealed interface PresentationEvent {
     data class RequestObjectRetrieved(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
+        val jwt: Jwt,
     ) : PresentationEvent
 
     data class PresentationDefinitionRetrieved(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
+        val presentationDefinition: PresentationDefinition,
     ) : PresentationEvent
 
     data class WalletResponsePosted(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
+        val walletResponse: WalletResponseTO,
+        val verifierResponse: WalletResponseAcceptedTO?,
     ) : PresentationEvent
 
     data class VerifierGotWalletResponse(

@@ -21,6 +21,10 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.presentationDefinitionOrNull
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
+import kotlinx.coroutines.coroutineScope
+import java.time.Clock
 
 /**
  * Given a [RequestId] returns the [PresentationDefinition] if
@@ -32,16 +36,26 @@ fun interface GetPresentationDefinition {
 }
 
 class GetPresentationDefinitionLive(
+    private val clock: Clock,
     private val loadPresentationByRequestId: LoadPresentationByRequestId,
+    private val publishPresentationEvent: PublishPresentationEvent,
 ) : GetPresentationDefinition {
-    override suspend fun invoke(requestId: RequestId): QueryResponse<PresentationDefinition> {
-        fun foundOrInvalid(p: Presentation) =
-            p.type.presentationDefinitionOrNull?.let { Found(it) } ?: InvalidState
+    override suspend fun invoke(requestId: RequestId): QueryResponse<PresentationDefinition> = coroutineScope {
+        suspend fun foundOrInvalid(p: Presentation) =
+            p.type.presentationDefinitionOrNull?.let { pd ->
+                logRetrieval(p, pd)
+                Found(pd)
+            } ?: InvalidState
 
-        return when (val presentation = loadPresentationByRequestId(requestId)) {
+        when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> NotFound
             is Presentation.RequestObjectRetrieved -> foundOrInvalid(presentation)
             else -> InvalidState
         }
+    }
+
+    private suspend fun logRetrieval(p: Presentation, pd: PresentationDefinition) {
+        val event = PresentationEvent.PresentationDefinitionRetrieved(p.id, clock.instant(), pd)
+        publishPresentationEvent(event)
     }
 }

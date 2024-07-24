@@ -19,6 +19,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.timedOut
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePresentationsOlderThan
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import java.time.Clock
 import java.time.Duration
@@ -33,6 +35,7 @@ class TimeoutPresentationsLive(
     private val storePresentation: StorePresentation,
     private val maxAge: Duration,
     private val clock: Clock,
+    private val publishPresentationEvent: PublishPresentationEvent,
 ) : TimeoutPresentations {
     override suspend operator fun invoke(): List<TransactionId> {
         val expireBefore = clock.instant().minusSeconds(maxAge.toSeconds())
@@ -46,6 +49,14 @@ class TimeoutPresentationsLive(
             is Presentation.Submitted -> presentation.timedOut(clock).getOrNull()
             is Presentation.TimedOut -> null
         }
-        return timeout?.also { storePresentation(it) }
+        return timeout?.also { timedOut ->
+            logExpired(timedOut)
+            storePresentation(timedOut)
+        }
+    }
+
+    private suspend fun logExpired(presentation: Presentation.TimedOut) {
+        val event = PresentationEvent.PresentationExpired(presentation.id, presentation.timedOutAt)
+        publishPresentationEvent(event)
     }
 }

@@ -108,25 +108,27 @@ internal fun beans(clock: Clock) = beans {
             WalletApi.requestJwtByReference(env.publicUrl()),
             WalletApi.presentationDefinitionByReference(env.publicUrl()),
             ref(),
+            ref(),
         )
     }
 
-    bean { GetRequestObjectLive(ref(), ref(), ref(), ref(), clock) }
+    bean { GetRequestObjectLive(ref(), ref(), ref(), ref(), clock, ref()) }
 
-    bean { GetPresentationDefinitionLive(ref()) }
+    bean { GetPresentationDefinitionLive(clock, ref(), ref()) }
     bean {
         TimeoutPresentationsLive(
             ref(),
             ref(),
             ref<VerifierConfig>().maxAge,
             clock,
+            ref(),
         )
     }
 
     bean { GenerateResponseCode.Random }
-    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref()) }
+    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref(), ref()) }
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
-    bean { GetWalletResponseLive(ref()) }
+    bean { GetWalletResponseLive(clock, ref(), ref()) }
     bean { GetJarmJwksLive(ref()) }
     bean { GetPresentationEventsLive(clock, ref(), ref()) }
 

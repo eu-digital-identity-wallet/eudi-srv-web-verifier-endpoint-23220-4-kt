@@ -19,6 +19,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import java.time.Clock
 
@@ -39,12 +41,17 @@ class GetRequestObjectLive(
     private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
+    private val publishPresentationEvent: PublishPresentationEvent,
 ) : GetRequestObject {
 
     override suspend operator fun invoke(requestId: RequestId): QueryResponse<Jwt> =
         when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> NotFound
-            is Presentation.Requested -> Found(requestObjectOf(presentation))
+            is Presentation.Requested -> {
+                val jwt = requestObjectOf(presentation)
+                logRequestObjectRetrieved(presentation, jwt)
+                Found(jwt)
+            }
             else -> InvalidState
         }
 
@@ -53,5 +60,10 @@ class GetRequestObjectLive(
         val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
         storePresentation(updatedPresentation)
         return jwt
+    }
+
+    private suspend fun logRequestObjectRetrieved(presentation: Presentation.Requested, jwt: Jwt) {
+        val event = PresentationEvent.RequestObjectRetrieved(presentation.id, clock.instant(), jwt)
+        publishPresentationEvent(event)
     }
 }

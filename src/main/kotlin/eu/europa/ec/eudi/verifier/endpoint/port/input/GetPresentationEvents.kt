@@ -78,19 +78,22 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
         }
 
         is PresentationEvent.PresentationDefinitionRetrieved -> {
-        }
-
-        is PresentationEvent.PresentationExpired -> {
+            put("presentation_definition", event.presentationDefinition.json())
         }
 
         is PresentationEvent.RequestObjectRetrieved -> {
+            put("jwt", event.jwt)
+        }
+
+        is PresentationEvent.WalletResponsePosted -> {
+            put("wallet_response", event.walletResponse.json())
         }
 
         is PresentationEvent.VerifierGotWalletResponse -> {
             put("wallet_response", event.walletResponse.json())
         }
 
-        is PresentationEvent.WalletResponsePosted -> {
+        is PresentationEvent.PresentationExpired -> {
         }
     }
 }
