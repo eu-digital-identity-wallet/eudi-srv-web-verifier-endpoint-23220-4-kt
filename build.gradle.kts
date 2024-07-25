@@ -33,6 +33,10 @@ dependencies {
     implementation(libs.bouncy.castle)
     implementation(libs.arrow.core)
     implementation(libs.arrow.fx.coroutines)
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    implementation("org.webjars:webjars-locator-core")
+    implementation(libs.swagger.ui)
+
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation("org.springframework.boot:spring-boot-starter-test")

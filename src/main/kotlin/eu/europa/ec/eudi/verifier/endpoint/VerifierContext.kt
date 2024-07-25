@@ -29,6 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.StaticContent
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.SwaggerUi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
@@ -147,7 +148,14 @@ internal fun beans(clock: Clock) = beans {
         )
         val verifierApi = VerifierApi(ref(), ref())
         val staticContent = StaticContent()
-        walletApi.route.and(verifierApi.route).and(staticContent.route)
+        val swaggerUi = SwaggerUi(
+            publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
+            webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern").removeSuffix("/**"),
+        )
+        walletApi.route
+            .and(verifierApi.route)
+            .and(staticContent.route)
+            .and(swaggerUi.route)
     }
 
     //
