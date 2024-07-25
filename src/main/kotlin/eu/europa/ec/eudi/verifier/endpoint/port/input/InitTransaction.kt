@@ -275,7 +275,7 @@ class InitTransactionLive(
         }
 
     private suspend fun logTransactionInitialized(p: Presentation, request: JwtSecuredAuthorizationRequestTO) {
-        val event = PresentationEvent.TransactionInitialized(p.id, clock.instant(), request)
+        val event = PresentationEvent.TransactionInitialized(p.id, p.initiatedAt, request)
         publishPresentationEvent(event)
     }
 }

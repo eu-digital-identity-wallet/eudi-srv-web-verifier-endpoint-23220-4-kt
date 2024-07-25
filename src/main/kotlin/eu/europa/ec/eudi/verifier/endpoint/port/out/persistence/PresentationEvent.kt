@@ -49,13 +49,19 @@ sealed interface PresentationEvent {
         override val transactionId: TransactionId,
         override val timestamp: Instant,
         val walletResponse: WalletResponseTO,
-        val verifierResponse: WalletResponseAcceptedTO?,
+        val verifierEndpointResponse: WalletResponseAcceptedTO?,
     ) : PresentationEvent
 
     data class VerifierGotWalletResponse(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
         val walletResponse: WalletResponseTO,
+    ) : PresentationEvent
+
+    data class VerifierFailedToGetWalletResponse(
+        override val transactionId: TransactionId,
+        override val timestamp: Instant,
+        val cause: String,
     ) : PresentationEvent
 
     data class PresentationExpired(

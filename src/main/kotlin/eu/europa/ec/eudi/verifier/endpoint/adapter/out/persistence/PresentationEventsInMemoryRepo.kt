@@ -21,14 +21,11 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
-import kotlinx.coroutines.sync.Mutex
 import java.util.concurrent.ConcurrentHashMap
 
 class PresentationEventsInMemoryRepo(
     private val logs: ConcurrentHashMap<TransactionId, NonEmptyList<PresentationEvent>> = ConcurrentHashMap(),
 ) {
-
-    private val mutex = Mutex()
 
     val loadPresentationEvents: LoadPresentationEvents by lazy {
         LoadPresentationEvents { transactionId -> logs[transactionId] }

@@ -93,6 +93,10 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
             put("wallet_response", event.walletResponse.json())
         }
 
+        is PresentationEvent.VerifierFailedToGetWalletResponse -> {
+            put("cause", event.cause)
+        }
+
         is PresentationEvent.PresentationExpired -> {
         }
     }
@@ -107,12 +111,13 @@ private enum class Actor {
 
 private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
     val (eventName, actor) = when (e) {
-        is PresentationEvent.PresentationDefinitionRetrieved -> "Presentation definition retrieved" to Actor.Wallet
-        is PresentationEvent.PresentationExpired -> "Presentation expired" to Actor.VerifierEndPoint
-        is PresentationEvent.RequestObjectRetrieved -> "Request object retrieved" to Actor.Wallet
         is PresentationEvent.TransactionInitialized -> "Transaction initialized" to Actor.Verifier
-        is PresentationEvent.VerifierGotWalletResponse -> "Verifier got wallet response" to Actor.Verifier
+        is PresentationEvent.RequestObjectRetrieved -> "Request object retrieved" to Actor.Wallet
+        is PresentationEvent.PresentationDefinitionRetrieved -> "Presentation definition retrieved" to Actor.Wallet
         is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet
+        is PresentationEvent.VerifierGotWalletResponse -> "Verifier got wallet response" to Actor.Verifier
+        is PresentationEvent.VerifierFailedToGetWalletResponse -> "Verifier failed to get wallet" to Actor.Verifier
+        is PresentationEvent.PresentationExpired -> "Presentation expired" to Actor.VerifierEndPoint
     }
     put("event", eventName)
     put("actor", actor.json())

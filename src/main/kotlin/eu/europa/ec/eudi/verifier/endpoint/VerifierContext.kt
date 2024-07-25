@@ -154,7 +154,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref<VerifierConfig>().clientIdScheme.jarSigning.key,
         )
-        val verifierApi = VerifierApi(ref(), ref(), ref(), ref(), clock)
+        val verifierApi = VerifierApi(ref(), ref(), ref())
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
