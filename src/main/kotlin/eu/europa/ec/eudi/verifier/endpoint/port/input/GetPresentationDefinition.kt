@@ -44,7 +44,7 @@ class GetPresentationDefinitionLive(
         when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> NotFound
             is Presentation.RequestObjectRetrieved -> {
-                when (val pd = presentation.type.presentationDefinitionOrNull) {
+                when (val pd = presentation.pd()) {
                     null -> presentationWithNoPD(presentation)
                     else -> found(presentation, pd)
                 }
@@ -53,6 +53,8 @@ class GetPresentationDefinitionLive(
             else -> invalidState(presentation)
         }
     }
+
+    private fun Presentation.pd() = type.presentationDefinitionOrNull
 
     private suspend fun found(
         presentation: Presentation.RequestObjectRetrieved,

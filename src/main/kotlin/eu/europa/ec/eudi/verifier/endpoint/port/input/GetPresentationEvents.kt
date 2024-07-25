@@ -81,16 +81,20 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
             put("response", event.response.json())
         }
 
+        is PresentationEvent.RequestObjectRetrieved -> {
+            put("jwt", event.jwt)
+        }
+
+        is PresentationEvent.FailedToRetrieveRequestObject -> {
+            put("cause", event.cause)
+        }
+
         is PresentationEvent.PresentationDefinitionRetrieved -> {
             put("presentation_definition", event.presentationDefinition.json())
         }
 
         is PresentationEvent.FailedToRetrievePresentationDefinition -> {
             put("cause", event.cause)
-        }
-
-        is PresentationEvent.RequestObjectRetrieved -> {
-            put("jwt", event.jwt)
         }
 
         is PresentationEvent.WalletResponsePosted -> {
@@ -121,6 +125,7 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
     val (eventName, actor) = when (e) {
         is PresentationEvent.TransactionInitialized -> "Transaction initialized" to Actor.Verifier
         is PresentationEvent.RequestObjectRetrieved -> "Request object retrieved" to Actor.Wallet
+        is PresentationEvent.FailedToRetrieveRequestObject -> "FailedToRetrieve request" to Actor.Wallet
         is PresentationEvent.PresentationDefinitionRetrieved -> "Presentation definition retrieved" to Actor.Wallet
         is PresentationEvent.FailedToRetrievePresentationDefinition -> "Failed to retrieve presentation definition" to Actor.Wallet
         is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet

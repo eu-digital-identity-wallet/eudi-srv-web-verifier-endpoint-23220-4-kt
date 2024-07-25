@@ -47,23 +47,35 @@ class GetRequestObjectLive(
     override suspend operator fun invoke(requestId: RequestId): QueryResponse<Jwt> =
         when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> NotFound
-            is Presentation.Requested -> {
-                val jwt = requestObjectOf(presentation)
-                logRequestObjectRetrieved(presentation, jwt)
-                Found(jwt)
-            }
-            else -> InvalidState
+            is Presentation.Requested -> found(presentation)
+            else -> invalidState(presentation)
         }
 
-    private suspend fun requestObjectOf(presentation: Presentation.Requested): Jwt {
-        val jwt = signRequestObject(verifierConfig, clock, presentation).getOrThrow()
-        val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
-        storePresentation(updatedPresentation)
-        return jwt
+    private suspend fun found(presentation: Presentation.Requested): Found<Jwt> {
+        suspend fun requestObjectOf(): Pair<Presentation.RequestObjectRetrieved, Jwt> {
+            val jwt = signRequestObject(verifierConfig, clock, presentation).getOrThrow()
+            val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
+            storePresentation(updatedPresentation)
+            return updatedPresentation to jwt
+        }
+
+        suspend fun log(p: Presentation.RequestObjectRetrieved, jwt: Jwt) {
+            val event = PresentationEvent.RequestObjectRetrieved(p.id, p.requestObjectRetrievedAt, jwt)
+            publishPresentationEvent(event)
+        }
+
+        val (updatePresentation, jwt) = requestObjectOf()
+        log(updatePresentation, jwt)
+        return Found(jwt)
     }
 
-    private suspend fun logRequestObjectRetrieved(presentation: Presentation.Requested, jwt: Jwt) {
-        val event = PresentationEvent.RequestObjectRetrieved(presentation.id, clock.instant(), jwt)
-        publishPresentationEvent(event)
+    private suspend fun invalidState(presentation: Presentation): InvalidState {
+        suspend fun log() {
+            val cause = "Presentation should be in Submitted state but is in ${presentation.javaClass.name}"
+            val event = PresentationEvent.FailedToRetrieveRequestObject(presentation.id, clock.instant(), cause)
+            publishPresentationEvent(event)
+        }
+        log()
+        return InvalidState
     }
 }

@@ -39,6 +39,12 @@ sealed interface PresentationEvent {
         val jwt: Jwt,
     ) : PresentationEvent
 
+    data class FailedToRetrieveRequestObject(
+        override val transactionId: TransactionId,
+        override val timestamp: Instant,
+        val cause: String,
+    ) : PresentationEvent
+
     data class PresentationDefinitionRetrieved(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
