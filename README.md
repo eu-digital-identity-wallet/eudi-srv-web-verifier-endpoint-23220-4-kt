@@ -32,6 +32,7 @@ Application exposes two APIs
 The Verifier API, supports two operations:
 * [Initialize Transaction](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/InitTransaction.kt), where Verifier may define whether it wants to request a SIOP or OpenID4VP or combined request
 * [Get Wallet response](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetWalletResponse.kt), where Verifier receives depending on the request an `id_token`, `vp_token`, or an error  
+An Open API v3 specification of these operations is available [here](src/main/resources/public/openapi.json).
 
 The Wallet API, provides the following main operations
 * [Get Request Object](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetRequestObject.kt) according JWT Secured Authorization Request
@@ -279,6 +280,8 @@ curl -X POST -H "Content-type: application/json" -d '{
 }
 ```
 
+You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/verifier%20api/initializeTransaction).
+
 ### Get authorization request
 
 - _Method_: GET
@@ -386,6 +389,8 @@ curl http://localhost:8080/ui/presentations/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAu
 ```
 
 **Returns:** The wallet submitted response as JSON.
+
+You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/verifier%20api/getTransactionResponse).
 
 ## Configuration
 
