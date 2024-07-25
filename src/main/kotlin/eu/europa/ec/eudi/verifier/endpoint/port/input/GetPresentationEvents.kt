@@ -45,14 +45,18 @@ class GetPresentationEventsLive(
     override suspend fun invoke(
         transactionId: TransactionId,
     ): QueryResponse<PresentationEventsTO> = coroutineScope {
-        val events = when (val presentation = loadPresentationById(transactionId)) {
-            null -> null
-            else -> loadPresentationEvents(transactionId)
+        if (presentationExists(transactionId)) {
+            val events = loadPresentationEvents(transactionId)
+            checkNotNull(events) { "Didn't find any events for transaction $transactionId" }
+            val transferOject = PresentationEventsTO(transactionId, clock, events)
+            QueryResponse.Found(transferOject)
+        } else {
+            QueryResponse.NotFound
         }
-        events
-            ?.let { es -> QueryResponse.Found(PresentationEventsTO(transactionId, clock, es)) }
-            ?: QueryResponse.NotFound
     }
+
+    private suspend fun presentationExists(transactionId: TransactionId): Boolean =
+        loadPresentationById(transactionId) != null
 }
 
 private operator fun PresentationEventsTO.Companion.invoke(
@@ -79,6 +83,10 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
 
         is PresentationEvent.PresentationDefinitionRetrieved -> {
             put("presentation_definition", event.presentationDefinition.json())
+        }
+
+        is PresentationEvent.FailedToRetrievePresentationDefinition -> {
+            put("cause", event.cause)
         }
 
         is PresentationEvent.RequestObjectRetrieved -> {
@@ -114,6 +122,7 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
         is PresentationEvent.TransactionInitialized -> "Transaction initialized" to Actor.Verifier
         is PresentationEvent.RequestObjectRetrieved -> "Request object retrieved" to Actor.Wallet
         is PresentationEvent.PresentationDefinitionRetrieved -> "Presentation definition retrieved" to Actor.Wallet
+        is PresentationEvent.FailedToRetrievePresentationDefinition -> "Failed to retrieve presentation definition" to Actor.Wallet
         is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet
         is PresentationEvent.VerifierGotWalletResponse -> "Verifier got wallet response" to Actor.Verifier
         is PresentationEvent.VerifierFailedToGetWalletResponse -> "Verifier failed to get wallet" to Actor.Verifier

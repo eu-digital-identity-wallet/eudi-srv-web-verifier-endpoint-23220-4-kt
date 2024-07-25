@@ -41,21 +41,50 @@ class GetPresentationDefinitionLive(
     private val publishPresentationEvent: PublishPresentationEvent,
 ) : GetPresentationDefinition {
     override suspend fun invoke(requestId: RequestId): QueryResponse<PresentationDefinition> = coroutineScope {
-        suspend fun foundOrInvalid(p: Presentation) =
-            p.type.presentationDefinitionOrNull?.let { pd ->
-                logRetrieval(p, pd)
-                Found(pd)
-            } ?: InvalidState
-
         when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> NotFound
-            is Presentation.RequestObjectRetrieved -> foundOrInvalid(presentation)
-            else -> InvalidState
+            is Presentation.RequestObjectRetrieved -> {
+                when (val pd = presentation.type.presentationDefinitionOrNull) {
+                    null -> presentationWithNoPD(presentation)
+                    else -> found(presentation, pd)
+                }
+            }
+
+            else -> invalidState(presentation)
         }
+    }
+
+    private suspend fun found(
+        presentation: Presentation.RequestObjectRetrieved,
+        pd: PresentationDefinition,
+    ): Found<PresentationDefinition> {
+        logRetrieval(presentation, pd)
+        return Found(pd)
+    }
+
+    private suspend fun presentationWithNoPD(p: Presentation): InvalidState {
+        require(p.type.presentationDefinitionOrNull == null)
+        logFailure(p, PRESENTATION_WITH_NO_PD)
+        return InvalidState
+    }
+
+    private suspend fun invalidState(p: Presentation): InvalidState {
+        val cause = "Presentation should be in Submitted state but is in ${p.javaClass.name}"
+        logFailure(p, cause)
+        return InvalidState
     }
 
     private suspend fun logRetrieval(p: Presentation, pd: PresentationDefinition) {
         val event = PresentationEvent.PresentationDefinitionRetrieved(p.id, clock.instant(), pd)
         publishPresentationEvent(event)
+    }
+
+    private suspend fun logFailure(p: Presentation, cause: String) {
+        val event = PresentationEvent.FailedToRetrievePresentationDefinition(p.id, clock.instant(), cause)
+        publishPresentationEvent(event)
+    }
+
+    companion object {
+        private const val PRESENTATION_WITH_NO_PD = "Invalid request, since Presentation was initialized without presentation definition"
     }
 }
