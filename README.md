@@ -391,7 +391,7 @@ curl http://localhost:8080/ui/presentations/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAu
 
 **Returns:** The wallet submitted response as JSON.
 
-You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/verifier%20api/getTransactionResponse).
+You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/verifier%20api/getWalletResponse).
 
 ## Configuration
 
