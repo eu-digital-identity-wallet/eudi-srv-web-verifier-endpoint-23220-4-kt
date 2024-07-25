@@ -15,15 +15,18 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
 import arrow.core.raise.Raise
+import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.some
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
+import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
@@ -56,7 +59,7 @@ sealed interface AuthorisationResponse {
 
 sealed interface WalletResponseValidationError {
     data object MissingState : WalletResponseValidationError
-    data class PresentationDefinitionNotFound(val requestId: RequestId) : WalletResponseValidationError
+    data object PresentationDefinitionNotFound : WalletResponseValidationError
 
     data class UnexpectedResponseMode(
         val requestId: RequestId,
@@ -64,7 +67,7 @@ sealed interface WalletResponseValidationError {
         val actual: ResponseModeOption,
     ) : WalletResponseValidationError
 
-    data class PresentationNotInExpectedState(val requestId: RequestId) : WalletResponseValidationError
+    data object PresentationNotInExpectedState : WalletResponseValidationError
 
     data object IncorrectStateInJarm : WalletResponseValidationError
     data object MissingIdToken : WalletResponseValidationError
@@ -140,35 +143,55 @@ class PostWalletResponseLive(
     ): Option<WalletResponseAcceptedTO> = coroutineScope {
         val presentation = loadPresentation(walletResponse)
 
-        // Verify the AuthorisationResponse matches what is expected for the Presentation
-        val responseMode = walletResponse.responseMode()
-        ensure(presentation.responseMode == responseMode) {
-            WalletResponseValidationError.UnexpectedResponseMode(
-                presentation.requestId,
-                expected = presentation.responseMode,
-                actual = responseMode,
-            )
-        }
-
-        val responseObject = responseObject(walletResponse, presentation)
-        val submitted = submit(presentation, responseObject).also { storePresentation(it) }
-
-        val accepted = when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
-            is GetWalletResponseMethod.Redirect ->
-                with(createQueryWalletResponseRedirectUri) {
-                    requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
-                    val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
-                    WalletResponseAcceptedTO(redirectUri.toExternalForm()).some()
-                }
-
-            GetWalletResponseMethod.Poll -> None
-        }
-        logWalletResponsePosted(submitted, accepted)
-        accepted
+        doInvoke(presentation, walletResponse).fold(
+            ifLeft = { cause ->
+                logFailure(presentation, cause)
+                raise(cause)
+            },
+            ifRight = { (submitted, accepted) ->
+                logWalletResponsePosted(submitted, accepted)
+                accepted
+            },
+        )
     }
 
+    private suspend fun doInvoke(
+        presentation: Presentation,
+        walletResponse: AuthorisationResponse,
+    ): Either<WalletResponseValidationError, Pair<Submitted, Option<WalletResponseAcceptedTO>>> =
+        either {
+            ensure(presentation is RequestObjectRetrieved) {
+                WalletResponseValidationError.PresentationNotInExpectedState
+            }
+
+            // Verify the AuthorisationResponse matches what is expected for the Presentation
+            val responseMode = walletResponse.responseMode()
+            ensure(presentation.responseMode == responseMode) {
+                WalletResponseValidationError.UnexpectedResponseMode(
+                    presentation.requestId,
+                    expected = presentation.responseMode,
+                    actual = responseMode,
+                )
+            }
+
+            val responseObject = responseObject(walletResponse, presentation)
+            val submitted = submit(presentation, responseObject).also { storePresentation(it) }
+
+            val accepted = when (val getWalletResponseMethod = presentation.getWalletResponseMethod) {
+                is GetWalletResponseMethod.Redirect ->
+                    with(createQueryWalletResponseRedirectUri) {
+                        requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
+                        val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
+                        WalletResponseAcceptedTO(redirectUri.toExternalForm()).some()
+                    }
+
+                GetWalletResponseMethod.Poll -> None
+            }
+            submitted to accepted
+        }
+
     context(Raise<WalletResponseValidationError>)
-    private suspend fun loadPresentation(walletResponse: AuthorisationResponse): RequestObjectRetrieved {
+    private suspend fun loadPresentation(walletResponse: AuthorisationResponse): Presentation {
         val state = when (walletResponse) {
             is AuthorisationResponse.DirectPost -> walletResponse.response.state
             is AuthorisationResponse.DirectPostJwt -> walletResponse.state
@@ -177,13 +200,7 @@ class PostWalletResponseLive(
         val requestId = RequestId(state)
 
         val presentation = loadPresentationByRequestId(requestId)
-        ensureNotNull(presentation) { WalletResponseValidationError.PresentationDefinitionNotFound(requestId) }
-        ensure(presentation is RequestObjectRetrieved) {
-            WalletResponseValidationError.PresentationNotInExpectedState(
-                requestId,
-            )
-        }
-        return presentation
+        return ensureNotNull(presentation) { WalletResponseValidationError.PresentationDefinitionNotFound }
     }
 
     context(Raise<WalletResponseValidationError>)
@@ -207,7 +224,7 @@ class PostWalletResponseLive(
     private suspend fun submit(
         presentation: RequestObjectRetrieved,
         responseObject: AuthorisationResponseTO,
-    ): Presentation.Submitted {
+    ): Submitted {
         // add the wallet response to the presentation
         val walletResponse = responseObject.toDomain(presentation)
         val responseCode = when (presentation.getWalletResponseMethod) {
@@ -217,8 +234,14 @@ class PostWalletResponseLive(
         return presentation.submit(clock, walletResponse, responseCode).getOrThrow()
     }
 
-    private suspend fun logWalletResponsePosted(p: Presentation.Submitted, accepted: Option<WalletResponseAcceptedTO>) {
-        val event = PresentationEvent.WalletResponsePosted(p.id, p.submittedAt, p.walletResponse.toTO(), accepted.getOrNull())
+    private suspend fun logWalletResponsePosted(p: Submitted, accepted: Option<WalletResponseAcceptedTO>) {
+        val event =
+            PresentationEvent.WalletResponsePosted(p.id, p.submittedAt, p.walletResponse.toTO(), accepted.getOrNull())
+        publishPresentationEvent(event)
+    }
+
+    private suspend fun logFailure(p: Presentation, cause: WalletResponseValidationError) {
+        val event = PresentationEvent.WalletFailedToPostResponse(p.id, clock.instant(), cause)
         publishPresentationEvent(event)
     }
 }

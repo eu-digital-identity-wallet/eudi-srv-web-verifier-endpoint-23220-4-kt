@@ -21,6 +21,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseAcceptedTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 import kotlinx.serialization.json.JsonElement
 import java.time.Instant
 
@@ -75,6 +76,12 @@ sealed interface PresentationEvent {
         override val timestamp: Instant,
         val walletResponse: WalletResponseTO,
         val verifierEndpointResponse: WalletResponseAcceptedTO?,
+    ) : PresentationEvent
+
+    data class WalletFailedToPostResponse(
+        override val transactionId: TransactionId,
+        override val timestamp: Instant,
+        val cause: WalletResponseValidationError,
     ) : PresentationEvent
 
     data class VerifierGotWalletResponse(

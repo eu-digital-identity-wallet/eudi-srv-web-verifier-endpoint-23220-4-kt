@@ -108,6 +108,9 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
         is PresentationEvent.WalletResponsePosted -> {
             put("wallet_response", event.walletResponse.json())
         }
+        is PresentationEvent.WalletFailedToPostResponse -> {
+            put("cause", event.cause.asText())
+        }
 
         is PresentationEvent.VerifierGotWalletResponse -> {
             put("wallet_response", event.walletResponse.json())
@@ -139,6 +142,7 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
         is PresentationEvent.PresentationDefinitionRetrieved -> "Presentation definition retrieved" to Actor.Wallet
         is PresentationEvent.FailedToRetrievePresentationDefinition -> "Failed to retrieve presentation definition" to Actor.Wallet
         is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet
+        is PresentationEvent.WalletFailedToPostResponse -> "Wallet failed to post response" to Actor.Wallet
         is PresentationEvent.VerifierGotWalletResponse -> "Verifier got wallet response" to Actor.Verifier
         is PresentationEvent.VerifierFailedToGetWalletResponse -> "Verifier failed to get wallet" to Actor.Verifier
         is PresentationEvent.PresentationExpired -> "Presentation expired" to Actor.VerifierEndPoint
@@ -146,5 +150,16 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
     put("event", eventName)
     put("actor", actor.json())
 }
+
+private fun WalletResponseValidationError.asText(): String =
+    when (this) {
+        WalletResponseValidationError.IncorrectStateInJarm -> "Incorrect state in JARM"
+        WalletResponseValidationError.MissingIdToken -> "Missing id_token"
+        WalletResponseValidationError.MissingState -> "Missing state from JARM"
+        WalletResponseValidationError.MissingVpTokenOrPresentationSubmission -> "Missing vp_token or presentation_submission"
+        is WalletResponseValidationError.PresentationDefinitionNotFound -> "Presentation definition not found"
+        is WalletResponseValidationError.PresentationNotInExpectedState -> "Presentation non in expected state"
+        is WalletResponseValidationError.UnexpectedResponseMode -> "Unexpected response mode. Expected $expected, actual $actual"
+    }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)
