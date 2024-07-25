@@ -32,6 +32,7 @@ Application exposes two APIs
 The Verifier API, supports two operations:
 * [Initialize Transaction](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/InitTransaction.kt), where Verifier may define whether it wants to request a SIOP or OpenID4VP or combined request
 * [Get Wallet response](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetWalletResponse.kt), where Verifier receives depending on the request an `id_token`, `vp_token`, or an error  
+
 An Open API v3 specification of these operations is available [here](src/main/resources/public/openapi.json).
 
 The Wallet API, provides the following main operations
