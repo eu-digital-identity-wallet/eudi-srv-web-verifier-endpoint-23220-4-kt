@@ -19,7 +19,13 @@ import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.jwk
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
+import java.time.Clock
 
 /**
  * Given a [RequestId] returns the [JWKSet] to be used for JARM.
@@ -28,18 +34,53 @@ fun interface GetJarmJwks {
     suspend operator fun invoke(id: RequestId): QueryResponse<JWKSet>
 }
 
-internal class GetJarmJwksLive(private val loadPresentationByRequestId: LoadPresentationByRequestId) : GetJarmJwks {
+internal class GetJarmJwksLive(
+    private val loadPresentationByRequestId: LoadPresentationByRequestId,
+    private val clock: Clock,
+    private val publishPresentationEvent: PublishPresentationEvent,
+) : GetJarmJwks {
 
     override suspend fun invoke(id: RequestId): QueryResponse<JWKSet> =
         when (val presentation = loadPresentationByRequestId(id)) {
-            null -> QueryResponse.NotFound
-            is Presentation.RequestObjectRetrieved -> presentation.ephemeralEcPubKey()
-                ?.let { QueryResponse.Found(it) }
-                ?: QueryResponse.InvalidState
-            else -> QueryResponse.InvalidState
+            null -> NotFound
+            is Presentation.RequestObjectRetrieved ->
+                when (val jwkSet = presentation.ephemeralEcPubKey()) {
+                    null -> presentationWithoutEphemeralKey(presentation)
+                    else -> found(presentation, jwkSet)
+                }
+            else -> invalidState(presentation)
         }
 
     private fun Presentation.RequestObjectRetrieved.ephemeralEcPubKey(): JWKSet? =
         if (ephemeralEcPrivateKey != null) JWKSet(listOf(ephemeralEcPrivateKey.jwk())).toPublicJWKSet()
         else null
+
+    private suspend fun found(
+        p: Presentation.RequestObjectRetrieved,
+        jwkSet: JWKSet,
+    ): Found<JWKSet> {
+        suspend fun log() {
+            val jwkSetJson = Json.encodeToJsonElement(jwkSet.toString(true))
+            val event = PresentationEvent.JarmJwkSetRetrieved(p.id, clock.instant(), jwkSetJson)
+            publishPresentationEvent(event)
+        }
+        log()
+        return Found(jwkSet)
+    }
+
+    private suspend fun presentationWithoutEphemeralKey(p: Presentation.RequestObjectRetrieved): InvalidState {
+        logFailure(p, "Presentation without ephemeral key. Probably requested for direct_post")
+        return InvalidState
+    }
+
+    private suspend fun invalidState(p: Presentation): InvalidState {
+        val cause = "Presentation should be in Submitted state but is in ${p.javaClass.name}"
+        logFailure(p, cause)
+        return InvalidState
+    }
+
+    private suspend fun logFailure(p: Presentation, cause: String) {
+        val event = PresentationEvent.FailedToRetrieveJarmJwkSet(p.id, clock.instant(), cause)
+        publishPresentationEvent(event)
+    }
 }

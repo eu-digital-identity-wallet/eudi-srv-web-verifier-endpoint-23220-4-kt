@@ -129,7 +129,7 @@ internal fun beans(clock: Clock) = beans {
     bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref(), ref()) }
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
     bean { GetWalletResponseLive(clock, ref(), ref()) }
-    bean { GetJarmJwksLive(ref()) }
+    bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(clock, ref(), ref()) }
 
     //

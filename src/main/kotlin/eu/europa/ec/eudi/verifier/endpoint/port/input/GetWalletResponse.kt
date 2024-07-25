@@ -80,12 +80,11 @@ class GetWalletResponseLive(
     ): QueryResponse<WalletResponseTO> {
         return when (val presentation = loadPresentationById(transactionId)) {
             null -> NotFound
-            is Presentation.Submitted -> {
+            is Presentation.Submitted ->
                 when (responseCode) {
                     presentation.responseCode -> found(presentation)
                     else -> responseCodeMismatch(presentation, responseCode)
                 }
-            }
 
             else -> invalidState(presentation)
         }
