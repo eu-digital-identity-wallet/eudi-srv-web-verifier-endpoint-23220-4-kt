@@ -16,13 +16,10 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
-import arrow.core.None
-import arrow.core.Option
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
-import arrow.core.some
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
@@ -123,7 +120,7 @@ data class WalletResponseAcceptedTO(
 fun interface PostWalletResponse {
 
     context(Raise<WalletResponseValidationError>)
-    suspend operator fun invoke(walletResponse: AuthorisationResponse): Option<WalletResponseAcceptedTO>
+    suspend operator fun invoke(walletResponse: AuthorisationResponse): WalletResponseAcceptedTO?
 }
 
 class PostWalletResponseLive(
@@ -140,7 +137,7 @@ class PostWalletResponseLive(
     context(Raise<WalletResponseValidationError>)
     override suspend operator fun invoke(
         walletResponse: AuthorisationResponse,
-    ): Option<WalletResponseAcceptedTO> = coroutineScope {
+    ): WalletResponseAcceptedTO? = coroutineScope {
         val presentation = loadPresentation(walletResponse)
 
         doInvoke(presentation, walletResponse).fold(
@@ -158,7 +155,7 @@ class PostWalletResponseLive(
     private suspend fun doInvoke(
         presentation: Presentation,
         walletResponse: AuthorisationResponse,
-    ): Either<WalletResponseValidationError, Pair<Submitted, Option<WalletResponseAcceptedTO>>> =
+    ): Either<WalletResponseValidationError, Pair<Submitted, WalletResponseAcceptedTO?>> =
         either {
             ensure(presentation is RequestObjectRetrieved) {
                 WalletResponseValidationError.PresentationNotInExpectedState
@@ -182,10 +179,10 @@ class PostWalletResponseLive(
                     with(createQueryWalletResponseRedirectUri) {
                         requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
                         val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
-                        WalletResponseAcceptedTO(redirectUri.toExternalForm()).some()
+                        WalletResponseAcceptedTO(redirectUri.toExternalForm())
                     }
 
-                GetWalletResponseMethod.Poll -> None
+                GetWalletResponseMethod.Poll -> null
             }
             submitted to accepted
         }
@@ -234,9 +231,9 @@ class PostWalletResponseLive(
         return presentation.submit(clock, walletResponse, responseCode).getOrThrow()
     }
 
-    private suspend fun logWalletResponsePosted(p: Submitted, accepted: Option<WalletResponseAcceptedTO>) {
+    private suspend fun logWalletResponsePosted(p: Submitted, accepted: WalletResponseAcceptedTO?) {
         val event =
-            PresentationEvent.WalletResponsePosted(p.id, p.submittedAt, p.walletResponse.toTO(), accepted.getOrNull())
+            PresentationEvent.WalletResponsePosted(p.id, p.submittedAt, p.walletResponse.toTO(), accepted)
         publishPresentationEvent(event)
     }
 

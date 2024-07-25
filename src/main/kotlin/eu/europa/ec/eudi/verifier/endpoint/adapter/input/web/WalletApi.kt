@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import arrow.core.getOrElse
 import arrow.core.raise.either
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
@@ -111,8 +110,13 @@ class WalletApi(
         outcome.fold(
             ifRight = { response ->
                 logger.info("PostWalletResponse processed")
-                logger.info(response.fold({ "Verifier UI will poll for Wallet Response" }, { "Wallet must redirect to ${it.redirectUri}" }))
-                ok().json().bodyValueAndAwait(response.getOrElse { JsonObject(emptyMap()) })
+                if (response == null) {
+                    logger.info("Verifier UI will poll for Wallet Response")
+                    ok().json().bodyValueAndAwait(JsonObject(emptyMap()))
+                } else {
+                    logger.info("Wallet must redirect to ${response.redirectUri}")
+                    ok().json().bodyValueAndAwait(response)
+                }
             },
             ifLeft = { error ->
                 logger.error("$error while handling post of wallet response ")
