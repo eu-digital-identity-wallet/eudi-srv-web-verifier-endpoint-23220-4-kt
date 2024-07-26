@@ -110,7 +110,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/PresentationId"
+              "$ref": "#/components/schemas/TransactionId"
             },
             "allowEmptyValue": false,
             "description": "The unique identifier of the Transaction."
@@ -144,6 +144,48 @@
                   "IdTokenAndVpTokenWalletResponse": {
                     "$ref": "#/components/examples/IdTokenAndVpTokenWalletResponse"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Server error."
+          }
+        }
+      }
+    },
+    "/ui/presentations/{transactionId}/events": {
+      "get": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Gets transaction events logs.",
+        "operationId": "getPresentationEvents",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TransactionId"
+            },
+            "allowEmptyValue": false,
+            "description": "The unique identifier of the Transaction."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentationEventsResponse"
                 }
               }
             }
@@ -465,7 +507,7 @@
           }
         ]
       },
-      "PresentationId": {
+      "TransactionId": {
         "type": "string",
         "nullable": false
       },
@@ -492,7 +534,7 @@
                 "description": "The unique identifier of the newly initialized Transaction."
               },
               {
-                "$ref": "#/components/schemas/PresentationId"
+                "$ref": "#/components/schemas/TransactionId"
               }
             ]
           },
@@ -534,7 +576,7 @@
                 "description": "The unique identifier of the newly initialized Transaction."
               },
               {
-                "$ref": "#/components/schemas/PresentationId"
+                "$ref": "#/components/schemas/TransactionId"
               }
             ]
           },
@@ -769,6 +811,47 @@
             "$ref": "#/components/schemas/ErrorWalletResponse"
           }
         ]
+      },
+      "PresentationEventsResponse": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "transaction_id": {
+            "allOf": [
+              {
+                "description": "The unique identifier of the newly initialized Transaction."
+              },
+              {
+                "type": "string",
+                "nullable": false
+              }
+            ]
+          },
+          "last_updated": {
+            "allOf": [
+              {
+                "description": "The timestamp of the last event"
+              },
+              {
+                "type": "number",
+                "nullable": false
+              }
+            ]
+          },
+          "events": {
+            "allOf": [
+              {
+                "description": "The events related to the presentation"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            ]
+          }
+        }
       }
     },
     "examples": {
