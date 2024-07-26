@@ -38,7 +38,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEnc
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationEventsInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -85,8 +84,6 @@ internal fun beans(clock: Clock) = beans {
         bean { loadPresentationByRequestId }
         bean { storePresentation }
         bean { loadIncompletePresentationsOlderThan }
-    }
-    with(PresentationEventsInMemoryRepo()) {
         bean { loadPresentationEvents }
         bean { publishPresentationEvent }
     }
@@ -321,7 +318,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
                 ByValue, null -> EmbedOption.ByValue
             }
         }
-    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
+    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(0)
 
     return VerifierConfig(
         clientIdScheme = clientIdScheme,
