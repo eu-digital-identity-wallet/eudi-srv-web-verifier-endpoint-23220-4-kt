@@ -71,7 +71,7 @@ class GetPresentationDefinitionLive(
     }
 
     private suspend fun invalidState(p: Presentation): InvalidState {
-        val cause = "Presentation should be in Submitted state but is in ${p.javaClass.name}"
+        val cause = "Presentation should be in RequestObjectRetrieved state but is in ${p.javaClass.name}"
         logFailure(p, cause)
         return InvalidState
     }

@@ -71,7 +71,7 @@ class GetRequestObjectLive(
 
     private suspend fun invalidState(presentation: Presentation): InvalidState {
         suspend fun log() {
-            val cause = "Presentation should be in Submitted state but is in ${presentation.javaClass.name}"
+            val cause = "Presentation should be in Requested state but is in ${presentation.javaClass.name}"
             val event = PresentationEvent.FailedToRetrieveRequestObject(presentation.id, clock.instant(), cause)
             publishPresentationEvent(event)
         }
