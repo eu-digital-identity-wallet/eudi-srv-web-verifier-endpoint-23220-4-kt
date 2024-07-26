@@ -318,7 +318,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
                 ByValue, null -> EmbedOption.ByValue
             }
         }
-    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(0)
+    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofMinutes(5)
 
     return VerifierConfig(
         clientIdScheme = clientIdScheme,
