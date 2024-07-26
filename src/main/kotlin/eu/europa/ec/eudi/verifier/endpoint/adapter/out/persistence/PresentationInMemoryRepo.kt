@@ -59,6 +59,7 @@ class PresentationInMemoryRepo(
             presentations.values.map { it.presentation }.toList().filter { it.isExpired(at) }
         }
     }
+
     val storePresentation: StorePresentation by lazy {
         StorePresentation { presentation ->
             val existing = presentations[presentation.id]
@@ -89,6 +90,15 @@ class PresentationInMemoryRepo(
                 else -> existingEvents + event
             }
             presentations[transactionId] = presentationAndEvent.copy(events = presentationEvents)
+        }
+    }
+
+    val deletePresentationsInitiatedBefore: DeletePresentationsInitiatedBefore by lazy {
+        DeletePresentationsInitiatedBefore { at ->
+            presentations.filter { (_, presentationAndEvents) -> presentationAndEvents.presentation.initiatedAt < at }
+                .keys
+                .onEach { presentations.remove(it) }
+                .toList()
         }
     }
 }

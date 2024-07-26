@@ -27,6 +27,7 @@ import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.nimbusds.jose.util.Base64
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.StaticContent
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.SwaggerUi
@@ -86,6 +87,7 @@ internal fun beans(clock: Clock) = beans {
         bean { loadIncompletePresentationsOlderThan }
         bean { loadPresentationEvents }
         bean { publishPresentationEvent }
+        bean { deletePresentationsInitiatedBefore }
     }
 
     bean { CreateQueryWalletResponseRedirectUri.Simple }
@@ -121,6 +123,12 @@ internal fun beans(clock: Clock) = beans {
             ref(),
         )
     }
+    bean {
+        val maxAge = Duration.parse(env.getProperty("verifier.presentations.cleanup.maxAge", "P10D"))
+        require(!maxAge.isZero && !maxAge.isNegative) { "'verifier.presentations.cleanup.maxAge' cannot be zero or negative" }
+
+        DeleteOldPresentationsLive(clock, maxAge, ref())
+    }
 
     bean { GenerateResponseCode.Random }
     bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref(), ref()) }
@@ -132,7 +140,8 @@ internal fun beans(clock: Clock) = beans {
     //
     // Scheduled
     //
-    bean { ScheduleTimeoutPresentations(ref()) }
+    bean(::ScheduleTimeoutPresentations)
+    bean(::ScheduleDeleteOldPresentations)
 
     //
     // Config
