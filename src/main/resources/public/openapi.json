@@ -185,7 +185,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PresentationEventsResponse"
+                  "$ref": "#/components/schemas/PresentationEvents"
                 }
               }
             }
@@ -812,18 +812,77 @@
           }
         ]
       },
-      "PresentationEventsResponse": {
+      "Instant": {
+        "type": "number",
+        "nullable": false,
+        "format": "int64"
+      },
+      "EventName": {
+        "type": "string",
+        "nullable": false
+      },
+      "Actor": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "Verifier",
+          "Wallet",
+          "VerifierEndPoint"
+        ]
+      },
+      "PresentationEvent": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "timestamp": {
+            "allOf": [
+              {
+                "description": "The timestamp of the event"
+              },
+              {
+                "$ref": "#/components/schemas/Instant"
+              }
+            ]
+          },
+          "event": {
+            "allOf": [
+              {
+                "description": "The name of the event"
+              },
+              {
+                "$ref": "#/components/schemas/EventName"
+              }
+            ]
+          },
+          "actor": {
+            "allOf": [
+              {
+                "description": "The actor of the event"
+              },
+              {
+                "$ref": "#/components/schemas/Actor"
+              }
+            ]
+          }
+        },
+        "required": [
+          "timestamp",
+          "event",
+          "actor"
+        ],
+        "additionalProperties": true
+      },
+      "PresentationEvents": {
         "type": "object",
         "nullable": false,
         "properties": {
           "transaction_id": {
             "allOf": [
               {
-                "description": "The unique identifier of the newly initialized Transaction."
+                "description": "The unique identifier of the Transaction."
               },
               {
-                "type": "string",
-                "nullable": false
+                "$ref": "#/components/schemas/TransactionId"
               }
             ]
           },
@@ -833,25 +892,27 @@
                 "description": "The timestamp of the last event"
               },
               {
-                "type": "number",
-                "nullable": false
+                "$ref": "#/components/schemas/Instant"
               }
             ]
           },
           "events": {
-            "allOf": [
-              {
-                "description": "The events related to the presentation"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "type": "object"
-                }
-              }
-            ]
+            "description": "The events related to the presentation",
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/PresentationEvent"
+            },
+            "minItems": 1,
+            "uniqueItems": true
           }
-        }
+        },
+        "required": [
+          "transaction_id",
+          "last_updated",
+          "events"
+        ],
+        "additionalProperties": false
       }
     },
     "examples": {
