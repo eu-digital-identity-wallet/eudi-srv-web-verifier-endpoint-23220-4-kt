@@ -474,6 +474,12 @@ Notes: Provide a value using Java Duration syntax
 Example: `PT6400M`  
 Default value: `PT6400M`
 
+Variable: `VERIFIER_PRESENTATIONS_CLEANUP_MAXAGE`  
+Description: Age of Authorization Requests. Authorization Requests older than this, are deleted.     
+Notes: Provide a value using Java Duration syntax  
+Example: `P10D`  
+Default value: `P10D`
+
 Variable: `VERIFIER_CLIENT_METADATA_AUTHORIZATION_SIGNED_RESPONSE_ALG`  
 Description: Accept only Authorization Responses that are _signed_ using this algorithm  
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
