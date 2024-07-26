@@ -56,7 +56,7 @@ sealed interface AuthorisationResponse {
 
 sealed interface WalletResponseValidationError {
     data object MissingState : WalletResponseValidationError
-    data object PresentationDefinitionNotFound : WalletResponseValidationError
+    data object PresentationNotFound : WalletResponseValidationError
 
     data class UnexpectedResponseMode(
         val requestId: RequestId,
@@ -197,7 +197,7 @@ class PostWalletResponseLive(
         val requestId = RequestId(state)
 
         val presentation = loadPresentationByRequestId(requestId)
-        return ensureNotNull(presentation) { WalletResponseValidationError.PresentationDefinitionNotFound }
+        return ensureNotNull(presentation) { WalletResponseValidationError.PresentationNotFound }
     }
 
     context(Raise<WalletResponseValidationError>)
