@@ -20,17 +20,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.scheduling.annotation.SchedulingConfigurer
+import org.springframework.scheduling.config.ScheduledTaskRegistrar
+import kotlin.time.Duration.Companion.seconds
 
-class ScheduleTimeoutPresentations(private val timeoutPresentations: TimeoutPresentations) {
+@EnableScheduling
+class ScheduleTimeoutPresentations(private val timeoutPresentations: TimeoutPresentations) : SchedulingConfigurer {
 
     private val logger: Logger = LoggerFactory.getLogger(ScheduleTimeoutPresentations::class.java)
 
-    @Scheduled(fixedRate = 2000)
-    fun timeout() {
-        runBlocking(Dispatchers.IO) {
-            timeoutPresentations().also {
-                if (it.isNotEmpty()) logger.info("Timed out ${it.size} presentations")
+    override fun configureTasks(taskRegistrar: ScheduledTaskRegistrar) {
+        taskRegistrar.addFixedRateTask(2.seconds) {
+            runBlocking(Dispatchers.IO) {
+                timeoutPresentations().also {
+                    if (it.isNotEmpty()) logger.info("Timed out ${it.size} presentations")
+                }
             }
         }
     }
