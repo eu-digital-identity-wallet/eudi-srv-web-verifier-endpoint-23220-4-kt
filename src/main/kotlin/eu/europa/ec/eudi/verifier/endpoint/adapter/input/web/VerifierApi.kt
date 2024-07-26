@@ -52,7 +52,7 @@ class VerifierApi(
         logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
         either { initTransaction(input) }.fold(
             ifRight = {
-                logger.info("Initiated transaction ${it.transactionId}")
+                logger.info("Initiated transaction tx ${it.transactionId}")
                 ok().json().bodyValueAndAwait(it)
             },
             ifLeft = { it.asBadRequest() },
@@ -72,7 +72,7 @@ class VerifierApi(
         val transactionId = req.transactionId()
         val responseCode = req.queryParam("response_code").getOrNull()?.let { ResponseCode(it) }
 
-        logger.info("Handling GetWalletResponse for $transactionId and response_code: $responseCode ...")
+        logger.info("Handling GetWalletResponse for tx ${transactionId.value} and response_code: ${responseCode?.value ?: "n/a"}. ...")
         return when (val result = getWalletResponse(transactionId, responseCode)) {
             is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
@@ -89,7 +89,7 @@ class VerifierApi(
 
         val transactionId = req.transactionId()
 
-        logger.info("Handling Get PresentationEvents for $transactionId")
+        logger.info("Handling Get PresentationEvents for tx ${transactionId.value}")
         return when (val result = getPresentationEvents(transactionId)) {
             is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()

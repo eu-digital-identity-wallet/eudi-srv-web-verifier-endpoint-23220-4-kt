@@ -130,7 +130,7 @@ internal fun beans(clock: Clock) = beans {
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
     bean { GetWalletResponseLive(clock, ref(), ref()) }
     bean { GetJarmJwksLive(ref(), clock, ref()) }
-    bean { GetPresentationEventsLive(clock, ref(), ref()) }
+    bean { GetPresentationEventsLive(ref(), ref()) }
 
     //
     // Scheduled

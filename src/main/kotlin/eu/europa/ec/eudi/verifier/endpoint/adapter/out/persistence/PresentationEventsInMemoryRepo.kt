@@ -21,7 +21,10 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
+
+private val logger = LoggerFactory.getLogger("EVENTS")
 
 class PresentationEventsInMemoryRepo(
     private val logs: ConcurrentHashMap<TransactionId, NonEmptyList<PresentationEvent>> = ConcurrentHashMap(),
@@ -33,6 +36,7 @@ class PresentationEventsInMemoryRepo(
 
     val publishPresentationEvent: PublishPresentationEvent by lazy {
         PublishPresentationEvent { event ->
+            log(event)
             val transactionId = event.transactionId
             val presentationEvents = when (val existingEvents = logs[transactionId]) {
                 null -> nonEmptyListOf(event)
@@ -40,5 +44,27 @@ class PresentationEventsInMemoryRepo(
             }
             logs[transactionId] = presentationEvents
         }
+    }
+}
+
+private fun log(e: PresentationEvent) {
+    fun txt(s: String) = "$s - tx: ${e.transactionId.value}"
+    fun warn(s: String) = logger.warn(txt(s))
+    fun info(s: String) = logger.info(txt(s))
+    when (e) {
+        is PresentationEvent.VerifierFailedToGetWalletResponse -> warn("Verifier failed to retrieve wallet response. Cause ${e.cause}")
+        is PresentationEvent.FailedToRetrieveJarmJwkSet -> warn("Verifier failed to retrieve JARM JWKS. Cause ${e.cause}")
+        is PresentationEvent.FailedToRetrievePresentationDefinition -> warn(
+            "Verifier failed to retrieve presentation definition. Cause ${e.cause}",
+        )
+        is PresentationEvent.WalletFailedToPostResponse -> warn("Wallet failed to post response. Cause ${e.cause}")
+        is PresentationEvent.FailedToRetrieveRequestObject -> warn("Wallet failed to retrieve request object. Cause ${e.cause}")
+        is PresentationEvent.PresentationExpired -> info("Expired presentation")
+        is PresentationEvent.JarmJwkSetRetrieved -> info("Wallet retrieved JARM JWKS")
+        is PresentationEvent.PresentationDefinitionRetrieved -> info("Wallet retrieved presentation definition")
+        is PresentationEvent.RequestObjectRetrieved -> info("Wallet retrieved Request Object")
+        is PresentationEvent.TransactionInitialized -> info("Verifier initialized transaction")
+        is PresentationEvent.VerifierGotWalletResponse -> info("Verifier retrieved wallet response")
+        is PresentationEvent.WalletResponsePosted -> info("Wallet posted response")
     }
 }

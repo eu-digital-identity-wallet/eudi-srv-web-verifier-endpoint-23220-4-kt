@@ -73,7 +73,7 @@ class WalletApi(
                 .bodyValueAndAwait(jwt)
 
         val requestId = req.requestId()
-        logger.info("Handling GetRequestObject for $requestId ...")
+        logger.info("Handling GetRequestObject for ${requestId.value} ...")
         return when (val result = getRequestObject(requestId)) {
             is Found -> requestObjectFound(result.value)
             is NotFound -> notFound().buildAndAwait()
@@ -89,7 +89,7 @@ class WalletApi(
         suspend fun pdFound(pd: PresentationDefinition) = ok().json().bodyValueAndAwait(pd)
 
         val requestId = req.requestId()
-        logger.info("Handling GetPresentationDefinition for $requestId ...")
+        logger.info("Handling GetPresentationDefinition for ${requestId.value} ...")
 
         return when (val result = getPresentationDefinition(requestId)) {
             is NotFound -> notFound().buildAndAwait()
@@ -140,7 +140,7 @@ class WalletApi(
      * Handles the GET request for fetching the JWKS to be used for JARM.
      */
     private suspend fun handleGetJarmJwks(request: ServerRequest): ServerResponse {
-        val requestId = request.requestId().also { logger.info("Handling GetJarmJwks for $it...") }
+        val requestId = request.requestId().also { logger.info("Handling GetJarmJwks for ${it.value}...") }
         return when (val queryResponse = getJarmJwks(requestId)) {
             is NotFound -> notFound().buildAndAwait()
             is InvalidState -> badRequest().buildAndAwait()

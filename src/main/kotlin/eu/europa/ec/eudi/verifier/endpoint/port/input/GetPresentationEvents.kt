@@ -16,21 +16,23 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.NonEmptyList
+import arrow.core.max
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import java.time.Clock
+import java.time.Instant
 
 @Serializable
 data class PresentationEventsTO(
-    @SerialName("transaction_id") val transactionId: String,
-    val timestamp: Long,
-    val events: List<JsonObject>,
+    @SerialName("transaction_id") @Required val transactionId: String,
+    @SerialName("last_updated") @Required val lastUpdated: Long,
+    @SerialName("events") @Required val events: List<JsonObject>,
 )
 
 fun interface GetPresentationEvents {
@@ -38,7 +40,7 @@ fun interface GetPresentationEvents {
 }
 
 class GetPresentationEventsLive(
-    private val clock: Clock,
+
     private val loadPresentationById: LoadPresentationById,
     private val loadPresentationEvents: LoadPresentationEvents,
 ) : GetPresentationEvents {
@@ -48,7 +50,8 @@ class GetPresentationEventsLive(
         if (presentationExists(transactionId)) {
             val events = loadPresentationEvents(transactionId)
             checkNotNull(events) { "Didn't find any events for transaction $transactionId" }
-            val transferOject = PresentationEventsTO(transactionId, clock, events)
+            val lastTimestamp = events.map { it.timestamp }.max()
+            val transferOject = PresentationEventsTO(transactionId, lastTimestamp, events)
             QueryResponse.Found(transferOject)
         } else {
             QueryResponse.NotFound
@@ -61,12 +64,12 @@ class GetPresentationEventsLive(
 
 private operator fun PresentationEventsTO.Companion.invoke(
     transactionId: TransactionId,
-    clock: Clock,
+    lastUpdated: Instant,
     events: NonEmptyList<PresentationEvent>,
 ) =
     PresentationEventsTO(
         transactionId = transactionId.value,
-        timestamp = clock.instant().toEpochMilli(),
+        lastUpdated = lastUpdated.toEpochMilli(),
         events = events.map { event ->
             require(event.transactionId == transactionId)
             toTransferObject(event)
