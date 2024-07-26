@@ -32,6 +32,7 @@ import kotlin.jvm.optionals.getOrNull
 class VerifierApi(
     private val initTransaction: InitTransaction,
     private val getWalletResponse: GetWalletResponse,
+    private val getPresentationEvents: GetPresentationEvents,
 ) {
 
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
@@ -43,6 +44,7 @@ class VerifierApi(
             this@VerifierApi::handleInitTransaction,
         )
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
+        GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
     }
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
@@ -50,7 +52,7 @@ class VerifierApi(
         logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
         either { initTransaction(input) }.fold(
             ifRight = {
-                logger.info("Initiated transaction ${it.transactionId}")
+                logger.info("Initiated transaction tx ${it.transactionId}")
                 ok().json().bodyValueAndAwait(it)
             },
             ifLeft = { it.asBadRequest() },
@@ -70,8 +72,25 @@ class VerifierApi(
         val transactionId = req.transactionId()
         val responseCode = req.queryParam("response_code").getOrNull()?.let { ResponseCode(it) }
 
-        logger.info("Handling GetWalletResponse for $transactionId and response_code: $responseCode ...")
+        logger.info("Handling GetWalletResponse for tx ${transactionId.value} and response_code: ${responseCode?.value ?: "n/a"}. ...")
         return when (val result = getWalletResponse(transactionId, responseCode)) {
+            is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
+            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.Found -> found(result.value)
+        }
+    }
+
+    /**
+     * Handles a request placed by verifier, input order to obtain
+     * presentation logs
+     */
+    private suspend fun handleGetPresentationEvents(req: ServerRequest): ServerResponse {
+        suspend fun found(events: PresentationEventsTO) = ok().json().bodyValueAndAwait(events)
+
+        val transactionId = req.transactionId()
+
+        logger.info("Handling Get PresentationEvents for tx ${transactionId.value}")
+        return when (val result = getPresentationEvents(transactionId)) {
             is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
             is QueryResponse.Found -> found(result.value)
@@ -81,6 +100,7 @@ class VerifierApi(
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
+        const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
 
         /**
          * Extracts from the request the [RequestId]

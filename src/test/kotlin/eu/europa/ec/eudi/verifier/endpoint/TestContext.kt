@@ -93,11 +93,12 @@ object TestContext {
             requestJarByReference,
             presentationDefinitionByReference,
             CreateQueryWalletResponseRedirectUri.Simple,
+            repo.publishPresentationEvent,
         )
 }
 
 /**
- * Meta annotation to be used with integration tests of the applicaiton
+ * Meta annotation to be used with integration tests of the application
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)

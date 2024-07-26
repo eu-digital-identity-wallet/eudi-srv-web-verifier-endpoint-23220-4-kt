@@ -19,6 +19,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import java.time.Clock
 
@@ -39,19 +41,41 @@ class GetRequestObjectLive(
     private val signRequestObject: SignRequestObject,
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
+    private val publishPresentationEvent: PublishPresentationEvent,
 ) : GetRequestObject {
 
     override suspend operator fun invoke(requestId: RequestId): QueryResponse<Jwt> =
         when (val presentation = loadPresentationByRequestId(requestId)) {
             null -> NotFound
-            is Presentation.Requested -> Found(requestObjectOf(presentation))
-            else -> InvalidState
+            is Presentation.Requested -> found(presentation)
+            else -> invalidState(presentation)
         }
 
-    private suspend fun requestObjectOf(presentation: Presentation.Requested): Jwt {
-        val jwt = signRequestObject(verifierConfig, clock, presentation).getOrThrow()
-        val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
-        storePresentation(updatedPresentation)
-        return jwt
+    private suspend fun found(presentation: Presentation.Requested): Found<Jwt> {
+        suspend fun requestObjectOf(): Pair<Presentation.RequestObjectRetrieved, Jwt> {
+            val jwt = signRequestObject(verifierConfig, clock, presentation).getOrThrow()
+            val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
+            storePresentation(updatedPresentation)
+            return updatedPresentation to jwt
+        }
+
+        suspend fun log(p: Presentation.RequestObjectRetrieved, jwt: Jwt) {
+            val event = PresentationEvent.RequestObjectRetrieved(p.id, p.requestObjectRetrievedAt, jwt)
+            publishPresentationEvent(event)
+        }
+
+        val (updatePresentation, jwt) = requestObjectOf()
+        log(updatePresentation, jwt)
+        return Found(jwt)
+    }
+
+    private suspend fun invalidState(presentation: Presentation): InvalidState {
+        suspend fun log() {
+            val cause = "Presentation should be in Requested state but is in ${presentation.javaClass.name}"
+            val event = PresentationEvent.FailedToRetrieveRequestObject(presentation.id, clock.instant(), cause)
+            publishPresentationEvent(event)
+        }
+        log()
+        return InvalidState
     }
 }

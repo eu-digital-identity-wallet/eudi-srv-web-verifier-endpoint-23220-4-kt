@@ -84,6 +84,8 @@ internal fun beans(clock: Clock) = beans {
         bean { loadPresentationByRequestId }
         bean { storePresentation }
         bean { loadIncompletePresentationsOlderThan }
+        bean { loadPresentationEvents }
+        bean { publishPresentationEvent }
     }
 
     bean { CreateQueryWalletResponseRedirectUri.Simple }
@@ -103,26 +105,29 @@ internal fun beans(clock: Clock) = beans {
             WalletApi.requestJwtByReference(env.publicUrl()),
             WalletApi.presentationDefinitionByReference(env.publicUrl()),
             ref(),
+            ref(),
         )
     }
 
-    bean { GetRequestObjectLive(ref(), ref(), ref(), ref(), clock) }
+    bean { GetRequestObjectLive(ref(), ref(), ref(), ref(), clock, ref()) }
 
-    bean { GetPresentationDefinitionLive(ref()) }
+    bean { GetPresentationDefinitionLive(clock, ref(), ref()) }
     bean {
         TimeoutPresentationsLive(
             ref(),
             ref(),
             ref<VerifierConfig>().maxAge,
             clock,
+            ref(),
         )
     }
 
     bean { GenerateResponseCode.Random }
-    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref()) }
+    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref(), ref()) }
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
-    bean { GetWalletResponseLive(ref()) }
-    bean { GetJarmJwksLive(ref()) }
+    bean { GetWalletResponseLive(clock, ref(), ref()) }
+    bean { GetJarmJwksLive(ref(), clock, ref()) }
+    bean { GetPresentationEventsLive(ref(), ref()) }
 
     //
     // Scheduled
@@ -146,7 +151,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref<VerifierConfig>().clientIdScheme.jarSigning.key,
         )
-        val verifierApi = VerifierApi(ref(), ref())
+        val verifierApi = VerifierApi(ref(), ref(), ref())
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
@@ -313,7 +318,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
                 ByValue, null -> EmbedOption.ByValue
             }
         }
-    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofSeconds(60)
+    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofMinutes(5)
 
     return VerifierConfig(
         clientIdScheme = clientIdScheme,

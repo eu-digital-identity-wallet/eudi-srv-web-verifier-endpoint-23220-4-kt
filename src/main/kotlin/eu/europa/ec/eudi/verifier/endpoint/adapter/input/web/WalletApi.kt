@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import arrow.core.getOrElse
 import arrow.core.raise.either
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
@@ -74,7 +73,7 @@ class WalletApi(
                 .bodyValueAndAwait(jwt)
 
         val requestId = req.requestId()
-        logger.info("Handling GetRequestObject for $requestId ...")
+        logger.info("Handling GetRequestObject for ${requestId.value} ...")
         return when (val result = getRequestObject(requestId)) {
             is Found -> requestObjectFound(result.value)
             is NotFound -> notFound().buildAndAwait()
@@ -90,7 +89,7 @@ class WalletApi(
         suspend fun pdFound(pd: PresentationDefinition) = ok().json().bodyValueAndAwait(pd)
 
         val requestId = req.requestId()
-        logger.info("Handling GetPresentationDefinition for $requestId ...")
+        logger.info("Handling GetPresentationDefinition for ${requestId.value} ...")
 
         return when (val result = getPresentationDefinition(requestId)) {
             is NotFound -> notFound().buildAndAwait()
@@ -111,8 +110,13 @@ class WalletApi(
         outcome.fold(
             ifRight = { response ->
                 logger.info("PostWalletResponse processed")
-                logger.info(response.fold({ "Verifier UI will poll for Wallet Response" }, { "Wallet must redirect to ${it.redirectUri}" }))
-                ok().json().bodyValueAndAwait(response.getOrElse { JsonObject(emptyMap()) })
+                if (response == null) {
+                    logger.info("Verifier UI will poll for Wallet Response")
+                    ok().json().bodyValueAndAwait(JsonObject(emptyMap()))
+                } else {
+                    logger.info("Wallet must redirect to ${response.redirectUri}")
+                    ok().json().bodyValueAndAwait(response)
+                }
             },
             ifLeft = { error ->
                 logger.error("$error while handling post of wallet response ")
@@ -136,7 +140,7 @@ class WalletApi(
      * Handles the GET request for fetching the JWKS to be used for JARM.
      */
     private suspend fun handleGetJarmJwks(request: ServerRequest): ServerResponse {
-        val requestId = request.requestId().also { logger.info("Handling GetJarmJwks for $it...") }
+        val requestId = request.requestId().also { logger.info("Handling GetJarmJwks for ${it.value}...") }
         return when (val queryResponse = getJarmJwks(requestId)) {
             is NotFound -> notFound().buildAndAwait()
             is InvalidState -> badRequest().buildAndAwait()
