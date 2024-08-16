@@ -286,13 +286,13 @@ You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/verifi
 ### Get authorization request
 
 - _Method_: GET
-- _URL_: http://localhost:8080/wallet/request.jwt/{transactionId}
+- _URL_: http://localhost:8080/wallet/request.jwt/{requestId}
 - _Parameters_
-  - `transactionId`: The initialized transaction's identifier
+  - `requestId`: The identifier of the authorization request
 - _Actor_: [Wallet](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
 
-An endpoint to be used by wallet when the OpenId4VP authorization request is passed to wallet by reference as a request_uri. 
-The identifier returned from calling [Initialize transaction endpoint](#initialize-transaction-endpoint) end-point should be used to identify the request.  
+An endpoint to be used by wallet when the OpenId4VP authorization request is passed to wallet by reference as a request_uri.
+In essence this is the endpoint that responds to the url included as the `request_uri` attribute of the [Initialize transaction endpoint](#initialize-transaction-endpoint)'s response.
 
 **Usage:**
 ```bash
@@ -303,9 +303,9 @@ curl https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxw
 ### Get presentation definition
 
 - _Method_: GET
-- _URL_: http://localhost:8080/wallet/pd/{transactionId}
+- _URL_: http://localhost:8080/wallet/pd/{requestId}
 - _Parameters_
-    - `transactionId`: The initialized transaction's identifier
+    - `requestId`: The identifier of the authorization request
 - _Actor_: [Wallet](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
 
 An endpoint to be used by wallet when the presentation definition of the OpenId4VP authorization request is not embedded inline in the request but by reference as a `presentation_definition_uri`.
@@ -329,7 +329,7 @@ accept 2 type of payloads:
 _**response_mode = direct_post**_
 
 A form post (application/x-www-form-urlencoded encoding) with the following form parameters:
-- `state`: The state claim included in the authorization request JWT.
+- `state`: The state claim included in the authorization request JWT. Its value matches the authorization request identifier.  
 - `id_token`: The requested id_token if authorization request 'response_type' attribute contains `id_token`.
 - `vp_token`: The requested vp_token if authorization request 'response_type' attribute contains `vp_token`.
 - `presentation_submission`: The presentation submission accompanying the vp_token in case 'response_type' attribute of authorization request contains `vp_token`.
@@ -337,7 +337,7 @@ A form post (application/x-www-form-urlencoded encoding) with the following form
 _**response_mode = direct_post.jwt**_
 
 A form post (application/x-www-form-urlencoded encoding) with the following form parameters:
-- `state`: The state claim included in the authorization request JWT.
+- `state`: The state claim included in the authorization request JWT. Its value matches the authorization request identifier.
 - `response`: A string representing an encrypted JWT (JWE) that contains as claims the form parameters mentioned in the case above    
 
 **Usage:**
