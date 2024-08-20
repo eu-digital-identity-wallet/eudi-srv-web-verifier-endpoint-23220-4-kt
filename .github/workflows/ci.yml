@@ -20,9 +20,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v3
+        uses: gradle/actions/wrapper-validation@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
       - name: Build with Gradle Wrapper
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          arguments: build --full-stacktrace
+        run: ./gradlew build --full-stacktrace
 
