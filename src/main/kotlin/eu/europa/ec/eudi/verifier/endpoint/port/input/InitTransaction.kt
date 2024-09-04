@@ -117,11 +117,21 @@ enum class ValidationError {
  */
 @Serializable
 data class JwtSecuredAuthorizationRequestTO(
-    @Required @SerialName("presentation_id") val transactionId: String,
+    @Required @SerialName("transaction_id") val transactionId: String,
     @Required @SerialName("client_id") val clientId: String,
     @SerialName("request") val request: String? = null,
     @SerialName("request_uri") val requestUri: String?,
-)
+) {
+    @Deprecated(
+        message = "Kept for compatibility, will be removed in future release.",
+        replaceWith = ReplaceWith("this.transactionId"),
+    )
+    @Required @SerialName("presentation_id") val presentationId: String
+
+    init {
+        this.presentationId = this.transactionId
+    }
+}
 
 /**
  * This is a use case that initializes the [Presentation] process.

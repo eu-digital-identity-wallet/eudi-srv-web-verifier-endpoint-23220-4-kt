@@ -218,7 +218,25 @@ sequenceDiagram
 ```
 ## Endpoints
 
-### Initialize transaction endpoint
+**Some Context around the verifier's endpoints:**
+
+A dominant concept around the interactions between a wallet and the verifier is that of a `Transaction`.
+A `Transaction` is initiated by a higher order application requesting the presentation of some credential from a wallet holder.   
+A `Transaction` comprises several aspects around the interactions between a `wallet` and the `verifier`:
+
+- The `authorization request` sent to the wallet (by value or by reference)
+- The response of the wallet to that `authorization request`
+- The log of events that occurred throughout the whole process 
+
+`transaction_id` is the identifier assigned to a `Transaction` (result of calling the [initialization endpoint](#initialize-transaction-endpoint)) and it is used in the [VerifierApi](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/VerifierApi.kt) related endpoints.
+
+An `Authorization Request` is an element of a `Transaction` and has to do with the specifics of what is requested from the wallet to present.  
+Its identifier is embedded in the request payload sent to the wallet as the `state` claim. This state is then posted back from the wallet to verifier,
+along with its response, and this is the way the initial authorization request is associated with the wallet's response.
+This identifier is used in the [WalletApi](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt) related endpoints.
+
+
+### Initialize Transaction endpoint
 
 - _Method_: POST
 - _URL_: http://localhost:8080/ui/presentations
@@ -275,7 +293,7 @@ curl -X POST -H "Content-type: application/json" -d '{
 **Returns:**
 ```json
 {
-  "presentation_id": "STMMbidoCQTtyk9id5IcoL8CqdC8rxgks5FF8cqqUrHvw0IL3AaIHGnwxvrvcEyUJ6uUPNdoBQDa7yCqpjtKaw",
+  "transaction_id": "STMMbidoCQTtyk9id5IcoL8CqdC8rxgks5FF8cqqUrHvw0IL3AaIHGnwxvrvcEyUJ6uUPNdoBQDa7yCqpjtKaw",
   "client_id": "dev.verifier-backend.eudiw.dev",
   "request_uri": "https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw"
 }
