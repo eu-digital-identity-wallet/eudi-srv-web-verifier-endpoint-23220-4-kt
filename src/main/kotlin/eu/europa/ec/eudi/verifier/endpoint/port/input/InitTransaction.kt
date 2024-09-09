@@ -126,7 +126,9 @@ data class JwtSecuredAuthorizationRequestTO(
         message = "Kept for compatibility, will be removed in future release.",
         replaceWith = ReplaceWith("this.transactionId"),
     )
-    @Required @SerialName("presentation_id") val presentationId: String
+    @Required
+    @SerialName("presentation_id")
+    val presentationId: String
 
     init {
         this.presentationId = this.transactionId
