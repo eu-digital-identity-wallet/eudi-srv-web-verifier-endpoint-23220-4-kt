@@ -23,6 +23,9 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEven
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import java.time.Clock
 
 /**
@@ -32,23 +35,29 @@ import java.time.Clock
 @SerialName("wallet_response")
 data class WalletResponseTO(
     @SerialName("id_token") val idToken: String? = null,
-    @SerialName("vp_token") val vpToken: String? = null,
+    @SerialName("vp_token") val vpToken: JsonArray? = null,
     @SerialName("presentation_submission") val presentationSubmission: PresentationSubmission? = null,
     @SerialName("error") val error: String? = null,
     @SerialName("error_description") val errorDescription: String? = null,
 )
 
 internal fun WalletResponse.toTO(): WalletResponseTO {
+    fun VpToken.toJsonElement(): JsonElement =
+        when (this) {
+            is VpToken.Generic -> JsonPrimitive(value)
+            is VpToken.Json -> value
+        }
+
     return when (this) {
         is WalletResponse.IdToken -> WalletResponseTO(idToken = idToken)
         is WalletResponse.VpToken -> WalletResponseTO(
-            vpToken = vpToken,
+            vpToken = JsonArray(vpToken.map { it.toJsonElement() }),
             presentationSubmission = presentationSubmission,
         )
 
         is WalletResponse.IdAndVpToken -> WalletResponseTO(
             idToken = idToken,
-            vpToken = vpToken,
+            vpToken = JsonArray(vpToken.map { it.toJsonElement() }),
             presentationSubmission = presentationSubmission,
         )
 

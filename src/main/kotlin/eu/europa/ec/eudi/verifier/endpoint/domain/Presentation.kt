@@ -15,8 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationSubmission
+import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 import java.time.Instant
 
@@ -80,6 +82,23 @@ val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
         is PresentationType.IdAndVpToken -> presentationDefinition
     }
 
+sealed interface VpToken {
+
+    @JvmInline
+    value class Generic(val value: String) : VpToken {
+        init {
+            require(value.isNotBlank()) { "VpToken cannot be blank" }
+        }
+    }
+
+    @JvmInline
+    value class Json(val value: JsonObject) : VpToken {
+        init {
+            require(value.isNotEmpty()) { "VpToken must contain claims" }
+        }
+    }
+}
+
 sealed interface WalletResponse {
 
     data class IdToken(
@@ -91,22 +110,17 @@ sealed interface WalletResponse {
     }
 
     data class VpToken(
-        val vpToken: String,
+        val vpToken: NonEmptyList<eu.europa.ec.eudi.verifier.endpoint.domain.VpToken>,
         val presentationSubmission: PresentationSubmission,
-    ) : WalletResponse {
-        init {
-            require(vpToken.isNotEmpty())
-        }
-    }
+    ) : WalletResponse
 
     data class IdAndVpToken(
         val idToken: Jwt,
-        val vpToken: String,
+        val vpToken: NonEmptyList<eu.europa.ec.eudi.verifier.endpoint.domain.VpToken>,
         val presentationSubmission: PresentationSubmission,
     ) : WalletResponse {
         init {
             require(idToken.isNotEmpty())
-            require(vpToken.isNotEmpty())
         }
     }
 

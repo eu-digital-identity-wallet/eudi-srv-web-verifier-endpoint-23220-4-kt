@@ -25,7 +25,9 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
@@ -34,6 +36,12 @@ import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
 import java.net.URL
+import kotlin.Any
+import kotlin.String
+import kotlin.also
+import kotlin.getOrThrow
+import kotlin.let
+import kotlin.run
 
 /**
  * The WEB API available to the wallet
@@ -185,7 +193,12 @@ class WalletApi(
             fun directPost() = AuthorisationResponseTO(
                 state = getFirst("state"),
                 idToken = getFirst("id_token"),
-                vpToken = getFirst("vp_token"),
+
+                // TODO: Is it possible to get JsonObjects in ResponseMode DirectPost
+                vpToken = get("vp_token")
+                    ?.map { JsonPrimitive(it) }
+                    ?.let { JsonArray(it) },
+
                 presentationSubmission = getFirst("presentation_submission")?.let {
                     PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
                 },
