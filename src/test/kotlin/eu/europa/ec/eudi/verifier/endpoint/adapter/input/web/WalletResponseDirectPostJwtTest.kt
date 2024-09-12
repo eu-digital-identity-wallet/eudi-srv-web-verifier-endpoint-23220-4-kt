@@ -27,13 +27,11 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
@@ -82,63 +80,86 @@ internal class WalletResponseDirectPostJwtTest {
     @Test
     @Order(value = 1)
     fun `direct_post_jwt vp_token end to end`() = runTest {
-        // given
-        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
-        val requestId =
-            RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        val requestObjectJsonResponse =
-            WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
+        fun test(
+            presentationDefinition: String,
+            presentationSubmission: String,
+            vpToken: String,
+            asserter: (WalletResponseTO) -> Unit,
+        ) {
+            // given
+            val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
+            val initTransaction = VerifierApiClient.loadInitTransactionTO(presentationDefinition)
+            val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+            val requestId =
+                RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+            val requestObjectJsonResponse =
+                WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
-        val ecKey = requestObjectJsonResponse.ecKey()
-        assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
-        assertNotNull(ecKey)
+            val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
+            val ecKey = requestObjectJsonResponse.ecKey()
+            assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
+            assertNotNull(ecKey)
 
-        // (wallet) generate JWT with claims
-        val pd: JsonElement = Json.decodeFromString(TestUtils.loadResource("02-presentationSubmission.json"))
-        val jwtClaims: JWTClaimsSet = buildJsonObject {
-            put("state", requestId.value)
-            put("id_token", idToken)
-            put("vp_token", TestUtils.loadResource("02-vpToken.json"))
-            put("presentation_submission", pd)
-        }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
+            // (wallet) generate JWT with claims
+            val pd: JsonElement = Json.decodeFromString(TestUtils.loadResource(presentationSubmission))
+            val jwtClaims: JWTClaimsSet = buildJsonObject {
+                put("state", requestId.value)
+                put("id_token", idToken)
+                put("vp_token", Json.decodeFromString(TestUtils.loadResource(vpToken)))
+                put("presentation_submission", pd)
+            }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
-        log.info("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
+            log.info("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
-        // Request JWT encrypted with ECDH-ES
-        val jweHeader = JWEHeader(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
-        log.info("header = ${jweHeader.toJSONObject()}")
+            // Request JWT encrypted with ECDH-ES
+            val jweHeader = JWEHeader(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
+            log.info("header = ${jweHeader.toJSONObject()}")
 
-        // Create the encrypted JWT object
-        val encryptedJWT = EncryptedJWT(jweHeader, jwtClaims)
+            // Create the encrypted JWT object
+            val encryptedJWT = EncryptedJWT(jweHeader, jwtClaims)
 
-        // Create an encrypter with the specified public EC key
-        val encrypter: JWEEncrypter = ECDHEncrypter(ecKey)
+            // Create an encrypter with the specified public EC key
+            val encrypter: JWEEncrypter = ECDHEncrypter(ecKey)
 
-        // Do the actual encryption
-        encryptedJWT.encrypt(encrypter)
+            // Do the actual encryption
+            encryptedJWT.encrypt(encrypter)
 
-        // Serialise to JWT compact form
-        val jwtString: String = encryptedJWT.serialize()
-        log.info("jwtString = $jwtString")
+            // Serialise to JWT compact form
+            val jwtString: String = encryptedJWT.serialize()
+            log.info("jwtString = $jwtString")
 
-        // create a post form url encoded body
-        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
-        formEncodedBody.add("response", jwtString)
-        formEncodedBody.add("state", requestId.value)
+            // create a post form url encoded body
+            val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
+            formEncodedBody.add("response", jwtString)
+            formEncodedBody.add("state", requestId.value)
 
-        // send the wallet response
-        WalletApiClient.directPostJwt(client, formEncodedBody)
+            // send the wallet response
+            WalletApiClient.directPostJwt(client, formEncodedBody)
 
-        // when
-        val response = VerifierApiClient.getWalletResponse(
-            client,
-            TransactionId(transactionInitialized.transactionId),
-        )
-        // then
-        assertNotNull(response, "response is null")
+            // when
+            val response = VerifierApiClient.getWalletResponse(
+                client,
+                TransactionId(transactionInitialized.transactionId),
+            )
+            // then
+            assertNotNull(response, "response is null")
+            asserter(response)
+        }
+
+        // Test with single Verifiable Presentation -- single JsonObject
+        test("02-presentationDefinition.json", "02-presentationSubmission.json", "02-vpToken.json") {
+            val vpToken = assertNotNull(it.vpToken)
+            assertEquals(1, vpToken.size)
+            assertIs<JsonObject>(vpToken[0])
+        }
+
+        // Test with multiple Verifiable Presentation -- single JsonArray that contains one JsonPrimitive and one JsonObject
+        test("03-presentationDefinition.json", "03-presentationSubmission.json", "03-vpToken.json") {
+            val vpToken = assertNotNull(it.vpToken)
+            assertEquals(2, vpToken.size)
+            assertIs<JsonPrimitive>(vpToken[0])
+            assertIs<JsonObject>(vpToken[1])
+        }
     }
 
     /**
