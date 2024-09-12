@@ -82,17 +82,17 @@ val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
         is PresentationType.IdAndVpToken -> presentationDefinition
     }
 
-sealed interface VpToken {
+sealed interface VerifiablePresentation {
 
     @JvmInline
-    value class Generic(val value: String) : VpToken {
+    value class Generic(val value: String) : VerifiablePresentation {
         init {
             require(value.isNotBlank()) { "VpToken cannot be blank" }
         }
     }
 
     @JvmInline
-    value class Json(val value: JsonObject) : VpToken {
+    value class Json(val value: JsonObject) : VerifiablePresentation {
         init {
             require(value.isNotEmpty()) { "VpToken must contain claims" }
         }
@@ -110,13 +110,13 @@ sealed interface WalletResponse {
     }
 
     data class VpToken(
-        val vpToken: NonEmptyList<eu.europa.ec.eudi.verifier.endpoint.domain.VpToken>,
+        val vpToken: NonEmptyList<VerifiablePresentation>,
         val presentationSubmission: PresentationSubmission,
     ) : WalletResponse
 
     data class IdAndVpToken(
         val idToken: Jwt,
-        val vpToken: NonEmptyList<eu.europa.ec.eudi.verifier.endpoint.domain.VpToken>,
+        val vpToken: NonEmptyList<VerifiablePresentation>,
         val presentationSubmission: PresentationSubmission,
     ) : WalletResponse {
         init {

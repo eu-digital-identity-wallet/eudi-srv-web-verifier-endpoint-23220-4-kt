@@ -42,10 +42,10 @@ data class WalletResponseTO(
 )
 
 internal fun WalletResponse.toTO(): WalletResponseTO {
-    fun VpToken.toJsonElement(): JsonElement =
+    fun VerifiablePresentation.toJsonElement(): JsonElement =
         when (this) {
-            is VpToken.Generic -> JsonPrimitive(value)
-            is VpToken.Json -> value
+            is VerifiablePresentation.Generic -> JsonPrimitive(value)
+            is VerifiablePresentation.Json -> value
         }
 
     return when (this) {

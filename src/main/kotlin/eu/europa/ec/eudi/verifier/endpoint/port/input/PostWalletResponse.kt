@@ -87,26 +87,29 @@ internal fun AuthorisationResponseTO.toDomain(presentation: RequestObjectRetriev
     }
 
     fun requiredVpToken(): WalletResponse.VpToken {
-        fun JsonElement.toVpTokens(): NonEmptyList<VpToken> {
-            fun JsonElement.toVpToken(): VpToken =
+        fun JsonElement.toVerifiablePresentations(): NonEmptyList<VerifiablePresentation> {
+            fun JsonElement.toVerifiablePresentation(): VerifiablePresentation =
                 when (this) {
                     is JsonPrimitive -> {
                         ensure(isString) { WalletResponseValidationError.InvalidVpToken }
-                        VpToken.Generic(content)
+                        VerifiablePresentation.Generic(content)
                     }
-                    is JsonObject -> VpToken.Json(this)
+                    is JsonObject -> VerifiablePresentation.Json(this)
                     else -> raise(WalletResponseValidationError.InvalidVpToken)
                 }
             return when (this) {
-                is JsonPrimitive, is JsonObject -> nonEmptyListOf(toVpToken())
-                is JsonArray -> map { it.toVpToken() }.toNonEmptyListOrNull() ?: raise(WalletResponseValidationError.InvalidVpToken)
+                is JsonPrimitive, is JsonObject -> nonEmptyListOf(toVerifiablePresentation())
+                is JsonArray ->
+                    map { it.toVerifiablePresentation() }
+                        .toNonEmptyListOrNull()
+                        ?: raise(WalletResponseValidationError.InvalidVpToken)
                 else -> raise(WalletResponseValidationError.InvalidVpToken)
             }
         }
 
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpTokenOrPresentationSubmission }
         ensureNotNull(presentationSubmission) { WalletResponseValidationError.MissingVpTokenOrPresentationSubmission }
-        return WalletResponse.VpToken(vpToken.toVpTokens(), presentationSubmission)
+        return WalletResponse.VpToken(vpToken.toVerifiablePresentations(), presentationSubmission)
     }
 
     fun requiredIdAndVpToken(): WalletResponse.IdAndVpToken {
