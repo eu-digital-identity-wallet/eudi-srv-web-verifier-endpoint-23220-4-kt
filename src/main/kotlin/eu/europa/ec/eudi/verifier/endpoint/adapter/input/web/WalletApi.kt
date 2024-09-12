@@ -25,7 +25,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.slf4j.Logger
@@ -39,9 +40,11 @@ import java.net.URL
 import kotlin.Any
 import kotlin.String
 import kotlin.also
+import kotlin.getOrElse
 import kotlin.getOrThrow
 import kotlin.let
 import kotlin.run
+import kotlin.runCatching
 
 /**
  * The WEB API available to the wallet
@@ -190,21 +193,23 @@ class WalletApi(
         private fun ServerRequest.requestId() = RequestId(pathVariable("requestId"))
 
         private fun MultiValueMap<String, String>.walletResponse(): AuthorisationResponse {
-            fun directPost() = AuthorisationResponseTO(
-                state = getFirst("state"),
-                idToken = getFirst("id_token"),
+            fun directPost(): AuthorisationResponse.DirectPost {
+                fun String.toJsonElement(): JsonElement =
+                    runCatching {
+                        Json.decodeFromString<JsonElement>(this)
+                    }.getOrElse { JsonPrimitive(this) }
 
-                // TODO: Is it possible to get JsonObjects in ResponseMode DirectPost
-                vpToken = get("vp_token")
-                    ?.map { JsonPrimitive(it) }
-                    ?.let { JsonArray(it) },
-
-                presentationSubmission = getFirst("presentation_submission")?.let {
-                    PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
-                },
-                error = getFirst("error"),
-                errorDescription = getFirst("error_description"),
-            ).run { AuthorisationResponse.DirectPost(this) }
+                return AuthorisationResponseTO(
+                    state = getFirst("state"),
+                    idToken = getFirst("id_token"),
+                    vpToken = getFirst("vp_token")?.toJsonElement(),
+                    presentationSubmission = getFirst("presentation_submission")?.let {
+                        PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
+                    },
+                    error = getFirst("error"),
+                    errorDescription = getFirst("error_description"),
+                ).run { AuthorisationResponse.DirectPost(this) }
+            }
 
             fun directPostJwt() = getFirst("response")?.let { jwt ->
                 AuthorisationResponse.DirectPostJwt(getFirst("state"), jwt)
