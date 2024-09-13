@@ -160,6 +160,7 @@ private fun WalletResponseValidationError.asText(): String =
         WalletResponseValidationError.MissingIdToken -> "Missing id_token"
         WalletResponseValidationError.MissingState -> "Missing state from JARM"
         WalletResponseValidationError.MissingVpTokenOrPresentationSubmission -> "Missing vp_token or presentation_submission"
+        WalletResponseValidationError.InvalidVpToken -> "vp_token is not valid"
         is WalletResponseValidationError.PresentationNotFound -> "Presentation not found"
         is WalletResponseValidationError.PresentationNotInExpectedState -> "Presentation non in expected state"
         is WalletResponseValidationError.UnexpectedResponseMode -> "Unexpected response mode. Expected $expected, actual $actual"

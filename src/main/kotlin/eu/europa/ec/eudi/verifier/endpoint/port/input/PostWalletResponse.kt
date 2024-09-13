@@ -16,10 +16,13 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
+import arrow.core.nonEmptyListOf
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
+import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
@@ -34,6 +37,10 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentatio
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import java.time.Clock
 
 /**
@@ -44,7 +51,7 @@ data class AuthorisationResponseTO(
     val error: String? = null,
     val errorDescription: String? = null,
     val idToken: String? = null,
-    val vpToken: String? = null,
+    val vpToken: JsonElement? = null,
     val presentationSubmission: PresentationSubmission? = null,
 )
 
@@ -68,6 +75,7 @@ sealed interface WalletResponseValidationError {
 
     data object IncorrectStateInJarm : WalletResponseValidationError
     data object MissingIdToken : WalletResponseValidationError
+    data object InvalidVpToken : WalletResponseValidationError
     data object MissingVpTokenOrPresentationSubmission : WalletResponseValidationError
 }
 
@@ -79,9 +87,29 @@ internal fun AuthorisationResponseTO.toDomain(presentation: RequestObjectRetriev
     }
 
     fun requiredVpToken(): WalletResponse.VpToken {
+        fun JsonElement.toVerifiablePresentations(): NonEmptyList<VerifiablePresentation> {
+            fun JsonElement.toVerifiablePresentation(): VerifiablePresentation =
+                when (this) {
+                    is JsonPrimitive -> {
+                        ensure(isString) { WalletResponseValidationError.InvalidVpToken }
+                        VerifiablePresentation.Generic(content)
+                    }
+                    is JsonObject -> VerifiablePresentation.Json(this)
+                    else -> raise(WalletResponseValidationError.InvalidVpToken)
+                }
+            return when (this) {
+                is JsonPrimitive, is JsonObject -> nonEmptyListOf(toVerifiablePresentation())
+                is JsonArray ->
+                    map { it.toVerifiablePresentation() }
+                        .toNonEmptyListOrNull()
+                        ?: raise(WalletResponseValidationError.InvalidVpToken)
+                else -> raise(WalletResponseValidationError.InvalidVpToken)
+            }
+        }
+
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpTokenOrPresentationSubmission }
         ensureNotNull(presentationSubmission) { WalletResponseValidationError.MissingVpTokenOrPresentationSubmission }
-        return WalletResponse.VpToken(vpToken, presentationSubmission)
+        return WalletResponse.VpToken(vpToken.toVerifiablePresentations(), presentationSubmission)
     }
 
     fun requiredIdAndVpToken(): WalletResponse.IdAndVpToken {
