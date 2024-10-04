@@ -15,13 +15,21 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
+import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.retrieveRequestObject
+import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.Found
+import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.InvalidState
+import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.NotFound
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.time.Clock
 
 /**
@@ -43,6 +51,7 @@ class GetRequestObjectLive(
     private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
 ) : GetRequestObject {
+    private val logger: Logger = LoggerFactory.getLogger(GetRequestObjectLive::class.java)
 
     override suspend operator fun invoke(requestId: RequestId): QueryResponse<Jwt> =
         when (val presentation = loadPresentationByRequestId(requestId)) {
@@ -71,8 +80,9 @@ class GetRequestObjectLive(
 
     private suspend fun invalidState(presentation: Presentation): InvalidState {
         suspend fun log() {
-            val cause = "Presentation should be in Requested state but is in ${presentation.javaClass.name}"
+            val cause = "Presentation should be in Requested state but is in ${presentation.javaClass.simpleName}"
             val event = PresentationEvent.FailedToRetrieveRequestObject(presentation.id, clock.instant(), cause)
+            logger.error("$cause ${presentation.id}")
             publishPresentationEvent(event)
         }
         log()

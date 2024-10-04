@@ -74,7 +74,7 @@ internal class GetJarmJwksLive(
     }
 
     private suspend fun invalidState(p: Presentation): InvalidState {
-        val cause = "Presentation should be in Submitted state but is in ${p.javaClass.name}"
+        val cause = "Presentation should be in Submitted state but is in ${p.javaClass.simpleName}"
         logFailure(p, cause)
         return InvalidState
     }

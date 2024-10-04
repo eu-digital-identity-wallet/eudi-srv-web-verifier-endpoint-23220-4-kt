@@ -16,8 +16,15 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import eu.europa.ec.eudi.prex.PresentationSubmission
-import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
+import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
+import eu.europa.ec.eudi.verifier.endpoint.domain.WalletResponse
+import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.Found
+import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.InvalidState
+import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.NotFound
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
@@ -26,6 +33,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.time.Clock
 
 /**
@@ -83,6 +92,8 @@ class GetWalletResponseLive(
     private val loadPresentationById: LoadPresentationById,
     private val publishPresentationEvent: PublishPresentationEvent,
 ) : GetWalletResponse {
+    private val logger: Logger = LoggerFactory.getLogger(GetWalletResponseLive::class.java)
+
     override suspend fun invoke(
         transactionId: TransactionId,
         responseCode: ResponseCode?,
@@ -119,7 +130,7 @@ class GetWalletResponseLive(
     }
 
     private suspend fun invalidState(presentation: Presentation): InvalidState {
-        val cause = "Presentation should be in Submitted state but is in ${presentation.javaClass.name}"
+        val cause = "Presentation should be in Submitted state but is in ${presentation.javaClass.simpleName}"
         logVerifierFailedToGetWalletResponse(presentation, cause)
         return InvalidState
     }
@@ -138,5 +149,6 @@ class GetWalletResponseLive(
     ) {
         val event = PresentationEvent.VerifierFailedToGetWalletResponse(presentation.id, clock.instant(), cause)
         publishPresentationEvent(event)
+        logger.error("$cause ${presentation.id}")
     }
 }
