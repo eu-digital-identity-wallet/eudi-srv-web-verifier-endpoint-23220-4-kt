@@ -22,7 +22,6 @@ import java.security.cert.*
 
 typealias ConfigurePKIXParameters = PKIXParameters.() -> Unit
 
-
 object CertValidationOps {
     private const val PKIX = "PKIX"
     private const val X509 = "X.509"

@@ -89,7 +89,7 @@ class DocumentValidator(
         private fun trustedCAs(keystore: KeyStore): List<X509Certificate> {
             fun x509(alias: String) =
                 alias.takeIf(keystore::isCertificateEntry)
-                ?.let(keystore::getCertificate) as? X509Certificate
+                    ?.let(keystore::getCertificate) as? X509Certificate
 
             return buildList {
                 for (alias in keystore.aliases()) {
