@@ -16,7 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
 
 import arrow.core.nonEmptyListOf
-import arrow.core.nonEmptySetOf
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -30,7 +29,7 @@ import kotlin.test.Test
 data class TrustedCA(val trustCert: X509Certificate, val caCert: X509Certificate)
 
 object Sample {
-    private const val signAlg = "SHA256withECDSA"
+    private const val SIGN_ALG = "SHA256withECDSA"
 
     fun create(): Pair<TrustedCA, X509Certificate> {
         //
@@ -44,7 +43,7 @@ object Sample {
                 addRDN(BCStyle.O, "Netcompany")
                 addRDN(BCStyle.CN, "Demo Root Certificate")
             }.build()
-        val (trustKeyPair, trustCertHolder) = CertificateOps.genTrustAnchor(signAlg, name)
+        val (trustKeyPair, trustCertHolder) = CertificateOps.genTrustAnchor(SIGN_ALG, name)
         val trustCert = trustCertHolder.toCertificate()
 
         //
@@ -62,7 +61,7 @@ object Sample {
             CertificateOps.genIntermediateCertificate(
                 trustCertHolder,
                 trustKeyPair.private,
-                signAlg,
+                SIGN_ALG,
                 0,
                 caSubject,
             )
@@ -79,7 +78,7 @@ object Sample {
                 addRDN(BCStyle.O, "Netcompany")
                 addRDN(BCStyle.CN, "Demo End-Entity Certificate")
             }.build()
-        val (_, eeCertHolder) = CertificateOps.genEndEntity(caCertHolder, caKeyPair.private, signAlg, eeSubject)
+        val (_, eeCertHolder) = CertificateOps.genEndEntity(caCertHolder, caKeyPair.private, SIGN_ALG, eeSubject)
         val eeCert = eeCertHolder.toCertificate()
 
         return TrustedCA(trustCert, caCert) to eeCert
@@ -88,9 +87,9 @@ object Sample {
 
 @DisplayName("validateChain, when")
 class CertValidationOpsTest {
-    val entities = Sample.create()
-    val trustedCA = entities.first
-    val eeCertificate = entities.second
+    private val entities = Sample.create()
+    private val trustedCA = entities.first
+    private val eeCertificate = entities.second
 
     @Test
     fun `chain contains end-entity and CA certs should succeed`() {

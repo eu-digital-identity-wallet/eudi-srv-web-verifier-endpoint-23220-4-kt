@@ -17,21 +17,17 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
 
 import arrow.core.Nel
 import arrow.core.NonEmptyList
-import arrow.core.NonEmptySet
 import java.security.KeyStore
 import java.security.cert.*
 
 typealias ConfigurePKIXParameters = PKIXParameters.() -> Unit
-operator fun ConfigurePKIXParameters.plus(that: ConfigurePKIXParameters): ConfigurePKIXParameters = {
-    apply(this@plus)
-    apply(that)
-}
+
 
 object CertValidationOps {
     private const val PKIX = "PKIX"
     private const val X509 = "X.509"
 
-    val SkipRevocation: ConfigurePKIXParameters = { isRevocationEnabled = false }
+    private val SkipRevocation: ConfigurePKIXParameters = { isRevocationEnabled = false }
 
     @Throws(CertPathValidatorException::class)
     fun validateChain(
@@ -71,6 +67,6 @@ object CertValidationOps {
     private fun certPath(chain: NonEmptyList<X509Certificate>): CertPath =
         certFactory().generateCertPath(chain)
 
-    fun certFactory() = CertificateFactory.getInstance(X509)
+    private fun certFactory(): CertificateFactory = CertificateFactory.getInstance(X509)
     private fun certPathValidator() = CertPathValidator.getInstance(PKIX)
 }

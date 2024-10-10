@@ -27,81 +27,85 @@ import id.walt.mdoc.doc.MDoc
 import java.security.KeyStore
 import java.time.Clock
 
-
+/**
+ * An invalid document inside a device response
+ */
 data class InvalidDocument(
     val index: Int,
     val documentType: String,
-    val errors: NonEmptyList<DocumentError>
+    val errors: NonEmptyList<DocumentError>,
 )
 
-sealed interface MsoMdocVPError {
-    data object CannotDecode : MsoMdocVPError
-    data class InvalidDeviceResponse(val cause: DeviceResponseError) : MsoMdocVPError
-    data class InvalidDocuments(val invalidDocuments: NonEmptyList<InvalidDocument>) : MsoMdocVPError
-}
-
+/**
+ * Errors related to device response
+ */
 sealed interface DeviceResponseError {
+    /**
+     * Given vp_token cannot be decoded to a device response
+     */
+    data object CannotDecode : DeviceResponseError
 
+    /**
+     * Device response didn't have an OK status
+     */
     data class NotOkDeviceResponseStatus(val status: Number) : DeviceResponseError
+
+    /**
+     * Invalid documents found within device response
+     */
+    data class InvalidDocuments(val invalidDocuments: NonEmptyList<InvalidDocument>) : DeviceResponseError
 }
 
-
-class MsoMdocVpValidator(
-    private val documentValidator: MsoMdocDocumentValidator
+class DeviceResponseValidator(
+    private val documentValidator: DocumentValidator,
 ) {
 
     /**
      * Validates the given verifier presentation
      * It could a vp_token or an element of an array vp_token
      */
-    fun ensureValidDocuments(vp: String): Either<MsoMdocVPError, List<MDoc>> =
+    fun ensureValidDocuments(vp: String): Either<DeviceResponseError, List<MDoc>> =
         either {
             val deviceResponse = decode(vp)
             val validDocuments = ensureValidDocuments(deviceResponse).bind()
             validDocuments
         }
 
-    fun ensureValidDocuments(deviceResponse: DeviceResponse): Either<MsoMdocVPError, List<MDoc>> =
+    fun ensureValidDocuments(deviceResponse: DeviceResponse): Either<DeviceResponseError, List<MDoc>> =
         either {
-            okStatus(deviceResponse)
+            ensureOkStatus(deviceResponse)
             validDocuments(deviceResponse)
         }
 
-    private fun Raise<MsoMdocVPError.InvalidDeviceResponse>.okStatus(deviceResponse: DeviceResponse) =
-        either { ensureOkStatus(deviceResponse) }.mapLeft(MsoMdocVPError::InvalidDeviceResponse).bind()
-
-    private fun Raise<MsoMdocVPError.InvalidDocuments>.validDocuments(deviceResponse: DeviceResponse): List<MDoc> =
+    private fun Raise<DeviceResponseError.InvalidDocuments>.validDocuments(deviceResponse: DeviceResponse): List<MDoc> =
         deviceResponse.documents.withIndex().mapOrAccumulate { (index, document) ->
-            validateDocument(index, document)
-        }.mapLeft(MsoMdocVPError::InvalidDocuments).bind()
-
-    private fun Raise<InvalidDocument>.validateDocument(index: Int, document: MDoc): MDoc =
-        documentValidator
-            .ensureValidDocument(document)
-            .mapLeft { documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }
-            .bind()
+            documentValidator
+                .ensureValidDocument(document)
+                .mapLeft { documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }
+                .bind()
+        }.mapLeft(DeviceResponseError::InvalidDocuments).bind()
 
     companion object {
 
         fun fromKeystore(
             clock: Clock,
-            validityInfoOption: ValidityInfoOption,
+            validityInfoShouldBe: ValidityInfoShouldBe,
             keyStore: KeyStore,
-        ): MsoMdocVpValidator {
-            val documentValidator = MsoMdocDocumentValidator.fromKeystore(clock, validityInfoOption, keyStore)
-            return MsoMdocVpValidator(documentValidator)
+        ): DeviceResponseValidator {
+            val documentValidator = DocumentValidator.fromKeystore(clock, validityInfoShouldBe, keyStore)
+            return DeviceResponseValidator(documentValidator)
         }
     }
 }
 
-private fun Raise<MsoMdocVPError>.decode(vp: String): DeviceResponse =
+private fun Raise<DeviceResponseError.CannotDecode>.decode(vp: String): DeviceResponse =
     try {
         DeviceResponse.fromCBORBase64URL(vp)
     } catch (t: Throwable) {
-        raise(MsoMdocVPError.CannotDecode)
+        raise(DeviceResponseError.CannotDecode)
     }
 
-private fun Raise<DeviceResponseError>.ensureOkStatus(deviceResponse: DeviceResponse) {
+private fun Raise<DeviceResponseError.NotOkDeviceResponseStatus>.ensureOkStatus(deviceResponse: DeviceResponse) {
     val status = deviceResponse.status
     ensure(DeviceResponseStatus.OK.status.toInt() == status.value.toInt()) {
         DeviceResponseError.NotOkDeviceResponseStatus(status.value)
