@@ -50,7 +50,7 @@ val issuerJwkSet =
                 "exp": 1767434030
               }
             ]
-          }
+         }
     """.trimIndent()
 
 /**

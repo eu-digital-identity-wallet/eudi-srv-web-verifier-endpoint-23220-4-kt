@@ -19,7 +19,12 @@ import arrow.core.Either
 import arrow.core.Nel
 import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
+import java.security.KeyStore
 import java.security.cert.*
+import java.time.Clock
 
 typealias ConfigurePKIXParameters = PKIXParameters.() -> Unit
 
@@ -61,6 +66,30 @@ sealed interface X5CShouldBe {
                 null -> Ignored
                 else -> Trusted(nel, customizePKIX)
             }
+
+        fun fromKeystore(
+            clock: Clock = Clock.systemDefaultZone(),
+            validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
+            issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
+            trustedCAsKeyStore: KeyStore,
+            customizePKIX: ConfigurePKIXParameters = SkipRevocation,
+        ): DocumentValidator {
+            val trustedRootCAs = trustedCAs(trustedCAsKeyStore)
+            val x5CShouldBe = X5CShouldBe(trustedRootCAs, customizePKIX)
+            return DocumentValidator(clock, validityInfoShouldBe, issuerSignedItemsShouldBe, x5CShouldBe)
+        }
+
+        private fun trustedCAs(keystore: KeyStore): List<X509Certificate> {
+            fun x509(alias: String) =
+                alias.takeIf(keystore::isCertificateEntry)
+                    ?.let(keystore::getCertificate) as? X509Certificate
+
+            return buildList {
+                for (alias in keystore.aliases()) {
+                    x509(alias)?.let(::add)
+                }
+            }
+        }
     }
 }
 

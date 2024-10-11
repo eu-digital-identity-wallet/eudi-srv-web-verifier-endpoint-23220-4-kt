@@ -18,6 +18,8 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 import COSE.AlgorithmID
 import arrow.core.*
 import arrow.core.raise.*
+import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.ECKey
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import id.walt.mdoc.COSECryptoProviderKeyInfo
@@ -26,7 +28,6 @@ import id.walt.mdoc.cose.COSESign1
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mso.ValidityInfo
 import kotlinx.datetime.toJavaInstant
-import java.security.KeyStore
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -46,6 +47,7 @@ enum class IssuerSignedItemsShouldBe {
 sealed interface DocumentError {
     data object MissingValidityInfo : DocumentError
     data class ExpiredValidityInfo(val validFrom: Instant, val validTo: Instant) : DocumentError
+    data object IssuerKeyIsNotEC : DocumentError
     data object InvalidIssuerSignature : DocumentError
     data class X5CNotTrusted(val cause: String?) : DocumentError
     data object DocumentTypeNotMatching : DocumentError
@@ -69,31 +71,6 @@ class DocumentValidator(
                 { ensureValidIssuerSignature(document, issuerChain, x5CShouldBe.caCertificates()) },
             ) { _, _, _, _ -> document }
         }
-
-    companion object {
-        fun fromKeystore(
-            clock: Clock = Clock.systemDefaultZone(),
-            validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-            issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
-            trustedCAsKeyStore: KeyStore,
-        ): DocumentValidator {
-            val trustedRootCAs = trustedCAs(trustedCAsKeyStore)
-            val x5CShouldBe = X5CShouldBe(trustedRootCAs)
-            return DocumentValidator(clock, validityInfoShouldBe, issuerSignedItemsShouldBe, x5CShouldBe)
-        }
-
-        private fun trustedCAs(keystore: KeyStore): List<X509Certificate> {
-            fun x509(alias: String) =
-                alias.takeIf(keystore::isCertificateEntry)
-                    ?.let(keystore::getCertificate) as? X509Certificate
-
-            return buildList {
-                for (alias in keystore.aliases()) {
-                    x509(alias)?.let(::add)
-                }
-            }
-        }
-    }
 }
 
 private fun Raise<DocumentError>.ensureNotExpiredValidityInfo(
@@ -125,8 +102,7 @@ private fun Raise<DocumentError.DocumentTypeNotMatching>.ensureMatchingDocumentT
         DocumentError.DocumentTypeNotMatching
     }
 
-private const val ISSUER_KEY_ID = "ISSUER_KEY_ID"
-private fun Raise<DocumentError.InvalidIssuerSignature>.ensureValidIssuerSignature(
+private fun Raise<DocumentError>.ensureValidIssuerSignature(
     document: MDoc,
     chain: NonEmptyList<X509Certificate>,
     caCertificates: List<X509Certificate>,
@@ -138,21 +114,37 @@ private fun Raise<DocumentError.InvalidIssuerSignature>.ensureValidIssuerSignatu
     }
 }
 
-private fun cryptoProviderKeyInfo(
+private const val ISSUER_KEY_ID = "ISSUER_KEY_ID"
+private fun Raise<DocumentError.IssuerKeyIsNotEC>.cryptoProviderKeyInfo(
     chain: NonEmptyList<X509Certificate>,
     caCertificates: List<X509Certificate>,
 ): COSECryptoProviderKeyInfo {
-    val issuerCert = chain.head
-    // TODO find a way to not hard-code algorithm
+    val issuerECKey = ensureIssuerKeyIsEC(chain.head)
     return COSECryptoProviderKeyInfo(
         keyID = ISSUER_KEY_ID,
-        algorithmID = AlgorithmID.ECDSA_256,
-        publicKey = issuerCert.publicKey,
+        algorithmID = issuerECKey.coseAlgorithmID,
+        publicKey = issuerECKey.toECPublicKey(),
         privateKey = null,
         x5Chain = chain,
         trustedRootCAs = caCertificates,
     )
 }
+
+private fun Raise<DocumentError.IssuerKeyIsNotEC>.ensureIssuerKeyIsEC(issuerCert: X509Certificate): ECKey =
+    try {
+        ECKey.parse(issuerCert)
+    } catch (e: Exception) {
+        raise(DocumentError.IssuerKeyIsNotEC)
+    }
+
+private val ECKey.coseAlgorithmID: AlgorithmID
+    get() =
+        when (curve) {
+            Curve.P_256 -> AlgorithmID.ECDSA_256
+            Curve.P_384 -> AlgorithmID.ECDSA_384
+            Curve.P_521 -> AlgorithmID.ECDSA_512
+            else -> error("Unsupported ECKey Curve '$curve'")
+        }
 
 private fun Raise<DocumentError.InvalidIssuerSignedItems>.ensureDigestsOfIssuerSignedItems(
     document: MDoc,
