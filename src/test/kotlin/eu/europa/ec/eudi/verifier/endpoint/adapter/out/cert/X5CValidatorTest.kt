@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
 
+import arrow.core.Nel
 import arrow.core.nonEmptyListOf
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
@@ -24,26 +25,24 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
-import kotlin.test.Test
+import kotlin.test.*
 
 data class TrustedCA(val trustCert: X509Certificate, val caCert: X509Certificate)
 
 object Sample {
     private const val SIGN_ALG = "SHA256withECDSA"
 
-    fun create(): Pair<TrustedCA, X509Certificate> {
+    fun create(): Pair<TrustedCA, X509Certificate> = with(CertOps) {
         //
         // Trust Anchor
         //
         val name: X500Name =
             X500NameBuilder(BCStyle.INSTANCE).apply {
-                addRDN(BCStyle.C, "GR")
-                addRDN(BCStyle.ST, "Attika")
-                addRDN(BCStyle.L, "Marousi")
-                addRDN(BCStyle.O, "Netcompany")
+                addRDN(BCStyle.C, "Utopia")
+                addRDN(BCStyle.O, "Awesome Organization")
                 addRDN(BCStyle.CN, "Demo Root Certificate")
             }.build()
-        val (trustKeyPair, trustCertHolder) = CertificateOps.genTrustAnchor(SIGN_ALG, name)
+        val (trustKeyPair, trustCertHolder) = genTrustAnchor(SIGN_ALG, name)
         val trustCert = trustCertHolder.toCertificate()
 
         //
@@ -51,14 +50,12 @@ object Sample {
         //
         val caSubject =
             X500NameBuilder(BCStyle.INSTANCE).apply {
-                addRDN(BCStyle.C, "GR")
-                addRDN(BCStyle.ST, "Attika")
-                addRDN(BCStyle.L, "Marousi")
-                addRDN(BCStyle.O, "Netcompany")
+                addRDN(BCStyle.C, "Utopia")
+                addRDN(BCStyle.O, "Awesome Organization")
                 addRDN(BCStyle.CN, "Demo Intermediate Certificate")
             }.build()
         val (caKeyPair, caCertHolder) =
-            CertificateOps.genIntermediateCertificate(
+            genIntermediateCertificate(
                 trustCertHolder,
                 trustKeyPair.private,
                 SIGN_ALG,
@@ -72,13 +69,12 @@ object Sample {
         //
         val eeSubject =
             X500NameBuilder(BCStyle.INSTANCE).apply {
-                addRDN(BCStyle.C, "GR")
-                addRDN(BCStyle.ST, "Attika")
-                addRDN(BCStyle.L, "Marousi")
-                addRDN(BCStyle.O, "Netcompany")
+                addRDN(BCStyle.C, "Utopia")
+                addRDN(BCStyle.O, "Awesome Organization")
                 addRDN(BCStyle.CN, "Demo End-Entity Certificate")
             }.build()
-        val (_, eeCertHolder) = CertificateOps.genEndEntity(caCertHolder, caKeyPair.private, SIGN_ALG, eeSubject)
+        val (_, eeCertHolder) =
+            genEndEntity(caCertHolder, caKeyPair.private, SIGN_ALG, eeSubject)
         val eeCert = eeCertHolder.toCertificate()
 
         return TrustedCA(trustCert, caCert) to eeCert
@@ -86,7 +82,7 @@ object Sample {
 }
 
 @DisplayName("validateChain, when")
-class CertValidationOpsTest {
+class X5CValidatorTest {
     private val entities = Sample.create()
     private val trustedCA = entities.first
     private val eeCertificate = entities.second
@@ -97,7 +93,7 @@ class CertValidationOpsTest {
         // trust contains the trust anchor cert
         val chain = nonEmptyListOf(eeCertificate, trustedCA.caCert)
         val trust = nonEmptyListOf(trustedCA.trustCert)
-        assertDoesNotThrow { CertValidationOps.validateChain(chain, trust) }
+        assertDoesNotThrow { test(chain, trust) }
     }
 
     @Test
@@ -110,7 +106,8 @@ class CertValidationOpsTest {
             trustedCA.trustCert,
         )
         val trust = nonEmptyListOf(trustedCA.trustCert)
-        assertDoesNotThrow { CertValidationOps.validateChain(chain, trust) }
+
+        assertDoesNotThrow { test(chain, trust) }
     }
 
     @Test
@@ -119,27 +116,33 @@ class CertValidationOpsTest {
         // trust contains the CA and Trust Anchor certs
         val chain = nonEmptyListOf(eeCertificate)
         val trust = nonEmptyListOf(trustedCA.caCert, trustedCA.trustCert)
-        assertDoesNotThrow { CertValidationOps.validateChain(chain, trust) }
+        assertDoesNotThrow { test(chain, trust) }
     }
 
     @Test
     fun `cert order in chain should not affect validation`() {
         val chain = nonEmptyListOf(trustedCA.caCert, eeCertificate)
         val trust = nonEmptyListOf(trustedCA.trustCert)
-        assertDoesNotThrow { CertValidationOps.validateChain(chain, trust) }
+        assertThrows<CertPathValidatorException> { test(chain, trust) }
     }
 
     @Test
     fun `validate a partial chain should fail`() {
         val chain = nonEmptyListOf(eeCertificate)
         val trust = nonEmptyListOf(trustedCA.trustCert)
-        assertThrows<CertPathValidatorException> { CertValidationOps.validateChain(chain, trust) }
+        assertThrows<CertPathValidatorException> { test(chain, trust) }
     }
 
     @Test
     fun `when directly trusting the CA should succeed `() {
         val chain = nonEmptyListOf(eeCertificate)
         val trust = nonEmptyListOf(trustedCA.caCert)
-        assertDoesNotThrow { CertValidationOps.validateChain(chain, trust) }
+        assertDoesNotThrow { test(chain, trust) }
     }
+}
+
+private fun test(chain: Nel<X509Certificate>, trust: Nel<X509Certificate>) {
+    val x5CShouldBe = X5CShouldBe.Trusted(trust)
+    val validator = X5CValidator(x5CShouldBe)
+    validator.trustedOrThrow(chain)
 }

@@ -16,9 +16,12 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import COSE.AlgorithmID
-import arrow.core.*
+import arrow.core.EitherNel
+import arrow.core.NonEmptyList
 import arrow.core.raise.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.CertValidationOps
+import arrow.core.toNonEmptyListOrNull
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.cose.COSESign1
@@ -26,7 +29,6 @@ import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mso.ValidityInfo
 import kotlinx.datetime.toJavaInstant
 import java.security.KeyStore
-import java.security.cert.CertPathValidatorException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -35,12 +37,7 @@ import java.time.Instant
 enum class ValidityInfoShouldBe {
     NotExpired,
     NotExpiredIfPresent,
-    Any,
-}
-
-sealed interface X5CShouldBe {
-    data class Trusted(val trustedRootCAs: Nel<X509Certificate>) : X5CShouldBe
-    data object Any : X5CShouldBe
+    Ignored,
 }
 
 sealed interface DocumentError {
@@ -124,7 +121,7 @@ private fun Raise<DocumentError>.verifyValidity(
         }
 
         ValidityInfoShouldBe.NotExpiredIfPresent -> validityInfo?.let(::check)
-        ValidityInfoShouldBe.Any -> Unit
+        ValidityInfoShouldBe.Ignored -> Unit
     }
 }
 
@@ -169,19 +166,9 @@ private fun Raise<DocumentError>.ensureTrustedChain(
 
     ensureNotNull(chain) { DocumentError.X5CNotTrusted("Empty chain") }
 
-    return when (x5CShouldBe) {
-        X5CShouldBe.Any -> chain
-        is X5CShouldBe.Trusted -> ensureTrustedChain(chain, x5CShouldBe)
+    val x5cValidator = X5CValidator(x5CShouldBe)
+    val trustedChain = x5cValidator.ensureTrusted(chain).mapLeft { exception ->
+        DocumentError.X5CNotTrusted(exception.message)
     }
+    return trustedChain.bind()
 }
-
-private fun Raise<DocumentError.X5CNotTrusted>.ensureTrustedChain(
-    chain: Nel<X509Certificate>,
-    trust: X5CShouldBe.Trusted,
-): Nel<X509Certificate> =
-    try {
-        CertValidationOps.validateChain(chain, trust.trustedRootCAs)
-        chain
-    } catch (e: CertPathValidatorException) {
-        raise(DocumentError.X5CNotTrusted(e.message))
-    }

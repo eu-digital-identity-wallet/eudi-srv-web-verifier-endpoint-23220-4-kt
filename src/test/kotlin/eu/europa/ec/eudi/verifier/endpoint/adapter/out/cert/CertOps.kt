@@ -23,7 +23,6 @@ import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509v1CertificateBuilder
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import java.math.BigInteger
@@ -35,10 +34,8 @@ import java.time.Instant
 import java.util.*
 import kotlin.time.Duration
 
-internal object CertificateOps {
-    init {
-        Security.addProvider(BouncyCastleProvider())
-    }
+internal object CertOps {
+    private val Ctx = SecCtx(null)
 
     private val clock = Clock.systemDefaultZone()
 
@@ -55,17 +52,11 @@ internal object CertificateOps {
     private fun notBefore(d: Duration = Duration.ZERO): Instant =
         clock.instant().plusSeconds(d.inWholeSeconds)
 
-    private val ecKeyPairGenerator: KeyPairGenerator by lazy {
-        KeyPairGenerator.getInstance("EC", "BC")
-    }
-
-    private fun generateECPair(): KeyPair = ecKeyPairGenerator.genKeyPair()
-
     fun genTrustAnchor(
         sigAlg: String,
         name: X500Name,
     ): Pair<KeyPair, X509CertificateHolder> {
-        val kp = ecKeyPairGenerator.genKeyPair()
+        val kp = Ctx.generateECPair()
         val certHolder = createTrustAnchor(kp, sigAlg, name)
         return kp to certHolder
     }
@@ -77,7 +68,7 @@ internal object CertificateOps {
         followingCACerts: Int = 0,
         subject: X500Name,
     ): Pair<KeyPair, X509CertificateHolder> {
-        val caKp = generateECPair()
+        val caKp = Ctx.generateECPair()
         val caCertHolder =
             createIntermediateCertificate(signerCert, signerKey, sigAlg, caKp.public, followingCACerts, subject)
         return caKp to caCertHolder
@@ -89,7 +80,7 @@ internal object CertificateOps {
         sigAlg: String,
         subject: X500Name,
     ): Pair<KeyPair, X509CertificateHolder> {
-        val eeKp = generateECPair()
+        val eeKp = Ctx.generateECPair()
         val eeCertHolder = createEndEntity(signerCert, signerKey, sigAlg, eeKp.public, subject)
         return eeKp to eeCertHolder
     }
@@ -132,7 +123,7 @@ internal object CertificateOps {
         JcaX509v3CertificateBuilder(
             signerCert.subject,
             calculateSerialNumber(),
-            calculateDate(0),
+            Date.from(notBefore()),
             calculateDate(24 * 31),
             subject,
             certKey,
@@ -163,26 +154,28 @@ internal object CertificateOps {
             basicConstraints(BasicConstraints(false)) // do not allow this cert to sign other certs
             keyUsage(KeyUsage(KeyUsage.digitalSignature))
         }.build(sigAlg, signerKey)
+
+    private fun signer(sigAlg: String, privateKey: PrivateKey): ContentSigner =
+        Ctx.jcaContentSignerBuilder(sigAlg).build(privateKey)
+
+    fun X509CertificateHolder.toCertificate(): X509Certificate {
+        val cFact = Ctx.certFactory()
+        return cFact.generateCertificate(encoded.inputStream()) as X509Certificate
+    }
+
+    private fun JcaX509v1CertificateBuilder.build(sigAlg: String, privateKey: PrivateKey): X509CertificateHolder {
+        val signer = signer(sigAlg, privateKey)
+        return build(signer)
+    }
+    private fun JcaX509v3CertificateBuilder.build(sigAlg: String, privateKey: PrivateKey): X509CertificateHolder {
+        val signer = signer(sigAlg, privateKey)
+        return build(signer)
+    }
 }
 
 //
 // Kotlin extensions
 //
-
-fun X509CertificateHolder.toCertificate(): X509Certificate {
-    val cFact = CertificateFactory.getInstance("X.509", "BC")
-    return cFact.generateCertificate(encoded.inputStream()) as X509Certificate
-}
-
-private fun JcaX509v1CertificateBuilder.build(sigAlg: String, privateKey: PrivateKey): X509CertificateHolder {
-    val signer = signer(sigAlg, privateKey)
-    return build(signer)
-}
-
-private fun JcaX509v3CertificateBuilder.build(sigAlg: String, privateKey: PrivateKey): X509CertificateHolder {
-    val signer = signer(sigAlg, privateKey)
-    return build(signer)
-}
 
 private fun JcaX509v3CertificateBuilder.authorityKeyIdentifier(signerCert: X509CertificateHolder) {
     addExtension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(signerCert))
@@ -211,5 +204,24 @@ private fun JcaX509v3CertificateBuilder.basicConstraints(c: BasicConstraints) {
 
 private val extUtils = JcaX509ExtensionUtils()
 
-private fun signer(sigAlg: String, privateKey: PrivateKey): ContentSigner =
-    JcaContentSignerBuilder(sigAlg).setProvider("BC").build(privateKey)
+private class SecCtx(private val provider: Provider? = null) {
+
+    fun certFactory(): CertificateFactory =
+        provider
+            ?.let { CertificateFactory.getInstance("X.509", it) }
+            ?: CertificateFactory.getInstance("X.509")
+
+    fun kpGenerator(): KeyPairGenerator =
+        provider
+            ?.let { KeyPairGenerator.getInstance("EC", provider) }
+            ?: KeyPairGenerator.getInstance("EC")
+
+    fun generateECPair(): KeyPair = kpGenerator().genKeyPair()
+
+    fun jcaContentSignerBuilder(sigAlg: String) =
+        JcaContentSignerBuilder(sigAlg).apply {
+            if (provider != null) {
+                setProvider(provider)
+            }
+        }
+}

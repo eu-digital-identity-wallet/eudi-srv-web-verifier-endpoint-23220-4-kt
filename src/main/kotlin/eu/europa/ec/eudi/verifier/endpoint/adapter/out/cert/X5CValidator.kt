@@ -1,0 +1,83 @@
+/*
+ * Copyright (c) 2023 European Commission
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
+
+import arrow.core.Either
+import arrow.core.Nel
+import arrow.core.NonEmptyList
+import java.security.cert.*
+
+typealias ConfigurePKIXParameters = PKIXParameters.() -> Unit
+
+private val SkipRevocation: ConfigurePKIXParameters = { isRevocationEnabled = false }
+
+/**
+ * Options about [certificate chain validator][X5CValidator]
+ */
+sealed interface X5CShouldBe {
+
+    /**
+     * The chain should be trusted
+     *
+     * @param rootCACertificates list of trusted root CA certificates. To be used as trust anchors
+     * @param customizePKIX a way to parameterize [PKIXParameters]. If not provided, disable revocation checks
+     */
+    data class Trusted(
+        val rootCACertificates: NonEmptyList<X509Certificate>,
+        val customizePKIX: ConfigurePKIXParameters = SkipRevocation,
+    ) : X5CShouldBe
+
+    /**
+     * The chain will not be checked
+     */
+    data object Ignored : X5CShouldBe
+}
+
+class X5CValidator(private val x5CShouldBe: X5CShouldBe) {
+
+    fun ensureTrusted(chain: Nel<X509Certificate>): Either<CertPathValidatorException, Nel<X509Certificate>> =
+        Either.catchOrThrow {
+            trustedOrThrow(chain)
+            chain
+        }
+
+    @Throws(CertPathValidatorException::class)
+    fun trustedOrThrow(chain: Nel<X509Certificate>) {
+        when (x5CShouldBe) {
+            X5CShouldBe.Ignored -> {} // Do nothing
+            is X5CShouldBe.Trusted -> trustedOrThrow(chain, x5CShouldBe)
+        }
+    }
+}
+
+@Throws(CertPathValidatorException::class)
+private fun trustedOrThrow(
+    chain: Nel<X509Certificate>,
+    trusted: X5CShouldBe.Trusted,
+) {
+    val factory = CertificateFactory.getInstance("X.509")
+    val certPath = factory.generateCertPath(chain)
+
+    val pkixParameters = trusted.asPkixParameters()
+    val validator = CertPathValidator.getInstance("PKIX")
+
+    validator.validate(certPath, pkixParameters)
+}
+
+private fun X5CShouldBe.Trusted.asPkixParameters(): PKIXParameters {
+    val trust = rootCACertificates.map { cert -> TrustAnchor(cert, null) }.toSet()
+    return PKIXParameters(trust).apply(customizePKIX)
+}
