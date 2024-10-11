@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
 import arrow.core.Either
 import arrow.core.Nel
 import arrow.core.NonEmptyList
+import arrow.core.toNonEmptyListOrNull
 import java.security.cert.*
 
 typealias ConfigurePKIXParameters = PKIXParameters.() -> Unit
@@ -33,7 +34,7 @@ sealed interface X5CShouldBe {
      * The chain should be trusted
      *
      * @param rootCACertificates list of trusted root CA certificates. To be used as trust anchors
-     * @param customizePKIX a way to parameterize [PKIXParameters]. If not provided, disable revocation checks
+     * @param customizePKIX a way to parameterize [PKIXParameters]. If not provided, revocation checks are disabled
      */
     data class Trusted(
         val rootCACertificates: NonEmptyList<X509Certificate>,
@@ -44,11 +45,30 @@ sealed interface X5CShouldBe {
      * The chain will not be checked
      */
     data object Ignored : X5CShouldBe
+
+    fun caCertificates(): List<X509Certificate> =
+        when (this) {
+            Ignored -> emptyList()
+            is Trusted -> rootCACertificates
+        }
+
+    companion object {
+        operator fun invoke(
+            rootCACertificates: List<X509Certificate>,
+            customizePKIX: ConfigurePKIXParameters = SkipRevocation,
+        ): X5CShouldBe =
+            when (val nel = rootCACertificates.toNonEmptyListOrNull()) {
+                null -> Ignored
+                else -> Trusted(nel, customizePKIX)
+            }
+    }
 }
 
 class X5CValidator(private val x5CShouldBe: X5CShouldBe) {
 
-    fun ensureTrusted(chain: Nel<X509Certificate>): Either<CertPathValidatorException, Nel<X509Certificate>> =
+    fun ensureTrusted(
+        chain: Nel<X509Certificate>,
+    ): Either<CertPathValidatorException, Nel<X509Certificate>> =
         Either.catchOrThrow {
             trustedOrThrow(chain)
             chain
@@ -57,8 +77,10 @@ class X5CValidator(private val x5CShouldBe: X5CShouldBe) {
     @Throws(CertPathValidatorException::class)
     fun trustedOrThrow(chain: Nel<X509Certificate>) {
         when (x5CShouldBe) {
-            X5CShouldBe.Ignored -> {} // Do nothing
-            is X5CShouldBe.Trusted -> trustedOrThrow(chain, x5CShouldBe)
+            X5CShouldBe.Ignored -> Unit // Do nothing
+            is X5CShouldBe.Trusted -> {
+                trustedOrThrow(chain, x5CShouldBe)
+            }
         }
     }
 }

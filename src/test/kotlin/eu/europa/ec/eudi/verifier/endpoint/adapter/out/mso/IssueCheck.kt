@@ -26,11 +26,11 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.springframework.core.io.ClassPathResource
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
 import kotlin.test.fail
 
+/**
+ * Kotlin issuer JWK
+ */
 val issuerJwkSet =
     """
         {
@@ -53,6 +53,9 @@ val issuerJwkSet =
           }
     """.trimIndent()
 
+/**
+ * A kotlin issued credential, presented by android wallet
+ */
 val presentation =
     """
         {
@@ -76,28 +79,21 @@ val presentation =
         }
     """.trimIndent()
 
-val caCert: X509Certificate by lazy {
-    val certificateFactory = CertificateFactory.getInstance("X.509")
-    val certStream = ClassPathResource("PIDIssuerCAUT01.pem").inputStream
-    certificateFactory.generateCertificate(certStream) as X509Certificate
+val trusted: X5CShouldBe.Trusted by lazy {
+    X5CShouldBe.Trusted(Data.caCert.nel())
 }
 
-fun checkIssuerJwkSet(): X5CShouldBe.Trusted {
+fun checkIssuerJwkSet() {
     val chain = run {
         val jwkSet = JWKSet.load(issuerJwkSet.byteInputStream())
         val jwk = jwkSet.keys.first()
         checkNotNull(jwk.parsedX509CertChain.toNonEmptyListOrNull())
     }
-
-    val trusted = X5CShouldBe.Trusted(caCert.nel())
     val chainValidator = X5CValidator(trusted)
     chainValidator.trustedOrThrow(chain)
-    return trusted
 }
 
 fun main() {
-    val trusted = checkIssuerJwkSet()
-
     val vpToken = Json.parseToJsonElement(presentation)
         .jsonObject["value"]!!
         .jsonObject["vp_token"]!!
@@ -105,8 +101,14 @@ fun main() {
         .first()
         .jsonPrimitive.content
 
-    val devRespValidator = DeviceResponseValidator(DocumentValidator(x5CShouldBe = trusted))
-    val validated = devRespValidator.ensureValidDocuments(vpToken)
+    val devRespValidator = DeviceResponseValidator(
+        DocumentValidator(
+            validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
+            x5CShouldBe = trusted,
+            issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
+        ),
+    )
+    val validated = devRespValidator.ensureValid(vpToken)
 
     val docs =
         assertDoesNotThrow {

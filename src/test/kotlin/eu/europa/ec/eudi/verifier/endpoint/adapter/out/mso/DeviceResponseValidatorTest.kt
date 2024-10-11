@@ -30,8 +30,8 @@ import kotlin.test.assertNotNull
 object Data {
 
     /**
-     * Contains three documents
-     * The first & the second are valid
+     * Contains three documents,
+     * The first and the second are valid
      * The 3d has expired validity info
      */
     val ThreeDocumentVP =
@@ -59,7 +59,8 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token where the 3d document has an invalid validity info should fail`() {
         val invalidDocument = run {
-            val validated = DeviceResponseValidator(Data.caCert).ensureValidDocuments(Data.ThreeDocumentVP)
+            val validator = deviceResponseValidator(Data.caCert)
+            val validated = validator.ensureValid(Data.ThreeDocumentVP)
             val invalidDocuments =
                 assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                     .invalidDocuments
@@ -72,7 +73,7 @@ class DeviceResponseValidatorTest {
             assertEquals(1, invalidDocument.errors.size)
             invalidDocument.errors.head
         }
-        assertIs<DocumentError.Expired>(documentError)
+        assertIs<DocumentError.ExpiredValidityInfo>(documentError)
     }
 
     @Test
@@ -83,7 +84,7 @@ class DeviceResponseValidatorTest {
                 x5CShouldBe = X5CShouldBe.Trusted(Data.caCert.nel()),
             )
             val vpValidator = DeviceResponseValidator(docV)
-            val validated = vpValidator.ensureValidDocuments(Data.ThreeDocumentVP)
+            val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
             assertNotNull(validated.getOrNull())
         }
 
@@ -93,7 +94,7 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token having a single document with invalid chain should fail`() {
         val invalidDocument = run {
-            val validated = DeviceResponseValidator(Data.caCert).ensureValidDocuments(Data.MdlVP)
+            val validated = deviceResponseValidator(Data.caCert).ensureValid(Data.MdlVP)
             val invalidDocuments =
                 assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                     .invalidDocuments
@@ -113,7 +114,7 @@ class DeviceResponseValidatorTest {
         val validDocuments = run {
             val docV = DocumentValidator(x5CShouldBe = X5CShouldBe.Ignored)
             val vpValidator = DeviceResponseValidator(docV)
-            val validated = vpValidator.ensureValidDocuments(Data.MdlVP)
+            val validated = vpValidator.ensureValid(Data.MdlVP)
             assertNotNull(validated.getOrNull())
         }
 
@@ -121,11 +122,12 @@ class DeviceResponseValidatorTest {
     }
 }
 
-private operator fun DeviceResponseValidator.Companion.invoke(caCert: X509Certificate): DeviceResponseValidator {
+private fun deviceResponseValidator(caCert: X509Certificate): DeviceResponseValidator {
     val documentValidator = DocumentValidator(
-        clock = Clock.systemDefaultZone(),
-        validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-        x5CShouldBe = X5CShouldBe.Trusted(nonEmptyListOf(caCert)),
+        Clock.systemDefaultZone(),
+        ValidityInfoShouldBe.NotExpired,
+        IssuerSignedItemsShouldBe.Verified,
+        X5CShouldBe.Trusted(nonEmptyListOf(caCert)),
     )
     return DeviceResponseValidator(documentValidator)
 }
