@@ -24,7 +24,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
-import id.walt.mdoc.cose.COSESign1
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mso.ValidityInfo
 import kotlinx.datetime.toJavaInstant
@@ -159,20 +158,38 @@ private fun Raise<DocumentError.InvalidIssuerSignedItems>.ensureDigestsOfIssuerS
 private fun Raise<Nel<DocumentError.X5CNotTrusted>>.ensureTrustedChain(
     document: MDoc,
     x5CShouldBe: X5CShouldBe,
-): NonEmptyList<X509Certificate> {
-    val issuerAuth: COSESign1 =
-        ensureNotNull(document.issuerSigned.issuerAuth) { DocumentError.X5CNotTrusted("Missing issuerAuth").nel() }
-    val chain = run {
-        val x5c = ensureNotNull(issuerAuth.x5Chain) { DocumentError.X5CNotTrusted("Missing x5Chain").nel() }
-        val factory: CertificateFactory = CertificateFactory.getInstance("X.509")
-        factory.generateCertificates(x5c.inputStream()).mapNotNull { it as? X509Certificate }.toNonEmptyListOrNull()
+): NonEmptyList<X509Certificate> =
+    either {
+        val chain = ensureContainsChain(document)
+        ensureValidChain(chain, x5CShouldBe)
+    }.toEitherNel().bind()
+
+private fun Raise<DocumentError.X5CNotTrusted>.ensureContainsChain(
+    document: MDoc,
+): Nel<X509Certificate> {
+    val issuerAuth =
+        ensureNotNull(document.issuerSigned.issuerAuth) {
+            DocumentError.X5CNotTrusted("Missing issuerAuth")
+        }
+    val chain =
+        run {
+            val x5c = ensureNotNull(issuerAuth.x5Chain) { DocumentError.X5CNotTrusted("Missing x5Chain") }
+            val factory: CertificateFactory = CertificateFactory.getInstance("X.509")
+            factory.generateCertificates(x5c.inputStream()).mapNotNull { it as? X509Certificate }.toNonEmptyListOrNull()
+        }
+
+    return ensureNotNull(chain) {
+        DocumentError.X5CNotTrusted("Empty chain")
     }
+}
 
-    ensureNotNull(chain) { DocumentError.X5CNotTrusted("Empty chain").nel() }
-
+private fun Raise<DocumentError.X5CNotTrusted>.ensureValidChain(
+    chain: NonEmptyList<X509Certificate>,
+    x5CShouldBe: X5CShouldBe,
+): Nel<X509Certificate> {
     val x5cValidator = X5CValidator(x5CShouldBe)
-    val trustedChain = x5cValidator.ensureTrusted(chain).mapLeft { exception ->
-        DocumentError.X5CNotTrusted(exception.message).nel()
+    val validChain = x5cValidator.ensureTrusted(chain).mapLeft { exception ->
+        DocumentError.X5CNotTrusted(exception.message)
     }
-    return trustedChain.bind()
+    return validChain.bind()
 }
