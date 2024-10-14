@@ -71,7 +71,7 @@ sealed interface X5CShouldBe {
             return X5CShouldBe(trustedRootCAs, customizePKIX)
         }
 
-        private fun trustedCAs(keystore: KeyStore): List<X509Certificate> {
+        internal fun trustedCAs(keystore: KeyStore): List<X509Certificate> {
             fun x509(alias: String) =
                 alias.takeIf(keystore::isCertificateEntry)
                     ?.let(keystore::getCertificate) as? X509Certificate

@@ -19,6 +19,7 @@ import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import org.springframework.core.io.DefaultResourceLoader
+import java.io.InputStream
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -48,25 +49,18 @@ object Data {
         """.trimIndent()
 
     val caCerts: NonEmptyList<X509Certificate> by lazy {
-        val keystore = DefaultResourceLoader().getResource("classpath:trusted-issuers.jks")
+        DefaultResourceLoader()
+            .getResource("classpath:trusted-issuers.jks")
             .inputStream
-            .use {
-                KeyStore.getInstance("JKS")
-                    .apply {
-                        load(it, null)
-                    }
+            .use { inputStream ->
+                val keyStore = loadKeystore(inputStream)
+                val certs = X5CShouldBe.trustedCAs(keyStore).toNonEmptyListOrNull()
+                requireNotNull(certs) { "Unable to load X509 Certificates from 'classpath:trusted-issuers.jks'" }
             }
-        val certificates = buildList {
-            val aliases = keystore.aliases()
-            while (aliases.hasMoreElements()) {
-                val alias = aliases.nextElement()
-                if (keystore.isCertificateEntry(alias)) {
-                    add(keystore.getCertificate(alias) as X509Certificate)
-                }
-            }
-        }.toNonEmptyListOrNull()
-        requireNotNull(certificates) { "Unable to load X509 Certificates from 'classpath:trusted-issuers.jks'" }
     }
+
+    private fun loadKeystore(inputStream: InputStream): KeyStore =
+        KeyStore.getInstance("JKS").apply { load(inputStream, null) }
 }
 
 class DeviceResponseValidatorTest {
