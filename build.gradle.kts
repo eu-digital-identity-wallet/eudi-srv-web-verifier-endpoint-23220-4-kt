@@ -18,6 +18,11 @@ plugins {
 repositories {
     mavenCentral()
     mavenLocal()
+    maven {
+        url = uri("https://maven.waltid.dev/releases")
+        mavenContent {
+        }
+    }
 }
 
 dependencies {
@@ -36,6 +41,15 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.webjars:webjars-locator-core")
     implementation(libs.swagger.ui)
+    implementation(libs.waltid.mdoc.credentials) {
+        because("To verify CBOR credentials")
+    }
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1") {
+        because("required by walt.id")
+    }
+    implementation("com.augustcellars.cose:cose-java:1.1.0") {
+        because("required by walt.id")
+    }
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)

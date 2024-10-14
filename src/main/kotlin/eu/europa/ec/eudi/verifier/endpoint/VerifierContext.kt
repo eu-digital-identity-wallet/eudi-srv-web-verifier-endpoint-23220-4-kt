@@ -29,10 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.StaticContent
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.SwaggerUi
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
@@ -136,6 +133,29 @@ internal fun beans(clock: Clock) = beans {
     bean { GetWalletResponseLive(clock, ref(), ref()) }
     bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
+    bean {
+        val trustedIssuers =
+            env.getProperty("trustedIssuers.keystore.path")
+                ?.takeIf { it.isNotBlank() }
+                ?.let { keystorePath ->
+                    val keystoreType = env.getRequiredProperty("trustedIssuers.keystore.type")
+                    val keystorePassword = env.getProperty("trustedIssuers.keystore.password")
+                        ?.takeIf { it.isNotBlank() }
+                        ?.toCharArray()
+
+                    log.info("Loading trusted issuers' certificates from '$keystorePath'")
+                    DefaultResourceLoader().getResource(keystorePath)
+                        .inputStream
+                        .use {
+                            KeyStore.getInstance(keystoreType)
+                                .apply {
+                                    load(it, keystorePassword)
+                                }
+                        }
+                }
+
+        ValidateMsoMdocDeviceResponse(clock, trustedIssuers)
+    }
 
     //
     // Scheduled
@@ -164,12 +184,15 @@ internal fun beans(clock: Clock) = beans {
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
-            webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern").removeSuffix("/**"),
+            webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
+                .removeSuffix("/**"),
         )
+        val utilityApi = UtilityApi(ref())
         walletApi.route
             .and(verifierApi.route)
             .and(staticContent.route)
             .and(swaggerUi.route)
+            .and(utilityApi.route)
     }
 
     //

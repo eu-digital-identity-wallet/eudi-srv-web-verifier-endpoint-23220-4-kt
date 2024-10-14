@@ -558,6 +558,16 @@ Description: Alias of the Key to use for JAR signing, in the configured Keystore
 Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
 Description: Password of the Key to use for JAR signing, in the configured Keystore
 
+Variable: `TRUSTEDISSUERS_KEYSTORE_PATH`   
+Description: If present, the URL of the Keystore from which to load the X509 Certificates of the trusted issuers  
+Examples: `classpath:trusted-issuers.jks`, `file:///trusted-issuers.jks`  
+
+Variable: `TRUSTEDISSUERS_KEYSTORE_TYPE`   
+Description: Type of the Keystore from which to load the X509 Certificates of the trusted issuers  
+Examples: `jks`, `pkcs12`  
+
+Variable: `TRUSTEDISSUERS_KEYSTORE_PASSWORD`  
+Description: If present and non-blank, the password of the Keystore from which to load the X509 Certificates of the trusted issuers  
 
 ## How to contribute
 

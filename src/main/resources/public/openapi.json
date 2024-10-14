@@ -201,6 +201,77 @@
           }
         }
       }
+    },
+    "/utilities/validations/msoMdoc/deviceResponse": {
+      "post": {
+        "tags": [
+          "utility api"
+        ],
+        "summary": "Validates an MSO MDoc DeviceResponse.",
+        "description": "Validates an MSO MDoc DeviceResponse.<p><ol><li>Verifies the provided value is a DeviceResponse encoded using Base64 URL-Safe encoding</li><li>For each contained Document verifies: <ol><li>It contains non-expired ValidityInfo</li><li>It is of the expected document type</li><li>It contains IssuerSigned items with valid Digests</li><li>It is signed by a trusted Issuer (checked against a configured X5C chain)</li></ol></li></ol></p>",
+        "operationId": "validateMsoMdocDeviceResponse",
+        "requestBody": {
+          "description": "The value to validate as an MSO Mdoc Device Response encoded using Base64 URL safe encoding.",
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateMsoMdocDeviceResponse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationSuccess"
+                },
+                "examples": {
+                  "MsoMdocDeviceResponseValidationSuccess": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationSuccess"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailure"
+                },
+                "examples": {
+                  "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureDecodingFailure"
+                  },
+                  "MsoMdocDeviceResponseValidationFailureStatusFailure": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureStatusFailure"
+                  },
+                  "MsoMdocDeviceResponseValidationFailureDocumentValidationFailure": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "nullable": false,
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -932,6 +1003,181 @@
           "events"
         ],
         "additionalProperties": false
+      },
+      "ValidateMsoMdocDeviceResponse": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "device_response": {
+            "type": "string",
+            "format": "base64url",
+            "nullable": false
+          }
+        },
+        "required": [
+          "device_response"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDocument": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "docType": {
+            "type": "string",
+            "nullable": false
+          },
+          "attributes": {
+            "type": "object",
+            "nullable": false,
+            "additionalProperties": {
+              "type": "array",
+              "nullable": false,
+              "items": {
+                "type": "string",
+                "nullable": false
+              },
+              "minItems": 0
+            }
+          }
+        },
+        "required": [
+          "docType",
+          "attributes"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationSuccess": {
+        "type": "array",
+        "nullable": false,
+        "items": {
+          "$ref": "#/components/schemas/MsoMdocDocument"
+        },
+        "minItems": 0,
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
+        "description": "A value cannot be decoded as an MSO MDoc DeviceResponse.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "CannotBeDecoded"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationFailureStatusFailure": {
+        "description": "A value contained a DeviceResponse with a non-OK Status.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "NotOkDeviceResponseStatus"
+            ]
+          },
+          "deviceResponseStatus": {
+            "type": "integer",
+            "nullable": false
+          }
+        },
+        "required": [
+          "type",
+          "deviceResponseStatus"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDocumentError": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "MissingValidityInfo",
+          "ExpiredValidityInfo",
+          "IssuerKeyIsNotEC",
+          "InvalidIssuerSignature",
+          "X5CNotTrusted",
+          "DocumentTypeNotMatching",
+          "InvalidIssuerSignedItems"
+        ]
+      },
+      "MsoMdocInvalidDocument": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "nullable": false,
+            "minimum": 0
+          },
+          "documentType": {
+            "type": "string",
+            "nullable": false
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MsoMdocDocumentError"
+            },
+            "nullable": false,
+            "minItems": 1
+          }
+        },
+        "required": [
+          "index",
+          "documentType",
+          "errors"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationFailureDocumentValidationFailure": {
+        "description": "A value contains a DeviceResponse with invalid Documents.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "InvalidDocuments"
+            ]
+          },
+          "invalidDocuments": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/MsoMdocInvalidDocument"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "type",
+          "invalidDocuments"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationFailure": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDecodingFailure"
+          },
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureStatusFailure"
+          },
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
+          }
+        ]
       }
     },
     "examples": {
@@ -1255,6 +1501,47 @@
               }
             ]
           }
+        }
+      },
+      "MsoMdocDeviceResponseValidationSuccess": {
+        "description": "A value has been successfully validated as an MSO MDoc DeviceResponse.",
+        "value": [
+          {
+            "docType": "eu.europa.ec.eudi.pid.1",
+            "attributes": {
+              "eu.europa.ec.eudi.pid.1": [
+                "age_over_18"
+              ]
+            }
+          }
+        ]
+      },
+      "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
+        "description": "A value could not be decoded as an MSO Mdoc DeviceResponse.",
+        "value": {
+          "type": "CannotBeDecoded"
+        }
+      },
+      "MsoMdocDeviceResponseValidationFailureStatusFailure": {
+        "description": "A value contains an MSO MDoc DeviceResponse with a non-OK Status.",
+        "value": {
+          "type": "NotOkDeviceResponseStatus",
+          "deviceResponseStatus": 12
+        }
+      },
+      "MsoMdocDeviceResponseValidationFailureDocumentValidationFailure": {
+        "description": "An MSO MDoc DeviceResponse contains invalid documents.",
+        "value": {
+          "type": "InvalidDocuments",
+          "invalidDocuments": [
+            {
+              "index": 0,
+              "documentType": "eu.europa.ec.eudi.pid.1",
+              "errors": [
+                "InvalidIssuerSignedItems"
+              ]
+            }
+          ]
         }
       }
     }

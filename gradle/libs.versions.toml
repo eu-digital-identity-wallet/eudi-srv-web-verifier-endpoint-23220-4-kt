@@ -16,6 +16,7 @@ sonarqube = "5.1.0.4882"
 dependencycheck = "10.0.4"
 jacoco = "0.8.11"
 swaggerUi = "5.17.14"
+waltid = "0.8.0"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -26,6 +27,7 @@ bouncy-castle = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bou
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
 swagger-ui = { module = "org.webjars:swagger-ui", version.ref = "swaggerUi" }
+waltid-mdoc-credentials = { module = "id.walt.mdoc-credentials:waltid-mdoc-credentials-jvm", version.ref = "waltid" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
