@@ -16,7 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.getOrElse
-import arrow.core.nel
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
@@ -80,7 +79,7 @@ val presentation =
     """.trimIndent()
 
 val trusted: X5CShouldBe.Trusted by lazy {
-    X5CShouldBe.Trusted(Data.caCert.nel())
+    X5CShouldBe.Trusted(Data.caCerts)
 }
 
 fun checkIssuerJwkSet() {
