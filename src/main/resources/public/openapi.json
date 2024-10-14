@@ -221,8 +221,20 @@
           }
         },
         "responses": {
-          "204": {
-            "description": "No content"
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationSuccess"
+                },
+                "examples": {
+                  "MsoMdocDeviceResponseValidationSuccess": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationSuccess"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad request",
@@ -241,9 +253,6 @@
                   "MsoMdocDeviceResponseValidationFailureDocumentValidationFailure": {
                     "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
                   },
-                  "MsoMdocDeviceResponseValidationFailureOtherFailure": {
-                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureOtherFailure"
-                  }
                 }
               }
             }
@@ -253,13 +262,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "nullable": false
-                },
-                "examples": {
-                  "UnexpectedError": {
-                    "value": "Unexpected error while trying to validate Device Response"
-                  }
+                  "type": "object",
+                  "nullable": false,
+                  "additionalProperties": true
                 }
               }
             }
@@ -1013,6 +1018,21 @@
         ],
         "additionalProperties": false
       },
+      "MsoMdocDeviceResponseValidationSuccess": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "numberOfDocuments": {
+            "type": "integer",
+            "nullable": false,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "numberOfDocuments"
+        ],
+        "additionalProperties": false
+      },
       "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
         "description": "A vp_token cannot be decoded as an MSO MDoc DeviceResponse.",
         "type": "object",
@@ -1123,10 +1143,6 @@
         ],
         "additionalProperties": false
       },
-      "MsoMdocDeviceResponseValidationFailureOtherFailure": {
-        "type": "string",
-        "nullable": false
-      },
       "MsoMdocDeviceResponseValidationFailure": {
         "oneOf": [
           {
@@ -1137,9 +1153,6 @@
           },
           {
             "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
-          },
-          {
-            "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureOtherFailure"
           }
         ]
       }
@@ -1467,6 +1480,12 @@
           }
         }
       },
+      "MsoMdocDeviceResponseValidationSuccess": {
+        "description": "A vp_token has been successfully validated as an MSO MDoc DeviceResponse.",
+        "value": {
+          "numberOfDocuments": 2
+        }
+      },
       "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
         "description": "A vp_token could not be decoded as an MSO Mdoc DeviceResponse.",
         "value": {
@@ -1494,10 +1513,6 @@
             }
           ]
         }
-      },
-      "MsoMdocDeviceResponseValidationFailureOtherFailure": {
-        "description": "An MSO MDoc DeviceResponse could not be validated due to another error.",
-        "value": "Unable to decode request body: 'vp_token must be provided'."
       }
     }
   }

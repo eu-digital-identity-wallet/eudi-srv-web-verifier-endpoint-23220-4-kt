@@ -15,13 +15,14 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import arrow.core.Either
 import arrow.core.raise.either
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
@@ -107,31 +108,26 @@ internal class VerifierApi(
     /**
      * Handles a request to validate an MsoMdoc DeviceResponse.
      */
-    private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse =
-        Either.catch {
-            request.awaitFormData()["vp_token"]
-                ?.firstOrNull { it.isNotBlank() }
-                .let {
-                    requireNotNull(it) { "vp_token must be provided" }
-                }
-        }.fold(
-            ifRight = { vpToken ->
-                when (val result = validateMsoMdocDeviceResponse(vpToken)) {
-                    is DeviceResponseValidationResult.Valid ->
-                        noContent().buildAndAwait()
+    private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse {
+        val vpToken = request.awaitFormData()["vp_token"]
+            ?.firstOrNull { it.isNotBlank() }
+            .let {
+                requireNotNull(it) { "vp_token must be provided" }
+            }
+        return when (val result = validateMsoMdocDeviceResponse(vpToken)) {
+            is DeviceResponseValidationResult.Valid ->
+                ok().bodyValueAndAwait(
+                    buildJsonObject {
+                        put("numberOfDocuments", result.numberOfDocuments)
+                    },
+                )
 
-                    is DeviceResponseValidationResult.Invalid ->
-                        badRequest()
-                            .json()
-                            .bodyValueAndAwait(result.error)
-                }
-            },
-            ifLeft = {
+            is DeviceResponseValidationResult.Invalid ->
                 badRequest()
                     .json()
-                    .bodyValueAndAwait("\"Unable to decode request body: '${it.message}'.\"")
-            },
-        )
+                    .bodyValueAndAwait(result.error)
+        }
+    }
 
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"

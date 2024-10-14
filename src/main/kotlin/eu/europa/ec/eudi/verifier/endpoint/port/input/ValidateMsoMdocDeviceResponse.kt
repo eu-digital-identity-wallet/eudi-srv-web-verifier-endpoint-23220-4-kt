@@ -98,13 +98,11 @@ internal sealed interface DeviceResponseValidationResult {
  * Tries to validate a vp_token as an MsoMdoc DeviceResponse.
  */
 internal class ValidateMsoMdocDeviceResponse(
-    private val clock: Clock,
-    private val trustedIssuers: KeyStore?,
+    clock: Clock,
+    trustedIssuers: KeyStore?,
 ) {
-
     private val defaultValidator: DeviceResponseValidator by lazy {
         val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
-
         val docValidator = DocumentValidator(
             clock = clock,
             issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
@@ -112,7 +110,13 @@ internal class ValidateMsoMdocDeviceResponse(
             x5CShouldBe = x5cShouldBe,
 
         )
-        // Log here the options
+
+        log.info(
+            "Created DocumentValidator using: \n\t" +
+                "IssuerSignedItemsShouldBe: '${IssuerSignedItemsShouldBe.Verified}', \n\t" +
+                "ValidityInfoShouldBe: '${ValidityInfoShouldBe.NotExpired}', and \n\t" +
+                "X5CShouldBe '$x5cShouldBe'",
+        )
         DeviceResponseValidator(docValidator)
     }
 
@@ -124,9 +128,6 @@ internal class ValidateMsoMdocDeviceResponse(
             )
 }
 
-/**
- * Converts this [DeviceResponseError] to a [ValidationErrorTO].
- */
 private fun DeviceResponseError.toValidationFailureTO(): ValidationErrorTO =
     when (this) {
         DeviceResponseError.CannotBeDecoded -> ValidationErrorTO.cannotBeDecoded()
@@ -134,15 +135,9 @@ private fun DeviceResponseError.toValidationFailureTO(): ValidationErrorTO =
         is DeviceResponseError.InvalidDocuments -> ValidationErrorTO.invalidDocuments(invalidDocuments.map { it.toInvalidDocumentTO() })
     }
 
-/**
- * Converts this [InvalidDocument] to a [InvalidDocumentTO].
- */
 private fun InvalidDocument.toInvalidDocumentTO(): InvalidDocumentTO =
     InvalidDocumentTO(index, documentType, errors.map { it.toDocumentErrorTO() })
 
-/**
- * Converts this [DocumentError] to a [DocumentErrorTO].
- */
 private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
     when (this) {
         DocumentError.MissingValidityInfo -> DocumentErrorTO.MissingValidityInfo
