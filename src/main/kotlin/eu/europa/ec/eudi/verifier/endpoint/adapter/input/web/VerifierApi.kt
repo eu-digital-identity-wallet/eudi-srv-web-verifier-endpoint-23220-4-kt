@@ -21,11 +21,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
@@ -35,7 +32,6 @@ internal class VerifierApi(
     private val initTransaction: InitTransaction,
     private val getWalletResponse: GetWalletResponse,
     private val getPresentationEvents: GetPresentationEvents,
-    private val validateMsoMdocDeviceResponse: ValidateMsoMdocDeviceResponse,
 ) {
 
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
@@ -48,11 +44,6 @@ internal class VerifierApi(
         )
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
         GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
-        POST(
-            VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH,
-            contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
-            ::handleValidateMsoMdocDeviceResponse,
-        )
     }
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
@@ -105,35 +96,10 @@ internal class VerifierApi(
         }
     }
 
-    /**
-     * Handles a request to validate an MsoMdoc DeviceResponse.
-     */
-    private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse {
-        val vpToken = request.awaitFormData()["device_response"]
-            ?.firstOrNull { it.isNotBlank() }
-            .let {
-                requireNotNull(it) { "device_response must be provided" }
-            }
-        return when (val result = validateMsoMdocDeviceResponse(vpToken)) {
-            is DeviceResponseValidationResult.Valid ->
-                ok().bodyValueAndAwait(
-                    buildJsonObject {
-                        put("numberOfDocuments", result.numberOfDocuments)
-                    },
-                )
-
-            is DeviceResponseValidationResult.Invalid ->
-                badRequest()
-                    .json()
-                    .bodyValueAndAwait(result.error)
-        }
-    }
-
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
-        const val VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH = "/validations/msoMdoc/deviceResponse"
 
         /**
          * Extracts from the request the [RequestId]

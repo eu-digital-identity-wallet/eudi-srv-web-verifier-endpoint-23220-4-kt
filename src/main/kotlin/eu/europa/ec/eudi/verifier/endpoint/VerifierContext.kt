@@ -29,10 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.StaticContent
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.SwaggerUi
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
@@ -183,17 +180,19 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref<VerifierConfig>().clientIdScheme.jarSigning.key,
         )
-        val verifierApi = VerifierApi(ref(), ref(), ref(), ref())
+        val verifierApi = VerifierApi(ref(), ref(), ref())
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
             webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
                 .removeSuffix("/**"),
         )
+        val utilityApi = UtilityApi(ref())
         walletApi.route
             .and(verifierApi.route)
             .and(staticContent.route)
             .and(swaggerUi.route)
+            .and(utilityApi.route)
     }
 
     //

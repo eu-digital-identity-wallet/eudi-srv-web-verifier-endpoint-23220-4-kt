@@ -202,10 +202,10 @@
         }
       }
     },
-    "/validations/msoMdoc/deviceResponse": {
+    "/utilities/validations/msoMdoc/deviceResponse": {
       "post": {
         "tags": [
-          "verifier api"
+          "utility api"
         ],
         "summary": "Validates an MSO MDoc DeviceResponse.",
         "description": "Validates an MSO MDoc DeviceResponse.<p><ol><li>Verifies the provided value is a DeviceResponse encoded using Base64 URL-Safe encoding</li><li>For each contained Document verifies: <ol><li>It contains non-expired ValidityInfo</li><li>It is of the expected document type</li><li>It contains IssuerSigned items with valid Digests</li><li>It is signed by a trusted Issuer (checked against a configured X5C chain)</li></ol></li></ol></p>",
