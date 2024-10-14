@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
+import id.walt.mdoc.doc.MDoc
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 import java.security.KeyStore
@@ -86,11 +87,22 @@ internal data class InvalidDocumentTO(
     val errors: List<DocumentErrorTO>,
 )
 
+typealias AttributesPerNamespace = Map<String, List<String>>
+
+/**
+ * The details of a validated MSO MDoc document.
+ */
+@Serializable
+internal data class DocumentTO(
+    val docType: String,
+    val attributes: AttributesPerNamespace = emptyMap(),
+)
+
 /**
  * The outcome of trying to validate a DeviceResponse.
  */
 internal sealed interface DeviceResponseValidationResult {
-    data class Valid(val numberOfDocuments: Int) : DeviceResponseValidationResult
+    data class Valid(val documents: List<DocumentTO>) : DeviceResponseValidationResult
     data class Invalid(val error: ValidationErrorTO) : DeviceResponseValidationResult
 }
 
@@ -123,7 +135,7 @@ internal class ValidateMsoMdocDeviceResponse(
     operator fun invoke(deviceResponse: String): DeviceResponseValidationResult =
         defaultValidator.ensureValid(deviceResponse)
             .fold(
-                ifRight = { docs -> DeviceResponseValidationResult.Valid(docs.size) },
+                ifRight = { documents -> DeviceResponseValidationResult.Valid(documents.map { it.toDocumentTO() }) },
                 ifLeft = { DeviceResponseValidationResult.Invalid(it.toValidationFailureTO()) },
             )
 }
@@ -148,3 +160,8 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         DocumentError.DocumentTypeNotMatching -> DocumentErrorTO.DocumentTypeNotMatching
         DocumentError.InvalidIssuerSignedItems -> DocumentErrorTO.InvalidIssuerSignedItems
     }
+
+private fun MDoc.toDocumentTO(): DocumentTO = DocumentTO(
+    docType = docType.value,
+    attributes = nameSpaces.associateWith { namespace -> getIssuerSignedItems(namespace).map { item -> item.elementIdentifier.value } },
+)

@@ -17,8 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.port.input.DeviceResponseValidationResult
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateMsoMdocDeviceResponse
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
@@ -47,11 +45,7 @@ internal class UtilityApi(
             }
         return when (val result = validateMsoMdocDeviceResponse(vpToken)) {
             is DeviceResponseValidationResult.Valid ->
-                ok().bodyValueAndAwait(
-                    buildJsonObject {
-                        put("numberOfDocuments", result.numberOfDocuments)
-                    },
-                )
+                ok().bodyValueAndAwait(result.documents)
 
             is DeviceResponseValidationResult.Invalid ->
                 badRequest()

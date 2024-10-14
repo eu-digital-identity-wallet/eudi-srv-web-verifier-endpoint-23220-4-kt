@@ -1019,19 +1019,41 @@
         ],
         "additionalProperties": false
       },
-      "MsoMdocDeviceResponseValidationSuccess": {
+      "MsoMdocDocument": {
         "type": "object",
         "nullable": false,
         "properties": {
-          "numberOfDocuments": {
-            "type": "integer",
+          "docType": {
+            "type": "string",
+            "nullable": false
+          },
+          "attributes": {
+            "type": "object",
             "nullable": false,
-            "minimum": 0
+            "additionalProperties": {
+              "type": "array",
+              "nullable": false,
+              "items": {
+                "type": "string",
+                "nullable": false
+              },
+              "minItems": 0
+            }
           }
         },
         "required": [
-          "numberOfDocuments"
+          "docType",
+          "attributes"
         ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationSuccess": {
+        "type": "array",
+        "nullable": false,
+        "items": {
+          "$ref": "#/components/schemas/MsoMdocDocument"
+        },
+        "minItems": 0,
         "additionalProperties": false
       },
       "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
@@ -1483,9 +1505,16 @@
       },
       "MsoMdocDeviceResponseValidationSuccess": {
         "description": "A value has been successfully validated as an MSO MDoc DeviceResponse.",
-        "value": {
-          "numberOfDocuments": 2
-        }
+        "value": [
+          {
+            "docType": "eu.europa.ec.eudi.pid.1",
+            "attributes": {
+              "eu.europa.ec.eudi.pid.1": [
+                "age_over_18"
+              ]
+            }
+          }
+        ]
       },
       "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
         "description": "A value could not be decoded as an MSO Mdoc DeviceResponse.",
