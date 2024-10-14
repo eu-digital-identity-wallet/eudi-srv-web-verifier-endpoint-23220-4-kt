@@ -19,12 +19,8 @@ import arrow.core.Either
 import arrow.core.Nel
 import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import java.security.KeyStore
 import java.security.cert.*
-import java.time.Clock
 
 typealias ConfigurePKIXParameters = PKIXParameters.() -> Unit
 
@@ -68,15 +64,11 @@ sealed interface X5CShouldBe {
             }
 
         fun fromKeystore(
-            clock: Clock = Clock.systemDefaultZone(),
-            validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-            issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
             trustedCAsKeyStore: KeyStore,
             customizePKIX: ConfigurePKIXParameters = SkipRevocation,
-        ): DocumentValidator {
+        ): X5CShouldBe {
             val trustedRootCAs = trustedCAs(trustedCAsKeyStore)
-            val x5CShouldBe = X5CShouldBe(trustedRootCAs, customizePKIX)
-            return DocumentValidator(clock, validityInfoShouldBe, issuerSignedItemsShouldBe, x5CShouldBe)
+            return X5CShouldBe(trustedRootCAs, customizePKIX)
         }
 
         private fun trustedCAs(keystore: KeyStore): List<X509Certificate> {

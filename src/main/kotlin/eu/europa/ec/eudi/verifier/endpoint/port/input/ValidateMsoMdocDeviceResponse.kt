@@ -16,12 +16,12 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.NonEmptyList
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
+import java.security.KeyStore
+import java.time.Clock
 
 private val log = LoggerFactory.getLogger(ValidateMsoMdocDeviceResponse::class.java)
 
@@ -39,23 +39,23 @@ internal enum class ValidationFailureErrorTypeTO {
  * Details abouts the reason why DeviceResponse failed to validate.
  */
 @Serializable
-internal data class ValidationFailureTO(
+internal data class ValidationErrorTO(
     val type: ValidationFailureErrorTypeTO,
     val deviceResponseStatus: Int? = null,
     val invalidDocuments: List<InvalidDocumentTO>? = null,
 ) {
     companion object {
-        fun cannotBeDecoded(): ValidationFailureTO =
-            ValidationFailureTO(type = ValidationFailureErrorTypeTO.CannotBeDecoded)
+        fun cannotBeDecoded(): ValidationErrorTO =
+            ValidationErrorTO(type = ValidationFailureErrorTypeTO.CannotBeDecoded)
 
-        fun notOkDeviceResponseStatus(deviceResponseStatus: Int): ValidationFailureTO =
-            ValidationFailureTO(
+        fun notOkDeviceResponseStatus(deviceResponseStatus: Int): ValidationErrorTO =
+            ValidationErrorTO(
                 type = ValidationFailureErrorTypeTO.NotOkDeviceResponseStatus,
                 deviceResponseStatus = deviceResponseStatus,
             )
 
-        fun invalidDocuments(invalidDocuments: NonEmptyList<InvalidDocumentTO>): ValidationFailureTO =
-            ValidationFailureTO(
+        fun invalidDocuments(invalidDocuments: NonEmptyList<InvalidDocumentTO>): ValidationErrorTO =
+            ValidationErrorTO(
                 type = ValidationFailureErrorTypeTO.InvalidDocuments,
                 invalidDocuments = invalidDocuments,
             )
@@ -90,45 +90,48 @@ internal data class InvalidDocumentTO(
  * The outcome of trying to validate a DeviceResponse.
  */
 internal sealed interface DeviceResponseValidationResult {
-    data object ValidationSuccess : DeviceResponseValidationResult
-    data class ValidationFailure(val reason: ValidationFailureTO) : DeviceResponseValidationResult
-    data class UnexpectedError(val error: Exception) : DeviceResponseValidationResult
-
-    companion object {
-        fun validationSuccess(): ValidationSuccess = ValidationSuccess
-        fun validationFailure(reason: ValidationFailureTO): ValidationFailure = ValidationFailure(reason)
-        fun unexpectedError(error: Exception): UnexpectedError = UnexpectedError(error)
-    }
+    data class Valid(val numberOfDocuments: Int) : DeviceResponseValidationResult
+    data class Invalid(val error: ValidationErrorTO) : DeviceResponseValidationResult
 }
 
 /**
  * Tries to validate a vp_token as an MsoMdoc DeviceResponse.
  */
 internal class ValidateMsoMdocDeviceResponse(
-    private val deviceResponseValidator: DeviceResponseValidator,
+    private val clock: Clock,
+    private val trustedIssuers: KeyStore?,
 ) {
 
+    private val defaultValidator: DeviceResponseValidator by lazy {
+        val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
+
+        val docValidator = DocumentValidator(
+            clock = clock,
+            issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
+            validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
+            x5CShouldBe = x5cShouldBe,
+
+        )
+        // Log here the options
+        DeviceResponseValidator(docValidator)
+    }
+
     operator fun invoke(vpToken: String): DeviceResponseValidationResult =
-        try {
-            deviceResponseValidator.ensureValid(vpToken)
-                .fold(
-                    ifRight = { DeviceResponseValidationResult.validationSuccess() },
-                    ifLeft = { DeviceResponseValidationResult.validationFailure(it.toValidationFailureTO()) },
-                )
-        } catch (error: Exception) {
-            log.error("Unexpected error while trying to validate DeviceResponse", error)
-            DeviceResponseValidationResult.unexpectedError(error)
-        }
+        defaultValidator.ensureValid(vpToken)
+            .fold(
+                ifRight = { docs -> DeviceResponseValidationResult.Valid(docs.size) },
+                ifLeft = { DeviceResponseValidationResult.Invalid(it.toValidationFailureTO()) },
+            )
 }
 
 /**
- * Converts this [DeviceResponseError] to a [ValidationFailureTO].
+ * Converts this [DeviceResponseError] to a [ValidationErrorTO].
  */
-private fun DeviceResponseError.toValidationFailureTO(): ValidationFailureTO =
+private fun DeviceResponseError.toValidationFailureTO(): ValidationErrorTO =
     when (this) {
-        DeviceResponseError.CannotBeDecoded -> ValidationFailureTO.cannotBeDecoded()
-        is DeviceResponseError.NotOkDeviceResponseStatus -> ValidationFailureTO.notOkDeviceResponseStatus(status.toInt())
-        is DeviceResponseError.InvalidDocuments -> ValidationFailureTO.invalidDocuments(invalidDocuments.map { it.toInvalidDocumentTO() })
+        DeviceResponseError.CannotBeDecoded -> ValidationErrorTO.cannotBeDecoded()
+        is DeviceResponseError.NotOkDeviceResponseStatus -> ValidationErrorTO.notOkDeviceResponseStatus(status.toInt())
+        is DeviceResponseError.InvalidDocuments -> ValidationErrorTO.invalidDocuments(invalidDocuments.map { it.toInvalidDocumentTO() })
     }
 
 /**

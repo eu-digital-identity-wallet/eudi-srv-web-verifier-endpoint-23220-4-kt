@@ -33,16 +33,12 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.StaticContent
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.SwaggerUi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -157,14 +153,8 @@ internal fun beans(clock: Clock) = beans {
                         }
                 }
         }
-        val deviceResponseValidator = run {
-            DeviceResponseValidator(
-                X5CShouldBe.fromKeystore(clock, ValidityInfoShouldBe.NotExpired, IssuerSignedItemsShouldBe.Verified, trustedIssuers) {
-                    isRevocationEnabled = false
-                },
-            )
-        }
-        ValidateMsoMdocDeviceResponse(deviceResponseValidator)
+
+        ValidateMsoMdocDeviceResponse(clock, trustedIssuers)
     }
 
     //

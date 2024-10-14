@@ -24,7 +24,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
@@ -118,20 +117,13 @@ internal class VerifierApi(
         }.fold(
             ifRight = { vpToken ->
                 when (val result = validateMsoMdocDeviceResponse(vpToken)) {
-                    DeviceResponseValidationResult.ValidationSuccess ->
+                    is DeviceResponseValidationResult.Valid ->
                         noContent().buildAndAwait()
 
-                    is DeviceResponseValidationResult.ValidationFailure ->
+                    is DeviceResponseValidationResult.Invalid ->
                         badRequest()
                             .json()
-                            .bodyValueAndAwait(result.reason)
-
-                    is DeviceResponseValidationResult.UnexpectedError ->
-                        status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .json()
-                            .bodyValueAndAwait(
-                                "\"Unexpected error while trying to validate Device Response '${result.error.message}'.\"",
-                            )
+                            .bodyValueAndAwait(result.error)
                 }
             },
             ifLeft = {
