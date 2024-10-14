@@ -137,22 +137,25 @@ internal fun beans(clock: Clock) = beans {
     bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
     bean {
-        val trustedIssuers = run {
-            val keystorePath = env.getRequiredProperty("verifier.msoMdoc.trustedIssuers.keystore.path")
-            val keystoreType = env.getRequiredProperty("verifier.msoMdoc.trustedIssuers.keystore.type")
-            val keystorePassword = env.getProperty("verifier.msoMdoc.trustedIssuers.keystore.password")
+        val trustedIssuers =
+            env.getProperty("trustedIssuers.keystore.path")
                 ?.takeIf { it.isNotBlank() }
-                ?.toCharArray()
-            log.info("Loading MsoMdoc trusted issuers' certificates from '$keystorePath'")
-            DefaultResourceLoader().getResource(keystorePath)
-                .inputStream
-                .use {
-                    KeyStore.getInstance(keystoreType)
-                        .apply {
-                            load(it, keystorePassword)
+                ?.let { keystorePath ->
+                    val keystoreType = env.getRequiredProperty("trustedIssuers.keystore.type")
+                    val keystorePassword = env.getProperty("trustedIssuers.keystore.password")
+                        ?.takeIf { it.isNotBlank() }
+                        ?.toCharArray()
+
+                    log.info("Loading trusted issuers' certificates from '$keystorePath'")
+                    DefaultResourceLoader().getResource(keystorePath)
+                        .inputStream
+                        .use {
+                            KeyStore.getInstance(keystoreType)
+                                .apply {
+                                    load(it, keystorePassword)
+                                }
                         }
                 }
-        }
 
         ValidateMsoMdocDeviceResponse(clock, trustedIssuers)
     }
@@ -184,7 +187,8 @@ internal fun beans(clock: Clock) = beans {
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
-            webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern").removeSuffix("/**"),
+            webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
+                .removeSuffix("/**"),
         )
         walletApi.route
             .and(verifierApi.route)
