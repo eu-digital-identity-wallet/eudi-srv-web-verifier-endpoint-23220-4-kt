@@ -33,12 +33,16 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.StaticContent
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.SwaggerUi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -136,6 +140,32 @@ internal fun beans(clock: Clock) = beans {
     bean { GetWalletResponseLive(clock, ref(), ref()) }
     bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
+    bean {
+        val trustedIssuers = run {
+            val keystorePath = env.getRequiredProperty("verifier.msoMdoc.trustedIssuers.keystore.path")
+            val keystoreType = env.getRequiredProperty("verifier.msoMdoc.trustedIssuers.keystore.type")
+            val keystorePassword = env.getProperty("verifier.msoMdoc.trustedIssuers.keystore.password")
+                ?.takeIf { it.isNotBlank() }
+                ?.toCharArray()
+            log.info("Loading MsoMdoc trusted issuers' certificates from '$keystorePath'")
+            DefaultResourceLoader().getResource(keystorePath)
+                .inputStream
+                .use {
+                    KeyStore.getInstance(keystoreType)
+                        .apply {
+                            load(it, keystorePassword)
+                        }
+                }
+        }
+        val deviceResponseValidator = run {
+            DeviceResponseValidator(
+                X5CShouldBe.fromKeystore(clock, ValidityInfoShouldBe.NotExpired, IssuerSignedItemsShouldBe.Verified, trustedIssuers) {
+                    isRevocationEnabled = false
+                },
+            )
+        }
+        ValidateMsoMdocDeviceResponse(deviceResponseValidator)
+    }
 
     //
     // Scheduled
@@ -160,7 +190,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref<VerifierConfig>().clientIdScheme.jarSigning.key,
         )
-        val verifierApi = VerifierApi(ref(), ref(), ref())
+        val verifierApi = VerifierApi(ref(), ref(), ref(), ref())
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),

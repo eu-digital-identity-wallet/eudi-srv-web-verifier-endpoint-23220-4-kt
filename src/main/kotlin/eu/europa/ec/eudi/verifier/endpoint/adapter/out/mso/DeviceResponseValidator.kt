@@ -41,7 +41,7 @@ sealed interface DeviceResponseError {
     /**
      * Given vp_token cannot be decoded to a device response
      */
-    data object CannotBeDecode : DeviceResponseError
+    data object CannotBeDecoded : DeviceResponseError
 
     /**
      * Device response didn't have an OK status
@@ -76,11 +76,11 @@ class DeviceResponseValidator(
         }
 }
 
-private fun Raise<DeviceResponseError.CannotBeDecode>.ensureCanBeDecoded(vp: String): DeviceResponse =
+private fun Raise<DeviceResponseError.CannotBeDecoded>.ensureCanBeDecoded(vp: String): DeviceResponse =
     try {
         DeviceResponse.fromCBORBase64URL(vp)
     } catch (t: Throwable) {
-        raise(DeviceResponseError.CannotBeDecode)
+        raise(DeviceResponseError.CannotBeDecoded)
     }
 
 private fun Raise<DeviceResponseError.NotOkDeviceResponseStatus>.ensureStatusIsOk(deviceResponse: DeviceResponse) {

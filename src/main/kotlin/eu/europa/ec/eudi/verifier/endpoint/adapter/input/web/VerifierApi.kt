@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.Either
 import arrow.core.raise.either
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
@@ -23,16 +24,18 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
-import org.springframework.web.reactive.function.server.ServerResponse.badRequest
-import org.springframework.web.reactive.function.server.ServerResponse.ok
+import org.springframework.web.reactive.function.server.ServerResponse.*
 import kotlin.jvm.optionals.getOrNull
 
-class VerifierApi(
+internal class VerifierApi(
     private val initTransaction: InitTransaction,
     private val getWalletResponse: GetWalletResponse,
     private val getPresentationEvents: GetPresentationEvents,
+    private val validateMsoMdocDeviceResponse: ValidateMsoMdocDeviceResponse,
 ) {
 
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
@@ -41,10 +44,15 @@ class VerifierApi(
         POST(
             INIT_TRANSACTION_PATH,
             contentType(APPLICATION_JSON) and accept(APPLICATION_JSON),
-            this@VerifierApi::handleInitTransaction,
+            ::handleInitTransaction,
         )
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
         GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
+        POST(
+            VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH,
+            contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
+            ::handleValidateMsoMdocDeviceResponse,
+        )
     }
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
@@ -74,7 +82,7 @@ class VerifierApi(
 
         logger.info("Handling GetWalletResponse for tx ${transactionId.value} and response_code: ${responseCode?.value ?: "n/a"}. ...")
         return when (val result = getWalletResponse(transactionId, responseCode)) {
-            is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
+            is QueryResponse.NotFound -> notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
             is QueryResponse.Found -> found(result.value)
         }
@@ -91,16 +99,53 @@ class VerifierApi(
 
         logger.info("Handling Get PresentationEvents for tx ${transactionId.value}")
         return when (val result = getPresentationEvents(transactionId)) {
-            is QueryResponse.NotFound -> ServerResponse.notFound().buildAndAwait()
+            is QueryResponse.NotFound -> notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
             is QueryResponse.Found -> found(result.value)
         }
     }
 
+    /**
+     * Handles a request to validate an MsoMdoc DeviceResponse.
+     */
+    private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse =
+        Either.catch {
+            request.awaitFormData()["vp_token"]
+                ?.firstOrNull { it.isNotBlank() }
+                .let {
+                    requireNotNull(it) { "vp_token must be provided" }
+                }
+        }.fold(
+            ifRight = { vpToken ->
+                when (val result = validateMsoMdocDeviceResponse(vpToken)) {
+                    DeviceResponseValidationResult.ValidationSuccess ->
+                        noContent().buildAndAwait()
+
+                    is DeviceResponseValidationResult.ValidationFailure ->
+                        badRequest()
+                            .json()
+                            .bodyValueAndAwait(result.reason)
+
+                    is DeviceResponseValidationResult.UnexpectedError ->
+                        status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .json()
+                            .bodyValueAndAwait(
+                                "\"Unexpected error while trying to validate Device Response '${result.error.message}'.\"",
+                            )
+                }
+            },
+            ifLeft = {
+                badRequest()
+                    .json()
+                    .bodyValueAndAwait("\"Unable to decode request body: '${it.message}'.\"")
+            },
+        )
+
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
+        const val VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH = "/validations/msoMdoc/deviceResponse"
 
         /**
          * Extracts from the request the [RequestId]

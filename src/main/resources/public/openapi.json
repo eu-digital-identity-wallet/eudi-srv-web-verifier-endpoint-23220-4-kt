@@ -201,6 +201,71 @@
           }
         }
       }
+    },
+    "/validations/msoMdoc/deviceResponse": {
+      "post": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Validates an MSO MDoc DeviceResponse",
+        "operationId": "validateMsoMdocDeviceResponse",
+        "requestBody": {
+          "description": "The vp_token to validate as an MSO Mdoc Device Response encoded using Base64 URL safe encoding.",
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateMsoMdocDeviceResponse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailure"
+                },
+                "examples": {
+                  "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureDecodingFailure"
+                  },
+                  "MsoMdocDeviceResponseValidationFailureStatusFailure": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureStatusFailure"
+                  },
+                  "MsoMdocDeviceResponseValidationFailureDocumentValidationFailure": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
+                  },
+                  "MsoMdocDeviceResponseValidationFailureOtherFailure": {
+                    "$ref": "#/components/examples/MsoMdocDeviceResponseValidationFailureOtherFailure"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "examples": {
+                  "UnexpectedError": {
+                    "value": "Unexpected error while trying to validate Device Response"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -932,6 +997,151 @@
           "events"
         ],
         "additionalProperties": false
+      },
+      "ValidateMsoMdocDeviceResponse": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "vp_token": {
+            "type": "string",
+            "format": "base64url",
+            "nullable": false
+          }
+        },
+        "required": [
+          "vp_token"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
+        "description": "A vp_token cannot be decoded as an MSO MDoc DeviceResponse.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "CannotBeDecoded"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationFailureStatusFailure": {
+        "description": "A vp_token contained a DeviceResponse with a non-OK Status.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "NotOkDeviceResponseStatus"
+            ]
+          },
+          "deviceResponseStatus": {
+            "type": "integer",
+            "nullable": false
+          }
+        },
+        "required": [
+          "type",
+          "deviceResponseStatus"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDocumentError": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "MissingValidityInfo",
+          "ExpiredValidityInfo",
+          "IssuerKeyIsNotEC",
+          "InvalidIssuerSignature",
+          "X5CNotTrusted",
+          "DocumentTypeNotMatching",
+          "InvalidIssuerSignedItems"
+        ]
+      },
+      "MsoMdocInvalidDocument": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "nullable": false,
+            "minimum": 0
+          },
+          "documentType": {
+            "type": "string",
+            "nullable": false
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MsoMdocDocumentError"
+            },
+            "nullable": false,
+            "minItems": 1
+          }
+        },
+        "required": [
+          "index",
+          "documentType",
+          "errors"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationFailureDocumentValidationFailure": {
+        "description": "A vp_token contains a DeviceResponse with invalid Documents.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "InvalidDocuments"
+            ]
+          },
+          "invalidDocuments": {
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/MsoMdocInvalidDocument"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "type",
+          "invalidDocuments"
+        ],
+        "additionalProperties": false
+      },
+      "MsoMdocDeviceResponseValidationFailureOtherFailure": {
+        "type": "string",
+        "nullable": false
+      },
+      "MsoMdocDeviceResponseValidationFailure": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDecodingFailure"
+          },
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureStatusFailure"
+          },
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
+          },
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureOtherFailure"
+          }
+        ]
       }
     },
     "examples": {
@@ -1256,6 +1466,38 @@
             ]
           }
         }
+      },
+      "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
+        "description": "A vp_token could not be decoded as an MSO Mdoc DeviceResponse.",
+        "value": {
+          "type": "CannotBeDecoded"
+        }
+      },
+      "MsoMdocDeviceResponseValidationFailureStatusFailure": {
+        "description": "A vp_token contains an MSO MDoc DeviceResponse with a non-OK Status.",
+        "value": {
+          "type": "NotOkDeviceResponseStatus",
+          "deviceResponseStatus": 12
+        }
+      },
+      "MsoMdocDeviceResponseValidationFailureDocumentValidationFailure": {
+        "description": "An MSO MDoc DeviceResponse contains invalid documents.",
+        "value": {
+          "type": "InvalidDocuments",
+          "invalidDocuments": [
+            {
+              "index": 0,
+              "documentType": "eu.europa.ec.eudi.pid.1",
+              "errors": [
+                "InvalidIssuerSignedItems"
+              ]
+            }
+          ]
+        }
+      },
+      "MsoMdocDeviceResponseValidationFailureOtherFailure": {
+        "description": "An MSO MDoc DeviceResponse could not be validated due to another error.",
+        "value": "Unable to decode request body: 'vp_token must be provided'."
       }
     }
   }
