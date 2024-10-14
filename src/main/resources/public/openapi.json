@@ -210,7 +210,7 @@
         "description": "Validates an MSO MDoc DeviceResponse",
         "operationId": "validateMsoMdocDeviceResponse",
         "requestBody": {
-          "description": "The vp_token to validate as an MSO Mdoc Device Response encoded using Base64 URL safe encoding.",
+          "description": "The value to validate as an MSO Mdoc Device Response encoded using Base64 URL safe encoding.",
           "required": true,
           "content": {
             "application/x-www-form-urlencoded": {
@@ -1007,14 +1007,14 @@
         "type": "object",
         "nullable": false,
         "properties": {
-          "vp_token": {
+          "device_response": {
             "type": "string",
             "format": "base64url",
             "nullable": false
           }
         },
         "required": [
-          "vp_token"
+          "device_response"
         ],
         "additionalProperties": false
       },
@@ -1034,7 +1034,7 @@
         "additionalProperties": false
       },
       "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
-        "description": "A vp_token cannot be decoded as an MSO MDoc DeviceResponse.",
+        "description": "A value cannot be decoded as an MSO MDoc DeviceResponse.",
         "type": "object",
         "nullable": false,
         "properties": {
@@ -1052,7 +1052,7 @@
         "additionalProperties": false
       },
       "MsoMdocDeviceResponseValidationFailureStatusFailure": {
-        "description": "A vp_token contained a DeviceResponse with a non-OK Status.",
+        "description": "A value contained a DeviceResponse with a non-OK Status.",
         "type": "object",
         "nullable": false,
         "properties": {
@@ -1117,7 +1117,7 @@
         "additionalProperties": false
       },
       "MsoMdocDeviceResponseValidationFailureDocumentValidationFailure": {
-        "description": "A vp_token contains a DeviceResponse with invalid Documents.",
+        "description": "A value contains a DeviceResponse with invalid Documents.",
         "type": "object",
         "nullable": false,
         "properties": {
@@ -1481,19 +1481,19 @@
         }
       },
       "MsoMdocDeviceResponseValidationSuccess": {
-        "description": "A vp_token has been successfully validated as an MSO MDoc DeviceResponse.",
+        "description": "A value has been successfully validated as an MSO MDoc DeviceResponse.",
         "value": {
           "numberOfDocuments": 2
         }
       },
       "MsoMdocDeviceResponseValidationFailureDecodingFailure": {
-        "description": "A vp_token could not be decoded as an MSO Mdoc DeviceResponse.",
+        "description": "A value could not be decoded as an MSO Mdoc DeviceResponse.",
         "value": {
           "type": "CannotBeDecoded"
         }
       },
       "MsoMdocDeviceResponseValidationFailureStatusFailure": {
-        "description": "A vp_token contains an MSO MDoc DeviceResponse with a non-OK Status.",
+        "description": "A value contains an MSO MDoc DeviceResponse with a non-OK Status.",
         "value": {
           "type": "NotOkDeviceResponseStatus",
           "deviceResponseStatus": 12

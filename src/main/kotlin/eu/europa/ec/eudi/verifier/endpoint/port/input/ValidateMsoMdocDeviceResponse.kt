@@ -95,7 +95,7 @@ internal sealed interface DeviceResponseValidationResult {
 }
 
 /**
- * Tries to validate a vp_token as an MsoMdoc DeviceResponse.
+ * Tries to validate a value as an MSO MDoc DeviceResponse.
  */
 internal class ValidateMsoMdocDeviceResponse(
     clock: Clock,
@@ -120,8 +120,8 @@ internal class ValidateMsoMdocDeviceResponse(
         DeviceResponseValidator(docValidator)
     }
 
-    operator fun invoke(vpToken: String): DeviceResponseValidationResult =
-        defaultValidator.ensureValid(vpToken)
+    operator fun invoke(deviceResponse: String): DeviceResponseValidationResult =
+        defaultValidator.ensureValid(deviceResponse)
             .fold(
                 ifRight = { docs -> DeviceResponseValidationResult.Valid(docs.size) },
                 ifLeft = { DeviceResponseValidationResult.Invalid(it.toValidationFailureTO()) },

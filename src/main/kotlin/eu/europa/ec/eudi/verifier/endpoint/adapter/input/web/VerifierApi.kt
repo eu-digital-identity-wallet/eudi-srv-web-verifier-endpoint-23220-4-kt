@@ -109,10 +109,10 @@ internal class VerifierApi(
      * Handles a request to validate an MsoMdoc DeviceResponse.
      */
     private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse {
-        val vpToken = request.awaitFormData()["vp_token"]
+        val vpToken = request.awaitFormData()["device_response"]
             ?.firstOrNull { it.isNotBlank() }
             .let {
-                requireNotNull(it) { "vp_token must be provided" }
+                requireNotNull(it) { "device_response must be provided" }
             }
         return when (val result = validateMsoMdocDeviceResponse(vpToken)) {
             is DeviceResponseValidationResult.Valid ->
