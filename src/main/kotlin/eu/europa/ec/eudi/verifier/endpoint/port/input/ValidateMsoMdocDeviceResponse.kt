@@ -18,11 +18,17 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
+import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toKotlinTimeZone
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.security.KeyStore
 import java.time.Clock
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 private val log = LoggerFactory.getLogger(ValidateMsoMdocDeviceResponse::class.java)
 
@@ -87,22 +93,20 @@ internal data class InvalidDocumentTO(
     val errors: List<DocumentErrorTO>,
 )
 
-typealias AttributesPerNamespace = Map<String, List<String>>
-
 /**
  * The details of a validated MSO MDoc document.
  */
 @Serializable
 internal data class DocumentTO(
     val docType: String,
-    val attributes: AttributesPerNamespace = emptyMap(),
+    val attributes: Map<String, JsonObject> = emptyMap(),
 )
 
 /**
  * The outcome of trying to validate a DeviceResponse.
  */
 internal sealed interface DeviceResponseValidationResult {
-    data class Valid(val documents: List<DocumentTO>) : DeviceResponseValidationResult
+    data class Valid(val documents: JsonArray) : DeviceResponseValidationResult
     data class Invalid(val error: ValidationErrorTO) : DeviceResponseValidationResult
 }
 
@@ -110,7 +114,7 @@ internal sealed interface DeviceResponseValidationResult {
  * Tries to validate a value as an MSO MDoc DeviceResponse.
  */
 internal class ValidateMsoMdocDeviceResponse(
-    clock: Clock,
+    private val clock: Clock,
     trustedIssuers: KeyStore?,
 ) {
     private val defaultValidator: DeviceResponseValidator by lazy {
@@ -120,7 +124,6 @@ internal class ValidateMsoMdocDeviceResponse(
             issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
             validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
             x5CShouldBe = x5cShouldBe,
-
         )
 
         log.info(
@@ -135,7 +138,10 @@ internal class ValidateMsoMdocDeviceResponse(
     operator fun invoke(deviceResponse: String): DeviceResponseValidationResult =
         defaultValidator.ensureValid(deviceResponse)
             .fold(
-                ifRight = { documents -> DeviceResponseValidationResult.Valid(documents.map { it.toDocumentTO() }) },
+                ifRight = {
+                        documents ->
+                    DeviceResponseValidationResult.Valid(JsonArray(documents.map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }))
+                },
                 ifLeft = { DeviceResponseValidationResult.Invalid(it.toValidationFailureTO()) },
             )
 }
@@ -161,7 +167,54 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         DocumentError.InvalidIssuerSignedItems -> DocumentErrorTO.InvalidIssuerSignedItems
     }
 
-private fun MDoc.toDocumentTO(): DocumentTO = DocumentTO(
+private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(
     docType = docType.value,
-    attributes = nameSpaces.associateWith { namespace -> getIssuerSignedItems(namespace).map { item -> item.elementIdentifier.value } },
+    attributes = nameSpaces.associateWith { namespace ->
+        buildJsonObject {
+            getIssuerSignedItems(namespace).map { item ->
+                put(item.elementIdentifier.value, item.elementValue.toJsonElement(clock))
+            }
+        }
+    },
 )
+
+@OptIn(ExperimentalEncodingApi::class)
+private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL)
+
+@OptIn(ExperimentalEncodingApi::class)
+private fun DataElement.toJsonElement(clock: Clock): JsonElement =
+    when (this) {
+        is BooleanElement -> JsonPrimitive(value)
+        is ByteStringElement -> JsonPrimitive(base64.encode(value))
+        is DateTimeElement -> {
+            val epoch = value.toEpochMilliseconds()
+            JsonPrimitive(epoch)
+        }
+
+        is EncodedCBORElement -> JsonPrimitive(base64.encode(value))
+        is FullDateElement -> {
+            val epoch = value.atStartOfDayIn(clock.zone.toKotlinTimeZone()).toEpochMilliseconds()
+            JsonPrimitive(epoch)
+        }
+
+        is ListElement -> {
+            val values = value.map { it.toJsonElement(clock) }
+            JsonArray(values)
+        }
+
+        is MapElement -> {
+            val values = value.mapKeys { (key, _) -> key.str }.mapValues { (_, value) -> value.toJsonElement(clock) }
+            JsonObject(values)
+        }
+
+        is NullElement -> JsonNull
+        is NumberElement -> JsonPrimitive(value)
+        is StringElement -> JsonPrimitive(value)
+        is TDateElement -> {
+            val epoch = value.toEpochMilliseconds()
+            JsonPrimitive(epoch)
+        }
+
+        // Other unsupported DataElements
+        else -> JsonPrimitive(this::class.java.simpleName)
+    }

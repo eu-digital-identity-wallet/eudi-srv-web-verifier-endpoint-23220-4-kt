@@ -45,11 +45,11 @@ internal class UtilityApi(
             }
         return when (val result = validateMsoMdocDeviceResponse(vpToken)) {
             is DeviceResponseValidationResult.Valid ->
-                ok().bodyValueAndAwait(result.documents)
+                ok().json()
+                    .bodyValueAndAwait(result.documents)
 
             is DeviceResponseValidationResult.Invalid ->
-                badRequest()
-                    .json()
+                badRequest().json()
                     .bodyValueAndAwait(result.error)
         }
     }
