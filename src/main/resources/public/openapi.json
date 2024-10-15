@@ -1030,15 +1030,7 @@
           "attributes": {
             "type": "object",
             "nullable": false,
-            "additionalProperties": {
-              "type": "array",
-              "nullable": false,
-              "items": {
-                "type": "string",
-                "nullable": false
-              },
-              "minItems": 0
-            }
+            "additionalProperties": true
           }
         },
         "required": [
@@ -1509,9 +1501,9 @@
           {
             "docType": "eu.europa.ec.eudi.pid.1",
             "attributes": {
-              "eu.europa.ec.eudi.pid.1": [
-                "age_over_18"
-              ]
+              "eu.europa.ec.eudi.pid.1": {
+                "age_over_18": true
+              }
             }
           }
         ]
