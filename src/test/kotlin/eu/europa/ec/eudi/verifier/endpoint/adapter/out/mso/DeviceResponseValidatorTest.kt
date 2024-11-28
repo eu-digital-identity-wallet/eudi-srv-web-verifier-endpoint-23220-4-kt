@@ -23,6 +23,10 @@ import java.io.InputStream
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.Clock
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZonedDateTime
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -65,10 +69,19 @@ object Data {
 
 class DeviceResponseValidatorTest {
 
+    private val clock = run {
+        val instant = ZonedDateTime.of(
+            LocalDate.of(2024, 11, 1),
+            LocalTime.MIDNIGHT,
+            TimeZone.getTimeZone("Europe/Athens").toZoneId(),
+        )
+        Clock.fixed(instant.toInstant(), instant.zone)
+    }
+
     @Test
     fun `a vp_token where the 3d document has an invalid validity info should fail`() {
         val invalidDocument = run {
-            val validator = deviceResponseValidator(Data.caCerts)
+            val validator = deviceResponseValidator(Data.caCerts, clock)
             val validated = validator.ensureValid(Data.ThreeDocumentVP)
             val invalidDocuments =
                 assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
@@ -89,8 +102,12 @@ class DeviceResponseValidatorTest {
     fun `a vp_token where the 3d document has an invalid validity info should not fail when skip`() {
         val validDocuments = run {
             val docV = DocumentValidator(
+                clock = clock,
                 validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
-                x5CShouldBe = X5CShouldBe.Trusted(Data.caCerts),
+                x5CShouldBe = X5CShouldBe.Trusted(Data.caCerts) {
+                    isRevocationEnabled = false
+                    date = Date.from(clock.instant())
+                },
             )
             val vpValidator = DeviceResponseValidator(docV)
             val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
@@ -103,7 +120,7 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token having a single document with invalid chain should fail`() {
         val invalidDocument = run {
-            val validated = deviceResponseValidator(Data.caCerts).ensureValid(Data.MdlVP)
+            val validated = deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP)
             val invalidDocuments =
                 assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                     .invalidDocuments
@@ -131,12 +148,15 @@ class DeviceResponseValidatorTest {
     }
 }
 
-private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>): DeviceResponseValidator {
+private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, clock: Clock): DeviceResponseValidator {
     val documentValidator = DocumentValidator(
-        Clock.systemDefaultZone(),
+        clock,
         ValidityInfoShouldBe.NotExpired,
         IssuerSignedItemsShouldBe.Verified,
-        X5CShouldBe.Trusted(caCerts),
+        X5CShouldBe.Trusted(caCerts) {
+            isRevocationEnabled = false
+            date = Date.from(clock.instant())
+        },
     )
     return DeviceResponseValidator(documentValidator)
 }
