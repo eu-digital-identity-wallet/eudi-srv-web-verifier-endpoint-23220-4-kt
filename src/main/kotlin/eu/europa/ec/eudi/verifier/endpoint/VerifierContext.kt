@@ -66,6 +66,27 @@ private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
 @OptIn(ExperimentalSerializationApi::class)
 internal fun beans(clock: Clock) = beans {
+    val trustedIssuers: KeyStore? by lazy {
+        env.getProperty("trustedIssuers.keystore.path")
+            ?.takeIf { it.isNotBlank() }
+            ?.let { keystorePath ->
+                val keystoreType = env.getRequiredProperty("trustedIssuers.keystore.type")
+                val keystorePassword = env.getProperty("trustedIssuers.keystore.password")
+                    ?.takeIf { it.isNotBlank() }
+                    ?.toCharArray()
+
+                log.info("Loading trusted issuers' certificates from '$keystorePath'")
+                DefaultResourceLoader().getResource(keystorePath)
+                    .inputStream
+                    .use {
+                        KeyStore.getInstance(keystoreType)
+                            .apply {
+                                load(it, keystorePassword)
+                            }
+                    }
+            }
+    }
+
     //
     // JOSE
     //
@@ -133,29 +154,8 @@ internal fun beans(clock: Clock) = beans {
     bean { GetWalletResponseLive(clock, ref(), ref()) }
     bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
-    bean {
-        val trustedIssuers =
-            env.getProperty("trustedIssuers.keystore.path")
-                ?.takeIf { it.isNotBlank() }
-                ?.let { keystorePath ->
-                    val keystoreType = env.getRequiredProperty("trustedIssuers.keystore.type")
-                    val keystorePassword = env.getProperty("trustedIssuers.keystore.password")
-                        ?.takeIf { it.isNotBlank() }
-                        ?.toCharArray()
-
-                    log.info("Loading trusted issuers' certificates from '$keystorePath'")
-                    DefaultResourceLoader().getResource(keystorePath)
-                        .inputStream
-                        .use {
-                            KeyStore.getInstance(keystoreType)
-                                .apply {
-                                    load(it, keystorePassword)
-                                }
-                        }
-                }
-
-        ValidateMsoMdocDeviceResponse(clock, trustedIssuers)
-    }
+    bean { ValidateMsoMdocDeviceResponse(clock, trustedIssuers) }
+    bean { ValidateSdJwtVc(trustedIssuers, env.publicUrl()) }
 
     //
     // Scheduled
@@ -187,7 +187,7 @@ internal fun beans(clock: Clock) = beans {
             webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
                 .removeSuffix("/**"),
         )
-        val utilityApi = UtilityApi(ref())
+        val utilityApi = UtilityApi(ref(), ref())
         walletApi.route
             .and(verifierApi.route)
             .and(staticContent.route)

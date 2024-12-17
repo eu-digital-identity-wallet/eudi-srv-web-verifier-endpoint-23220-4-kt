@@ -49,6 +49,7 @@ dependencies {
     implementation("com.augustcellars.cose:cose-java:1.1.0") {
         because("required by walt.id")
     }
+    implementation(libs.sd.jwt)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
