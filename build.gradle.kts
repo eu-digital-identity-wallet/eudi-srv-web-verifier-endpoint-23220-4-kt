@@ -1,6 +1,5 @@
 import org.owasp.dependencycheck.gradle.extension.DependencyCheckExtension
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
-import kotlin.jvm.optionals.getOrNull
 
 plugins {
     base
@@ -58,15 +57,13 @@ dependencies {
 }
 
 java {
-    val javaVersion = getVersionFromCatalog("java")
-    sourceCompatibility = JavaVersion.toVersion(javaVersion)
+    sourceCompatibility = JavaVersion.toVersion(libs.versions.java.get())
 }
 
 kotlin {
 
     jvmToolchain {
-        val javaVersion = getVersionFromCatalog("java")
-        languageVersion.set(JavaLanguageVersion.of(javaVersion))
+        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
     }
 
     compilerOptions {
@@ -126,7 +123,7 @@ tasks.named<BootBuildImage>("bootBuildImage") {
 }
 
 spotless {
-    val ktlintVersion = getVersionFromCatalog("ktlintVersion")
+    val ktlintVersion = libs.versions.ktlintVersion.get()
     kotlin {
         ktlint(ktlintVersion)
         licenseHeaderFile("FileHeader.txt")
@@ -134,15 +131,6 @@ spotless {
     kotlinGradle {
         ktlint(ktlintVersion)
     }
-}
-
-fun getVersionFromCatalog(lookup: String): String {
-    val versionCatalog: VersionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
-    return versionCatalog
-        .findVersion(lookup)
-        .getOrNull()
-        ?.requiredVersion
-        ?: throw GradleException("Version '$lookup' is not specified in the version catalog")
 }
 
 val nvdApiKey: String? = System.getenv("NVD_API_KEY") ?: properties["nvdApiKey"]?.toString()
