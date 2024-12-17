@@ -19,6 +19,7 @@ import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.sdjwt.*
+import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
@@ -94,7 +95,10 @@ internal class ValidateSdJwtVc(
                 )
             } ?: false
         }
-        SdJwtVcVerifier.usingX5c(x509CertificateTrust)
+        SdJwtVcVerifier.usingX5cOrIssuerMetadata(
+            x509CertificateTrust = x509CertificateTrust,
+            httpClientFactory = DefaultHttpClientFactory,
+        )
     }
 
     suspend operator fun invoke(unverified: SdJwt, nonce: Nonce): SdJwtVcValidationResult {
