@@ -15,15 +15,15 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
-import com.nimbusds.jose.proc.BadJOSEException
 import eu.europa.ec.eudi.sdjwt.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -103,7 +103,7 @@ internal class ValidateSdJwtVc(
             put(Claims.Nonce, nonce.value)
         }
 
-        return try {
+        return Either.catch {
             val (presentation, keyBinding) = verifier.verifyPresentation(unverified, challenge).getOrThrow()
             checkNotNull(keyBinding) { "KeyBinding JWT cannot be null" }
 
@@ -111,14 +111,13 @@ internal class ValidateSdJwtVc(
                 presentation.recreateClaims(visitor = null)
             }
             SdJwtVcValidationResult.Valid(payload)
-        } catch (cancellation: CancellationException) {
-            throw cancellation
-        } catch (verificationError: SdJwtVerificationException) {
-            log.error("SD-JWT-VC validation failed", verificationError)
-            SdJwtVcValidationResult.Invalid(verificationError.toSdJwtVcValidationErrorTO())
-        } catch (badJoseError: BadJOSEException) {
-            log.error("SD-JWT-VC validation failed", badJoseError)
-            SdJwtVcValidationResult.Invalid(SdJwtVcValidationErrorTO.Other)
+        }.getOrElse {
+            log.error("SD-JWT-VC validation failed", it)
+            if (it is SdJwtVerificationException) {
+                SdJwtVcValidationResult.Invalid(it.toSdJwtVcValidationErrorTO())
+            } else {
+                SdJwtVcValidationResult.Invalid(SdJwtVcValidationErrorTO.Other)
+            }
         }
     }
 }
