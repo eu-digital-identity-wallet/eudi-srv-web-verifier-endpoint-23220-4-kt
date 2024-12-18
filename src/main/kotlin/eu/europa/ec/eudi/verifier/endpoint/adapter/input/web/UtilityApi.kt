@@ -15,8 +15,11 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.DeviceResponseValidationResult
+import eu.europa.ec.eudi.verifier.endpoint.port.input.SdJwtVcValidationResult
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateMsoMdocDeviceResponse
+import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateSdJwtVc
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
@@ -25,12 +28,19 @@ import org.springframework.web.reactive.function.server.ServerResponse.ok
 
 internal class UtilityApi(
     private val validateMsoMdocDeviceResponse: ValidateMsoMdocDeviceResponse,
+    private val validateSdJwtVc: ValidateSdJwtVc,
 ) {
     val route: RouterFunction<ServerResponse> = coRouter {
         POST(
             VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH,
             contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
             ::handleValidateMsoMdocDeviceResponse,
+        )
+
+        POST(
+            VALIDATE_SD_JWT_VC_PATH,
+            contentType(APPLICATION_FORM_URLENCODED) and accept(APPLICATION_JSON),
+            ::handleValidateSdJwtVc,
         )
     }
 
@@ -54,7 +64,31 @@ internal class UtilityApi(
         }
     }
 
+    /**
+     * Handles a request to validate an SD-JWT Verifiable Credential.
+     */
+    private suspend fun handleValidateSdJwtVc(request: ServerRequest): ServerResponse {
+        val form = request.awaitFormData()
+        val unverifiedSdJwtVc = form["sd_jwt_vc"]
+            ?.firstOrNull { it.isNotBlank() }
+            .let {
+                requireNotNull(it) { "sd_jwt_vc must be provided" }
+            }
+        val nonce = form["nonce"]
+            ?.firstOrNull { it.isNotBlank() }
+            .let {
+                requireNotNull(it) { "nonce must be provided" }
+                Nonce(it)
+            }
+
+        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce)) {
+            is SdJwtVcValidationResult.Valid -> ok().json().bodyValueAndAwait(result.payload)
+            is SdJwtVcValidationResult.Invalid -> badRequest().json().bodyValueAndAwait(result.reason)
+        }
+    }
+
     companion object {
         const val VALIDATE_MSO_MDOC_DEVICE_RESPONSE_PATH = "/utilities/validations/msoMdoc/deviceResponse"
+        const val VALIDATE_SD_JWT_VC_PATH = "/utilities/validations/sdJwtVc"
     }
 }

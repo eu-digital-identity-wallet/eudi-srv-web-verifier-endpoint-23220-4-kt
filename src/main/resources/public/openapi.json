@@ -272,6 +272,69 @@
           }
         }
       }
+    },
+    "/utilities/validations/sdJwtVc": {
+      "post": {
+        "tags": [
+          "utility api"
+        ],
+        "summary": "Validates an SD-JWT Verifiable Credential.",
+        "description": "Validates an SD-JWT Verifiable Credentials.<p>Verifies the provided value: <ol><li>Is an SD-JWT-VC serialized using compact serialization</li><li>Is signed by a trusted Issuer (checked against a configured X5C chain)</li><li>Contains a valid KeyBinding JWT (with this Verifier as the Audience and the provided Nonce value)</ol></p>",
+        "operationId": "validateSdJwtVc",
+        "requestBody": {
+          "description": "The value to validate as an SD-JWT Verifiable Credential and the expected Nonce of the KeyBinding JWT.",
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateSdJwtVc"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "The payload of the processed SD-JWT-VC including all disclosed claims.",
+                  "type": "object",
+                  "nullable": false,
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "SdJwtVcPidProccessedPayload": {
+                    "$ref": "#/components/examples/SdJwtVcPidProccessedPayload"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SdJwtVcValidationError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "nullable": false,
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1170,6 +1233,41 @@
             "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
           }
         ]
+      },
+      "ValidateSdJwtVc": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "sd_jwt_vc": {
+            "type": "string",
+            "nullable": false
+          },
+          "nonce": {
+            "$ref": "#/components/schemas/Nonce"
+          }
+        },
+        "required": [
+          "sd_jwt_vc",
+          "nonce"
+        ],
+        "additionalProperties": false
+      },
+      "SdJwtVcValidationError": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "ContainsInvalidDisclosures",
+          "ContainsInvalidJwt",
+          "ContainsInvalidKeyBindingJwt",
+          "IsMissingHolderPublicKey",
+          "IsMissingKeyBindingJwt",
+          "ContainsDisclosuresWithNoDigests",
+          "ContainsUnknownHashingAlgorithm",
+          "ContainsNonUniqueDigests",
+          "ContainsNonUniqueDisclosures",
+          "IsUnparsable",
+          "Other"
+        ]
       }
     },
     "examples": {
@@ -1534,6 +1632,56 @@
               ]
             }
           ]
+        }
+      },
+      "SdJwtVcPidProccessedPayload": {
+        "description": "The proccessed payload of a PID issued as an SD-JWT-VC.",
+        "value": {
+          "place_of_birth": {
+            "country": "AT",
+            "locality": "101 Trauner"
+          },
+          "address": {
+            "street_address": "Trauner",
+            "country": "AT",
+            "postal_code": "3331",
+            "house_number": "101 ",
+            "region": "Lower Austria",
+            "locality": "Gemeinde Biberbach"
+          },
+          "vct": "urn:eu.europa.ec.eudi:pid:1",
+          "iss": "https://dev.issuer-backend.eudiw.dev",
+          "cnf": {
+            "jwk": {
+              "kty": "RSA",
+              "e": "AQAB",
+              "use": "sig",
+              "kid": "30f54ba1-2df0-41c2-8520-1241576c794f",
+              "iat": 1734444712,
+              "n": "uzK4yxP9Z-1S8Z3Q6Hbk5PCIOVvjvHH_mXDQlVyWDy2t57RiRjVoSz4xvcy4lkIsIqMLfMVPhRx3AMy7Gl_rSq3qi5GwBEsEVjLP07r9HaSwod6hen4f36h3sUf6EE_3LMJbFLTTx2aHais2p2cQ49tv8ri4d6FSleSDGdvPSqDQfNffsSuex-8k6g8VIF_SEeK2z_tprUUkEua5z2EUJykZCGdvtyqpWVTNnV69eaEYF2W42a10MvxTVRNY4qg7p1RcSCM-AC7kpURY1n4tk8Y6Ybty4csQy7QaOftsvE1BTw_rZ_Qhw9Bto4HEJVC_Ca_HTRqUkiVHzxOjX7EO8Q"
+            }
+          },
+          "exp": 1737036713,
+          "iat": 1734444713,
+          "age_equal_or_over": {
+            "18": true
+          },
+          "age_in_years": 70,
+          "birthdate": "1955-04-12",
+          "age_birth_year": "1955",
+          "gender": "male",
+          "family_name": "Neal",
+          "birth_given_name": "Tyler",
+          "issuing_authority": "GR Administrative authority",
+          "birth_family_name": "Neal",
+          "nationalities": [
+            "AT"
+          ],
+          "document_number": "e16416d4-7d6f-4d95-8c91-d78e200bc8d4",
+          "issuing_country": "GR",
+          "administrative_number": "888adb27-d4d5-4004-8c71-97f61273c203",
+          "given_name": "Tyler",
+          "issuing_jurisdiction": "GR-I"
         }
       }
     }
