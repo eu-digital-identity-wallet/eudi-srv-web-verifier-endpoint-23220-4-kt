@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import arrow.core.raise.either
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.prex.PresentationDefinition
@@ -37,14 +36,6 @@ import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
 import java.net.URL
-import kotlin.Any
-import kotlin.String
-import kotlin.also
-import kotlin.getOrElse
-import kotlin.getOrThrow
-import kotlin.let
-import kotlin.run
-import kotlin.runCatching
 
 /**
  * The WEB API available to the wallet
@@ -117,8 +108,7 @@ class WalletApi(
     private suspend fun handlePostWalletResponse(req: ServerRequest): ServerResponse = try {
         logger.info("Handling PostWalletResponse ...")
         val walletResponse = req.awaitFormData().walletResponse()
-        val outcome = either { postWalletResponse(walletResponse) }
-        outcome.fold(
+        postWalletResponse(walletResponse).fold(
             ifRight = { response ->
                 logger.info("PostWalletResponse processed")
                 if (response == null) {

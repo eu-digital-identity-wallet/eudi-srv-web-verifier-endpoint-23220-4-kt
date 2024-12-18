@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.owasp.dependencycheck.gradle.extension.DependencyCheckExtension
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
@@ -68,8 +69,7 @@ kotlin {
     }
 
     compilerOptions {
-        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
-        freeCompilerArgs.add("-Xcontext-receivers")
+        apiVersion.set(KotlinVersion.KOTLIN_2_0)
         freeCompilerArgs.add("-Xjsr305=strict")
     }
 }
