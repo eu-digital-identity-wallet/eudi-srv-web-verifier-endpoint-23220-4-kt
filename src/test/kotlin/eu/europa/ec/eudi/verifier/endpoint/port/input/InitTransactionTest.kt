@@ -18,7 +18,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.getOrElse
-import arrow.core.raise.either
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApiClient
@@ -60,7 +59,7 @@ class InitTransactionTest {
                 EmbedOption.byReference { _ -> uri },
             )
 
-            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             assertTrue {
@@ -95,7 +94,7 @@ class InitTransactionTest {
                 EmbedOption.byReference { _ -> uri },
             )
 
-            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertEquals(uri.toExternalForm(), jwtSecuredAuthorizationRequest.requestUri)
             assertTrue {
@@ -148,7 +147,7 @@ class InitTransactionTest {
                 EmbedOption.byReference { _ -> uri },
             )
 
-            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             val presentation = loadPresentationById(testTransactionId)
@@ -177,7 +176,7 @@ class InitTransactionTest {
 
             // we expect the Authorization Request to contain a request_uri
             // and the Presentation to be in state Requested
-            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertNull(jwtSecuredAuthorizationRequest.request)
             assertNotNull(jwtSecuredAuthorizationRequest.requestUri)
@@ -204,7 +203,7 @@ class InitTransactionTest {
 
             // we expect the Authorization Request to contain a request that contains a presentation_definition_uri
             // and the Presentation to be in state RequestedObjectRetrieved
-            val jwtSecuredAuthorizationRequest = either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
             assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             val claims = SignedJWT.parse(jwtSecuredAuthorizationRequest.request).payload!!.toJSONObject()!!
@@ -231,7 +230,7 @@ class InitTransactionTest {
                 redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
             )
 
-            either { useCase(invalidPlaceHolderInput) }
+            useCase(invalidPlaceHolderInput)
                 .onLeft {
                     assertTrue(
                         "Should fail with ValidationError.InvalidWalletResponseTemplate",
@@ -250,7 +249,7 @@ class InitTransactionTest {
                     "hts:/client.example.org/cb%response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
             )
 
-            either { useCase(invalidUrlInput) }
+            useCase(invalidUrlInput)
                 .onLeft {
                     assertTrue(
                         "Should fail with ValidationError.InvalidWalletResponseTemplate",
@@ -279,7 +278,7 @@ class InitTransactionTest {
                 EmbedOption.byReference { _ -> uri },
             )
 
-            either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            useCase(input).getOrElse { fail("Unexpected $it") }
             val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.RequestObjectRetrieved>(presentation)
             assertIs<GetWalletResponseMethod.Redirect>(presentation.getWalletResponseMethod)
@@ -301,14 +300,14 @@ class InitTransactionTest {
                 EmbedOption.byReference { _ -> uri },
             )
 
-            either { useCase(input) }.getOrElse { fail("Unexpected $it") }
+            useCase(input).getOrElse { fail("Unexpected $it") }
             val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.RequestObjectRetrieved>(presentation)
             assertIs<GetWalletResponseMethod.Poll>(presentation.getWalletResponseMethod)
         }
 
     private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) =
-        either { input.toDomain() }.fold(
+        input.toDomain().fold(
             ifRight = { fail("Invalid input accepted") },
             ifLeft = { error -> assertEquals(expectedError, error) },
         )
