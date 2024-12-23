@@ -17,7 +17,8 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
-import arrow.core.raise.Raise
+import arrow.core.Either
+import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import eu.europa.ec.eudi.prex.PresentationDefinition
@@ -145,8 +146,7 @@ data class JwtSecuredAuthorizationRequestTO(
  */
 fun interface InitTransaction {
 
-    context(Raise<ValidationError>)
-    suspend operator fun invoke(initTransactionTO: InitTransactionTO): JwtSecuredAuthorizationRequestTO
+    suspend operator fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO>
 }
 
 /**
@@ -167,15 +167,14 @@ class InitTransactionLive(
 
 ) : InitTransaction {
 
-    context(Raise<ValidationError>)
-    override suspend fun invoke(initTransactionTO: InitTransactionTO): JwtSecuredAuthorizationRequestTO {
+    override suspend fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO> = either {
         // validate input
-        val (nonce, type) = initTransactionTO.toDomain()
+        val (nonce, type) = initTransactionTO.toDomain().bind()
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
         val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
-        val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO)
+        val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
 
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
@@ -194,7 +193,7 @@ class InitTransactionLive(
 
         storePresentation(updatedPresentation)
         logTransactionInitialized(updatedPresentation, request)
-        return request
+        request
     }
 
     private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
@@ -243,8 +242,7 @@ class InitTransactionLive(
             }
         }
 
-    context(Raise<ValidationError>)
-    private fun getWalletResponseMethod(initTransactionTO: InitTransactionTO): GetWalletResponseMethod =
+    private fun getWalletResponseMethod(initTransactionTO: InitTransactionTO): Either<ValidationError, GetWalletResponseMethod> = either {
         initTransactionTO.redirectUriTemplate
             ?.let { template ->
                 with(createQueryWalletResponseRedirectUri) {
@@ -252,6 +250,7 @@ class InitTransactionLive(
                 }
                 GetWalletResponseMethod.Redirect(template)
             } ?: GetWalletResponseMethod.Poll
+    }
 
     /**
      * Gets the [ResponseModeOption] for the provided [InitTransactionTO].
@@ -292,8 +291,7 @@ class InitTransactionLive(
     }
 }
 
-context(Raise<ValidationError>)
-internal fun InitTransactionTO.toDomain(): Pair<Nonce, PresentationType> {
+internal fun InitTransactionTO.toDomain(): Either<ValidationError, Pair<Nonce, PresentationType>> = either {
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
@@ -321,7 +319,7 @@ internal fun InitTransactionTO.toDomain(): Pair<Nonce, PresentationType> {
 
     val nonce = requiredNonce()
 
-    return nonce to presentationType
+    nonce to presentationType
 }
 
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
