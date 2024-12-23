@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
+import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.*
 import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
@@ -80,7 +81,7 @@ internal class ValidateSdJwtVc(
     trustedIssuers: KeyStore?,
     private val audience: Audience,
 ) {
-    private val verifier: SdJwtVcVerifier by lazy {
+    private val verifier: SdJwtVcVerifier<SignedJWT> by lazy {
         val x5CShouldBe = trustedIssuers?.let {
             X5CShouldBe.fromKeystore(it) {
                 isRevocationEnabled = false
@@ -95,7 +96,7 @@ internal class ValidateSdJwtVc(
                 )
             } ?: false
         }
-        SdJwtVcVerifier.usingX5cOrIssuerMetadata(
+        NimbusSdJwtOps.SdJwtVcVerifier.usingX5cOrIssuerMetadata(
             x509CertificateTrust = x509CertificateTrust,
             httpClientFactory = DefaultHttpClientFactory,
         )
@@ -108,10 +109,8 @@ internal class ValidateSdJwtVc(
         }
 
         return Either.catch {
-            val (presentation, keyBinding) = verifier.verifyPresentation(unverified, challenge).getOrThrow()
-            checkNotNull(keyBinding) { "KeyBinding JWT cannot be null" }
-
-            val payload = with(DefaultSdJwtOps) {
+            val (presentation, _) = verifier.verify(unverified, challenge).getOrThrow()
+            val payload = with(NimbusSdJwtOps) {
                 presentation.recreateClaims(visitor = null)
             }
             SdJwtVcValidationResult.Valid(payload)
