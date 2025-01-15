@@ -155,7 +155,7 @@ internal fun beans(clock: Clock) = beans {
     bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
     bean { ValidateMsoMdocDeviceResponse(clock, trustedIssuers) }
-    bean { ValidateSdJwtVc(trustedIssuers, env.publicUrl()) }
+    bean { ValidateSdJwtVc(trustedIssuers, ref<VerifierConfig>().clientIdScheme.clientId) }
 
     //
     // Scheduled
