@@ -497,8 +497,8 @@ Variable: `SERVER_PORT`
 Description: Port for the HTTP listener of the Verifier Endpoint application  
 Default value: `8080`
 
-Variable: `VERIFIER_CLIENTID`  
-Description: Client Id of the Verifier Endpoint application  
+Variable: `VERIFIER_ORIGINALCLIENTID`  
+Description: Client Id of the Verifier Endpoint application **without** the Client Id Scheme prefix   
 Default value: `Verifier`
 
 Variable: `VERIFIER_CLIENTIDSCHEME`  
