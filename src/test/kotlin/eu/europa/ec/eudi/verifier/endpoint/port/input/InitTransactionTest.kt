@@ -34,7 +34,7 @@ class InitTransactionTest {
 
     private val uri = URL("https://foo")
     private val verifierConfig = VerifierConfig(
-        clientIdScheme = TestContext.clientIdScheme,
+        verifierId = TestContext.verifierId,
         requestJarOption = EmbedOption.ByValue,
         presentationDefinitionEmbedOption = EmbedOption.ByValue,
         responseUriBuilder = { _ -> uri },
@@ -60,7 +60,7 @@ class InitTransactionTest {
             )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
-            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             assertTrue {
                 loadPresentationById(testTransactionId)?.let { it is Presentation.RequestObjectRetrieved } ?: false
@@ -72,7 +72,7 @@ class InitTransactionTest {
         runTest {
             val uri = URL("https://foo")
             val verifierConfig = VerifierConfig(
-                clientIdScheme = TestContext.clientIdScheme,
+                verifierId = TestContext.verifierId,
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
                 presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
@@ -95,7 +95,7 @@ class InitTransactionTest {
             )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
-            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertEquals(uri.toExternalForm(), jwtSecuredAuthorizationRequest.requestUri)
             assertTrue {
                 loadPresentationById(testTransactionId)?.let { it is Presentation.Requested } ?: false
@@ -148,7 +148,7 @@ class InitTransactionTest {
             )
 
             val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
-            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             val presentation = loadPresentationById(testTransactionId)
             val requestObjectRetrieved = assertIs<Presentation.RequestObjectRetrieved>(presentation)
@@ -177,7 +177,7 @@ class InitTransactionTest {
             // we expect the Authorization Request to contain a request_uri
             // and the Presentation to be in state Requested
             val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
-            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertNull(jwtSecuredAuthorizationRequest.request)
             assertNotNull(jwtSecuredAuthorizationRequest.requestUri)
             val presentation = loadPresentationById(testTransactionId)
@@ -204,7 +204,7 @@ class InitTransactionTest {
             // we expect the Authorization Request to contain a request that contains a presentation_definition_uri
             // and the Presentation to be in state RequestedObjectRetrieved
             val jwtSecuredAuthorizationRequest = useCase(input).getOrElse { fail("Unexpected $it") }
-            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.clientIdScheme.clientId)
+            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             val claims = SignedJWT.parse(jwtSecuredAuthorizationRequest.request).payload!!.toJSONObject()!!
             assertEquals(uri.toExternalForm(), claims["presentation_definition_uri"])

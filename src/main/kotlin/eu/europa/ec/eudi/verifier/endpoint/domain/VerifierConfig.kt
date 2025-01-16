@@ -115,54 +115,65 @@ data class SigningConfig(
         get() = key.parsedX509CertChain.first()
 }
 
+typealias OriginalClientId = String
+typealias ClientId = String
+
 /**
- * Client Id schemes that can be used by Verifier.
+ * Client Id (as defined by OpenId 4 VP) of the Verifier Endpoint.
+ *
+ * @see <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-scheme-an">https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-scheme-an</a>
  */
-sealed interface ClientIdScheme {
-    val clientId: String
+sealed interface VerifierId {
+    val originalClientId: OriginalClientId
     val jarSigning: SigningConfig
-    val name: String
+    val clientId: ClientId
 
     /**
-     * 'pre-registered' Client Id scheme.
+     * This value represents the RFC6749 default behavior,
+     * i.e., the Client Identifier needs to be known to the Wallet in advance of the Authorization Request
+     * The Verifier's metadata is obtained using (RFC7591) or through out-of-band mechanisms.
      */
     data class PreRegistered(
-        override val clientId: String,
+        override val originalClientId: String,
         override val jarSigning: SigningConfig,
-    ) : ClientIdScheme {
-        override val name: String = "pre-registered"
+    ) : VerifierId {
+        override val clientId: ClientId = originalClientId
     }
 
     /**
-     * 'x509_san_dns' Client Id scheme.
+     * When the Client Identifier Scheme is x509_san_dns, the Client Identifier
+     * MUST be a DNS name and match a dNSName Subject Alternative Name (SAN) RFC5280
+     * entry in the leaf certificate passed with the request
      */
     data class X509SanDns(
-        override val clientId: String,
+        override val originalClientId: String,
         override val jarSigning: SigningConfig,
-    ) : ClientIdScheme {
+    ) : VerifierId {
         init {
-            require(jarSigning.certificate.containsSanDns(clientId)) {
-                "Client Id '$clientId' not contained in 'DNS' Subject Alternative Names of JAR Signing Certificate."
+            require(jarSigning.certificate.containsSanDns(originalClientId)) {
+                "Original Client Id '$originalClientId' not contained in 'DNS' Subject Alternative Names of JAR Signing Certificate."
             }
         }
 
-        override val name: String = "x509_san_dns"
+        override val clientId: ClientId = "x509_san_dns:$originalClientId"
     }
 
     /**
-     * 'x509_san_uri' Client Id scheme.
+     * When the Client Identifier Scheme is x509_san_uri, the Client Identifier
+     * MUST be a URI and match a uniformResourceIdentifier Subject Alternative Name (SAN) RFC5280
+     * entry in the leaf certificate passed with the request
      */
     data class X509SanUri(
-        override val clientId: String,
+        override val originalClientId: String,
         override val jarSigning: SigningConfig,
-    ) : ClientIdScheme {
+    ) : VerifierId {
         init {
-            require(jarSigning.certificate.containsSanUri(clientId)) {
-                "Client Id '$clientId' not contained in 'URI' Subject Alternative Names of JAR Signing Certificate."
+            require(jarSigning.certificate.containsSanUri(originalClientId)) {
+                "Original Client Id '$originalClientId' not contained in 'URI' Subject Alternative Names of JAR Signing Certificate."
             }
         }
 
-        override val name: String = "x509_san_uri"
+        override val clientId: ClientId = "x509_san_uri:$originalClientId"
     }
 }
 
@@ -170,7 +181,7 @@ sealed interface ClientIdScheme {
  * Verifier configuration options
  */
 data class VerifierConfig(
-    val clientIdScheme: ClientIdScheme,
+    val verifierId: VerifierId,
     val requestJarOption: EmbedOption<RequestId>,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseModeOption: ResponseModeOption,

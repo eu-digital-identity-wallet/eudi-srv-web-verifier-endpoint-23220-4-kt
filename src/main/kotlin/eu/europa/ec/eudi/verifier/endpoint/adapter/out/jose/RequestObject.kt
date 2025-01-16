@@ -22,7 +22,7 @@ import java.time.Clock
 import java.time.Instant
 
 internal data class RequestObject(
-    val clientIdScheme: ClientIdScheme,
+    val verifierId: VerifierId,
     val responseType: List<String>,
     val presentationDefinitionUri: URL?,
     val presentationDefinition: PresentationDefinition? = null,
@@ -82,7 +82,7 @@ internal fun requestObjectFromDomain(
     }
 
     return RequestObject(
-        clientIdScheme = verifierConfig.clientIdScheme,
+        verifierId = verifierConfig.verifierId,
         scope = scope,
         idTokenType = idTokenType,
         presentationDefinitionUri = presentationDefinitionUri,

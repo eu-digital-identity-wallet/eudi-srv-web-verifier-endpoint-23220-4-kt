@@ -55,12 +55,12 @@ class SignRequestObjectNimbus : SignRequestObject {
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
     ): Result<Jwt> = runCatching {
-        val (key, algorithm) = requestObject.clientIdScheme.jarSigning
+        val (key, algorithm) = requestObject.verifierId.jarSigning
         val header = JWSHeader.Builder(algorithm)
             .apply {
-                when (requestObject.clientIdScheme) {
-                    is ClientIdScheme.PreRegistered -> keyID(key.keyID)
-                    is ClientIdScheme.X509SanDns, is ClientIdScheme.X509SanUri -> x509CertChain(key.x509CertChain)
+                when (requestObject.verifierId) {
+                    is VerifierId.PreRegistered -> keyID(key.keyID)
+                    is VerifierId.X509SanDns, is VerifierId.X509SanUri -> x509CertChain(key.x509CertChain)
                 }
             }
             .type(JOSEObjectType(AuthReqJwt))
@@ -78,7 +78,7 @@ class SignRequestObjectNimbus : SignRequestObject {
      */
     private fun asClaimSet(clientMetaData: OIDCClientMetadata?, r: RequestObject): JWTClaimsSet {
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
-        val clientId = ClientID(r.clientIdScheme.clientId)
+        val clientId = ClientID(r.verifierId.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
         val state = State(r.state)
 
@@ -96,7 +96,6 @@ class SignRequestObjectNimbus : SignRequestObject {
             issueTime(Date.from(r.issuedAt))
             audience(r.aud)
             claim("nonce", r.nonce)
-            claim("client_id_scheme", r.clientIdScheme.name)
             optionalClaim(
                 "id_token_type",
                 if (r.idTokenType.isEmpty()) {

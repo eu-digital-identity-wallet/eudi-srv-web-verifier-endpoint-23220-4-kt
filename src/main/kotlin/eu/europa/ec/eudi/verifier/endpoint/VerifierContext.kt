@@ -155,7 +155,7 @@ internal fun beans(clock: Clock) = beans {
     bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
     bean { ValidateMsoMdocDeviceResponse(clock, trustedIssuers) }
-    bean { ValidateSdJwtVc(trustedIssuers, ref<VerifierConfig>().clientIdScheme.clientId) }
+    bean { ValidateSdJwtVc(trustedIssuers, ref<VerifierConfig>().verifierId.clientId) }
 
     //
     // Scheduled
@@ -178,7 +178,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref(),
             ref(),
-            ref<VerifierConfig>().clientIdScheme.jarSigning.key,
+            ref<VerifierConfig>().verifierId.jarSigning.key,
         )
         val verifierApi = VerifierApi(ref(), ref(), ref())
         val staticContent = StaticContent()
@@ -318,18 +318,18 @@ private fun jarSigningConfig(environment: Environment, clock: Clock): SigningCon
 }
 
 private fun verifierConfig(environment: Environment, clock: Clock): VerifierConfig {
-    val clientIdScheme = run {
-        val clientId = environment.getProperty("verifier.clientId", "verifier")
+    val verifierId = run {
+        val originalClientId = environment.getProperty("verifier.originalClientId", "verifier")
         val jarSigning = jarSigningConfig(environment, clock)
 
         val factory =
             when (val clientIdScheme = environment.getProperty("verifier.clientIdScheme", "pre-registered")) {
-                "pre-registered" -> ClientIdScheme::PreRegistered
-                "x509_san_dns" -> ClientIdScheme::X509SanDns
-                "x509_san_uri" -> ClientIdScheme::X509SanUri
+                "pre-registered" -> VerifierId::PreRegistered
+                "x509_san_dns" -> VerifierId::X509SanDns
+                "x509_san_uri" -> VerifierId::X509SanUri
                 else -> error("Unknown clientIdScheme '$clientIdScheme'")
             }
-        factory(clientId, jarSigning)
+        factory(originalClientId, jarSigning)
     }
 
     val publicUrl = environment.publicUrl()
@@ -353,7 +353,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
     val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofMinutes(5)
 
     return VerifierConfig(
-        clientIdScheme = clientIdScheme,
+        verifierId = verifierId,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = { WalletApi.directPost(publicUrl) },

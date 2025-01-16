@@ -119,7 +119,7 @@ enum class ValidationError {
 @Serializable
 data class JwtSecuredAuthorizationRequestTO(
     @Required @SerialName("transaction_id") val transactionId: String,
-    @Required @SerialName("client_id") val clientId: String,
+    @Required @SerialName("client_id") val clientId: ClientId,
     @SerialName("request") val request: String? = null,
     @SerialName("request_uri") val requestUri: String?,
 ) {
@@ -225,7 +225,7 @@ class InitTransactionLive(
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(
                     requestedPresentation.id.value,
-                    verifierConfig.clientIdScheme.clientId,
+                    verifierConfig.verifierId.clientId,
                     jwt,
                     null,
                 )
@@ -235,7 +235,7 @@ class InitTransactionLive(
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId).toExternalForm()
                 requestedPresentation to JwtSecuredAuthorizationRequestTO(
                     requestedPresentation.id.value,
-                    verifierConfig.clientIdScheme.clientId,
+                    verifierConfig.verifierId.clientId,
                     null,
                     requestUri,
                 )
