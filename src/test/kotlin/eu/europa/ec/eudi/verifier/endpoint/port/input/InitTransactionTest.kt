@@ -50,6 +50,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
+                null,
                 "nonce",
             )
 
@@ -85,6 +86,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
+                null,
                 "nonce",
             )
 
@@ -112,7 +114,7 @@ class InitTransactionTest {
             presentationDefinition = null,
             nonce = "nonce",
         )
-        testWithInvalidInput(input, ValidationError.MissingPresentationDefinition)
+        testWithInvalidInput(input, ValidationError.MissingPresentationQuery)
     }
 
     @Test
@@ -226,6 +228,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
+                null,
                 "nonce",
                 redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
             )
@@ -243,6 +246,7 @@ class InitTransactionTest {
             val invalidUrlInput = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
+                null,
                 null,
                 "nonce",
                 redirectUriTemplate =
@@ -267,6 +271,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
+                null,
                 "nonce",
                 redirectUriTemplate =
                     "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -290,6 +295,7 @@ class InitTransactionTest {
             val input = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
+                null,
                 null,
                 "nonce",
             )

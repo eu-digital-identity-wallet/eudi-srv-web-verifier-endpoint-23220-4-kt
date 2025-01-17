@@ -457,6 +457,12 @@
         "nullable": false,
         "additionalProperties": true
       },
+      "DcqlQuery": {
+        "description": "Query using the Digital Credentials Query Language as defined by OpenId4VP. More information here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-digital-credentials-query-l",
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": true
+      },
       "InitVpTokenTransaction": {
         "type": "object",
         "nullable": false,
@@ -472,10 +478,20 @@
           "presentation_definition": {
             "allOf": [
               {
-                "description": "A json object that depicting the presentation definition to be included in the OpenId4VP authorization request."
+                "description": "A json object depicting the presentation definition to be included in the OpenId4VP authorization request."
               },
               {
                 "$ref": "#/components/schemas/PresentationDefinition"
+              }
+            ]
+          },
+          "dcql_query": {
+            "allOf": [
+              {
+                "description": "A json object depicting the query, expressed using DCQL, to be included in the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/DcqlQuery"
               }
             ]
           },
@@ -532,7 +548,6 @@
         },
         "required": [
           "type",
-          "presentation_definition",
           "nonce"
         ],
         "additionalProperties": false
@@ -562,10 +577,20 @@
           "presentation_definition": {
             "allOf": [
               {
-                "description": "A json object that depicting the presentation definition to be included in the OpenId4VP authorization request."
+                "description": "A json object depicting the presentation definition to be included in the OpenId4VP authorization request."
               },
               {
                 "$ref": "#/components/schemas/PresentationDefinition"
+              }
+            ]
+          },
+          "dcql_query": {
+            "allOf": [
+              {
+                "description": "A json object depicting the query, expressed using DCQL, to be included in the OpenId4VP authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/DcqlQuery"
               }
             ]
           },
@@ -623,7 +648,6 @@
         "required": [
           "type",
           "id_token_type",
-          "presentation_definition",
           "nonce"
         ],
         "additionalProperties": false
@@ -756,7 +780,8 @@
         "type": "string",
         "nullable": false,
         "enum": [
-          "MissingPresentationDefinition",
+          "MissingPresentationQuery",
+          "MultiplePresentationQueries",
           "MissingNonce",
           "InvalidWalletResponseTemplate"
         ]
@@ -1332,6 +1357,7 @@
               }
             ]
           },
+          "dcql_query": null,
           "jar_mode": "by_value",
           "presentation_definition_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
@@ -1370,6 +1396,7 @@
               }
             ]
           },
+          "dcql_query": null,
           "jar_mode": "by_reference",
           "presentation_definition_mode": "by_reference",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
@@ -1408,6 +1435,7 @@
               }
             ]
           },
+          "dcql_query": null,
           "jar_mode": "by_value",
           "presentation_definition_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
@@ -1448,6 +1476,7 @@
               }
             ]
           },
+          "dcql_query": null,
           "jar_mode": "by_value",
           "presentation_definition_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
@@ -1487,6 +1516,7 @@
               }
             ]
           },
+          "dcql_query": null,
           "jar_mode": "by_reference",
           "presentation_definition_mode": "by_reference",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
@@ -1526,6 +1556,7 @@
               }
             ]
           },
+          "dcql_query": null,
           "jar_mode": "by_value",
           "presentation_definition_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",

@@ -20,7 +20,6 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
-import arrow.core.raise.ensureNotNull
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -35,6 +34,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 
 /**
@@ -96,6 +96,7 @@ data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
     @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null,
+    @SerialName("dcql_query") val dcqlQuery: JsonObject? = null,
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
@@ -107,7 +108,8 @@ data class InitTransactionTO(
  * Possible validation errors of caller's input
  */
 enum class ValidationError {
-    MissingPresentationDefinition,
+    MissingPresentationQuery,
+    MultiplePresentationQueries,
     MissingNonce,
     InvalidWalletResponseTemplate,
 }
@@ -295,8 +297,13 @@ internal fun InitTransactionTO.toDomain(): Either<ValidationError, Pair<Nonce, P
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
-    fun requiredPresentationDefinition() =
-        ensureNotNull(presentationDefinition) { ValidationError.MissingPresentationDefinition }
+    fun requiredPresentationQuery(): PresentationQuery =
+        when {
+            presentationDefinition != null && dcqlQuery == null -> PresentationQuery.ByPresentationDefinition(presentationDefinition)
+            presentationDefinition == null && dcqlQuery != null -> PresentationQuery.ByDigitalCredentialsQueryLanguage(dcqlQuery)
+            presentationDefinition == null && dcqlQuery == null -> raise(ValidationError.MissingPresentationQuery)
+            else -> raise(ValidationError.MultiplePresentationQueries)
+        }
 
     fun requiredNonce(): Nonce {
         ensure(!nonce.isNullOrBlank()) { ValidationError.MissingNonce }
@@ -308,12 +315,12 @@ internal fun InitTransactionTO.toDomain(): Either<ValidationError, Pair<Nonce, P
             PresentationType.IdTokenRequest(requiredIdTokenType())
 
         PresentationTypeTO.VpTokenRequest ->
-            PresentationType.VpTokenRequest(requiredPresentationDefinition())
+            PresentationType.VpTokenRequest(requiredPresentationQuery())
 
         PresentationTypeTO.IdAndVpTokenRequest -> {
             val idTokenTypes = requiredIdTokenType()
-            val pd = requiredPresentationDefinition()
-            PresentationType.IdAndVpToken(idTokenTypes, pd)
+            val pq = requiredPresentationQuery()
+            PresentationType.IdAndVpToken(idTokenTypes, pq)
         }
     }
 

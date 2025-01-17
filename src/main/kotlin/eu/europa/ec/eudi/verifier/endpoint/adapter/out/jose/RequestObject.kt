@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import kotlinx.serialization.json.JsonObject
 import java.net.URL
 import java.time.Clock
 import java.time.Instant
@@ -26,6 +27,7 @@ internal data class RequestObject(
     val responseType: List<String>,
     val presentationDefinitionUri: URL?,
     val presentationDefinition: PresentationDefinition? = null,
+    val dcqlQuery: JsonObject? = null,
     val scope: List<String>,
     val idTokenType: List<String>,
     val nonce: String,
@@ -87,6 +89,7 @@ internal fun requestObjectFromDomain(
         idTokenType = idTokenType,
         presentationDefinitionUri = presentationDefinitionUri,
         presentationDefinition = presentationDefinition,
+        dcqlQuery = type.dcqlQueryOrNull,
         responseType = responseType,
         aud = aud,
         nonce = presentation.nonce.value,

@@ -57,6 +57,34 @@ enum class IdTokenType {
 }
 
 /**
+ * The requirements of the Verifiable Presentations to be presented.
+ */
+sealed interface PresentationQuery {
+
+    /**
+     * The requirements of the Verifiable Presentations to be presented, expressed using Presentation Definition.
+     */
+    data class ByPresentationDefinition(val presentationDefinition: PresentationDefinition) : PresentationQuery
+
+    /**
+     * The requirements of the Verifiable Presentations to be presented, expressed using DCQL.
+     */
+    data class ByDigitalCredentialsQueryLanguage(val query: JsonObject) : PresentationQuery
+}
+
+val PresentationQuery.presentationDefinitionOrNull: PresentationDefinition?
+    get() = when (this) {
+        is PresentationQuery.ByPresentationDefinition -> presentationDefinition
+        is PresentationQuery.ByDigitalCredentialsQueryLanguage -> null
+    }
+
+val PresentationQuery.dcqlQueryOrNull: JsonObject?
+    get() = when (this) {
+        is PresentationQuery.ByPresentationDefinition -> null
+        is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query
+    }
+
+/**
  * Represents what the [Presentation] is asking
  * from the wallet
  */
@@ -66,20 +94,27 @@ sealed interface PresentationType {
     ) : PresentationType
 
     data class VpTokenRequest(
-        val presentationDefinition: PresentationDefinition,
+        val presentationQuery: PresentationQuery,
     ) : PresentationType
 
     data class IdAndVpToken(
         val idTokenType: List<IdTokenType>,
-        val presentationDefinition: PresentationDefinition,
+        val presentationQuery: PresentationQuery,
     ) : PresentationType
 }
 
 val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
     get() = when (this) {
         is PresentationType.IdTokenRequest -> null
-        is PresentationType.VpTokenRequest -> presentationDefinition
-        is PresentationType.IdAndVpToken -> presentationDefinition
+        is PresentationType.VpTokenRequest -> presentationQuery.presentationDefinitionOrNull
+        is PresentationType.IdAndVpToken -> presentationQuery.presentationDefinitionOrNull
+    }
+
+val PresentationType.dcqlQueryOrNull: JsonObject?
+    get() = when (this) {
+        is PresentationType.IdTokenRequest -> null
+        is PresentationType.VpTokenRequest -> presentationQuery.dcqlQueryOrNull
+        is PresentationType.IdAndVpToken -> presentationQuery.dcqlQueryOrNull
     }
 
 sealed interface VerifiablePresentation {
