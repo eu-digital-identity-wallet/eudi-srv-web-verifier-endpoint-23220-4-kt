@@ -245,7 +245,8 @@ This identifier is used in the [WalletApi](src/main/kotlin/eu/europa/ec/eudi/ver
 An endpoint to control the content of the authorization request that will be prepared from the verifier backend service. Payload of this request is a json object with the following acceptable attributes:
 - `type`: The type of the response to the authorization request. Allowed values are one of: `id_token`, `vp_token` or `vp_token id_token`.
 - `id_token_type`: In case type is `id_token` controls the type of id_token that will be requested from wallet. Allowed values are one of `subject_signed_id_token` or `attester_signed_id_token`. 
-- `presentation_definition`: A json object that depicting the presentation definition to be included in the OpenId4VP authorization request in case `type` is 'vp_token'. 
+- `presentation_definition`: A json object depicting the presentation definition to be included in the OpenId4VP authorization request in case `type` is 'vp_token', or 'vp_token id_token'. 
+- `dcql_query`: A json object depicting the query, expressed using DCQL, to be included in the OpenId4VP authorization request in case `type` is 'vp_token', or 'vp_token id_token'. 
 - `nonce`: Nonce value to be included in the OpenId4VP authorization request.
 - `response_mode`: Controls the `response_mode` attribute of the OpenId4VP authorization request. Allowed values are one of `direct_post` or `direct_post.jwt`.  
 - `jar_mode`: Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if `by_reference` a `request_uri` url will be returned.  
@@ -285,7 +286,8 @@ curl -X POST -H "Content-type: application/json" -d '{
                 "purpose": "We need to verify your identity"
             }
         ]
-    },
+  },
+  "dcql_query": null,
   "nonce": "nonce"
 }' 'http://localhost:8080/ui/presentations'
 ```
@@ -294,7 +296,7 @@ curl -X POST -H "Content-type: application/json" -d '{
 ```json
 {
   "transaction_id": "STMMbidoCQTtyk9id5IcoL8CqdC8rxgks5FF8cqqUrHvw0IL3AaIHGnwxvrvcEyUJ6uUPNdoBQDa7yCqpjtKaw",
-  "client_id": "dev.verifier-backend.eudiw.dev",
+  "client_id": "x509_san_dns:localhost",
   "request_uri": "https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw"
 }
 ```
