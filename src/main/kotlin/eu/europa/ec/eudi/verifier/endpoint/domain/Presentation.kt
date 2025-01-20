@@ -134,6 +134,45 @@ sealed interface VerifiablePresentation {
     }
 }
 
+/**
+ * The Wallet's response to a 'vp_token' request.
+ */
+sealed interface VpContent {
+
+    /**
+     * A 'vp_token' response as defined by Presentation Exchange.
+     */
+    data class PresentationExchange(
+        val verifiablePresentations: NonEmptyList<VerifiablePresentation>,
+        val presentationSubmission: PresentationSubmission,
+    ) : VpContent {
+        init {
+            require(verifiablePresentations.size == verifiablePresentations.distinct().size)
+        }
+    }
+
+    /**
+     * A 'vp_token' response as defined by DCQL.
+     */
+    data class DCQL(val verifiablePresentations: Map<String, VerifiablePresentation>) : VpContent {
+        init {
+            require(verifiablePresentations.isNotEmpty())
+        }
+    }
+}
+
+internal fun VpContent.verifiablePresentations(): List<VerifiablePresentation> =
+    when (this) {
+        is VpContent.PresentationExchange -> verifiablePresentations
+        is VpContent.DCQL -> verifiablePresentations.values.distinct()
+    }
+
+internal fun VpContent.presentationSubmissionOrNull(): PresentationSubmission? =
+    when (this) {
+        is VpContent.PresentationExchange -> presentationSubmission
+        is VpContent.DCQL -> null
+    }
+
 sealed interface WalletResponse {
 
     data class IdToken(
@@ -145,14 +184,12 @@ sealed interface WalletResponse {
     }
 
     data class VpToken(
-        val vpToken: NonEmptyList<VerifiablePresentation>,
-        val presentationSubmission: PresentationSubmission,
+        val vpContent: VpContent,
     ) : WalletResponse
 
     data class IdAndVpToken(
         val idToken: Jwt,
-        val vpToken: NonEmptyList<VerifiablePresentation>,
-        val presentationSubmission: PresentationSubmission,
+        val vpContent: VpContent,
     ) : WalletResponse {
         init {
             require(idToken.isNotEmpty())
