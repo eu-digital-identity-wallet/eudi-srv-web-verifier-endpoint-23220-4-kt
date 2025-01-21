@@ -20,14 +20,18 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.proc.JWEDecryptionKeySelector
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jose.shaded.gson.Gson
+import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jose.util.JSONObjectUtils
+import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.proc.JWTProcessor
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import kotlinx.serialization.json.Json
@@ -48,10 +52,17 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
         jarmOption: JarmOption,
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         jarmJwt: Jwt,
+        apv: Nonce,
     ): Result<AuthorisationResponseTO> = runCatching {
-        processor(jarmOption, ephemeralEcPrivateKey)
-            .process(jarmJwt, null)
-            .mapToDomain()
+        val processor = processor(jarmOption, ephemeralEcPrivateKey)
+        val jwt = JWTParser.parse(jarmJwt)
+        if (jwt is EncryptedJWT) {
+            require(jwt.header.agreementPartyVInfo == Base64URL.encode(apv.value)) {
+                "'apv' header claim must be set to the 'nonce' value provided by the verifier"
+            }
+        }
+        val claimSet = processor.process(jwt, null)
+        claimSet.mapToDomain()
     }
 
     private fun processor(

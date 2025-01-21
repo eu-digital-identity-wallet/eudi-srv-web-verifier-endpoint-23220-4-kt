@@ -256,6 +256,7 @@ class PostWalletResponseLive(
                     jarmOption = verifierConfig.clientMetaData.jarmOption,
                     ephemeralEcPrivateKey = presentation.ephemeralEcPrivateKey,
                     jarmJwt = walletResponse.jarm,
+                    apv = presentation.nonce,
                 ).getOrThrow()
                 ensure(response.state == walletResponse.state) { WalletResponseValidationError.IncorrectStateInJarm }
                 response

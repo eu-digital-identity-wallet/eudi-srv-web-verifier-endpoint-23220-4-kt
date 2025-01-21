@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 import com.nimbusds.jose.JWEEncrypter
 import com.nimbusds.jose.JWEHeader
 import com.nimbusds.jose.crypto.ECDHEncrypter
+import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
@@ -112,7 +113,9 @@ internal class WalletResponseDirectPostJwtTest {
             log.info("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
             // Request JWT encrypted with ECDH-ES
-            val jweHeader = JWEHeader(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
+            val jweHeader = JWEHeader.Builder(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
+                .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
+                .build()
             log.info("header = ${jweHeader.toJSONObject()}")
 
             // Create the encrypted JWT object
