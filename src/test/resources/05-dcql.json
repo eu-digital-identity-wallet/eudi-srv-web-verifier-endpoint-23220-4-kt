@@ -1,0 +1,84 @@
+{
+  "type": "vp_token id_token",
+  "id_token_type": "subject_signed_id_token",
+  "dcql_query": {
+    "credentials": [
+      {
+        "id": "employment_input",
+        "format": "dc+sd-jwt",
+        "claims": [
+          {
+            "id": "dateOfBirth",
+            "path": [
+              "dateOfBirth"
+            ]
+          },
+          {
+            "id": "dob",
+            "path": [
+              "dob"
+            ]
+          }
+        ],
+        "claim_sets": [
+          [
+            "dateOfBirth"
+          ],
+          [
+            "dob"
+          ]
+        ]
+      },
+      {
+        "id": "employment_input_2",
+        "format": "dc+sd-jwt",
+        "claims": [
+          {
+            "id": "dateOfBirth",
+            "path": [
+              "dateOfBirth"
+            ]
+          },
+          {
+            "id": "dob",
+            "path": [
+              "dob"
+            ]
+          }
+        ],
+        "claim_sets": [
+          [
+            "dateOfBirth"
+          ],
+          [
+            "dob"
+          ]
+        ]
+      },
+      {
+        "id": "employment_input_3",
+        "format": "dc+sd-jwt"
+      }
+    ],
+    "credential_sets": [
+      {
+        "options": [
+          [
+            "employment_input",
+            "employment_input_2"
+          ]
+        ],
+        "purpose": "We can only allow licensed Washington State business representatives into the WA Business Conference"
+      },
+      {
+        "options": [
+          [
+            "employment_input_3"
+          ]
+        ],
+        "purpose": "We can only allow licensed Washington State business representatives into the WA Business Conference"
+      }
+    ]
+  },
+  "nonce": "nonce"
+}
