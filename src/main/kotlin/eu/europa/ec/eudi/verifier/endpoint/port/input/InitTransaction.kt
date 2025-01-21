@@ -34,7 +34,6 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 
 /**
@@ -96,7 +95,7 @@ data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
     @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null,
-    @SerialName("dcql_query") val dcqlQuery: JsonObject? = null,
+    @SerialName("dcql_query") val dcqlQuery: DCQL? = null,
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,

@@ -166,6 +166,8 @@ private fun WalletResponseValidationError.asText(): String =
         is WalletResponseValidationError.PresentationNotFound -> "Presentation not found"
         is WalletResponseValidationError.PresentationNotInExpectedState -> "Presentation non in expected state"
         is WalletResponseValidationError.UnexpectedResponseMode -> "Unexpected response mode. Expected $expected, actual $actual"
+        WalletResponseValidationError.RequiredCredentialSetNotSatisfied ->
+            "vp_token does not satisfy all the required credential sets of the query"
     }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)

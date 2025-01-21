@@ -69,7 +69,7 @@ sealed interface PresentationQuery {
     /**
      * The requirements of the Verifiable Presentations to be presented, expressed using DCQL.
      */
-    data class ByDigitalCredentialsQueryLanguage(val query: JsonObject) : PresentationQuery
+    data class ByDigitalCredentialsQueryLanguage(val query: DCQL) : PresentationQuery
 }
 
 val PresentationQuery.presentationDefinitionOrNull: PresentationDefinition?
@@ -78,7 +78,7 @@ val PresentationQuery.presentationDefinitionOrNull: PresentationDefinition?
         is PresentationQuery.ByDigitalCredentialsQueryLanguage -> null
     }
 
-val PresentationQuery.dcqlQueryOrNull: JsonObject?
+val PresentationQuery.dcqlQueryOrNull: DCQL?
     get() = when (this) {
         is PresentationQuery.ByPresentationDefinition -> null
         is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query
@@ -110,7 +110,7 @@ val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
         is PresentationType.IdAndVpToken -> presentationQuery.presentationDefinitionOrNull
     }
 
-val PresentationType.dcqlQueryOrNull: JsonObject?
+val PresentationType.dcqlQueryOrNull: DCQL?
     get() = when (this) {
         is PresentationType.IdTokenRequest -> null
         is PresentationType.VpTokenRequest -> presentationQuery.dcqlQueryOrNull
@@ -154,7 +154,7 @@ sealed interface VpContent {
     /**
      * A 'vp_token' response as defined by DCQL.
      */
-    data class DCQL(val verifiablePresentations: Map<String, VerifiablePresentation>) : VpContent {
+    data class DCQL(val verifiablePresentations: Map<QueryId, VerifiablePresentation>) : VpContent {
         init {
             require(verifiablePresentations.isNotEmpty())
         }

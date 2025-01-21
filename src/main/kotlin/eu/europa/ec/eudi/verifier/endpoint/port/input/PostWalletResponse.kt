@@ -35,10 +35,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentat
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.*
 import java.time.Clock
 
 /**
@@ -77,6 +74,7 @@ sealed interface WalletResponseValidationError {
     data object MissingVpToken : WalletResponseValidationError
     data object MissingPresentationSubmission : WalletResponseValidationError
     data object PresentationSubmissionMustNotBePresent : WalletResponseValidationError
+    data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
 }
 
 internal fun AuthorisationResponseTO.toDomain(
@@ -118,9 +116,12 @@ internal fun AuthorisationResponseTO.toDomain(
             }
 
             is PresentationQuery.ByDigitalCredentialsQueryLanguage -> {
-                fun JsonElement.toVerifiablePresentations(): Map<String, VerifiablePresentation> {
-                    ensure(this is JsonObject) { WalletResponseValidationError.InvalidVpToken }
-                    return mapValues { (_, value) ->
+                fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
+                    val vpToken = runCatching {
+                        Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
+                    }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
+
+                    return vpToken.mapValues { (_, value) ->
                         when (value) {
                             is JsonPrimitive -> {
                                 ensure(value.isString) { WalletResponseValidationError.InvalidVpToken }
@@ -134,6 +135,9 @@ internal fun AuthorisationResponseTO.toDomain(
 
                 ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
                 val verifiablePresentations = vpToken.toVerifiablePresentations()
+                ensure(presentationQuery.satisfiedBy(verifiablePresentations)) {
+                    WalletResponseValidationError.RequiredCredentialSetNotSatisfied
+                }
 
                 VpContent.DCQL(verifiablePresentations)
             }
@@ -291,3 +295,12 @@ private fun AuthorisationResponse.responseMode(): ResponseModeOption = when (thi
     is AuthorisationResponse.DirectPost -> ResponseModeOption.DirectPost
     is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
 }
+
+private fun PresentationQuery.ByDigitalCredentialsQueryLanguage.satisfiedBy(response: Map<QueryId, VerifiablePresentation>): Boolean =
+    if (query.credentialSets != null) {
+        query.credentialSets.filter { credentialSet -> credentialSet.required ?: true }
+            .map { credentialSet -> credentialSet.options.any { option -> response.keys.containsAll(option) } }
+            .fold(true, Boolean::and)
+    } else {
+        response.keys.containsAll(query.credentials.map { it.id })
+    }
