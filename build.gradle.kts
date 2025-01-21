@@ -51,6 +51,9 @@ dependencies {
         because("required by walt.id")
     }
     implementation(libs.sd.jwt)
+    implementation(libs.ktor.client.java) {
+        because("ktor client engine to use (required by SdJwtVcVerifier)")
+    }
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
