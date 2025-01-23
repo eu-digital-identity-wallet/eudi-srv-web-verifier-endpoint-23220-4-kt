@@ -159,11 +159,15 @@ private fun WalletResponseValidationError.asText(): String =
         WalletResponseValidationError.IncorrectStateInJarm -> "Incorrect state in JARM"
         WalletResponseValidationError.MissingIdToken -> "Missing id_token"
         WalletResponseValidationError.MissingState -> "Missing state from JARM"
-        WalletResponseValidationError.MissingVpTokenOrPresentationSubmission -> "Missing vp_token or presentation_submission"
+        WalletResponseValidationError.MissingVpToken -> "Missing vp_token"
+        WalletResponseValidationError.MissingPresentationSubmission -> "Missing presentation_submission"
+        WalletResponseValidationError.PresentationSubmissionMustNotBePresent -> "presentation_submission must not be provided"
         WalletResponseValidationError.InvalidVpToken -> "vp_token is not valid"
         is WalletResponseValidationError.PresentationNotFound -> "Presentation not found"
         is WalletResponseValidationError.PresentationNotInExpectedState -> "Presentation non in expected state"
         is WalletResponseValidationError.UnexpectedResponseMode -> "Unexpected response mode. Expected $expected, actual $actual"
+        WalletResponseValidationError.RequiredCredentialSetNotSatisfied ->
+            "vp_token does not satisfy all the required credential sets of the query"
     }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)

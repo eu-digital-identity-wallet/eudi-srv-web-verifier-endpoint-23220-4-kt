@@ -27,6 +27,7 @@ import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
@@ -109,6 +110,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             optionalClaim("client_metadata", clientMetaData?.toJSONObject())
             optionalClaim("response_uri", r.responseUri?.toExternalForm())
             optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
+            optionalClaim("dcql_query", r.dcqlQuery?.toJackson())
             build()
         }
     }

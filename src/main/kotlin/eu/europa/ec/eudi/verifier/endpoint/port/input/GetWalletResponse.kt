@@ -51,14 +51,14 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
     return when (this) {
         is WalletResponse.IdToken -> WalletResponseTO(idToken = idToken)
         is WalletResponse.VpToken -> WalletResponseTO(
-            vpToken = JsonArray(vpToken.map { it.toJsonElement() }),
-            presentationSubmission = presentationSubmission,
+            vpToken = JsonArray(vpContent.verifiablePresentations().map { it.toJsonElement() }),
+            presentationSubmission = vpContent.presentationSubmissionOrNull(),
         )
 
         is WalletResponse.IdAndVpToken -> WalletResponseTO(
             idToken = idToken,
-            vpToken = JsonArray(vpToken.map { it.toJsonElement() }),
-            presentationSubmission = presentationSubmission,
+            vpToken = JsonArray(vpContent.verifiablePresentations().map { it.toJsonElement() }),
+            presentationSubmission = vpContent.presentationSubmissionOrNull(),
         )
 
         is WalletResponse.Error -> WalletResponseTO(
