@@ -511,12 +511,12 @@ Description: Algorithm used to sign Authorization Request
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms   
 Note: The configured signing algorithm must be compatible with the configured signing key  
-Default value: `RS256`
+Default value: `ES256`
 
 Variable: `VERIFIER_JAR_SIGNING_KEY`  
 Description: Key to use for Authorization Request signing  
 Possible values: `GenerateRandom`, `LoadFromKeystore`  
-Setting this value to `GenerateRandom` will result in the generation of a random `RSA` key   
+Setting this value to `GenerateRandom` will result in the generation of a random `EC` key using the curve `P-256`   
 Note: The configured signing key must be compatible with the configured signing algorithm  
 Default value: `GenerateRandom`
 

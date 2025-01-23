@@ -23,7 +23,7 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
@@ -299,8 +299,8 @@ private fun jarSigningConfig(environment: Environment, clock: Clock): SigningCon
             }
         }
 
-        fun generateRandom(): RSAKey =
-            RSAKeyGenerator(4096, false)
+        fun generateRandom(): ECKey =
+            ECKeyGenerator(Curve.P_256)
                 .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
                 .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
                 .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
@@ -312,7 +312,7 @@ private fun jarSigningConfig(environment: Environment, clock: Clock): SigningCon
         }
     }
 
-    val algorithm = environment.getProperty("verifier.jar.signing.algorithm", "RS256").let(JWSAlgorithm::parse)
+    val algorithm = environment.getProperty("verifier.jar.signing.algorithm", "ES256").let(JWSAlgorithm::parse)
 
     return SigningConfig(key, algorithm)
 }
