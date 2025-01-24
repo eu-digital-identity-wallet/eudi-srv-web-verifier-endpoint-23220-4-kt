@@ -118,16 +118,15 @@ val PresentationType.dcqlQueryOrNull: DCQL?
     }
 
 sealed interface VerifiablePresentation {
+    val format: Format
 
-    @JvmInline
-    value class Generic(val value: String) : VerifiablePresentation {
+    data class Generic(val value: String, override val format: Format) : VerifiablePresentation {
         init {
             require(value.isNotBlank()) { "VpToken cannot be blank" }
         }
     }
 
-    @JvmInline
-    value class Json(val value: JsonObject) : VerifiablePresentation {
+    data class Json(val value: JsonObject, override val format: Format) : VerifiablePresentation {
         init {
             require(value.isNotEmpty()) { "VpToken must contain claims" }
         }

@@ -35,6 +35,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentation
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -81,12 +82,13 @@ sealed interface WalletResponseValidationError {
     data object InvalidPresentationSubmission : WalletResponseValidationError
 }
 
-private fun AuthorisationResponseTO.toDomain(
+private suspend fun AuthorisationResponseTO.toDomain(
     presentation: RequestObjectRetrieved,
+    validateVerifiablePresentation: ValidateVerifiablePresentation,
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
-    fun requiredVpContent(presentationQuery: PresentationQuery): VpContent {
+    suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
 
         return when (presentationQuery) {
@@ -103,7 +105,9 @@ private fun AuthorisationResponseTO.toDomain(
                 val verifiablePresentations = descriptorMaps.map {
                     val element = it.path.readFromJson(vpTokenJson).getOrNull() ?: raise(WalletResponseValidationError.InvalidVpToken)
                     val format = Format(it.format)
-                    element.toVerifiablePresentation(format).bind()
+                    val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
+                    validateVerifiablePresentation(unvalidatedVerifiablePresentation, presentation.nonce)
+                        .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
                 }
 
                 VpContent.PresentationExchange(verifiablePresentations, presentationSubmission)
@@ -112,7 +116,7 @@ private fun AuthorisationResponseTO.toDomain(
             is PresentationQuery.ByDigitalCredentialsQueryLanguage -> {
                 ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
 
-                fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
+                suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
                     val vpToken = runCatching {
                         Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
                     }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
@@ -120,7 +124,9 @@ private fun AuthorisationResponseTO.toDomain(
                     val credentialQueries = presentationQuery.query.credentials.associateBy { it.id }
                     return vpToken.mapValues { (queryId, value) ->
                         val format = credentialQueries[queryId]?.format ?: raise(WalletResponseValidationError.InvalidVpToken)
-                        value.toVerifiablePresentation(format).bind()
+                        val unvalidatedVerifiablePresentation = value.toVerifiablePresentation(format).bind()
+                        validateVerifiablePresentation(unvalidatedVerifiablePresentation, presentation.nonce)
+                            .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
                     }
                 }
 
@@ -155,15 +161,15 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
                 when (val element = this@toVerifiablePresentation) {
                     is JsonPrimitive -> {
                         ensure(element.isString) { WalletResponseValidationError.InvalidVpToken }
-                        VerifiablePresentation.Generic(element.content)
+                        VerifiablePresentation.Generic(element.content, format)
                     }
-                    is JsonObject -> VerifiablePresentation.Json(element)
+                    is JsonObject -> VerifiablePresentation.Json(element, format)
                     else -> raise(WalletResponseValidationError.InvalidVpToken)
                 }
             }
             Format.MsoMdoc -> {
                 ensure(this is JsonPrimitive && isString) { WalletResponseValidationError.InvalidVpToken }
-                VerifiablePresentation.Generic(content)
+                VerifiablePresentation.Generic(content, format)
             }
             else -> raise(WalletResponseValidationError.UnsupportedFormat(format))
         }
@@ -206,6 +212,7 @@ class PostWalletResponseLive(
     private val generateResponseCode: GenerateResponseCode,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
+    private val validateVerifiablePresentation: ValidateVerifiablePresentation,
 ) : PostWalletResponse {
 
     override suspend operator fun invoke(
@@ -291,7 +298,7 @@ class PostWalletResponseLive(
         responseObject: AuthorisationResponseTO,
     ): Either<WalletResponseValidationError, Submitted> = either {
         // add the wallet response to the presentation
-        val walletResponse = responseObject.toDomain(presentation).bind()
+        val walletResponse = responseObject.toDomain(presentation, validateVerifiablePresentation).bind()
         val responseCode = when (presentation.getWalletResponseMethod) {
             GetWalletResponseMethod.Poll -> null
             is GetWalletResponseMethod.Redirect -> generateResponseCode()

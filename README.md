@@ -616,6 +616,10 @@ Notes: Provide a value using Java Duration syntax
 Example: `P10D`  
 Default value: `P10D`
 
+Variable: `VERIFIER_PRESENTATIONS_VALIDATIONS_ENABLED`  
+Description: Whether to enable signature and structural validations of received Verifiable Presentations. Applicable only to MsoMdoc DeviceResponses and SD-JWT VCs.  
+Default value: `false`  
+
 Variable: `VERIFIER_CLIENTMETADATA_AUTHORIZATIONSIGNEDRESPONSEALG`  
 Description: Accept only Authorization Responses that are _signed_ using this algorithm  
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
