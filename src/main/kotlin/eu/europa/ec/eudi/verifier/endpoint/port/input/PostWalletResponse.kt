@@ -41,6 +41,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import java.time.Clock
+import java.util.regex.Pattern
 
 /**
  * Represent the Authorisation Response placed by wallet
@@ -81,6 +82,8 @@ sealed interface WalletResponseValidationError {
     data object InvalidPresentationSubmission : WalletResponseValidationError
 }
 
+private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
+
 private suspend fun AuthorisationResponseTO.toDomain(
     presentation: RequestObjectRetrieved,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
@@ -102,6 +105,8 @@ private suspend fun AuthorisationResponseTO.toDomain(
                     ?: raise(WalletResponseValidationError.InvalidPresentationSubmission)
                 val vpTokenJson = Json.encodeToString(vpToken)
                 val verifiablePresentations = descriptorMaps.map {
+                    ensure(jsonPathPattern.matcher(it.path.value).matches()) { WalletResponseValidationError.InvalidPresentationSubmission }
+
                     val element = it.path.readFromJson(vpTokenJson).getOrNull() ?: raise(WalletResponseValidationError.InvalidVpToken)
                     val format = Format(it.format)
                     val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
