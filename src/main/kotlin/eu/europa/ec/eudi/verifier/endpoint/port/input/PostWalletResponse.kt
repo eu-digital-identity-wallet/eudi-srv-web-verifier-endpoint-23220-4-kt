@@ -78,7 +78,6 @@ sealed interface WalletResponseValidationError {
     data object MissingPresentationSubmission : WalletResponseValidationError
     data object PresentationSubmissionMustNotBePresent : WalletResponseValidationError
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
-    data class UnsupportedFormat(val format: Format) : WalletResponseValidationError
     data object InvalidPresentationSubmission : WalletResponseValidationError
 }
 
@@ -157,7 +156,12 @@ private suspend fun AuthorisationResponseTO.toDomain(
 private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletResponseValidationError, VerifiablePresentation> =
     either {
         when (format) {
-            Format("vc+sd-jwt"), Format.SdJwtVc -> {
+            Format.MsoMdoc -> {
+                ensure(this is JsonPrimitive && isString) { WalletResponseValidationError.InvalidVpToken }
+                VerifiablePresentation.Generic(content, format)
+            }
+
+            else -> {
                 when (val element = this@toVerifiablePresentation) {
                     is JsonPrimitive -> {
                         ensure(element.isString) { WalletResponseValidationError.InvalidVpToken }
@@ -167,11 +171,6 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
                     else -> raise(WalletResponseValidationError.InvalidVpToken)
                 }
             }
-            Format.MsoMdoc -> {
-                ensure(this is JsonPrimitive && isString) { WalletResponseValidationError.InvalidVpToken }
-                VerifiablePresentation.Generic(content, format)
-            }
-            else -> raise(WalletResponseValidationError.UnsupportedFormat(format))
         }
     }
 
