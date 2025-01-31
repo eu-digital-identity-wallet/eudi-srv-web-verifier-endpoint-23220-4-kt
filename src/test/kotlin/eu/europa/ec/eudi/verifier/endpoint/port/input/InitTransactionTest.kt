@@ -41,6 +41,7 @@ class InitTransactionTest {
         responseModeOption = ResponseModeOption.DirectPostJwt,
         maxAge = Duration.ofDays(3),
         clientMetaData = TestContext.clientMetaData,
+        transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
     )
 
     @Test
@@ -80,6 +81,7 @@ class InitTransactionTest {
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
+                transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
             )
 
             val input = InitTransactionTO(
@@ -313,7 +315,7 @@ class InitTransactionTest {
         }
 
     private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) =
-        input.toDomain().fold(
+        input.toDomain(verifierConfig.transactionDataHashAlgorithm).fold(
             ifRight = { fail("Invalid input accepted") },
             ifLeft = { error -> assertEquals(expectedError, error) },
         )

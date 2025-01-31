@@ -76,11 +76,12 @@ kotlin {
 
     compilerOptions {
         apiVersion = KotlinVersion.KOTLIN_2_0
-        optIn = listOf(
+        freeCompilerArgs.add("-Xjsr305=strict")
+        optIn.addAll(
             "kotlinx.serialization.ExperimentalSerializationApi",
             "kotlin.io.encoding.ExperimentalEncodingApi",
+            "kotlin.contracts.ExperimentalContracts",
         )
-        freeCompilerArgs.add("-Xjsr305=strict")
     }
 }
 

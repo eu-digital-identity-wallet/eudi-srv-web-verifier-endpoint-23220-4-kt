@@ -633,6 +633,11 @@ Possible values: Any `Algorithm Name` of an IANA registered asymmetric encryptio
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms    
 Default value: `A128CBC-HS256`
 
+Variable: `VERIFIER_TRANSACTIONDATA_HASHALGORITHM`  
+Description: Hash algorithm to communicate in the `transaction_data_hashes_alg` claim of transaction data  
+Default value: `sha-256`  
+Supported values: `sha-256`, `sha-384`, `sha-512`, `sha3-224`, `sha3-256`, `sha3-384`, `sha3-512`  
+
 Variable: `CORS_ORIGINS`  
 Description: Comma separated list of allowed Origins for cross-origin requests  
 Default value: `*`
@@ -657,6 +662,17 @@ Variable: `CORS_MAXAGE`
 Description: Time in seconds of how long pre-flight request responses can be cached by clients  
 Default value: `3600`
 
+Variable: `TRUSTEDISSUERS_KEYSTORE_PATH`   
+Description: If present, the URL of the Keystore from which to load the X509 Certificates of the trusted issuers  
+Examples: `classpath:trusted-issuers.jks`, `file:///trusted-issuers.jks`
+
+Variable: `TRUSTEDISSUERS_KEYSTORE_TYPE`   
+Description: Type of the Keystore from which to load the X509 Certificates of the trusted issuers  
+Examples: `jks`, `pkcs12`
+
+Variable: `TRUSTEDISSUERS_KEYSTORE_PASSWORD`  
+Description: If present and non-blank, the password of the Keystore from which to load the X509 Certificates of the trusted issuers
+
 ### When `VERIFIER_JAR_SIGNING_KEY` is set to `LoadFromKeystore` the following environment variables must also be configured.
 
 Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE`  
@@ -675,17 +691,6 @@ Description: Alias of the Key to use for JAR signing, in the configured Keystore
 
 Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
 Description: Password of the Key to use for JAR signing, in the configured Keystore
-
-Variable: `TRUSTEDISSUERS_KEYSTORE_PATH`   
-Description: If present, the URL of the Keystore from which to load the X509 Certificates of the trusted issuers  
-Examples: `classpath:trusted-issuers.jks`, `file:///trusted-issuers.jks`  
-
-Variable: `TRUSTEDISSUERS_KEYSTORE_TYPE`   
-Description: Type of the Keystore from which to load the X509 Certificates of the trusted issuers  
-Examples: `jks`, `pkcs12`  
-
-Variable: `TRUSTEDISSUERS_KEYSTORE_PASSWORD`  
-Description: If present and non-blank, the password of the Keystore from which to load the X509 Certificates of the trusted issuers  
 
 ## How to contribute
 

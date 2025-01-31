@@ -34,7 +34,9 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
 import java.time.Clock
+import kotlin.contracts.contract
 
 /**
  * Represent the kind of [Presentation] process
@@ -101,6 +103,7 @@ data class InitTransactionTO(
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
+    @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
 )
 
 /**
@@ -111,6 +114,7 @@ enum class ValidationError {
     MultiplePresentationQueries,
     MissingNonce,
     InvalidWalletResponseTemplate,
+    InvalidTransactionData,
 }
 
 /**
@@ -158,7 +162,7 @@ class InitTransactionLive(
 
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO> = either {
         // validate input
-        val (nonce, type) = initTransactionTO.toDomain().bind()
+        val (nonce, type) = initTransactionTO.toDomain(verifierConfig.transactionDataHashAlgorithm).bind()
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
@@ -280,7 +284,9 @@ class InitTransactionLive(
     }
 }
 
-internal fun InitTransactionTO.toDomain(): Either<ValidationError, Pair<Nonce, PresentationType>> = either {
+internal fun InitTransactionTO.toDomain(
+    transactionDataHashAlgorithm: HashAlgorithm,
+): Either<ValidationError, Pair<Nonce, PresentationType>> = either {
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
@@ -297,17 +303,47 @@ internal fun InitTransactionTO.toDomain(): Either<ValidationError, Pair<Nonce, P
         return Nonce(nonce)
     }
 
+    fun optionalTransactionData(query: PresentationQuery): List<JsonObject>? {
+        fun PresentationQuery.credentialIds(): List<String> =
+            when (this) {
+                is PresentationQuery.ByPresentationDefinition -> this.presentationDefinition.inputDescriptors.map { it.id.value }
+                is PresentationQuery.ByDigitalCredentialsQueryLanguage -> this.query.credentials.map { it.id.value }
+            }
+
+        return transactionData?.map {
+            // type is required
+            val type = it["type"]
+            ensure(type is JsonPrimitive && type.isString) { ValidationError.InvalidTransactionData }
+
+            // credential_ids is required
+            val queryCredentialIds = query.credentialIds()
+            val credentialIds = it["credential_ids"]
+            ensure(credentialIds is JsonArray) { ValidationError.InvalidTransactionData }
+            ensure(credentialIds.all { credentialId -> credentialId.isString() && credentialId.content in queryCredentialIds }) {
+                ValidationError.InvalidTransactionData
+            }
+
+            // overwrite transaction_data_hashes_alg with what we support
+            val hashAlgorithms = buildJsonArray {
+                add(transactionDataHashAlgorithm.ianaName)
+            }
+            JsonObject(it + ("transaction_data_hashes_alg" to hashAlgorithms))
+        }
+    }
+
     val presentationType = when (type) {
         PresentationTypeTO.IdTokenRequest ->
             PresentationType.IdTokenRequest(requiredIdTokenType())
 
-        PresentationTypeTO.VpTokenRequest ->
-            PresentationType.VpTokenRequest(requiredPresentationQuery())
+        PresentationTypeTO.VpTokenRequest -> {
+            val query = requiredPresentationQuery()
+            PresentationType.VpTokenRequest(query, optionalTransactionData(query))
+        }
 
         PresentationTypeTO.IdAndVpTokenRequest -> {
             val idTokenTypes = requiredIdTokenType()
-            val pq = requiredPresentationQuery()
-            PresentationType.IdAndVpToken(idTokenTypes, pq)
+            val query = requiredPresentationQuery()
+            PresentationType.IdAndVpToken(idTokenTypes, query, optionalTransactionData(query))
         }
     }
 
@@ -319,4 +355,12 @@ internal fun InitTransactionTO.toDomain(): Either<ValidationError, Pair<Nonce, P
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
+}
+
+private fun JsonElement.isString(): Boolean {
+    contract {
+        returns(true) implies(this@isString is JsonPrimitive)
+    }
+
+    return this is JsonPrimitive && this.isString
 }

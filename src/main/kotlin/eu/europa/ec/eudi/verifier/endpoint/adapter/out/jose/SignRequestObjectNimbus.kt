@@ -111,6 +111,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             optionalClaim("response_uri", r.responseUri?.toExternalForm())
             optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
             optionalClaim("dcql_query", r.dcqlQuery?.toJackson())
+            optionalClaim("transaction_data", r.transactionData?.toJackson())
             build()
         }
     }
