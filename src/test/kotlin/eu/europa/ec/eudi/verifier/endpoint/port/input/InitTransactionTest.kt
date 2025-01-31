@@ -18,12 +18,17 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.getOrElse
+import arrow.core.left
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApiClient
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import kotlinx.coroutines.test.runTest
+import kotlinx.io.bytestring.decodeToByteString
+import kotlinx.io.bytestring.decodeToString
+import kotlinx.serialization.json.*
 import java.net.URL
 import java.time.Duration
 import kotlin.test.*
@@ -313,6 +318,105 @@ class InitTransactionTest {
             assertIs<Presentation.RequestObjectRetrieved>(presentation)
             assertIs<GetWalletResponseMethod.Poll>(presentation.getWalletResponseMethod)
         }
+
+    @Test
+    fun `when transaction_data contains jsonobjects without required properties, inittransaction fails`() = runTest {
+        val useCase: InitTransaction = TestContext.initTransaction(
+            verifierConfig,
+            EmbedOption.byReference { _ -> uri },
+            EmbedOption.byReference { _ -> uri },
+        )
+
+        suspend fun test(transactionData: JsonObject) {
+            val input = VerifierApiClient.loadInitTransactionTO(
+                "00-presentationDefinition.json",
+            ).copy(transactionData = listOf(transactionData))
+
+            val result = useCase(input)
+            assertEquals(ValidationError.InvalidTransactionData.left(), result)
+        }
+
+        val withoutType = JsonObject(emptyMap())
+        val withoutCredentialIds = buildJsonObject {
+            put("type", "foo.bar")
+        }
+
+        test(withoutType)
+        test(withoutCredentialIds)
+    }
+
+    @Test
+    fun `when transaction_data contains jsonobjects with invalid credential ids, inittransaction fails`() = runTest {
+        val useCase: InitTransaction = TestContext.initTransaction(
+            verifierConfig,
+            EmbedOption.byReference { _ -> uri },
+            EmbedOption.byReference { _ -> uri },
+        )
+
+        suspend fun test(baseInput: String, credentialId: String) {
+            val transactionData = buildJsonObject {
+                put("type", "foo.bar")
+                putJsonArray("credential_ids") {
+                    add(credentialId)
+                }
+            }
+
+            val input = VerifierApiClient.loadInitTransactionTO(
+                baseInput,
+            ).copy(transactionData = listOf(transactionData))
+
+            val result = useCase(input)
+            assertEquals(ValidationError.InvalidTransactionData.left(), result)
+        }
+
+        test("00-presentationDefinition.json", "_foo_wa_driver_license")
+        test("04-dcql.json", "_foo_employment_input")
+    }
+
+    @Test
+    fun `when transaction_data contains jsonobjects with valid credential ids, inittransaction succeeds`() = runTest {
+        val useCase: InitTransaction = TestContext.initTransaction(
+            verifierConfig,
+            EmbedOption.byReference { _ -> uri },
+            EmbedOption.byReference { _ -> uri },
+        )
+
+        suspend fun test(baseInput: String, credentialId: String) {
+            val transactionData = buildJsonObject {
+                put("type", "foo.bar")
+                putJsonArray("credential_ids") {
+                    add(credentialId)
+                }
+            }
+
+            val input = VerifierApiClient.loadInitTransactionTO(
+                baseInput,
+            ).copy(transactionData = listOf(transactionData))
+
+            val result = useCase(input)
+            val response = assertNotNull(result.getOrNull())
+            val jar = assertNotNull(response.request).let {
+                SignedJWT.parse(it).jwtClaimsSet
+            }
+            val jarTransactionData = run {
+                val jarTransactionDataList = assertNotNull(jar.getStringListClaim("transaction_data"))
+                assertEquals(1, jarTransactionDataList.size)
+                val encodedJarTransactionData = jarTransactionDataList.first()
+                val decodedJarTransactionData = base64UrlNoPadding.decodeToByteString(encodedJarTransactionData)
+                Json.decodeFromString<JsonObject>(decodedJarTransactionData.decodeToString())
+            }
+            val expectedJarTransactionData = run {
+                val hashAlgorithms = buildJsonArray {
+                    add(verifierConfig.transactionDataHashAlgorithm.ianaName)
+                }
+                JsonObject(transactionData + ("transaction_data_hashes_alg" to hashAlgorithms))
+            }
+            assertEquals(expectedJarTransactionData, jarTransactionData)
+        }
+
+        test("00-presentationDefinition.json", "wa_driver_license")
+        test("04-dcql.json", "employment_input")
+    }
 
     private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) =
         input.toDomain(verifierConfig.transactionDataHashAlgorithm).fold(

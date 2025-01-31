@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import kotlinx.io.bytestring.encode
 import kotlinx.io.bytestring.encodeToByteString
@@ -24,7 +25,6 @@ import kotlinx.serialization.json.Json
 import java.net.URL
 import java.time.Clock
 import java.time.Instant
-import kotlin.io.encoding.Base64
 
 internal data class RequestObject(
     val verifierId: VerifierId,
@@ -42,8 +42,6 @@ internal data class RequestObject(
     val issuedAt: Instant,
     val transactionData: List<String>? = null,
 )
-
-private val base64UrlNoPadding: Base64 by lazy { Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT) }
 
 internal fun requestObjectFromDomain(
     verifierConfig: VerifierConfig,
