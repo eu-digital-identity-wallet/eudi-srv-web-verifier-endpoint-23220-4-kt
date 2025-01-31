@@ -478,7 +478,36 @@
       "DcqlQuery": {
         "description": "Query using the Digital Credentials Query Language as defined by OpenId4VP. More information here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-digital-credentials-query-l",
         "type": "object",
-        "nullable": true,
+        "nullable": false,
+        "additionalProperties": true
+      },
+      "TransactionData": {
+        "description": "Details about the transaction that the Verifier is requesting the End-User to authorize.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "description": "String that identifies the type of transaction data. This value determines extra parameters that can be included in this object.",
+            "type": "string",
+            "nullable": false,
+            "minLength": 1
+          },
+          "credential_ids": {
+            "description": "Array of strings each referencing a Credential requested by the Verifier that can be used to authorize this transaction. In Presentation Exchange, the string matches the id field in the Input Descriptor. In the Digital Credentials Query Language, the string matches the id field in the Credential Query.",
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "type": "string",
+              "nullable": false,
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "nullable": false,
+        "required": [
+          "type",
+          "credential_ids"
+        ],
         "additionalProperties": true
       },
       "InitVpTokenTransaction": {
@@ -562,6 +591,15 @@
                 "$ref": "#/components/schemas/UriTemplate"
               }
             ]
+          },
+          "transaction_data": {
+            "description": "Details about the transaction that the Verifier is requesting the End-User to authorize.",
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/TransactionData"
+            },
+            "minItems": 1
           }
         },
         "required": [
@@ -661,6 +699,15 @@
                 "$ref": "#/components/schemas/UriTemplate"
               }
             ]
+          },
+          "transaction_data": {
+            "description": "Details about the transaction that the Verifier is requesting the End-User to authorize.",
+            "type": "array",
+            "nullable": false,
+            "items": {
+              "$ref": "#/components/schemas/TransactionData"
+            },
+            "minItems": 1
           }
         },
         "required": [
@@ -801,7 +848,8 @@
           "MissingPresentationQuery",
           "MultiplePresentationQueries",
           "MissingNonce",
-          "InvalidWalletResponseTemplate"
+          "InvalidWalletResponseTemplate",
+          "InvalidTransactionData"
         ]
       },
       "InitTransactionError": {
