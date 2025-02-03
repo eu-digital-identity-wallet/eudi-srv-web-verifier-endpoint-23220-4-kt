@@ -15,6 +15,32 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding
 
+import com.nimbusds.jose.util.Base64URL
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlin.io.encoding.Base64
 
 internal val base64UrlNoPadding: Base64 by lazy { Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT) }
+
+/**
+ * [KSerializer] for [Base64URL]. Serializes its value as a string.
+ */
+internal object Base64URLStringSerializer : KSerializer<Base64URL> {
+
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Base64URLString", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: Base64URL) {
+        base64UrlNoPadding.decode(value.toString())
+        encoder.encodeString(value.toString())
+    }
+
+    override fun deserialize(decoder: Decoder): Base64URL {
+        val encoded = decoder.decodeString()
+        base64UrlNoPadding.decode(encoded)
+        return Base64URL.from(encoded)
+    }
+}

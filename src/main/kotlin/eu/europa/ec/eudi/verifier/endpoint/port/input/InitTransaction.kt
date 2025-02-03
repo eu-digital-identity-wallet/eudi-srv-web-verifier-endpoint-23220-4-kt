@@ -313,7 +313,7 @@ internal fun InitTransactionTO.toDomain(
         return transactionData?.map {
             // type is required
             val type = it["type"]
-            ensure(type is JsonPrimitive && type.isString) { ValidationError.InvalidTransactionData }
+            ensure(type.isString()) { ValidationError.InvalidTransactionData }
 
             // credential_ids is required
             val queryCredentialIds = query.credentialIds()
@@ -327,7 +327,20 @@ internal fun InitTransactionTO.toDomain(
             val hashAlgorithms = buildJsonArray {
                 add(transactionDataHashAlgorithm.ianaName)
             }
+
+            // populate hash algorithms, and verify the structure for known types
             JsonObject(it + ("transaction_data_hashes_alg" to hashAlgorithms))
+                .apply {
+                    when (type.content) {
+                        QesAuthorization.TYPE -> QesAuthorization.serializer()
+                        QCertCreationAcceptance.TYPE -> QCertCreationAcceptance.serializer()
+                        else -> null
+                    }?.let { deserializer ->
+                        runCatching {
+                            Json.decodeFromJsonElement(deserializer, this)
+                        }.getOrElse { raise(ValidationError.InvalidTransactionData) }
+                    }
+                }
         }
     }
 
@@ -357,7 +370,7 @@ private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
 
-private fun JsonElement.isString(): Boolean {
+private fun JsonElement?.isString(): Boolean {
     contract {
         returns(true) implies(this@isString is JsonPrimitive)
     }
