@@ -97,7 +97,7 @@ internal fun requestObjectFromDomain(
             ResponseModeOption.DirectPost -> "direct_post"
             ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
         }, // or direct_post for direct submission
-        responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
+        responseUri = verifierConfig.responseUriBuilder(presentation.responseId),
         issuedAt = clock.instant(),
     )
 }

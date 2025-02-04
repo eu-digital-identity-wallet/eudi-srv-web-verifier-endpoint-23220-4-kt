@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence
 import arrow.core.NonEmptyList
 import arrow.core.nonEmptyListOf
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.isExpired
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.*
@@ -51,6 +52,18 @@ class PresentationInMemoryRepo(
             presentations.values.map { it.presentation }.firstOrNull {
                 requestId(it) == requestId
             }
+        }
+    }
+
+    val loadPresentationByResponseId: LoadPresentationByResponseId by lazy {
+        fun Presentation.responseId(): ResponseId? = when (this) {
+            is Presentation.Requested -> responseId
+            is Presentation.RequestObjectRetrieved -> responseId
+            else -> null
+        }
+
+        LoadPresentationByResponseId { responseId ->
+            presentations.values.firstOrNull { it.presentation.responseId() == responseId }?.presentation
         }
     }
 

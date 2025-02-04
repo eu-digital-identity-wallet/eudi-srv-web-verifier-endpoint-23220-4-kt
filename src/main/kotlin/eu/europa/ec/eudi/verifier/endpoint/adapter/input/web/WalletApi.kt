@@ -20,7 +20,9 @@ import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationRelatedUrlBuilder
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import kotlinx.serialization.SerializationException
@@ -35,7 +37,6 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
-import java.net.URL
 
 /**
  * The WEB API available to the wallet
@@ -107,8 +108,9 @@ class WalletApi(
      */
     private suspend fun handlePostWalletResponse(req: ServerRequest): ServerResponse = try {
         logger.info("Handling PostWalletResponse ...")
+        val responseId = req.responseId()
         val walletResponse = req.awaitFormData().walletResponse()
-        postWalletResponse(walletResponse).fold(
+        postWalletResponse(responseId, walletResponse).fold(
             ifRight = { response ->
                 logger.info("PostWalletResponse processed")
                 if (response == null) {
@@ -175,12 +177,17 @@ class WalletApi(
          * Path template for the route for
          * posting the Authorisation Response
          */
-        const val WALLET_RESPONSE_PATH = "/wallet/direct_post"
+        const val WALLET_RESPONSE_PATH = "/wallet/direct_post/{responseId}"
 
         /**
          * Extracts from the request the [RequestId]
          */
         private fun ServerRequest.requestId() = RequestId(pathVariable("requestId"))
+
+        /**
+         * Extracts from the request the [ResponseId]
+         */
+        private fun ServerRequest.responseId(): ResponseId = ResponseId(pathVariable("responseId"))
 
         private fun MultiValueMap<String, String>.walletResponse(): AuthorisationResponse {
             fun directPost(): AuthorisationResponse.DirectPost {
@@ -202,7 +209,7 @@ class WalletApi(
             }
 
             fun directPostJwt() = getFirst("response")?.let { jwt ->
-                AuthorisationResponse.DirectPostJwt(getFirst("state"), jwt)
+                AuthorisationResponse.DirectPostJwt(jwt)
             }
 
             return directPostJwt() ?: directPost()
@@ -224,11 +231,12 @@ class WalletApi(
         fun jarmJwksByReference(baseUrl: String): EmbedOption.ByReference<RequestId> =
             urlBuilder(baseUrl, JARM_JWK_SET_PATH)
 
-        fun directPost(baseUrl: String): URL =
+        fun directPost(baseUrl: String): PresentationRelatedUrlBuilder<ResponseId> = { responseId ->
             DefaultUriBuilderFactory(baseUrl)
                 .uriString(WALLET_RESPONSE_PATH)
-                .build()
+                .build(responseId.value)
                 .toURL()
+        }
 
         private fun urlBuilder(
             baseUrl: String,

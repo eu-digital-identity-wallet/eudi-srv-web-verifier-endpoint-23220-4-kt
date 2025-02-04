@@ -156,7 +156,7 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
 
 private fun WalletResponseValidationError.asText(): String =
     when (this) {
-        WalletResponseValidationError.IncorrectStateInJarm -> "Incorrect state in JARM"
+        WalletResponseValidationError.IncorrectState -> "Incorrect state"
         WalletResponseValidationError.MissingIdToken -> "Missing id_token"
         WalletResponseValidationError.MissingState -> "Missing state from JARM"
         WalletResponseValidationError.MissingVpToken -> "Missing vp_token"

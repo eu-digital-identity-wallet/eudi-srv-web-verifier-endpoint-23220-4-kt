@@ -31,6 +31,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOld
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateResponseIdWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
@@ -98,9 +99,11 @@ internal fun beans(clock: Clock) = beans {
     //
     bean { GenerateTransactionIdNimbus(64) }
     bean { GenerateRequestIdNimbus(64) }
+    bean { GenerateResponseIdWithNimbus(64u) }
     with(PresentationInMemoryRepo()) {
         bean { loadPresentationById }
         bean { loadPresentationByRequestId }
+        bean { loadPresentationByResponseId }
         bean { storePresentation }
         bean { loadIncompletePresentationsOlderThan }
         bean { loadPresentationEvents }
@@ -124,6 +127,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             WalletApi.requestJwtByReference(env.publicUrl()),
             WalletApi.presentationDefinitionByReference(env.publicUrl()),
+            ref(),
             ref(),
             ref(),
         )
@@ -356,7 +360,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         verifierId = verifierId,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
-        responseUriBuilder = { WalletApi.directPost(publicUrl) },
+        responseUriBuilder = WalletApi.directPost(publicUrl),
         responseModeOption = responseModeOption,
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(publicUrl),
