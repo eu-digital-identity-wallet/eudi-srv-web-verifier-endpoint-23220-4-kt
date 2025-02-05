@@ -123,19 +123,7 @@ data class JwtSecuredAuthorizationRequestTO(
     @Required @SerialName("client_id") val clientId: ClientId,
     @SerialName("request") val request: String? = null,
     @SerialName("request_uri") val requestUri: String?,
-) {
-    @Deprecated(
-        message = "Kept for compatibility, will be removed in future release.",
-        replaceWith = ReplaceWith("this.transactionId"),
-    )
-    @Required
-    @SerialName("presentation_id")
-    val presentationId: String
-
-    init {
-        this.presentationId = this.transactionId
-    }
-}
+)
 
 /**
  * This is a use case that initializes the [Presentation] process.
