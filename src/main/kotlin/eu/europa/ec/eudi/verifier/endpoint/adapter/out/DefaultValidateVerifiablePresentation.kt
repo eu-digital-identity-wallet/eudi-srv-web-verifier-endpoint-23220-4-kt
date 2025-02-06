@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out
 
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.RFC7519
+import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Format
@@ -41,7 +42,7 @@ internal class DefaultValidateVerifiablePresentation(
         nonce: Nonce,
     ): Result<VerifiablePresentation> = runCatching {
         when (verifiablePresentation.format) {
-            Format("vc+sd-jwt"), Format.SdJwtVc -> {
+            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
                 val challenge = buildJsonObject {
                     put(RFC7519.AUDIENCE, verifierId.clientId)
                     put("nonce", nonce.value)
