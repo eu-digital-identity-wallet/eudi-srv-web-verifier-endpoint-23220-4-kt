@@ -68,11 +68,15 @@ java {
 kotlin {
 
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
+        languageVersion = JavaLanguageVersion.of(libs.versions.java.get())
     }
 
     compilerOptions {
-        apiVersion.set(KotlinVersion.KOTLIN_2_0)
+        apiVersion = KotlinVersion.KOTLIN_2_0
+        optIn = listOf(
+            "kotlinx.serialization.ExperimentalSerializationApi",
+            "kotlin.io.encoding.ExperimentalEncodingApi",
+        )
         freeCompilerArgs.add("-Xjsr305=strict")
     }
 }

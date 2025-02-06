@@ -62,6 +62,8 @@ class DocumentValidator(
 
     fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> =
         either {
+            document.decodeMso()
+
             val issuerChain = ensureTrustedChain(document, x5CShouldBe)
             zipOrAccumulate(
                 { ensureNotExpiredValidityInfo(document, clock, validityInfoShouldBe) },
