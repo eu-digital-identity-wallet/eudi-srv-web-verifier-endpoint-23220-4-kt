@@ -30,7 +30,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContextInitializer
@@ -77,8 +76,6 @@ object TestContext {
     val loadPresentationById = repo.loadPresentationById
     private val storePresentation = repo.storePresentation
     private val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus
-    val testResponseId = ResponseId("SampleResponseId")
-    private val generateResponseId = GenerateResponseId.fixed(testResponseId)
 
     fun initTransaction(
         verifierConfig: VerifierConfig,
@@ -97,7 +94,6 @@ object TestContext {
             presentationDefinitionByReference,
             CreateQueryWalletResponseRedirectUri.Simple,
             repo.publishPresentationEvent,
-            generateResponseId,
         )
 }
 

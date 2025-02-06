@@ -25,12 +25,10 @@ import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusEnc
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusJWSAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
-import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
@@ -71,9 +69,6 @@ internal class WalletResponseDirectPostJwtTest {
     @Autowired
     private lateinit var client: WebTestClient
 
-    @Autowired
-    private lateinit var loadPresentationById: LoadPresentationById
-
     /**
      * Unit test of flow:
      * - verifier to verifier backend, to post presentation definition
@@ -86,7 +81,7 @@ internal class WalletResponseDirectPostJwtTest {
     @Test
     @Order(value = 1)
     fun `direct_post_jwt vp_token end to end`() = runTest {
-        suspend fun test(
+        fun test(
             presentationDefinition: String,
             presentationSubmission: String,
             vpToken: String,
@@ -101,7 +96,6 @@ internal class WalletResponseDirectPostJwtTest {
             val requestObjectJsonResponse =
                 WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
             val transactionId = TransactionId(transactionInitialized.transactionId)
-            val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
             val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
             val ecKey = requestObjectJsonResponse.ecKey()
@@ -143,7 +137,7 @@ internal class WalletResponseDirectPostJwtTest {
             formEncodedBody.add("response", jwtString)
 
             // send the wallet response
-            WalletApiClient.directPostJwt(client, presentation.responseId, formEncodedBody)
+            WalletApiClient.directPostJwt(client, requestId, formEncodedBody)
 
             // when
             val response = VerifierApiClient.getWalletResponse(client, transactionId)
@@ -184,8 +178,6 @@ internal class WalletResponseDirectPostJwtTest {
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
-        val transactionId = TransactionId(transactionInitialized.transactionId)
-        val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
         val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
         val ecKey = requestObjectJsonResponse.ecKey()
@@ -203,7 +195,7 @@ internal class WalletResponseDirectPostJwtTest {
         // send the wallet response
         // we expect the response submission to fail
         try {
-            WalletApiClient.directPost(client, presentation.responseId, formEncodedBody)
+            WalletApiClient.directPost(client, requestId, formEncodedBody)
             fail("Expected direct_post submission to fail for direct_post.jwt Presentation")
         } catch (error: AssertionError) {
             assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)

@@ -24,7 +24,6 @@ import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
-import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
@@ -154,7 +153,6 @@ class InitTransactionLive(
     private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
-    private val generateResponseId: GenerateResponseId,
 
 ) : InitTransaction {
 
@@ -178,7 +176,6 @@ class InitTransactionLive(
             responseMode = responseMode,
             presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
-            responseId = generateResponseId(),
         )
         // create request, which may update presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))

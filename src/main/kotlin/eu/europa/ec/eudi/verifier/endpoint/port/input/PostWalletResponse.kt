@@ -29,7 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
-import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByResponseId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
@@ -170,13 +170,13 @@ data class WalletResponseAcceptedTO(
 fun interface PostWalletResponse {
 
     suspend operator fun invoke(
-        responseId: ResponseId,
+        requestId: RequestId,
         walletResponse: AuthorisationResponse,
     ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?>
 }
 
 class PostWalletResponseLive(
-    private val loadPresentationByResponseId: LoadPresentationByResponseId,
+    private val loadPresentationByRequestId: LoadPresentationByRequestId,
     private val storePresentation: StorePresentation,
     private val verifyJarmJwtSignature: VerifyJarmJwtSignature,
     private val clock: Clock,
@@ -187,10 +187,10 @@ class PostWalletResponseLive(
 ) : PostWalletResponse {
 
     override suspend operator fun invoke(
-        responseId: ResponseId,
+        requestId: RequestId,
         walletResponse: AuthorisationResponse,
     ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?> = either {
-        val presentation = loadPresentation(responseId).bind()
+        val presentation = loadPresentation(requestId).bind()
         doInvoke(presentation, walletResponse)
             .onLeft { cause -> logFailure(presentation, cause) }
             .onRight { (submitted, accepted) -> logWalletResponsePosted(submitted, accepted) }
@@ -240,9 +240,9 @@ class PostWalletResponseLive(
             submitted to accepted
         }
 
-    private suspend fun loadPresentation(responseId: ResponseId): Either<WalletResponseValidationError, Presentation> =
+    private suspend fun loadPresentation(requestId: RequestId): Either<WalletResponseValidationError, Presentation> =
         either {
-            val presentation = loadPresentationByResponseId(responseId)
+            val presentation = loadPresentationByRequestId(requestId)
             ensureNotNull(presentation) { WalletResponseValidationError.PresentationNotFound }
         }
 

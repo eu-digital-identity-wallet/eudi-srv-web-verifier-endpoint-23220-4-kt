@@ -16,11 +16,9 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
-import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -56,9 +54,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Autowired
     private lateinit var client: WebTestClient
 
-    @Autowired
-    private lateinit var loadPresentationById: LoadPresentationById
-
     /**
      * Unit test of flow:
      * - verifier to verifier backend, to post presentation definition
@@ -75,8 +70,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val presentationId = transactionInitialized.transactionId
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-        val transactionId = TransactionId(transactionInitialized.transactionId)
-        val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
@@ -85,7 +78,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         formEncodedBody.add("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
 
         // when
-        WalletApiClient.directPost(client, presentation.responseId, formEncodedBody)
+        WalletApiClient.directPost(client, requestId, formEncodedBody)
 
         // then
         assertNotNull(presentationId)
@@ -114,8 +107,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
             val requestId =
                 RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
             WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-            val transactionId = TransactionId(transactionInitialized.transactionId)
-            val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
             val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
             formEncodedBody.add("state", requestId.value)
@@ -123,7 +114,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
             formEncodedBody.add("vp_token", TestUtils.loadResource(vpToken))
             formEncodedBody.add("presentation_submission", TestUtils.loadResource(presentationSubmission))
 
-            WalletApiClient.directPost(client, presentation.responseId, formEncodedBody)
+            WalletApiClient.directPost(client, requestId, formEncodedBody)
 
             // when
             val response = VerifierApiClient.getWalletResponse(client, presentationId)
@@ -161,8 +152,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-        val transactionId = TransactionId(transactionInitialized.transactionId)
-        val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
         // At this point we don't generate an actual JARM response
         // The response will be rejected before JARM parsing/verification takes place
@@ -172,7 +161,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         // send the wallet response
         // we expect the response submission to fail
         try {
-            WalletApiClient.directPostJwt(client, presentation.responseId, formEncodedBody)
+            WalletApiClient.directPostJwt(client, requestId, formEncodedBody)
             fail("Expected direct_post.jwt submission to fail for direct_post Presentation")
         } catch (error: AssertionError) {
             assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
@@ -187,15 +176,13 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val presentationId = TransactionId(transactionInitialized.transactionId)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-        val transactionId = TransactionId(transactionInitialized.transactionId)
-        val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("id_token", "value 1")
         formEncodedBody.add("vp_token", TestUtils.loadResource("04-vpToken.json"))
 
-        WalletApiClient.directPost(client, presentation.responseId, formEncodedBody)
+        WalletApiClient.directPost(client, requestId, formEncodedBody)
 
         val response = assertNotNull(VerifierApiClient.getWalletResponse(client, presentationId))
 
@@ -212,8 +199,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-        val transactionId = TransactionId(transactionInitialized.transactionId)
-        val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
@@ -221,7 +206,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         formEncodedBody.add("vp_token", TestUtils.loadResource("04-vpToken.json"))
 
         try {
-            WalletApiClient.directPost(client, presentation.responseId, formEncodedBody)
+            WalletApiClient.directPost(client, requestId, formEncodedBody)
             fail("Expected DCQL response to be rejected for Presentation Exchange query")
         } catch (error: AssertionError) {
             assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
@@ -235,8 +220,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-        val transactionId = TransactionId(transactionInitialized.transactionId)
-        val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
@@ -245,7 +228,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         formEncodedBody.add("presentation_submission", TestUtils.loadResource("03-presentationSubmission.json"))
 
         try {
-            WalletApiClient.directPost(client, presentation.responseId, formEncodedBody)
+            WalletApiClient.directPost(client, requestId, formEncodedBody)
             fail("Expected Presentation Exchange response to be rejected for DCQL query")
         } catch (error: AssertionError) {
             assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
@@ -259,8 +242,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-        val transactionId = TransactionId(transactionInitialized.transactionId)
-        val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
@@ -268,7 +249,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         formEncodedBody.add("vp_token", TestUtils.loadResource("04-vpToken.json"))
 
         try {
-            WalletApiClient.directPost(client, presentation.responseId, formEncodedBody)
+            WalletApiClient.directPost(client, requestId, formEncodedBody)
             fail("Expected Presentation Exchange response to be rejected for DCQL query")
         } catch (error: AssertionError) {
             assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
@@ -283,15 +264,13 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val presentationId = TransactionId(transactionInitialized.transactionId)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-        val transactionId = TransactionId(transactionInitialized.transactionId)
-        val presentation = assertIs<Presentation.RequestObjectRetrieved>(loadPresentationById(transactionId))
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("id_token", "value 1")
         formEncodedBody.add("vp_token", TestUtils.loadResource("05-vpToken.json"))
 
-        WalletApiClient.directPost(client, presentation.responseId, formEncodedBody)
+        WalletApiClient.directPost(client, requestId, formEncodedBody)
 
         val response = assertNotNull(VerifierApiClient.getWalletResponse(client, presentationId))
 

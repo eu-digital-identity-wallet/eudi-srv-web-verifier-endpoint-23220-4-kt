@@ -213,18 +213,6 @@ sealed interface GetWalletResponseMethod {
 }
 
 /**
- * Unique identifier used for correlating Wallet responses with a Presentation.
- */
-@JvmInline
-value class ResponseId(val value: String) {
-    init {
-        require(value.isNotEmpty())
-    }
-
-    override fun toString(): String = value
-}
-
-/**
  * The entity that represents the presentation process
  */
 sealed interface Presentation {
@@ -245,7 +233,6 @@ sealed interface Presentation {
         val responseMode: ResponseModeOption,
         val presentationDefinitionMode: EmbedOption<RequestId>,
         val getWalletResponseMethod: GetWalletResponseMethod,
-        val responseId: ResponseId,
     ) : Presentation
 
     /**
@@ -264,7 +251,6 @@ sealed interface Presentation {
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,
         val getWalletResponseMethod: GetWalletResponseMethod,
-        val responseId: ResponseId,
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
@@ -283,7 +269,6 @@ sealed interface Presentation {
                         requested.ephemeralEcPrivateKey,
                         requested.responseMode,
                         requested.getWalletResponseMethod,
-                        requested.responseId,
                     )
                 }
         }
