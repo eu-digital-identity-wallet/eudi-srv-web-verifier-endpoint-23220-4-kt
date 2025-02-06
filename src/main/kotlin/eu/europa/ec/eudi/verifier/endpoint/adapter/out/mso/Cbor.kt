@@ -47,11 +47,14 @@ fun DeviceResponse.Companion.decodeFromCborBase64Url(value: String): DeviceRespo
  * Decodes the [MSO] of this [MDoc].
  *
  * Unknown properties are ignored.
+ *
+ * **This is a hack to circumvent a `walt.id` library limitation. Currently, it does not support the `status` property in [MSO].**
  */
-fun MDoc.decodeMso(): MSO? =
-    issuerSigned.issuerAuth?.payload?.let { data ->
-        val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(data)
-        cbor.decodeFromByteArray<MSO>(encoded.value)
-    }?.also {
-        _mso = it
+fun MDoc.decodeMso() {
+    if (_mso == null) {
+        _mso = issuerSigned.issuerAuth?.payload?.let { data ->
+            val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(data)
+            cbor.decodeFromByteArray<MSO>(encoded.value)
+        }
     }
+}
