@@ -44,7 +44,7 @@ data class WalletResponseTO(
 internal fun WalletResponse.toTO(): WalletResponseTO {
     fun VerifiablePresentation.toJsonElement(): JsonElement =
         when (this) {
-            is VerifiablePresentation.Generic -> JsonPrimitive(value)
+            is VerifiablePresentation.Str -> JsonPrimitive(value)
             is VerifiablePresentation.Json -> value
         }
 

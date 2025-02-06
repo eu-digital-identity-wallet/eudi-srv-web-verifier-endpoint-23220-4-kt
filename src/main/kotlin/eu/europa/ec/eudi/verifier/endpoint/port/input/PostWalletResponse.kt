@@ -163,14 +163,14 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
         when (format) {
             Format.MsoMdoc -> {
                 ensure(this is JsonPrimitive && isString) { WalletResponseValidationError.InvalidVpToken }
-                VerifiablePresentation.Generic(content, format)
+                VerifiablePresentation.Str(content, format)
             }
 
             else -> {
                 when (val element = this@toVerifiablePresentation) {
                     is JsonPrimitive -> {
                         ensure(element.isString) { WalletResponseValidationError.InvalidVpToken }
-                        VerifiablePresentation.Generic(element.content, format)
+                        VerifiablePresentation.Str(element.content, format)
                     }
                     is JsonObject -> VerifiablePresentation.Json(element, format)
                     else -> raise(WalletResponseValidationError.InvalidVpToken)

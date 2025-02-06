@@ -49,7 +49,7 @@ internal class DefaultValidateVerifiablePresentation(
                 }
 
                 when (verifiablePresentation) {
-                    is VerifiablePresentation.Generic -> {
+                    is VerifiablePresentation.Str -> {
                         sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
                             .fold(
                                 onSuccess = { verifiablePresentation },
@@ -74,7 +74,7 @@ internal class DefaultValidateVerifiablePresentation(
             }
 
             Format.MsoMdoc -> {
-                require(verifiablePresentation is VerifiablePresentation.Generic)
+                require(verifiablePresentation is VerifiablePresentation.Str)
                 deviceResponseValidator.ensureValid(verifiablePresentation.value)
                     .fold(
                         ifLeft = {

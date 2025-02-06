@@ -120,7 +120,7 @@ val PresentationType.dcqlQueryOrNull: DCQL?
 sealed interface VerifiablePresentation {
     val format: Format
 
-    data class Generic(val value: String, override val format: Format) : VerifiablePresentation {
+    data class Str(val value: String, override val format: Format) : VerifiablePresentation {
         init {
             require(value.isNotBlank()) { "VpToken cannot be blank" }
         }
