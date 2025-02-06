@@ -51,9 +51,8 @@ data class AuthorisationResponseTO(
 )
 
 sealed interface AuthorisationResponse {
-
     data class DirectPost(val response: AuthorisationResponseTO) : AuthorisationResponse
-    data class DirectPostJwt(val state: String?, val jarm: Jwt) : AuthorisationResponse
+    data class DirectPostJwt(val jarm: Jwt) : AuthorisationResponse
 }
 
 sealed interface WalletResponseValidationError {
@@ -68,7 +67,7 @@ sealed interface WalletResponseValidationError {
 
     data object PresentationNotInExpectedState : WalletResponseValidationError
 
-    data object IncorrectStateInJarm : WalletResponseValidationError
+    data object IncorrectState : WalletResponseValidationError
     data object MissingIdToken : WalletResponseValidationError
     data object InvalidVpToken : WalletResponseValidationError
     data object MissingVpToken : WalletResponseValidationError
@@ -170,7 +169,10 @@ data class WalletResponseAcceptedTO(
  */
 fun interface PostWalletResponse {
 
-    suspend operator fun invoke(walletResponse: AuthorisationResponse): Either<WalletResponseValidationError, WalletResponseAcceptedTO?>
+    suspend operator fun invoke(
+        requestId: RequestId,
+        walletResponse: AuthorisationResponse,
+    ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?>
 }
 
 class PostWalletResponseLive(
@@ -185,9 +187,10 @@ class PostWalletResponseLive(
 ) : PostWalletResponse {
 
     override suspend operator fun invoke(
+        requestId: RequestId,
         walletResponse: AuthorisationResponse,
     ): Either<WalletResponseValidationError, WalletResponseAcceptedTO?> = either {
-        val presentation = loadPresentation(walletResponse).bind()
+        val presentation = loadPresentation(requestId).bind()
         doInvoke(presentation, walletResponse)
             .onLeft { cause -> logFailure(presentation, cause) }
             .onRight { (submitted, accepted) -> logWalletResponsePosted(submitted, accepted) }
@@ -215,6 +218,11 @@ class PostWalletResponseLive(
             }
 
             val responseObject = responseObject(walletResponse, presentation).bind()
+
+            // Verify response `state` is RequestId
+            ensure(presentation.requestId.value == responseObject.state) { WalletResponseValidationError.IncorrectState }
+
+            // Submit the response
             val submitted = submit(presentation, responseObject)
                 .bind()
                 .also { storePresentation(it) }
@@ -232,15 +240,8 @@ class PostWalletResponseLive(
             submitted to accepted
         }
 
-    private suspend fun loadPresentation(walletResponse: AuthorisationResponse): Either<WalletResponseValidationError, Presentation> =
+    private suspend fun loadPresentation(requestId: RequestId): Either<WalletResponseValidationError, Presentation> =
         either {
-            val state = when (walletResponse) {
-                is AuthorisationResponse.DirectPost -> walletResponse.response.state
-                is AuthorisationResponse.DirectPostJwt -> walletResponse.state
-            }
-            ensureNotNull(state) { WalletResponseValidationError.MissingState }
-            val requestId = RequestId(state)
-
             val presentation = loadPresentationByRequestId(requestId)
             ensureNotNull(presentation) { WalletResponseValidationError.PresentationNotFound }
         }
@@ -258,7 +259,6 @@ class PostWalletResponseLive(
                     jarmJwt = walletResponse.jarm,
                     apv = presentation.nonce,
                 ).getOrThrow()
-                ensure(response.state == walletResponse.state) { WalletResponseValidationError.IncorrectStateInJarm }
                 response
             }
         }

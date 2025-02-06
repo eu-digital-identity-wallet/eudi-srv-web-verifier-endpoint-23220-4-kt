@@ -95,6 +95,7 @@ internal class WalletResponseDirectPostJwtTest {
                 RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
             val requestObjectJsonResponse =
                 WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
+            val transactionId = TransactionId(transactionInitialized.transactionId)
 
             val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
             val ecKey = requestObjectJsonResponse.ecKey()
@@ -134,16 +135,12 @@ internal class WalletResponseDirectPostJwtTest {
             // create a post form url encoded body
             val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
             formEncodedBody.add("response", jwtString)
-            formEncodedBody.add("state", requestId.value)
 
             // send the wallet response
-            WalletApiClient.directPostJwt(client, formEncodedBody)
+            WalletApiClient.directPostJwt(client, requestId, formEncodedBody)
 
             // when
-            val response = VerifierApiClient.getWalletResponse(
-                client,
-                TransactionId(transactionInitialized.transactionId),
-            )
+            val response = VerifierApiClient.getWalletResponse(client, transactionId)
             // then
             assertNotNull(response, "response is null")
             asserter(response)
@@ -191,7 +188,6 @@ internal class WalletResponseDirectPostJwtTest {
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
-        formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("id_token", idToken)
         formEncodedBody.add("vp_token", TestUtils.loadResource("02-vpToken.json"))
         formEncodedBody.add("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
@@ -199,7 +195,7 @@ internal class WalletResponseDirectPostJwtTest {
         // send the wallet response
         // we expect the response submission to fail
         try {
-            WalletApiClient.directPost(client, formEncodedBody)
+            WalletApiClient.directPost(client, requestId, formEncodedBody)
             fail("Expected direct_post submission to fail for direct_post.jwt Presentation")
         } catch (error: AssertionError) {
             assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)

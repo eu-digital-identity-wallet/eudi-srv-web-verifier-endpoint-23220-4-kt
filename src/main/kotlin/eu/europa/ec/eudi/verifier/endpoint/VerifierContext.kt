@@ -356,7 +356,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         verifierId = verifierId,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
-        responseUriBuilder = { WalletApi.directPost(publicUrl) },
+        responseUriBuilder = WalletApi.directPost(publicUrl),
         responseModeOption = responseModeOption,
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(publicUrl),
