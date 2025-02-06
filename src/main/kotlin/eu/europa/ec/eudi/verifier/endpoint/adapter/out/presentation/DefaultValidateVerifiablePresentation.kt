@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.adapter.out
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation
 
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.RFC7519
