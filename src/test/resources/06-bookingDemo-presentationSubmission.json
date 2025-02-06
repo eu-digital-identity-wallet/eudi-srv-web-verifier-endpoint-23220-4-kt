@@ -1,0 +1,16 @@
+{
+  "id": "9ecdd154-331e-4a1f-a78d-5880ab6dee36",
+  "definition_id": "cm6tha8l80004n067pitfuq4p",
+  "descriptor_map": [
+    {
+      "id": "org.iso.23220.2.photoid.1",
+      "format": "mso_mdoc",
+      "path": "$"
+    },
+    {
+      "id": "org.iso.18013.5.1.mDL",
+      "format": "mso_mdoc",
+      "path": "$"
+    }
+  ]
+}

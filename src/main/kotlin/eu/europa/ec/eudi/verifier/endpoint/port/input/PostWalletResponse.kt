@@ -112,7 +112,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
                     val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
                     validateVerifiablePresentation(unvalidatedVerifiablePresentation, presentation.nonce)
                         .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
-                }
+                }.distinct()
 
                 VpContent.PresentationExchange(verifiablePresentations, presentationSubmission)
             }
@@ -160,14 +160,15 @@ private suspend fun AuthorisationResponseTO.toDomain(
 
 private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletResponseValidationError, VerifiablePresentation> =
     either {
+        val element = this@toVerifiablePresentation
         when (format) {
             Format.MsoMdoc -> {
-                ensure(this is JsonPrimitive && isString) { WalletResponseValidationError.InvalidVpToken }
-                VerifiablePresentation.Str(content, format)
+                ensure(element is JsonPrimitive && element.isString) { WalletResponseValidationError.InvalidVpToken }
+                VerifiablePresentation.Str(element.content, format)
             }
 
             else -> {
-                when (val element = this@toVerifiablePresentation) {
+                when (element) {
                     is JsonPrimitive -> {
                         ensure(element.isString) { WalletResponseValidationError.InvalidVpToken }
                         VerifiablePresentation.Str(element.content, format)
