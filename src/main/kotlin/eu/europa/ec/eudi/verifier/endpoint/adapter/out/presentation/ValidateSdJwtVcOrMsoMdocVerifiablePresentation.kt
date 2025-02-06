@@ -29,9 +29,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 
-private val log = LoggerFactory.getLogger(DefaultValidateVerifiablePresentation::class.java)
+private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePresentation::class.java)
 
-internal class DefaultValidateVerifiablePresentation(
+internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val verifierId: VerifierId,
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT>,
     private val deviceResponseValidator: DeviceResponseValidator,

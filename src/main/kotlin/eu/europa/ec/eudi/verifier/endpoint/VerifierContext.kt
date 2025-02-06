@@ -48,7 +48,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.DefaultValidateVerifiablePresentation
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -209,7 +209,7 @@ internal fun beans(clock: Clock) = beans {
     bean<ValidateVerifiablePresentation> {
         val validationsEnabled = env.getProperty<Boolean>("verifier.presentations.validations.enabled") ?: false
         if (validationsEnabled) {
-            DefaultValidateVerifiablePresentation(ref<VerifierConfig>().verifierId, ref(), ref())
+            ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref<VerifierConfig>().verifierId, ref(), ref())
         } else {
             ValidateVerifiablePresentation.NoOp
         }
