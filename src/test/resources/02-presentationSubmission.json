@@ -4,7 +4,7 @@
   "descriptor_map": [
     {
       "id": "wa_driver_license",
-      "format": "dc+sd-jwt",
+      "format": "jwt_vc_json",
       "path": "$"
     }
   ]

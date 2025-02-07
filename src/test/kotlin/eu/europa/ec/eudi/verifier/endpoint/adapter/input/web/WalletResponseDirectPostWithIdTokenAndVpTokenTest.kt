@@ -43,7 +43,6 @@ import kotlin.test.*
         "verifier.clientMetadata.authorizationSignedResponseAlg=",
         "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
         "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
-        "verifier.presentations.validations.enabled=false",
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)

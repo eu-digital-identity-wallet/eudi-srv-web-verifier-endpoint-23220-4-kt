@@ -53,7 +53,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
-import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
@@ -206,14 +205,7 @@ internal fun beans(clock: Clock) = beans {
     }
     bean { ValidateMsoMdocDeviceResponse(clock, ref()) }
     bean { ValidateSdJwtVc(ref(), ref<VerifierConfig>().verifierId.clientId) }
-    bean<ValidateVerifiablePresentation> {
-        val validationsEnabled = env.getProperty<Boolean>("verifier.presentations.validations.enabled") ?: true
-        if (validationsEnabled) {
-            ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref<VerifierConfig>().verifierId, ref(), ref())
-        } else {
-            ValidateVerifiablePresentation.NoOp
-        }
-    }
+    bean { ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref<VerifierConfig>().verifierId, ref(), ref()) }
 
     //
     // Scheduled

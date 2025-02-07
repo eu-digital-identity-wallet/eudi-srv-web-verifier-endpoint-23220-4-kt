@@ -4,12 +4,12 @@
   "descriptor_map": [
     {
       "id": "employment_input",
-      "format": "dc+sd-jwt",
+      "format": "jwt_vc_json",
       "path": "$[0]"
     },
     {
       "id": "employment_input_2",
-      "format": "dc+sd-jwt",
+      "format": "jwt_vc_json",
       "path": "$[1]"
     }
   ]
