@@ -1,9 +1,9 @@
 {
-  "id": "9ecdd154-331e-4a1f-a78d-5880ab6dee36",
-  "definition_id": "cm6tha8l80004n067pitfuq4p",
+  "id": "028b39fd-33b6-46a1-8887-2ef654771d7f",
+  "definition_id": "c64dd05a-b8b4-42dd-892e-7bb49ee06069",
   "descriptor_map": [
     {
-      "id": "org.iso.23220.2.photoid.1",
+      "id": "eu.europa.ec.eudi.pid.1",
       "format": "mso_mdoc",
       "path": "$"
     },

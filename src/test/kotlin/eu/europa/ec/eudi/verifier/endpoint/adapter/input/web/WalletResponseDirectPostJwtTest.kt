@@ -205,7 +205,7 @@ internal class WalletResponseDirectPostJwtTest {
     @Test
     @Order(value = 3)
     fun `when wallet responds with a single deviceresponse that contains multiple documents, validations succeeds`() = runTest {
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("06-bookingDemo-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-presentationDefinition.json")
         val transactionDetails = VerifierApiClient.initTransaction(client, initTransaction)
         val requestObject = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
 
@@ -216,11 +216,11 @@ internal class WalletResponseDirectPostJwtTest {
         val requestId = RequestId(transactionDetails.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val encryptedJwt = run {
             val presentationSubmission: JsonElement = Json.decodeFromString(
-                TestUtils.loadResource("06-bookingDemo-presentationSubmission.json"),
+                TestUtils.loadResource("06-pidPlusMdl-presentationSubmission.json"),
             )
             val jwtClaims: JWTClaimsSet = buildJsonObject {
                 put("state", requestId.value)
-                put("vp_token", Json.decodeFromString(TestUtils.loadResource("06-bookingDemo-vpToken.json")))
+                put("vp_token", Json.decodeFromString(TestUtils.loadResource("06-pidPlusMdl-vpToken.json")))
                 put("presentation_submission", presentationSubmission)
             }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
