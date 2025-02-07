@@ -207,7 +207,7 @@ internal fun beans(clock: Clock) = beans {
     bean { ValidateMsoMdocDeviceResponse(clock, ref()) }
     bean { ValidateSdJwtVc(ref(), ref<VerifierConfig>().verifierId.clientId) }
     bean<ValidateVerifiablePresentation> {
-        val validationsEnabled = env.getProperty<Boolean>("verifier.presentations.validations.enabled") ?: false
+        val validationsEnabled = env.getProperty<Boolean>("verifier.presentations.validations.enabled") ?: true
         if (validationsEnabled) {
             ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref<VerifierConfig>().verifierId, ref(), ref())
         } else {

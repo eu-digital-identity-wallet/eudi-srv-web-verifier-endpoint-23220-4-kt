@@ -618,7 +618,7 @@ Default value: `P10D`
 
 Variable: `VERIFIER_PRESENTATIONS_VALIDATIONS_ENABLED`  
 Description: Whether to enable signature and structural validations of received Verifiable Presentations. Applicable only to MsoMdoc DeviceResponses and SD-JWT VCs.  
-Default value: `false`  
+Default value: `true`  
 
 Variable: `VERIFIER_CLIENTMETADATA_AUTHORIZATIONSIGNEDRESPONSEALG`  
 Description: Accept only Authorization Responses that are _signed_ using this algorithm  

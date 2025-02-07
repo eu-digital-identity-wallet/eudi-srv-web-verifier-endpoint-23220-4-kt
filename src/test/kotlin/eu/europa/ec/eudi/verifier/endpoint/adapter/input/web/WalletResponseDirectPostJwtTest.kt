@@ -59,6 +59,7 @@ import kotlin.test.*
         "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
         "verifier.clientMetadata.authorizationEncryptedResponseEnc=A256GCM",
         "verifier.jwk.embed=ByValue",
+        "verifier.presentations.validations.enabled=false",
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
