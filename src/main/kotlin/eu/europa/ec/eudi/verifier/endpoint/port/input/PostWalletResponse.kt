@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import eu.europa.ec.eudi.prex.JsonPath
 import eu.europa.ec.eudi.prex.PresentationSubmission
+import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
@@ -160,23 +161,27 @@ private suspend fun AuthorisationResponseTO.toDomain(
 
 private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletResponseValidationError, VerifiablePresentation> =
     either {
-        val element = this@toVerifiablePresentation
-        when (format) {
-            Format.MsoMdoc -> {
-                ensure(element is JsonPrimitive && element.isString) { WalletResponseValidationError.InvalidVpToken }
-                VerifiablePresentation.Str(element.content, format)
+        fun JsonElement.asString(): VerifiablePresentation.Str {
+            val element = this@asString
+            ensure(element is JsonPrimitive && element.isString) { WalletResponseValidationError.InvalidVpToken }
+            return VerifiablePresentation.Str(element.content, format)
+        }
+
+        fun JsonElement.asStringOrObject(): VerifiablePresentation =
+            when (val element = this@asStringOrObject) {
+                is JsonPrimitive -> {
+                    ensure(element.isString) { WalletResponseValidationError.InvalidVpToken }
+                    VerifiablePresentation.Str(element.content, format)
+                }
+                is JsonObject -> VerifiablePresentation.Json(element, format)
+                else -> raise(WalletResponseValidationError.InvalidVpToken)
             }
 
-            else -> {
-                when (element) {
-                    is JsonPrimitive -> {
-                        ensure(element.isString) { WalletResponseValidationError.InvalidVpToken }
-                        VerifiablePresentation.Str(element.content, format)
-                    }
-                    is JsonObject -> VerifiablePresentation.Json(element, format)
-                    else -> raise(WalletResponseValidationError.InvalidVpToken)
-                }
-            }
+        val element = this@toVerifiablePresentation
+        when (format) {
+            Format.MsoMdoc -> element.asString()
+            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> element.asStringOrObject()
+            else -> element.asStringOrObject()
         }
     }
 
