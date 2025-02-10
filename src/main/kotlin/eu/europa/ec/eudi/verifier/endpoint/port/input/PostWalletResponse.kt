@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
@@ -123,7 +124,7 @@ private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
 private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
     presentationDefinition: PresentationDefinition,
     nonce: Nonce,
-    transactionData: List<JsonObject>?,
+    transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
 ): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
     either {
@@ -147,9 +148,8 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             val format = Format(descriptorMap.format)
             val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
             val applicableTransactionData = transactionData?.filter {
-                val credentialIds = it.stringArray("credential_ids")
-                descriptorMap.id.value in credentialIds
-            }
+                descriptorMap.id.value in it.credentialIds
+            }?.toNonEmptyListOrNull()
             validateVerifiablePresentation(unvalidatedVerifiablePresentation, nonce, applicableTransactionData)
                 .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
         }.distinct()
@@ -160,7 +160,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
 private suspend fun AuthorisationResponseTO.dcqlVpContent(
     query: DCQL,
     nonce: Nonce,
-    transactionData: List<JsonObject>?,
+    transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
 ): Either<WalletResponseValidationError, VpContent.DCQL> =
     either {
@@ -177,9 +177,8 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                 val format = credentialQueries[queryId]?.format ?: raise(WalletResponseValidationError.InvalidVpToken)
                 val unvalidatedVerifiablePresentation = value.toVerifiablePresentation(format).bind()
                 val applicableTransactionData = transactionData?.filter {
-                    val credentialIds = it.stringArray("credential_ids")
-                    queryId.value in credentialIds
-                }
+                    queryId.value in it.credentialIds
+                }?.toNonEmptyListOrNull()
                 validateVerifiablePresentation(unvalidatedVerifiablePresentation, nonce, applicableTransactionData)
                     .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
             }
@@ -218,8 +217,6 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
             else -> element.asStringOrObject()
         }
     }
-
-private fun JsonObject.stringArray(name: String): List<String> = requireNotNull(get(name)).jsonArray.map { it.jsonPrimitive.content }
 
 @Serializable
 data class WalletResponseAcceptedTO(

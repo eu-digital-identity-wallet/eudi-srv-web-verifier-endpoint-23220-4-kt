@@ -89,7 +89,7 @@ internal fun requestObjectFromDomain(
     }
 
     val transactionData = type.transactionDataOrNull?.map {
-        val serialized = Json.encodeToString(it)
+        val serialized = Json.encodeToString(it.value)
         val decoded = serialized.encodeToByteString()
         base64UrlNoPadding.encode(decoded)
     }

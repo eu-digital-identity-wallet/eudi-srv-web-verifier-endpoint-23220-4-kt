@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation
 
+import arrow.core.NonEmptyList
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.RFC7519
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
@@ -22,10 +23,7 @@ import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.domain.Format
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.io.bytestring.encode
 import kotlinx.io.bytestring.encodeToByteString
@@ -44,7 +42,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     override suspend fun invoke(
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
-        transactionData: List<JsonObject>?,
+        transactionData: NonEmptyList<TransactionData>?,
     ): Result<VerifiablePresentation> = runCatching {
         when (verifiablePresentation.format) {
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
@@ -54,7 +52,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                     transactionData?.let { transactionData ->
                         putJsonArray("transaction_data_hashes") {
                             transactionData.forEach {
-                                val serialized = Json.encodeToString(it)
+                                val serialized = Json.encodeToString(it.value)
                                 val base64 = base64UrlNoPadding.encode(serialized.encodeToByteString())
                                 val hash = hash(base64, config.transactionDataHashAlgorithm)
                                 val base64Hash = base64UrlNoPadding.encode(hash)

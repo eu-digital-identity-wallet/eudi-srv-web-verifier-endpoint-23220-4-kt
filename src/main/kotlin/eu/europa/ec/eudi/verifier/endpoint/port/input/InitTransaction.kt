@@ -18,8 +18,10 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -34,9 +36,11 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import java.time.Clock
-import kotlin.contracts.contract
 
 /**
  * Represent the kind of [Presentation] process
@@ -303,45 +307,35 @@ internal fun InitTransactionTO.toDomain(
         return Nonce(nonce)
     }
 
-    fun optionalTransactionData(query: PresentationQuery): List<JsonObject>? {
-        fun PresentationQuery.credentialIds(): List<String> =
-            when (this) {
-                is PresentationQuery.ByPresentationDefinition -> this.presentationDefinition.inputDescriptors.map { it.id.value }
-                is PresentationQuery.ByDigitalCredentialsQueryLanguage -> this.query.credentials.map { it.id.value }
+    fun optionalTransactionData(query: PresentationQuery): NonEmptyList<TransactionData>? {
+        val credentialIds: List<String> by lazy {
+            when (query) {
+                is PresentationQuery.ByPresentationDefinition -> query.presentationDefinition.inputDescriptors.map { it.id.value }
+                is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.credentials.map { it.id.value }
             }
+        }
 
-        return transactionData?.map {
-            // type is required
-            val type = it["type"]
-            ensure(type.isString()) { ValidationError.InvalidTransactionData }
-
-            // credential_ids is required
-            val queryCredentialIds = query.credentialIds()
-            val credentialIds = it["credential_ids"]
-            ensure(credentialIds is JsonArray) { ValidationError.InvalidTransactionData }
-            ensure(credentialIds.all { credentialId -> credentialId.isString() && credentialId.content in queryCredentialIds }) {
-                ValidationError.InvalidTransactionData
-            }
-
-            // overwrite transaction_data_hashes_alg with what we support
-            val hashAlgorithms = buildJsonArray {
+        val hashAlgorithms: JsonArray by lazy {
+            buildJsonArray {
                 add(transactionDataHashAlgorithm.ianaName)
             }
+        }
 
-            // populate hash algorithms, and verify the structure for known types
-            JsonObject(it + ("transaction_data_hashes_alg" to hashAlgorithms))
+        return transactionData?.map {
+            TransactionData(JsonObject(it + ("transaction_data_hashes_alg" to hashAlgorithms)), credentialIds)
+                .getOrElse { raise(ValidationError.InvalidTransactionData) }
                 .apply {
-                    when (type.content) {
+                    when (type) {
                         QesAuthorization.TYPE -> QesAuthorization.serializer()
                         QCertCreationAcceptance.TYPE -> QCertCreationAcceptance.serializer()
                         else -> null
                     }?.let { deserializer ->
                         runCatching {
-                            Json.decodeFromJsonElement(deserializer, this)
+                            decodeAs(deserializer)
                         }.getOrElse { raise(ValidationError.InvalidTransactionData) }
                     }
                 }
-        }
+        }?.toNonEmptyListOrNull()
     }
 
     val presentationType = when (type) {
@@ -368,12 +362,4 @@ internal fun InitTransactionTO.toDomain(
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
-}
-
-private fun JsonElement?.isString(): Boolean {
-    contract {
-        returns(true) implies(this@isString is JsonPrimitive)
-    }
-
-    return this is JsonPrimitive && this.isString
 }

@@ -15,35 +15,126 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.NonEmptyList
+import arrow.core.toNonEmptyListOrNull
 import com.eygraber.uri.Uri
 import com.nimbusds.jose.util.Base64URL
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.Base64URLStringSerializer
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Required
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.*
 import java.net.URL
+import kotlin.contracts.contract
 
 /**
- * Base structure for Transaction Data as defined by OpenId4VP.
+ * Wrapper for a JsonObject that contains Transaction Data.
  */
-internal interface TransactionData {
+@JvmInline
+value class TransactionData private constructor(val value: JsonObject) {
 
-    @SerialName("type")
-    @Required
     val type: String
+        get() = value["type"]!!.jsonPrimitive.content
 
-    @SerialName("credential_ids")
-    @Required
-    val credentialIds: List<String>
+    val credentialIds: NonEmptyList<String>
+        get() = value["credential_ids"]!!
+            .jsonArray
+            .map { it.jsonPrimitive.content }
+            .toNonEmptyListOrNull()!!
 
-    @SerialName("transaction_data_hashes_alg")
-    val hashAlgorithms: List<String>?
+    val hashAlgorithms: NonEmptyList<String>?
+        get() = value["transaction_data_hashes_alg"]
+            ?.jsonArray
+            ?.map { it.jsonPrimitive.content }
+            ?.let {
+                it.toNonEmptyListOrNull()!!
+            }
+
+    inline fun <reified T> decodeAs(
+        deserializer: DeserializationStrategy<T> = serializer(),
+        json: Json = Json.Default,
+    ): T = json.decodeFromJsonElement(deserializer, value)
+
+    companion object {
+
+        private fun from(value: JsonObject): Result<TransactionData> = runCatching {
+            val type = value["type"]
+            require(type.isNonEmptyString()) {
+                "'type' is required and must not be a non-empty string"
+            }
+
+            val credentialIds = value["credential_ids"]
+            require(credentialIds.isNonEmptyArray() && credentialIds.all { it.isNonEmptyString() }) {
+                "'credential_ids' is required and must be a non-empty array of non-empty strings"
+            }
+
+            value["transaction_data_hashes_alg"]?.let { hashAlgorithms ->
+                require(hashAlgorithms.isNonEmptyArray() && hashAlgorithms.all { it.isNonEmptyString() }) {
+                    "'transaction_data_hashes_alg' if present must be a non-empty array of non-empty strings"
+                }
+            }
+
+            TransactionData(value)
+        }
+
+        operator fun invoke(
+            type: String,
+            credentialIds: NonEmptyList<String>,
+            hashAlgorithms: NonEmptyList<String>? = null,
+            builder: JsonObjectBuilder.() -> Unit = {},
+        ): Result<TransactionData> {
+            val value = buildJsonObject {
+                builder()
+
+                put("type", type)
+                putJsonArray("credential_ids") {
+                    addAll(credentialIds)
+                }
+                hashAlgorithms?.let { hashAlgorithms ->
+                    putJsonArray("transaction_data_hashes_alg") {
+                        addAll(hashAlgorithms)
+                    }
+                }
+            }
+            return from(value)
+        }
+
+        operator fun invoke(
+            unvalidated: JsonObject,
+            validCredentialIds: List<String>,
+        ): Result<TransactionData> = runCatching {
+            val transactionData = from(unvalidated).getOrThrow()
+            require(validCredentialIds.containsAll(transactionData.credentialIds)) {
+                "invalid 'credential_ids'"
+            }
+            transactionData
+        }
+    }
+}
+
+/**
+ * Checks if this [JsonElement] is a [JsonPrimitive] that is a non-empty string.
+ */
+private fun JsonElement?.isNonEmptyString(): Boolean {
+    contract {
+        returns(true) implies(this@isNonEmptyString is JsonPrimitive)
+    }
+
+    return this is JsonPrimitive && this.isString && this.content.isNotEmpty()
+}
+
+/**
+ * Checks if this [JsonElement] is a non-empty [JsonArray].
+ */
+private fun JsonElement?.isNonEmptyArray(): Boolean {
+    contract {
+        returns(true) implies(this@isNonEmptyArray is JsonArray)
+    }
+
+    return this is JsonArray && this.isNotEmpty()
 }
 
 /**
@@ -291,14 +382,14 @@ internal value class ProcessId(val value: String) {
 internal data class QesAuthorization(
     @SerialName("type")
     @Required
-    override val type: String,
+    val type: String,
 
     @SerialName("credential_ids")
     @Required
-    override val credentialIds: List<String>,
+    val credentialIds: List<String>,
 
     @SerialName("transaction_data_hashes_alg")
-    override val hashAlgorithms: List<String>?,
+    val hashAlgorithms: List<String>?,
 
     @SerialName("signatureQualifier")
     val signatureQualifier: SignatureQualifier?,
@@ -312,7 +403,7 @@ internal data class QesAuthorization(
     @SerialName("processID")
     val processId: ProcessId?,
 
-) : TransactionData {
+) {
     init {
         require(TYPE == type) { "Expected 'type' to be '$TYPE'. Was: '$type'." }
         require(credentialIds.isNotEmpty()) { "'credential_ids' must not be empty." }
@@ -334,14 +425,14 @@ internal data class QesAuthorization(
 internal data class QCertCreationAcceptance(
     @SerialName("type")
     @Required
-    override val type: String,
+    val type: String,
 
     @SerialName("credential_ids")
     @Required
-    override val credentialIds: List<String>,
+    val credentialIds: List<String>,
 
     @SerialName("transaction_data_hashes_alg")
-    override val hashAlgorithms: List<String>?,
+    val hashAlgorithms: List<String>?,
 
     @SerialName("QC_terms_conditions_uri")
     @Required
@@ -357,7 +448,7 @@ internal data class QCertCreationAcceptance(
     @Required
     val hashAlgorithm: HashAlgorithmOID,
 
-) : TransactionData {
+) {
     init {
         require(TYPE == type) { "Expected 'type' to be '$TYPE'. Was: '$type'." }
         require(credentialIds.isNotEmpty()) { "'credential_ids' must not be empty." }

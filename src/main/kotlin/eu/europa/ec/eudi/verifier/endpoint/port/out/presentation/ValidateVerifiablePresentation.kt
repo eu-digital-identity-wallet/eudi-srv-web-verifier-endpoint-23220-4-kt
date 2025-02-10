@@ -15,9 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.presentation
 
+import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionData
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
-import kotlinx.serialization.json.JsonObject
 
 /**
  * Validates Verifiable Presentations.
@@ -32,7 +33,7 @@ fun interface ValidateVerifiablePresentation {
     suspend operator fun invoke(
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
-        transactionData: List<JsonObject>?,
+        transactionData: NonEmptyList<TransactionData>?,
     ): Result<VerifiablePresentation>
 
     companion object {
