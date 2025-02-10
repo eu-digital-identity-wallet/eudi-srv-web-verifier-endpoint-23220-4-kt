@@ -20,12 +20,9 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import eu.europa.ec.eudi.prex.JsonPath
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.JsonPathReader
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
@@ -39,7 +36,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentatio
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import java.time.Clock
 import java.util.regex.Pattern
@@ -104,11 +100,11 @@ private suspend fun AuthorisationResponseTO.toDomain(
                 val descriptorMaps = presentationSubmission.descriptorMaps
                     .toNonEmptyListOrNull()
                     ?: raise(WalletResponseValidationError.InvalidPresentationSubmission)
-                val vpTokenJson = Json.encodeToString(vpToken)
+                val vpTokenReader = JsonPathReader(vpToken)
                 val verifiablePresentations = descriptorMaps.map {
                     ensure(jsonPathPattern.matcher(it.path.value).matches()) { WalletResponseValidationError.InvalidPresentationSubmission }
 
-                    val element = it.path.readFromJson(vpTokenJson).getOrNull() ?: raise(WalletResponseValidationError.InvalidVpToken)
+                    val element = vpTokenReader.readPath(it.path.value).getOrNull() ?: raise(WalletResponseValidationError.InvalidVpToken)
                     val format = Format(it.format)
                     val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
                     validateVerifiablePresentation(unvalidatedVerifiablePresentation, presentation.nonce)
@@ -183,16 +179,6 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> element.asStringOrObject()
             else -> element.asStringOrObject()
         }
-    }
-
-private val objectMapper: ObjectMapper by lazy { jacksonObjectMapper() }
-
-private fun JsonPath.readFromJson(json: String): Result<JsonElement?> =
-    runCatching {
-        com.nfeld.jsonpathkt.JsonPath(value)
-            .readFromJson<JsonNode>(json)
-            ?.let { objectMapper.writeValueAsString(it) }
-            ?.let { Json.parseToJsonElement(it) }
     }
 
 @Serializable
