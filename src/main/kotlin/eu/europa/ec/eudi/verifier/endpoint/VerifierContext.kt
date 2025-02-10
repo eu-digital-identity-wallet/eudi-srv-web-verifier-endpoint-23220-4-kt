@@ -205,7 +205,7 @@ internal fun beans(clock: Clock) = beans {
     }
     bean { ValidateMsoMdocDeviceResponse(clock, ref()) }
     bean { ValidateSdJwtVc(ref(), ref<VerifierConfig>().verifierId.clientId) }
-    bean { ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref<VerifierConfig>().verifierId, ref(), ref()) }
+    bean { ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref(), ref(), ref()) }
 
     //
     // Scheduled

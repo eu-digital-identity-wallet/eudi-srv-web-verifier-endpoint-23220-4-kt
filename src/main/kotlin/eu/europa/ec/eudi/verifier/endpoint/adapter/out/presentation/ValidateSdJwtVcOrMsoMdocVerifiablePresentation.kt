@@ -19,20 +19,24 @@ import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.RFC7519
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Format
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import kotlinx.io.bytestring.encode
+import kotlinx.io.bytestring.encodeToByteString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePresentation::class.java)
 
 internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
-    private val verifierId: VerifierId,
+    private val config: VerifierConfig,
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT>,
     private val deviceResponseValidator: DeviceResponseValidator,
 ) : ValidateVerifiablePresentation {
@@ -40,12 +44,26 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     override suspend fun invoke(
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
+        transactionData: List<JsonObject>?,
     ): Result<VerifiablePresentation> = runCatching {
         when (verifiablePresentation.format) {
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
                 val challenge = buildJsonObject {
-                    put(RFC7519.AUDIENCE, verifierId.clientId)
+                    put(RFC7519.AUDIENCE, config.verifierId.clientId)
                     put("nonce", nonce.value)
+                    transactionData?.let { transactionData ->
+                        putJsonArray("transaction_data_hashes") {
+                            transactionData.forEach {
+                                val serialized = Json.encodeToString(it)
+                                val base64 = base64UrlNoPadding.encode(serialized.encodeToByteString())
+                                val hash = hash(base64, config.transactionDataHashAlgorithm)
+                                val base64Hash = base64UrlNoPadding.encode(hash)
+                                add(base64Hash)
+                            }
+                        }
+
+                        put("transaction_data_hashes_alg", config.transactionDataHashAlgorithm.ianaName)
+                    }
                 }
 
                 when (verifiablePresentation) {
