@@ -54,6 +54,9 @@ dependencies {
     implementation(libs.ktor.client.java) {
         because("ktor client engine to use (required by SdJwtVcVerifier)")
     }
+    implementation(libs.jsonpathkt) {
+        because("Evaluate JsonPaths on vp_token")
+    }
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)

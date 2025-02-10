@@ -4,13 +4,13 @@
   "descriptor_map": [
     {
       "id": "employment_input",
-      "format": "jwt_vc",
-      "path": "$[0].verifiableCredential[0]"
+      "format": "jwt_vc_json",
+      "path": "$[0]"
     },
     {
       "id": "employment_input_2",
-      "format": "jwt_vc",
-      "path": "$[1].verifiableCredential[0]"
+      "format": "jwt_vc_json",
+      "path": "$[1]"
     }
   ]
 }

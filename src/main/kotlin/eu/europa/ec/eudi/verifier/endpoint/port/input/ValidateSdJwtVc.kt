@@ -17,21 +17,15 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
 import arrow.core.getOrElse
-import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.*
-import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
-import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
-import java.security.KeyStore
 
 /**
  * Reasons why validation of an SD-JWT Verifiable Credential might fail.
@@ -74,34 +68,13 @@ private object Claims {
 /**
  * Validates an SD-JWT Verifiable Credential.
  *
- * @param trustedIssuers keystore containing the X509 Certificates of the trusted issuers
- * @param audience the public url of this verifier, expected to be found in the KeyBinding JWT
+ * @param verifier SdJwtVcVerifier used for verification
+ * @param audience the Client Id of this Verifier, expected to be found in the KeyBinding JWT
  */
 internal class ValidateSdJwtVc(
-    trustedIssuers: KeyStore?,
+    private val verifier: SdJwtVcVerifier<SignedJWT>,
     private val audience: Audience,
 ) {
-    private val verifier: SdJwtVcVerifier<SignedJWT> by lazy {
-        val x5CShouldBe = trustedIssuers?.let {
-            X5CShouldBe.fromKeystore(it) {
-                isRevocationEnabled = false
-            }
-        } ?: X5CShouldBe.Ignored
-        val x5cValidator = X5CValidator(x5CShouldBe)
-        val x509CertificateTrust = X509CertificateTrust { chain ->
-            chain.toNonEmptyListOrNull()?.let {
-                x5cValidator.ensureTrusted(it).fold(
-                    ifLeft = { _ -> false },
-                    ifRight = { _ -> true },
-                )
-            } ?: false
-        }
-        NimbusSdJwtOps.SdJwtVcVerifier.usingX5cOrIssuerMetadata(
-            x509CertificateTrust = x509CertificateTrust,
-            httpClientFactory = DefaultHttpClientFactory,
-        )
-    }
-
     suspend operator fun invoke(unverified: SdJwt, nonce: Nonce): SdJwtVcValidationResult {
         val challenge = buildJsonObject {
             put(Claims.Audience, audience)
