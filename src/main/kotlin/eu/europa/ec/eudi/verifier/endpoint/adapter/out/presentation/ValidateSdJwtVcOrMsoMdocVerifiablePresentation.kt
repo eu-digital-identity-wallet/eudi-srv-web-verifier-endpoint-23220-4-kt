@@ -45,61 +45,74 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         transactionData: NonEmptyList<TransactionData>?,
     ): Result<VerifiablePresentation> = runCatching {
         when (verifiablePresentation.format) {
-            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
-                val challenge = buildJsonObject {
-                    put(RFC7519.AUDIENCE, config.verifierId.clientId)
-                    put("nonce", nonce.value)
-                    transactionData?.let { transactionData ->
-                        putJsonArray("transaction_data_hashes") {
-                            transactionData.forEach {
-                                val hash = hash(it.base64Url, config.transactionDataHashAlgorithm)
-                                val base64Hash = base64UrlNoPadding.encode(hash)
-                                add(base64Hash)
-                            }
-                        }
+            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc ->
+                validateSdJwtVcVerifiablePresentation(verifiablePresentation, nonce, transactionData)
 
-                        put("transaction_data_hashes_alg", config.transactionDataHashAlgorithm.ianaName)
+            Format.MsoMdoc ->
+                validateMsoMdocVerifiablePresentation(verifiablePresentation)
+
+            else ->
+                verifiablePresentation
+        }
+    }
+
+    private suspend fun validateSdJwtVcVerifiablePresentation(
+        verifiablePresentation: VerifiablePresentation,
+        nonce: Nonce,
+        transactionData: NonEmptyList<TransactionData>?,
+    ): VerifiablePresentation {
+        val challenge = buildJsonObject {
+            put(RFC7519.AUDIENCE, config.verifierId.clientId)
+            put("nonce", nonce.value)
+            transactionData?.let { transactionData ->
+                putJsonArray("transaction_data_hashes") {
+                    transactionData.forEach {
+                        val hash = hash(it.base64Url, config.transactionDataHashAlgorithm)
+                        val base64Hash = base64UrlNoPadding.encode(hash)
+                        add(base64Hash)
                     }
                 }
 
-                when (verifiablePresentation) {
-                    is VerifiablePresentation.Str -> {
-                        sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
-                            .fold(
-                                onSuccess = { verifiablePresentation },
-                                onFailure = {
-                                    log.warn("Failed to validate SD-JWT VC", it)
-                                    throw IllegalArgumentException("Invalid SdJwtVc", it)
-                                },
-                            )
-                    }
-
-                    is VerifiablePresentation.Json -> {
-                        sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
-                            .fold(
-                                onSuccess = { verifiablePresentation },
-                                onFailure = {
-                                    log.warn("Failed to validate SD-JWT VC", it)
-                                    throw IllegalArgumentException("Invalid SdJwtVc", it)
-                                },
-                            )
-                    }
-                }
+                put("transaction_data_hashes_alg", config.transactionDataHashAlgorithm.ianaName)
             }
+        }
 
-            Format.MsoMdoc -> {
-                require(verifiablePresentation is VerifiablePresentation.Str)
-                deviceResponseValidator.ensureValid(verifiablePresentation.value)
+        return when (verifiablePresentation) {
+            is VerifiablePresentation.Str -> {
+                sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
                     .fold(
-                        ifLeft = {
-                            log.warn("Failed to validate MsoMdoc VC. Reason: '$it'")
-                            throw IllegalArgumentException("Invalid MsoMdoc DeviceResponse: '$it'")
+                        onSuccess = { verifiablePresentation },
+                        onFailure = {
+                            log.warn("Failed to validate SD-JWT VC", it)
+                            throw IllegalArgumentException("Invalid SdJwtVc", it)
                         },
-                        ifRight = { verifiablePresentation },
                     )
             }
 
-            else -> verifiablePresentation
+            is VerifiablePresentation.Json -> {
+                sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
+                    .fold(
+                        onSuccess = { verifiablePresentation },
+                        onFailure = {
+                            log.warn("Failed to validate SD-JWT VC", it)
+                            throw IllegalArgumentException("Invalid SdJwtVc", it)
+                        },
+                    )
+            }
         }
+    }
+
+    private fun validateMsoMdocVerifiablePresentation(
+        verifiablePresentation: VerifiablePresentation,
+    ): VerifiablePresentation.Str {
+        require(verifiablePresentation is VerifiablePresentation.Str)
+        return deviceResponseValidator.ensureValid(verifiablePresentation.value)
+            .fold(
+                ifLeft = {
+                    log.warn("Failed to validate MsoMdoc VC. Reason: '$it'")
+                    throw IllegalArgumentException("Invalid MsoMdoc DeviceResponse: '$it'")
+                },
+                ifRight = { verifiablePresentation },
+            )
     }
 }
