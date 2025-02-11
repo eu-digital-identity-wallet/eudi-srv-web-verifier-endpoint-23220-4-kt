@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.slf4j.Logger
@@ -96,10 +97,12 @@ object WalletApiClient {
      */
     fun directPost(
         client: WebTestClient,
+        requestId: RequestId,
         formEncodedBody: MultiValueMap<String, Any>,
         vararg consumers: ResponseSpecConsumer,
     ) {
-        client.post().uri(WalletApi.WALLET_RESPONSE_PATH)
+        client.post()
+            .uri { builder -> builder.path(WalletApi.WALLET_RESPONSE_PATH).build(requestId.value) }
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(formEncodedBody))
@@ -115,8 +118,13 @@ object WalletApiClient {
      *
      * @see: <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-response-mode-direct_postjw">OpenId4vp Response Mode "direct_post.jwt</a>
      */
-    fun directPostJwt(client: WebTestClient, formEncodedBody: MultiValueMap<String, Any>) {
-        client.post().uri(WalletApi.WALLET_RESPONSE_PATH)
+    fun directPostJwt(
+        client: WebTestClient,
+        requestId: RequestId,
+        formEncodedBody: MultiValueMap<String, Any>,
+    ) {
+        client.post()
+            .uri { builder -> builder.path(WalletApi.WALLET_RESPONSE_PATH).build(requestId.value) }
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(formEncodedBody))
