@@ -322,19 +322,15 @@ internal fun InitTransactionTO.toDomain(
         }
 
         return transactionData?.map {
-            TransactionData(JsonObject(it + ("transaction_data_hashes_alg" to hashAlgorithms)), credentialIds)
-                .getOrElse { raise(ValidationError.InvalidTransactionData) }
-                .apply {
+            TransactionData.validate(JsonObject(it + ("transaction_data_hashes_alg" to hashAlgorithms)), credentialIds)
+                .applyCatching {
                     when (type) {
                         QesAuthorization.TYPE -> QesAuthorization.serializer()
                         QCertCreationAcceptance.TYPE -> QCertCreationAcceptance.serializer()
                         else -> null
-                    }?.let { deserializer ->
-                        runCatching {
-                            decodeAs(deserializer)
-                        }.getOrElse { raise(ValidationError.InvalidTransactionData) }
-                    }
+                    }?.let { deserializer -> decodeAs(deserializer) }
                 }
+                .getOrElse { raise(ValidationError.InvalidTransactionData) }
         }?.toNonEmptyListOrNull()
     }
 
@@ -363,3 +359,14 @@ private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
+
+private inline fun <reified T> Result<T>.applyCatching(block: T.() -> Unit): Result<T> =
+    if (isFailure) {
+        this
+    } else {
+        runCatching {
+            val value = getOrThrow()
+            value.block()
+            value
+        }
+    }

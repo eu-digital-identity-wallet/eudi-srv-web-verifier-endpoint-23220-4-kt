@@ -25,10 +25,10 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPaddi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
-import kotlinx.io.bytestring.encode
-import kotlinx.io.bytestring.encodeToByteString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePresentation::class.java)
@@ -52,9 +52,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                     transactionData?.let { transactionData ->
                         putJsonArray("transaction_data_hashes") {
                             transactionData.forEach {
-                                val serialized = Json.encodeToString(it.value)
-                                val base64 = base64UrlNoPadding.encode(serialized.encodeToByteString())
-                                val hash = hash(base64, config.transactionDataHashAlgorithm)
+                                val hash = hash(it.base64Url, config.transactionDataHashAlgorithm)
                                 val base64Hash = base64UrlNoPadding.encode(hash)
                                 add(base64Hash)
                             }

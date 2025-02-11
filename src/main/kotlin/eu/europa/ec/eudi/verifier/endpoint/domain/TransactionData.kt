@@ -20,6 +20,12 @@ import arrow.core.toNonEmptyListOrNull
 import com.eygraber.uri.Uri
 import com.nimbusds.jose.util.Base64URL
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.Base64URLStringSerializer
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
+import kotlinx.io.bytestring.decodeToByteString
+import kotlinx.io.bytestring.decodeToString
+import kotlinx.io.bytestring.encode
+import kotlinx.io.bytestring.encodeToByteString
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -53,6 +59,14 @@ value class TransactionData private constructor(val value: JsonObject) {
                 it.toNonEmptyListOrNull()!!
             }
 
+    val base64Url: String
+        get() {
+            val serialized = jsonSupport.encodeToString(value)
+            val decoded = serialized.encodeToByteString()
+            val encoded = base64UrlNoPadding.encode(decoded)
+            return encoded
+        }
+
     inline fun <reified T> decodeAs(
         deserializer: DeserializationStrategy<T> = serializer(),
         json: Json = Json.Default,
@@ -60,7 +74,7 @@ value class TransactionData private constructor(val value: JsonObject) {
 
     companion object {
 
-        private fun from(value: JsonObject): Result<TransactionData> = runCatching {
+        private fun validate(value: JsonObject): Result<TransactionData> = runCatching {
             val type = value["type"]
             require(type.isNonEmptyString()) {
                 "'type' is required and must not be a non-empty string"
@@ -99,18 +113,27 @@ value class TransactionData private constructor(val value: JsonObject) {
                     }
                 }
             }
-            return from(value)
+            return validate(value)
         }
 
-        operator fun invoke(
+        fun validate(
             unvalidated: JsonObject,
             validCredentialIds: List<String>,
         ): Result<TransactionData> = runCatching {
-            val transactionData = from(unvalidated).getOrThrow()
+            val transactionData = validate(unvalidated).getOrThrow()
             require(validCredentialIds.containsAll(transactionData.credentialIds)) {
                 "invalid 'credential_ids'"
             }
             transactionData
+        }
+
+        fun fromBase64Url(
+            base64Url: String,
+        ): Result<TransactionData> = runCatching {
+            val decoded = base64UrlNoPadding.decodeToByteString(base64Url)
+            val serialized = decoded.decodeToString()
+            val json = jsonSupport.decodeFromString<JsonObject>(serialized)
+            validate(json).getOrThrow()
         }
     }
 }

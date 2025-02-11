@@ -16,12 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import kotlinx.io.bytestring.encode
-import kotlinx.io.bytestring.encodeToByteString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.net.URL
 import java.time.Clock
 import java.time.Instant
@@ -88,11 +83,7 @@ internal fun requestObjectFromDomain(
         else -> listOf("https://self-issued.me/v2")
     }
 
-    val transactionData = type.transactionDataOrNull?.map {
-        val serialized = Json.encodeToString(it.value)
-        val decoded = serialized.encodeToByteString()
-        base64UrlNoPadding.encode(decoded)
-    }
+    val transactionData = type.transactionDataOrNull?.map { it.base64Url }
 
     return RequestObject(
         verifierId = verifierConfig.verifierId,

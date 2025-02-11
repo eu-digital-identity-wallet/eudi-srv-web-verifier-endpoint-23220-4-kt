@@ -38,6 +38,6 @@ internal class JsonPathReader(val element: JsonElement) {
         com.nfeld.jsonpathkt.JsonPath(path)
             .readFromJson<JsonNode>(json)
             ?.let { objectMapper.writeValueAsString(it) }
-            ?.let { Json.parseToJsonElement(it) }
+            ?.let { jsonSupport.parseToJsonElement(it) }
     }
 }
