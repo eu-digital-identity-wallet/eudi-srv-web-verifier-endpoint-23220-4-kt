@@ -25,10 +25,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPaddi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
-import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePresentation::class.java)
@@ -64,42 +62,43 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         val challenge = buildJsonObject {
             put(RFC7519.AUDIENCE, config.verifierId.clientId)
             put("nonce", nonce.value)
-            transactionData?.let { transactionData ->
-                putJsonArray("transaction_data_hashes") {
-                    transactionData.forEach {
-                        val hash = hash(it.base64Url, config.transactionDataHashAlgorithm)
-                        val base64Hash = base64UrlNoPadding.encode(hash)
-                        add(base64Hash)
-                    }
-                }
-
+            if (transactionData != null) {
                 put("transaction_data_hashes_alg", config.transactionDataHashAlgorithm.ianaName)
             }
         }
 
-        return when (verifiablePresentation) {
+        val kbJwt = when (verifiablePresentation) {
             is VerifiablePresentation.Str -> {
                 sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
-                    .fold(
-                        onSuccess = { verifiablePresentation },
-                        onFailure = {
-                            log.warn("Failed to validate SD-JWT VC", it)
-                            throw IllegalArgumentException("Invalid SdJwtVc", it)
-                        },
-                    )
+                    .getOrElse {
+                        log.warn("Failed to validate SD-JWT VC", it)
+                        throw IllegalArgumentException("Invalid SdJwtVc", it)
+                    }
+                    .keyBindingJwt
             }
 
             is VerifiablePresentation.Json -> {
                 sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
-                    .fold(
-                        onSuccess = { verifiablePresentation },
-                        onFailure = {
-                            log.warn("Failed to validate SD-JWT VC", it)
-                            throw IllegalArgumentException("Invalid SdJwtVc", it)
-                        },
-                    )
+                    .getOrElse {
+                        log.warn("Failed to validate SD-JWT VC", it)
+                        throw IllegalArgumentException("Invalid SdJwtVc", it)
+                    }
+                    .keyBindingJwt
             }
         }
+
+        if (transactionData != null) {
+            val expectedHashes = transactionData.map {
+                val hash = hash(it.base64Url, config.transactionDataHashAlgorithm)
+                base64UrlNoPadding.encode(hash)
+            }
+            val actualHashes = kbJwt.jwtClaimsSet.getStringListClaim("transaction_data_hashes")
+            require(expectedHashes.size == actualHashes.size && expectedHashes.containsAll(actualHashes)) {
+                "hashes of transaction data do not match the expected values"
+            }
+        }
+
+        return verifiablePresentation
     }
 
     private fun validateMsoMdocVerifiablePresentation(
