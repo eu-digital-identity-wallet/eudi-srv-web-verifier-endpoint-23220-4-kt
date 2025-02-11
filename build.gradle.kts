@@ -57,9 +57,6 @@ dependencies {
     implementation(libs.jsonpathkt) {
         because("Evaluate JsonPaths on vp_token")
     }
-    implementation(libs.uri.kmp) {
-        because("To be able to parse Uris and their parameters")
-    }
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
