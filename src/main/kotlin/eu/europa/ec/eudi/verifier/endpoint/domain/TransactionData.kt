@@ -17,9 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
-import com.eygraber.uri.Uri
-import com.nimbusds.jose.util.Base64URL
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.Base64URLStringSerializer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import kotlinx.io.bytestring.decodeToByteString
@@ -226,6 +223,21 @@ internal value class Label(val value: String) {
 }
 
 /**
+ * A base64url encoded value.
+ *
+ * No padding is used.
+ */
+@Serializable
+@JvmInline
+internal value class Base64Url(val value: String) {
+    init {
+        runCatching {
+            base64UrlNoPadding.decode(value)
+        }.getOrElse { throw IllegalArgumentException("value is not base64url encoded", it) }
+    }
+}
+
+/**
  * OID Hash Algorithm.
  */
 @Serializable
@@ -250,24 +262,6 @@ internal object URLStringSerializer : KSerializer<URL> {
     }
 
     override fun deserialize(decoder: Decoder): URL = URL(decoder.decodeString())
-}
-
-/**
- * A URL for a Document.
- */
-@Serializable
-@JvmInline
-internal value class DocumentUrl(
-    @Serializable(with = URLStringSerializer::class) val value: URL,
-) {
-    init {
-        val uri = Uri.parse(value.toExternalForm())
-        require(!uri.getQueryParameter("hash").isNullOrEmpty()) {
-            "a document url must contain a non-empty 'hash' query parameter"
-        }
-    }
-
-    override fun toString(): String = value.toExternalForm()
 }
 
 /**
@@ -345,24 +339,23 @@ internal data class DocumentDigest(
     val label: Label,
 
     @SerialName("hash")
-    @Serializable(with = Base64URLStringSerializer::class)
-    val hash: Base64URL?,
+    val hash: Base64Url?,
 
     @SerialName("hashAlgorithmOID")
     val hashAlgorithm: HashAlgorithmOID?,
 
     @SerialName("documentLocation_uri")
-    val documentLocation: DocumentUrl?,
+    @Serializable(with = URLStringSerializer::class)
+    val documentLocation: URL?,
 
     @SerialName("documentLocation_method")
     val documentAccessMethod: DocumentAccessMethod?,
 
     @SerialName("DTBS/R")
-    @Serializable(with = Base64URLStringSerializer::class)
-    val dataToBeSigned: Base64URL?,
+    val dataToBeSignedRepresentation: Base64Url?,
 
     @SerialName("DTBS/RHashAlgorithmOID")
-    val dataToBeSignedHashAlgorithm: HashAlgorithmOID?,
+    val dataToBeSignedRepresentationHashAlgorithm: HashAlgorithmOID?,
 
 ) {
     init {
@@ -370,8 +363,8 @@ internal data class DocumentDigest(
             "either provide both 'hash' and 'hashAlgorithmOID', or none."
         }
         require(
-            (null == dataToBeSigned && null == dataToBeSignedHashAlgorithm) ||
-                (null != dataToBeSigned && null != dataToBeSignedHashAlgorithm),
+            (null == dataToBeSignedRepresentation && null == dataToBeSignedRepresentationHashAlgorithm) ||
+                (null != dataToBeSignedRepresentation && null != dataToBeSignedRepresentationHashAlgorithm),
         ) {
             "either provide both 'DTBS/R' and 'DTBS/RHashAlgorithmOID', or none."
         }
@@ -381,7 +374,9 @@ internal data class DocumentDigest(
         ) {
             "either provide both 'documentLocation_uri' and 'documentLocation_method', or none."
         }
-        require(null != hash || null != dataToBeSigned) { "either 'hash', or 'dataToBeSigned' must be present." }
+        require(
+            null != hash || null != dataToBeSignedRepresentation,
+        ) { "either 'hash', or 'dataToBeSignedRepresentation' must be present." }
     }
 }
 
@@ -421,6 +416,7 @@ internal data class QesAuthorization(
     val credentialId: CredentialId?,
 
     @SerialName("documentDigests")
+    @Required
     val documentDigests: List<DocumentDigest>,
 
     @SerialName("processID")
@@ -464,8 +460,7 @@ internal data class QCertCreationAcceptance(
 
     @SerialName("QC_hash")
     @Required
-    @Serializable(with = Base64URLStringSerializer::class)
-    val documentHash: Base64URL,
+    val documentHash: Base64Url,
 
     @SerialName("QC_hashAlgorithmOID")
     @Required
