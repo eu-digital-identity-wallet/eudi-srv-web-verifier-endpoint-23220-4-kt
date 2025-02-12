@@ -135,6 +135,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             jwkSet?.let { this.jwkSet = it }
             jwkSetUri?.let { this.jwkSetURI = it.toURI() }
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
+            setCustomField("client_id_scheme", "x509_san_dns")
 
             if ("direct_post.jwt" == responseMode) {
                 c.jarmOption.jwsAlg?.let { setCustomField("authorization_signed_response_alg", it) }
