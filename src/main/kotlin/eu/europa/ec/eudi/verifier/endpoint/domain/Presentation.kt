@@ -95,11 +95,13 @@ sealed interface PresentationType {
 
     data class VpTokenRequest(
         val presentationQuery: PresentationQuery,
+        val transactionData: NonEmptyList<TransactionData>?,
     ) : PresentationType
 
     data class IdAndVpToken(
         val idTokenType: List<IdTokenType>,
         val presentationQuery: PresentationQuery,
+        val transactionData: NonEmptyList<TransactionData>?,
     ) : PresentationType
 }
 
@@ -115,6 +117,13 @@ val PresentationType.dcqlQueryOrNull: DCQL?
         is PresentationType.IdTokenRequest -> null
         is PresentationType.VpTokenRequest -> presentationQuery.dcqlQueryOrNull
         is PresentationType.IdAndVpToken -> presentationQuery.dcqlQueryOrNull
+    }
+
+val PresentationType.transactionDataOrNull: NonEmptyList<TransactionData>?
+    get() = when (this) {
+        is PresentationType.IdTokenRequest -> null
+        is PresentationType.VpTokenRequest -> transactionData
+        is PresentationType.IdAndVpToken -> transactionData
     }
 
 sealed interface VerifiablePresentation {

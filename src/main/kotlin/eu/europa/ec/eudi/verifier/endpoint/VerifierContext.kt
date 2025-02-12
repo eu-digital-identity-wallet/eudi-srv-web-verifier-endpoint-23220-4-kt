@@ -205,7 +205,7 @@ internal fun beans(clock: Clock) = beans {
     }
     bean { ValidateMsoMdocDeviceResponse(clock, ref()) }
     bean { ValidateSdJwtVc(ref(), ref<VerifierConfig>().verifierId.clientId) }
-    bean { ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref<VerifierConfig>().verifierId, ref(), ref()) }
+    bean { ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref(), ref(), ref()) }
 
     //
     // Scheduled
@@ -402,6 +402,14 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         }
     val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofMinutes(5)
 
+    val transactionDataHashAlgorithm = environment.getProperty("verifier.transactionData.hashAlgorithm", "sha-256")
+        .let { configured ->
+            val hashAlgorithm = HashAlgorithm.entries.firstOrNull { supported -> supported.ianaName == configured }
+            requireNotNull(hashAlgorithm) {
+                "'verifier.transactionData.hashAlgorithm' must be one of '${HashAlgorithm.entries.map { it.ianaName }}'"
+            }
+        }
+
     return VerifierConfig(
         verifierId = verifierId,
         requestJarOption = requestJarOption,
@@ -410,6 +418,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         responseModeOption = responseModeOption,
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(publicUrl),
+        transactionDataHashAlgorithm = transactionDataHashAlgorithm,
     )
 }
 

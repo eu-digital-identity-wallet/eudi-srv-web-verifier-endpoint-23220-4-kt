@@ -178,6 +178,19 @@ sealed interface VerifierId {
 }
 
 /**
+ * Hashing algorithms.
+ */
+enum class HashAlgorithm(val ianaName: String) {
+    SHA_256("sha-256"),
+    SHA_384("sha-384"),
+    SHA_512("sha-512"),
+    SHA3_224("sha3-224"),
+    SHA3_256("sha3-256"),
+    SHA3_384("sha3-384"),
+    SHA3_512("sha3-512"),
+}
+
+/**
  * Verifier configuration options
  */
 data class VerifierConfig(
@@ -188,6 +201,7 @@ data class VerifierConfig(
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,
+    val transactionDataHashAlgorithm: HashAlgorithm,
 )
 
 /**

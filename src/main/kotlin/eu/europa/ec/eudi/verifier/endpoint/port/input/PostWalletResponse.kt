@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
@@ -92,12 +93,14 @@ private suspend fun AuthorisationResponseTO.toDomain(
                 presentationExchangeVpContent(
                     presentationQuery.presentationDefinition,
                     presentation.nonce,
+                    presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
                 )
             is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
                 dcqlVpContent(
                     presentationQuery.query,
                     presentation.nonce,
+                    presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
                 )
         }.bind()
@@ -121,6 +124,7 @@ private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
 private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
     presentationDefinition: PresentationDefinition,
     nonce: Nonce,
+    transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
 ): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
     either {
@@ -134,13 +138,19 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             .toNonEmptyListOrNull()
             ?: raise(WalletResponseValidationError.InvalidPresentationSubmission)
         val vpTokenReader = JsonPathReader(vpToken)
-        val verifiablePresentations = descriptorMaps.map {
-            ensure(jsonPathPattern.matcher(it.path.value).matches()) { WalletResponseValidationError.InvalidPresentationSubmission }
+        val verifiablePresentations = descriptorMaps.map { descriptorMap ->
+            ensure(jsonPathPattern.matcher(descriptorMap.path.value).matches()) {
+                WalletResponseValidationError.InvalidPresentationSubmission
+            }
 
-            val element = vpTokenReader.readPath(it.path.value).getOrNull() ?: raise(WalletResponseValidationError.InvalidVpToken)
-            val format = Format(it.format)
+            val element = vpTokenReader.readPath(descriptorMap.path.value).getOrNull()
+                ?: raise(WalletResponseValidationError.InvalidVpToken)
+            val format = Format(descriptorMap.format)
             val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
-            validateVerifiablePresentation(unvalidatedVerifiablePresentation, nonce)
+            val applicableTransactionData = transactionData?.filter {
+                descriptorMap.id.value in it.credentialIds
+            }?.toNonEmptyListOrNull()
+            validateVerifiablePresentation(unvalidatedVerifiablePresentation, nonce, applicableTransactionData)
                 .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
         }.distinct()
 
@@ -150,6 +160,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
 private suspend fun AuthorisationResponseTO.dcqlVpContent(
     query: DCQL,
     nonce: Nonce,
+    transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
 ): Either<WalletResponseValidationError, VpContent.DCQL> =
     either {
@@ -165,7 +176,10 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
             return vpToken.mapValues { (queryId, value) ->
                 val format = credentialQueries[queryId]?.format ?: raise(WalletResponseValidationError.InvalidVpToken)
                 val unvalidatedVerifiablePresentation = value.toVerifiablePresentation(format).bind()
-                validateVerifiablePresentation(unvalidatedVerifiablePresentation, nonce)
+                val applicableTransactionData = transactionData?.filter {
+                    queryId.value in it.credentialIds
+                }?.toNonEmptyListOrNull()
+                validateVerifiablePresentation(unvalidatedVerifiablePresentation, nonce, applicableTransactionData)
                     .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
             }
         }

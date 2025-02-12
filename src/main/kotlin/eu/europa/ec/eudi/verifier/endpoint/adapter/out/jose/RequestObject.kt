@@ -35,6 +35,7 @@ internal data class RequestObject(
     val aud: List<String>,
     val state: String,
     val issuedAt: Instant,
+    val transactionData: List<String>? = null,
 )
 
 internal fun requestObjectFromDomain(
@@ -82,6 +83,8 @@ internal fun requestObjectFromDomain(
         else -> listOf("https://self-issued.me/v2")
     }
 
+    val transactionData = type.transactionDataOrNull?.map { it.base64Url }
+
     return RequestObject(
         verifierId = verifierConfig.verifierId,
         scope = scope,
@@ -99,5 +102,6 @@ internal fun requestObjectFromDomain(
         }, // or direct_post for direct submission
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
         issuedAt = clock.instant(),
+        transactionData = transactionData,
     )
 }

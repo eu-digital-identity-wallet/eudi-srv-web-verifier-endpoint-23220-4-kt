@@ -15,15 +15,15 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation
 
+import arrow.core.NonEmptyList
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.RFC7519
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.domain.Format
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory
 private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePresentation::class.java)
 
 internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
-    private val verifierId: VerifierId,
+    private val config: VerifierConfig,
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT>,
     private val deviceResponseValidator: DeviceResponseValidator,
 ) : ValidateVerifiablePresentation {
@@ -40,52 +40,88 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     override suspend fun invoke(
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
+        transactionData: NonEmptyList<TransactionData>?,
     ): Result<VerifiablePresentation> = runCatching {
         when (verifiablePresentation.format) {
-            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
-                val challenge = buildJsonObject {
-                    put(RFC7519.AUDIENCE, verifierId.clientId)
-                    put("nonce", nonce.value)
-                }
+            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc ->
+                validateSdJwtVcVerifiablePresentation(verifiablePresentation, nonce, transactionData)
 
-                when (verifiablePresentation) {
-                    is VerifiablePresentation.Str -> {
-                        sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
-                            .fold(
-                                onSuccess = { verifiablePresentation },
-                                onFailure = {
-                                    log.warn("Failed to validate SD-JWT VC", it)
-                                    throw IllegalArgumentException("Invalid SdJwtVc", it)
-                                },
-                            )
-                    }
+            Format.MsoMdoc ->
+                validateMsoMdocVerifiablePresentation(verifiablePresentation)
 
-                    is VerifiablePresentation.Json -> {
-                        sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
-                            .fold(
-                                onSuccess = { verifiablePresentation },
-                                onFailure = {
-                                    log.warn("Failed to validate SD-JWT VC", it)
-                                    throw IllegalArgumentException("Invalid SdJwtVc", it)
-                                },
-                            )
-                    }
-                }
-            }
-
-            Format.MsoMdoc -> {
-                require(verifiablePresentation is VerifiablePresentation.Str)
-                deviceResponseValidator.ensureValid(verifiablePresentation.value)
-                    .fold(
-                        ifLeft = {
-                            log.warn("Failed to validate MsoMdoc VC. Reason: '$it'")
-                            throw IllegalArgumentException("Invalid MsoMdoc DeviceResponse: '$it'")
-                        },
-                        ifRight = { verifiablePresentation },
-                    )
-            }
-
-            else -> verifiablePresentation
+            else ->
+                verifiablePresentation
         }
+    }
+
+    private suspend fun validateSdJwtVcVerifiablePresentation(
+        verifiablePresentation: VerifiablePresentation,
+        nonce: Nonce,
+        transactionData: NonEmptyList<TransactionData>?,
+    ): VerifiablePresentation {
+        val challenge = buildJsonObject {
+            put(RFC7519.AUDIENCE, config.verifierId.clientId)
+            put("nonce", nonce.value)
+        }
+
+        val kbJwt = when (verifiablePresentation) {
+            is VerifiablePresentation.Str -> {
+                sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
+                    .getOrElse {
+                        log.warn("Failed to validate SD-JWT VC", it)
+                        throw IllegalArgumentException("Invalid SdJwtVc", it)
+                    }
+                    .keyBindingJwt
+            }
+
+            is VerifiablePresentation.Json -> {
+                sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
+                    .getOrElse {
+                        log.warn("Failed to validate SD-JWT VC", it)
+                        throw IllegalArgumentException("Invalid SdJwtVc", it)
+                    }
+                    .keyBindingJwt
+            }
+        }
+
+        transactionData?.let {
+            validateTransactionDataHashes(kbJwt, transactionData, config.transactionDataHashAlgorithm)
+        }
+
+        return verifiablePresentation
+    }
+
+    private fun validateMsoMdocVerifiablePresentation(
+        verifiablePresentation: VerifiablePresentation,
+    ): VerifiablePresentation.Str {
+        require(verifiablePresentation is VerifiablePresentation.Str)
+        return deviceResponseValidator.ensureValid(verifiablePresentation.value)
+            .fold(
+                ifLeft = {
+                    log.warn("Failed to validate MsoMdoc VC. Reason: '$it'")
+                    throw IllegalArgumentException("Invalid MsoMdoc DeviceResponse: '$it'")
+                },
+                ifRight = { verifiablePresentation },
+            )
+    }
+}
+
+private fun validateTransactionDataHashes(
+    keyBindingJwt: SignedJWT,
+    transactionData: NonEmptyList<TransactionData>,
+    hashAlgorithm: HashAlgorithm,
+) {
+    val actualHashAlgorithm = keyBindingJwt.jwtClaimsSet.getStringClaim("transaction_data_hashes_alg")
+    require(hashAlgorithm.ianaName == actualHashAlgorithm) {
+        "'transaction_data_hashes_alg' must be '${hashAlgorithm.ianaName}'"
+    }
+
+    val expectedHashes = transactionData.map {
+        val hash = hash(it.base64Url, hashAlgorithm)
+        base64UrlNoPadding.encode(hash)
+    }
+    val actualHashes = keyBindingJwt.jwtClaimsSet.getStringListClaim("transaction_data_hashes")
+    require(actualHashes.isNotEmpty() && actualHashes.size <= expectedHashes.size && expectedHashes.containsAll(actualHashes)) {
+        "hashes of transaction data do not match the expected values"
     }
 }
