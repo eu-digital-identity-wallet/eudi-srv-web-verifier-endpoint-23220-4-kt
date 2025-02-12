@@ -155,7 +155,7 @@ sealed interface VerifierId {
             }
         }
 
-        override val clientId: ClientId = "x509_san_dns:$originalClientId"
+        override val clientId: ClientId = originalClientId
     }
 
     /**
