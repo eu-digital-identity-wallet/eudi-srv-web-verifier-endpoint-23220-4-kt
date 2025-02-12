@@ -62,9 +62,6 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         val challenge = buildJsonObject {
             put(RFC7519.AUDIENCE, config.verifierId.clientId)
             put("nonce", nonce.value)
-            if (transactionData != null) {
-                put("transaction_data_hashes_alg", config.transactionDataHashAlgorithm.ianaName)
-            }
         }
 
         val kbJwt = when (verifiablePresentation) {
@@ -87,15 +84,8 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             }
         }
 
-        if (transactionData != null) {
-            val expectedHashes = transactionData.map {
-                val hash = hash(it.base64Url, config.transactionDataHashAlgorithm)
-                base64UrlNoPadding.encode(hash)
-            }
-            val actualHashes = kbJwt.jwtClaimsSet.getStringListClaim("transaction_data_hashes")
-            require(expectedHashes.size == actualHashes.size && expectedHashes.containsAll(actualHashes)) {
-                "hashes of transaction data do not match the expected values"
-            }
+        transactionData?.let {
+            validateTransactionDataHashes(kbJwt, transactionData, config.transactionDataHashAlgorithm)
         }
 
         return verifiablePresentation
@@ -113,5 +103,25 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 },
                 ifRight = { verifiablePresentation },
             )
+    }
+}
+
+private fun validateTransactionDataHashes(
+    keyBindingJwt: SignedJWT,
+    transactionData: NonEmptyList<TransactionData>,
+    hashAlgorithm: HashAlgorithm,
+) {
+    val actualHashAlgorithm = keyBindingJwt.jwtClaimsSet.getStringClaim("transaction_data_hashes_alg")
+    require(hashAlgorithm.ianaName == actualHashAlgorithm) {
+        "'transaction_data_hashes_alg' must be '${hashAlgorithm.ianaName}'"
+    }
+
+    val expectedHashes = transactionData.map {
+        val hash = hash(it.base64Url, hashAlgorithm)
+        base64UrlNoPadding.encode(hash)
+    }
+    val actualHashes = keyBindingJwt.jwtClaimsSet.getStringListClaim("transaction_data_hashes")
+    require(actualHashes.isNotEmpty() && actualHashes.size <= expectedHashes.size && expectedHashes.containsAll(actualHashes)) {
+        "hashes of transaction data do not match the expected values"
     }
 }
