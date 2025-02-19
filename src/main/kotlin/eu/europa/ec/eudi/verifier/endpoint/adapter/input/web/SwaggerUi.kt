@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -52,6 +53,7 @@ internal class SwaggerUi(
                     model = mapOf(
                         "publicResourcesBasePath" to publicResourcesBasePath,
                         "webJarResourcesBasePath" to webJarResourcesBasePath,
+                        "openid4VpVersion" to OpenId4VPSpec.VERSION,
                     ),
                 )
         }

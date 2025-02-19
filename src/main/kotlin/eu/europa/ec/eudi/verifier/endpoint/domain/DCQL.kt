@@ -24,29 +24,6 @@ import kotlinx.serialization.json.*
 
 // Copied from eudi-lib-jvm-siop-openid4vp-kt
 
-object OpenId4VPSpec {
-    const val FORMAT_MSO_MDOC: String = "mso_mdoc"
-    const val FORMAT_SD_JWT_VC: String = "dc+sd-jwt"
-    const val FORMAT_W3C_SIGNED_JWT: String = "jwt_vc_json"
-
-    const val DCQL_CREDENTIALS: String = "credentials"
-    const val DCQL_CREDENTIAL_SETS: String = "credential_sets"
-    const val DCQL_ID: String = "id"
-    const val DCQL_FORMAT: String = "format"
-    const val DCQL_META: String = "meta"
-    const val DCQL_CLAIMS: String = "claims"
-    const val DCQL_CLAIM_SETS: String = "claim_sets"
-    const val DCQL_OPTIONS: String = "options"
-    const val DCQL_REQUIRED: String = "required"
-    const val DCQL_PURPOSE: String = "purpose"
-    const val DCQL_PATH: String = "path"
-    const val DCQL_VALUES: String = "values"
-    const val DCQL_SD_JWT_VC_VCT_VALUES: String = "vct_values"
-    const val DCQL_MSO_MDOC_DOCTYPE_VALUE: String = "doctype_value"
-    const val DCQL_MSO_MDOC_NAMESPACE: String = "namespace"
-    const val DCQL_MSO_MDOC_CLAIM_NAME: String = "claim_name"
-}
-
 @Serializable
 @JvmInline
 value class Format(val value: String) {
