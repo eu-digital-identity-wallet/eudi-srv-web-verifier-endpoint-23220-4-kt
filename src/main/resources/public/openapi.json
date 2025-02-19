@@ -220,6 +220,35 @@
         }
       }
     },
+    "/ui/metadata": {
+      "get": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Get the metadata of the Verifier Endpoint.",
+        "operationId": "getVerifierEndpointMetadata",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Metadata"
+                },
+                "examples": {
+                  "Metadata": {
+                    "$ref": "#/components/examples/Metadata"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error."
+          }
+        }
+      }
+    },
     "/utilities/validations/msoMdoc/deviceResponse": {
       "post": {
         "tags": [
@@ -1359,6 +1388,20 @@
           "IsUnparsable",
           "Other"
         ]
+      },
+      "Metadata": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "openid4vp_version": {
+            "type": "string",
+            "nullable": false
+          }
+        },
+        "required": [
+          "openid4vp_version"
+        ],
+        "additionalProperties": false
       }
     },
     "examples": {
@@ -1994,6 +2037,12 @@
           "administrative_number": "888adb27-d4d5-4004-8c71-97f61273c203",
           "given_name": "Tyler",
           "issuing_jurisdiction": "GR-I"
+        }
+      },
+      "Metadata": {
+        "description": "Verifier Endpoint Metadata",
+        "value": {
+          "openid4vp_version": "draft 23"
         }
       }
     }

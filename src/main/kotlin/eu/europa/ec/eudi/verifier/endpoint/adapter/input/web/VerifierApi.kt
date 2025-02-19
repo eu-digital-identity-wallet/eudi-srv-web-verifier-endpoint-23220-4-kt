@@ -15,13 +15,18 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.http.CacheControl
+import org.springframework.http.MediaType.ALL
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
@@ -43,6 +48,7 @@ internal class VerifierApi(
         )
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
         GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
+        GET(METADATA_PATH, contentType(ALL) and accept(APPLICATION_JSON), this@VerifierApi::handleGetVerifierEndpointMetadata)
     }
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
@@ -95,10 +101,24 @@ internal class VerifierApi(
         }
     }
 
+    /**
+     * Handles a request to get the metadata of Verifier Endpoint.
+     */
+    private suspend fun handleGetVerifierEndpointMetadata(request: ServerRequest): ServerResponse =
+        ok()
+            .json()
+            .cacheControl(CacheControl.noStore())
+            .bodyValueAndAwait(
+                buildJsonObject {
+                    put("openid4vp_version", OpenId4VPSpec.VERSION)
+                },
+            )
+
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
+        const val METADATA_PATH = "/ui/metadata"
 
         /**
          * Extracts from the request the [RequestId]
