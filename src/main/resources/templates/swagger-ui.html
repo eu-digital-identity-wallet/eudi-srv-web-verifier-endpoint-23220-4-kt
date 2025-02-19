@@ -1,5 +1,6 @@
 <!--/*@thymesVar id="publicResourcesBasePath" type="java.lang.String"*/-->
 <!--/*@thymesVar id="webJarResourcesBasePath" type="java.lang.String"*/-->
+<!--/*@thymesVar id="openid4VpVersion" type="kotlin.String"*/-->
 
 <!DOCTYPE html>
 
@@ -9,6 +10,7 @@
     <meta charset="UTF-8">
     <title>Swagger UI</title>
     <link rel="stylesheet" type="text/css" th:href="@{${webJarResourcesBasePath} + '/swagger-ui/swagger-ui.css'}"/>
+    <link rel="stylesheet" type="text/css" th:href="@{${publicResourcesBasePath} + '/css/style.css'}"/>
     <link rel="icon" type="image/png" th:href="@{${webJarResourcesBasePath} + '/swagger-ui/favicon-32x32.png'}" sizes="32x32"/>
     <link rel="icon" type="image/png" th:href="@{${webJarResourcesBasePath} + '/swagger-ui/favicon-16x16.png'}" sizes="16x16"/>
 </head>
@@ -18,7 +20,7 @@
 <script type="application/javascript" th:src="@{${webJarResourcesBasePath} + '/swagger-ui/swagger-ui-standalone-preset.js'}" charset="UTF-8"></script>
 <script type="application/javascript" th:inline="javascript" charset="UTF-8">
     /*<![CDATA[*/
-    window.onload = function() {
+    window.addEventListener("load", () => {
         window.ui = SwaggerUIBundle({
             url: "[(@{${publicResourcesBasePath} + '/openapi.json'})]",
             dom_id: '#swagger-ui',
@@ -32,7 +34,25 @@
             ],
             layout: "StandaloneLayout"
         });
-    };
+    });
+    /*]]>*/
+</script>
+<script type="application/javascript" th:inline="javascript" charset="UTF-8" th:unless="${#strings.isEmpty(openid4VpVersion)}">
+    /*<![CDATA[*/
+    window.addEventListener("load", () => {
+        const addSpecVersion = setInterval(() => {
+            const titleElements = document.getElementsByClassName("title");
+            if (!!titleElements && titleElements.length > 0) {
+                clearInterval(addSpecVersion);
+
+                const titleElement = titleElements[0];
+                const openid4VpVersionElement = titleElement.cloneNode(false);
+                openid4VpVersionElement.textContent = "[(#{openid4vp-version(${openid4VpVersion})})]"
+
+                titleElement.parentNode.insertBefore(openid4VpVersionElement, titleElement.nextSibling);
+            }
+        }, 100);
+    });
     /*]]>*/
 </script>
 </body>
