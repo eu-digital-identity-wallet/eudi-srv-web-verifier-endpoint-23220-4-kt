@@ -18,7 +18,6 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 
 fun interface VerifyJarmJwtSignature {
@@ -27,6 +26,5 @@ fun interface VerifyJarmJwtSignature {
         jarmOption: JarmOption,
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         jarmJwt: Jwt,
-        apv: Nonce,
     ): Result<AuthorisationResponseTO>
 }

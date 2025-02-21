@@ -16,10 +16,8 @@ sonarqube = "6.0.0.5145"
 dependencycheck = "11.1.0"
 jacoco = "0.8.11"
 swaggerUi = "5.18.2"
-waltid = "0.11.0"
-sdJwt = "0.10.0"
-ktor = "3.0.1"
-jsonpathkt = "2.0.1"
+waltid = "0.9.0"
+sdJwt = "0.9.0"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -32,8 +30,6 @@ arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref 
 swagger-ui = { module = "org.webjars:swagger-ui", version.ref = "swaggerUi" }
 waltid-mdoc-credentials = { module = "id.walt.mdoc-credentials:waltid-mdoc-credentials-jvm", version.ref = "waltid" }
 sd-jwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sdJwt" }
-ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
-jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }

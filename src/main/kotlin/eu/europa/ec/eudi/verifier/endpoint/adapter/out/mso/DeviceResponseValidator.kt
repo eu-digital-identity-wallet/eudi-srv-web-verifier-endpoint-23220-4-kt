@@ -78,7 +78,7 @@ class DeviceResponseValidator(
 
 private fun Raise<DeviceResponseError.CannotBeDecoded>.ensureCanBeDecoded(vp: String): DeviceResponse =
     try {
-        DeviceResponse.decodeFromCborBase64Url(vp)
+        DeviceResponse.fromCBORBase64URL(vp)
     } catch (t: Throwable) {
         raise(DeviceResponseError.CannotBeDecoded)
     }

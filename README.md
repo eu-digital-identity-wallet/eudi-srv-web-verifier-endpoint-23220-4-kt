@@ -154,10 +154,8 @@ sequenceDiagram
     
     W->>W: Parse authorization request
     
-    opt
-        W->>+VE: Get presentation definition 
-        VE-->>-W: presentation_definition
-    end
+    W->>+VE: Get presentation definition 
+    VE-->>-W: presentation_definition
     
     W->>W: Prepare response     
     
@@ -203,10 +201,8 @@ sequenceDiagram
     
     W->>W: Parse authorization request
     
-    opt
-        W->>+VE: Get presentation definition 
-        VE-->>-W: presentation_definition
-    end
+    W->>+VE: Get presentation definition 
+    VE-->>-W: presentation_definition
     
     W->>W: Prepare response     
     
@@ -249,8 +245,7 @@ This identifier is used in the [WalletApi](src/main/kotlin/eu/europa/ec/eudi/ver
 An endpoint to control the content of the authorization request that will be prepared from the verifier backend service. Payload of this request is a json object with the following acceptable attributes:
 - `type`: The type of the response to the authorization request. Allowed values are one of: `id_token`, `vp_token` or `vp_token id_token`.
 - `id_token_type`: In case type is `id_token` controls the type of id_token that will be requested from wallet. Allowed values are one of `subject_signed_id_token` or `attester_signed_id_token`. 
-- `presentation_definition`: A json object depicting the presentation definition to be included in the OpenId4VP authorization request in case `type` is 'vp_token', or 'vp_token id_token'. 
-- `dcql_query`: A json object depicting the query, expressed using DCQL, to be included in the OpenId4VP authorization request in case `type` is 'vp_token', or 'vp_token id_token'. 
+- `presentation_definition`: A json object that depicting the presentation definition to be included in the OpenId4VP authorization request in case `type` is 'vp_token'. 
 - `nonce`: Nonce value to be included in the OpenId4VP authorization request.
 - `response_mode`: Controls the `response_mode` attribute of the OpenId4VP authorization request. Allowed values are one of `direct_post` or `direct_post.jwt`.  
 - `jar_mode`: Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if `by_reference` a `request_uri` url will be returned.  
@@ -258,9 +253,6 @@ An endpoint to control the content of the authorization request that will be pre
 - `wallet_response_redirect_uri_template`: If provided will be used to construct the response to wallet, when it posts its response to the authorization request.   
 
 **Usage:**
-
-Using Presentation Exchange:
-
 ```bash
 curl -X POST -H "Content-type: application/json" -d '{
   "type": "vp_token",  
@@ -273,12 +265,12 @@ curl -X POST -H "Content-type: application/json" -d '{
                         {
                             "intent_to_retain": false,
                             "path": [
-                                "$['eu.europa.ec.eudi.pid.1']['family_name']"
+                                "$['eu.europa.ec.eudiw.pid.1']['family_name']"
                             ]
                         }
                     ]
                 },
-                "id": "eu.europa.ec.eudi.pid.1",
+                "id": "eu.europa.ec.eudiw.pid.1",
                 "format": {
                   "mso_mdoc": {
                     "alg": [
@@ -293,44 +285,7 @@ curl -X POST -H "Content-type: application/json" -d '{
                 "purpose": "We need to verify your identity"
             }
         ]
-  },
-  "dcql_query": null,
-  "nonce": "nonce"
-}' 'http://localhost:8080/ui/presentations'
-```
-
-Using DCQL:
-
-```bash
-curl -X POST -H "Content-type: application/json" -d '{
-  "type": "vp_token",  
-  "dcql_query": {
-    "credentials": [
-      {
-        "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
-        "format": "mso_mdoc",
-        "meta": {
-          "doctype_value": "eu.europa.ec.eudi.pid.1"
-        },
-        "claims": [
-          {
-            "namespace": "eu.europa.ec.eudi.pid.1",
-            "claim_name": "family_name"
-          }
-        ]
-      }
-    ],
-    "credential_sets": [
-      {
-        "options": [
-          [
-            "32f54163-7166-48f1-93d8-ff217bdb0653"
-          ]
-        ],
-        "purpose": "We need to verify your identity"
-      }
-    ]
-  },
+    },
   "nonce": "nonce"
 }' 'http://localhost:8080/ui/presentations'
 ```
@@ -339,7 +294,7 @@ curl -X POST -H "Content-type: application/json" -d '{
 ```json
 {
   "transaction_id": "STMMbidoCQTtyk9id5IcoL8CqdC8rxgks5FF8cqqUrHvw0IL3AaIHGnwxvrvcEyUJ6uUPNdoBQDa7yCqpjtKaw",
-  "client_id": "x509_san_dns:localhost",
+  "client_id": "dev.verifier-backend.eudiw.dev",
   "request_uri": "https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw"
 }
 ```
@@ -395,7 +350,7 @@ A form post (application/x-www-form-urlencoded encoding) with the following form
 - `state`: The state claim included in the authorization request JWT. Its value matches the authorization request identifier.  
 - `id_token`: The requested id_token if authorization request 'response_type' attribute contains `id_token`.
 - `vp_token`: The requested vp_token if authorization request 'response_type' attribute contains `vp_token`.
-- `presentation_submission`: The presentation submission accompanying the vp_token in case 'response_type' attribute of authorization request contains `vp_token` (applicable only when using Presentation Exchange).
+- `presentation_submission`: The presentation submission accompanying the vp_token in case 'response_type' attribute of authorization request contains `vp_token`.
 
 _**response_mode = direct_post.jwt**_
 
@@ -404,9 +359,6 @@ A form post (application/x-www-form-urlencoded encoding) with the following form
 - `response`: A string representing an encrypted JWT (JWE) that contains as claims the form parameters mentioned in the case above    
 
 **Usage:**
-
-Using Presentation Exchange:
-
 ```bash
 STATE=IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA
 curl -v -X POST 'http://localhost:8080/wallet/direct_post' \
@@ -428,18 +380,6 @@ curl -v -X POST 'http://localhost:8080/wallet/direct_post' \
 }
 EOF
 ```
-
-Using DCQL:
-
-```bash
-STATE=IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA
-curl -v -X POST 'http://localhost:8080/wallet/direct_post' \
-  -H "Content-type: application/x-www-form-urlencoded" \
-  -H "Accept: application/json" \
-  --data-urlencode "state=$STATE" \
-  --data-urlencode 'vp_token={"32f54163-7166-48f1-93d8-ff217bdb0653": {"id": "123456"}}'
-```
-
 **Returns:**
 
 * Same device case
@@ -557,8 +497,8 @@ Variable: `SERVER_PORT`
 Description: Port for the HTTP listener of the Verifier Endpoint application  
 Default value: `8080`
 
-Variable: `VERIFIER_ORIGINALCLIENTID`  
-Description: Client Id of the Verifier Endpoint application **without** the Client Id Scheme prefix   
+Variable: `VERIFIER_CLIENTID`  
+Description: Client Id of the Verifier Endpoint application  
 Default value: `Verifier`
 
 Variable: `VERIFIER_CLIENTIDSCHEME`  
@@ -571,12 +511,12 @@ Description: Algorithm used to sign Authorization Request
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms   
 Note: The configured signing algorithm must be compatible with the configured signing key  
-Default value: `ES256`
+Default value: `RS256`
 
 Variable: `VERIFIER_JAR_SIGNING_KEY`  
 Description: Key to use for Authorization Request signing  
 Possible values: `GenerateRandom`, `LoadFromKeystore`  
-Setting this value to `GenerateRandom` will result in the generation of a random `EC` key using the curve `P-256`   
+Setting this value to `GenerateRandom` will result in the generation of a random `RSA` key   
 Note: The configured signing key must be compatible with the configured signing algorithm  
 Default value: `GenerateRandom`
 

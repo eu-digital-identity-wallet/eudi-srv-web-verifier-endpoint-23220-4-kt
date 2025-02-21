@@ -69,7 +69,7 @@ object TestContext {
         jarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, "A256GCM")!!,
     )
     private val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
-    val verifierId = VerifierId.X509SanDns("client-id", jarSigningConfig)
+    val clientIdScheme = ClientIdScheme.X509SanDns("client-id", jarSigningConfig)
     val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus()
     val singRequestObjectVerifier = RSASSAVerifier(rsaJwk)
     private val repo = PresentationInMemoryRepo()

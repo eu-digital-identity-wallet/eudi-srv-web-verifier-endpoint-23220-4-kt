@@ -44,21 +44,21 @@ data class WalletResponseTO(
 internal fun WalletResponse.toTO(): WalletResponseTO {
     fun VerifiablePresentation.toJsonElement(): JsonElement =
         when (this) {
-            is VerifiablePresentation.Str -> JsonPrimitive(value)
+            is VerifiablePresentation.Generic -> JsonPrimitive(value)
             is VerifiablePresentation.Json -> value
         }
 
     return when (this) {
         is WalletResponse.IdToken -> WalletResponseTO(idToken = idToken)
         is WalletResponse.VpToken -> WalletResponseTO(
-            vpToken = JsonArray(vpContent.verifiablePresentations().map { it.toJsonElement() }),
-            presentationSubmission = vpContent.presentationSubmissionOrNull(),
+            vpToken = JsonArray(vpToken.map { it.toJsonElement() }),
+            presentationSubmission = presentationSubmission,
         )
 
         is WalletResponse.IdAndVpToken -> WalletResponseTO(
             idToken = idToken,
-            vpToken = JsonArray(vpContent.verifiablePresentations().map { it.toJsonElement() }),
-            presentationSubmission = vpContent.presentationSubmissionOrNull(),
+            vpToken = JsonArray(vpToken.map { it.toJsonElement() }),
+            presentationSubmission = presentationSubmission,
         )
 
         is WalletResponse.Error -> WalletResponseTO(

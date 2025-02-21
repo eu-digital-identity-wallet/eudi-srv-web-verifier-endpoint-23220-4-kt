@@ -3,9 +3,9 @@
   "definition_id": "32f54163-7166-48f1-93d8-ff217bdb0653",
   "descriptor_map": [
     {
-      "id": "wa_driver_license",
-      "format": "jwt_vc_json",
-      "path": "$"
+      "id": "employment_input",
+      "format": "jwt_vc",
+      "path": "$.verifiableCredential[0]"
     }
   ]
 }

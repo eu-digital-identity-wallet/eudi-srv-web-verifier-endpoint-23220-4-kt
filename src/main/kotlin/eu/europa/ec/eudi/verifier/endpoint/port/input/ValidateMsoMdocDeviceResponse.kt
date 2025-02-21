@@ -16,10 +16,8 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.NonEmptyList
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.*
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
 import kotlinx.datetime.atStartOfDayIn
@@ -27,6 +25,7 @@ import kotlinx.datetime.toKotlinTimeZone
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
+import java.security.KeyStore
 import java.time.Clock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -116,8 +115,26 @@ internal sealed interface DeviceResponseValidationResult {
  */
 internal class ValidateMsoMdocDeviceResponse(
     private val clock: Clock,
-    private val defaultValidator: DeviceResponseValidator,
+    trustedIssuers: KeyStore?,
 ) {
+    private val defaultValidator: DeviceResponseValidator by lazy {
+        val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
+        val docValidator = DocumentValidator(
+            clock = clock,
+            issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
+            validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
+            x5CShouldBe = x5cShouldBe,
+        )
+
+        log.info(
+            "Created DocumentValidator using: \n\t" +
+                "IssuerSignedItemsShouldBe: '${IssuerSignedItemsShouldBe.Verified}', \n\t" +
+                "ValidityInfoShouldBe: '${ValidityInfoShouldBe.NotExpired}', and \n\t" +
+                "X5CShouldBe '$x5cShouldBe'",
+        )
+        DeviceResponseValidator(docValidator)
+    }
+
     operator fun invoke(deviceResponse: String): DeviceResponseValidationResult =
         defaultValidator.ensureValid(deviceResponse)
             .fold(

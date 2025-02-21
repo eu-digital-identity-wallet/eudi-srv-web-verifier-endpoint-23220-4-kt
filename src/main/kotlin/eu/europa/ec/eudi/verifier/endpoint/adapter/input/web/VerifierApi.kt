@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.raise.either
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
@@ -48,7 +49,7 @@ internal class VerifierApi(
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
         val input = req.awaitBody<InitTransactionTO>()
         logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
-        initTransaction(input).fold(
+        either { initTransaction(input) }.fold(
             ifRight = {
                 logger.info("Initiated transaction tx ${it.transactionId}")
                 ok().json().bodyValueAndAwait(it)

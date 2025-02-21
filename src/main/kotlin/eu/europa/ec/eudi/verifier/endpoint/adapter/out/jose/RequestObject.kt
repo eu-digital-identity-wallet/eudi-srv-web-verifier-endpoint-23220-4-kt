@@ -22,11 +22,10 @@ import java.time.Clock
 import java.time.Instant
 
 internal data class RequestObject(
-    val verifierId: VerifierId,
+    val clientIdScheme: ClientIdScheme,
     val responseType: List<String>,
     val presentationDefinitionUri: URL?,
     val presentationDefinition: PresentationDefinition? = null,
-    val dcqlQuery: DCQL? = null,
     val scope: List<String>,
     val idTokenType: List<String>,
     val nonce: String,
@@ -83,12 +82,11 @@ internal fun requestObjectFromDomain(
     }
 
     return RequestObject(
-        verifierId = verifierConfig.verifierId,
+        clientIdScheme = verifierConfig.clientIdScheme,
         scope = scope,
         idTokenType = idTokenType,
         presentationDefinitionUri = presentationDefinitionUri,
         presentationDefinition = presentationDefinition,
-        dcqlQuery = type.dcqlQueryOrNull,
         responseType = responseType,
         aud = aud,
         nonce = presentation.nonce.value,

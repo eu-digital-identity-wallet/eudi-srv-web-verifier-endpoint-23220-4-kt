@@ -23,32 +23,20 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.nimbusds.jose.util.Base64
-import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps
-import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
-import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
-import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -161,51 +149,13 @@ internal fun beans(clock: Clock) = beans {
     }
 
     bean { GenerateResponseCode.Random }
-    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref(), ref(), ref()) }
+    bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref(), ref()) }
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
     bean { GetWalletResponseLive(clock, ref(), ref()) }
     bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
-    bean<DeviceResponseValidator> {
-        val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
-        val docValidator = DocumentValidator(
-            clock = clock,
-            issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
-            validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-            x5CShouldBe = x5cShouldBe,
-        )
-
-        log.info(
-            "Created DocumentValidator using: \n\t" +
-                "IssuerSignedItemsShouldBe: '${IssuerSignedItemsShouldBe.Verified}', \n\t" +
-                "ValidityInfoShouldBe: '${ValidityInfoShouldBe.NotExpired}', and \n\t" +
-                "X5CShouldBe '$x5cShouldBe'",
-        )
-        DeviceResponseValidator(docValidator)
-    }
-    bean<SdJwtVcVerifier<SignedJWT>> {
-        val x5CShouldBe = trustedIssuers?.let {
-            X5CShouldBe.fromKeystore(it) {
-                isRevocationEnabled = false
-            }
-        } ?: X5CShouldBe.Ignored
-        val x5cValidator = X5CValidator(x5CShouldBe)
-        val x509CertificateTrust = X509CertificateTrust { chain ->
-            chain.toNonEmptyListOrNull()?.let {
-                x5cValidator.ensureTrusted(it).fold(
-                    ifLeft = { _ -> false },
-                    ifRight = { _ -> true },
-                )
-            } ?: false
-        }
-        NimbusSdJwtOps.SdJwtVcVerifier.usingX5cOrIssuerMetadata(
-            x509CertificateTrust = x509CertificateTrust,
-            httpClientFactory = DefaultHttpClientFactory,
-        )
-    }
-    bean { ValidateMsoMdocDeviceResponse(clock, ref()) }
-    bean { ValidateSdJwtVc(ref(), ref<VerifierConfig>().verifierId.clientId) }
-    bean { ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref<VerifierConfig>().verifierId, ref(), ref()) }
+    bean { ValidateMsoMdocDeviceResponse(clock, trustedIssuers) }
+    bean { ValidateSdJwtVc(trustedIssuers, env.publicUrl()) }
 
     //
     // Scheduled
@@ -228,7 +178,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref(),
             ref(),
-            ref<VerifierConfig>().verifierId.jarSigning.key,
+            ref<VerifierConfig>().clientIdScheme.jarSigning.key,
         )
         val verifierApi = VerifierApi(ref(), ref(), ref())
         val staticContent = StaticContent()
@@ -349,8 +299,8 @@ private fun jarSigningConfig(environment: Environment, clock: Clock): SigningCon
             }
         }
 
-        fun generateRandom(): ECKey =
-            ECKeyGenerator(Curve.P_256)
+        fun generateRandom(): RSAKey =
+            RSAKeyGenerator(4096, false)
                 .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
                 .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
                 .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
@@ -362,24 +312,24 @@ private fun jarSigningConfig(environment: Environment, clock: Clock): SigningCon
         }
     }
 
-    val algorithm = environment.getProperty("verifier.jar.signing.algorithm", "ES256").let(JWSAlgorithm::parse)
+    val algorithm = environment.getProperty("verifier.jar.signing.algorithm", "RS256").let(JWSAlgorithm::parse)
 
     return SigningConfig(key, algorithm)
 }
 
 private fun verifierConfig(environment: Environment, clock: Clock): VerifierConfig {
-    val verifierId = run {
-        val originalClientId = environment.getProperty("verifier.originalClientId", "verifier")
+    val clientIdScheme = run {
+        val clientId = environment.getProperty("verifier.clientId", "verifier")
         val jarSigning = jarSigningConfig(environment, clock)
 
         val factory =
             when (val clientIdScheme = environment.getProperty("verifier.clientIdScheme", "pre-registered")) {
-                "pre-registered" -> VerifierId::PreRegistered
-                "x509_san_dns" -> VerifierId::X509SanDns
-                "x509_san_uri" -> VerifierId::X509SanUri
+                "pre-registered" -> ClientIdScheme::PreRegistered
+                "x509_san_dns" -> ClientIdScheme::X509SanDns
+                "x509_san_uri" -> ClientIdScheme::X509SanUri
                 else -> error("Unknown clientIdScheme '$clientIdScheme'")
             }
-        factory(originalClientId, jarSigning)
+        factory(clientId, jarSigning)
     }
 
     val publicUrl = environment.publicUrl()
@@ -403,10 +353,10 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
     val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofMinutes(5)
 
     return VerifierConfig(
-        verifierId = verifierId,
+        clientIdScheme = clientIdScheme,
         requestJarOption = requestJarOption,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
-        responseUriBuilder = WalletApi.directPost(publicUrl),
+        responseUriBuilder = { WalletApi.directPost(publicUrl) },
         responseModeOption = responseModeOption,
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(publicUrl),

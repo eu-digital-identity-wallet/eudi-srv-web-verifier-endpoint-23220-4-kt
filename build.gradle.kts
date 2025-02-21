@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.owasp.dependencycheck.gradle.extension.DependencyCheckExtension
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
@@ -51,12 +50,6 @@ dependencies {
         because("required by walt.id")
     }
     implementation(libs.sd.jwt)
-    implementation(libs.ktor.client.java) {
-        because("ktor client engine to use (required by SdJwtVcVerifier)")
-    }
-    implementation(libs.jsonpathkt) {
-        because("Evaluate JsonPaths on vp_token")
-    }
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)
@@ -71,15 +64,12 @@ java {
 kotlin {
 
     jvmToolchain {
-        languageVersion = JavaLanguageVersion.of(libs.versions.java.get())
+        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
     }
 
     compilerOptions {
-        apiVersion = KotlinVersion.KOTLIN_2_0
-        optIn = listOf(
-            "kotlinx.serialization.ExperimentalSerializationApi",
-            "kotlin.io.encoding.ExperimentalEncodingApi",
-        )
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        freeCompilerArgs.add("-Xcontext-receivers")
         freeCompilerArgs.add("-Xjsr305=strict")
     }
 }

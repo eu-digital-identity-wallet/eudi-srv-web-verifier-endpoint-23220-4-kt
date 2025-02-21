@@ -27,7 +27,6 @@ import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
@@ -56,12 +55,12 @@ class SignRequestObjectNimbus : SignRequestObject {
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
     ): Result<Jwt> = runCatching {
-        val (key, algorithm) = requestObject.verifierId.jarSigning
+        val (key, algorithm) = requestObject.clientIdScheme.jarSigning
         val header = JWSHeader.Builder(algorithm)
             .apply {
-                when (requestObject.verifierId) {
-                    is VerifierId.PreRegistered -> keyID(key.keyID)
-                    is VerifierId.X509SanDns, is VerifierId.X509SanUri -> x509CertChain(key.x509CertChain)
+                when (requestObject.clientIdScheme) {
+                    is ClientIdScheme.PreRegistered -> keyID(key.keyID)
+                    is ClientIdScheme.X509SanDns, is ClientIdScheme.X509SanUri -> x509CertChain(key.x509CertChain)
                 }
             }
             .type(JOSEObjectType(AuthReqJwt))
@@ -79,7 +78,7 @@ class SignRequestObjectNimbus : SignRequestObject {
      */
     private fun asClaimSet(clientMetaData: OIDCClientMetadata?, r: RequestObject): JWTClaimsSet {
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
-        val clientId = ClientID(r.verifierId.clientId)
+        val clientId = ClientID(r.clientIdScheme.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
         val state = State(r.state)
 
@@ -97,6 +96,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             issueTime(Date.from(r.issuedAt))
             audience(r.aud)
             claim("nonce", r.nonce)
+            claim("client_id_scheme", r.clientIdScheme.name)
             optionalClaim(
                 "id_token_type",
                 if (r.idTokenType.isEmpty()) {
@@ -110,8 +110,6 @@ class SignRequestObjectNimbus : SignRequestObject {
             optionalClaim("client_metadata", clientMetaData?.toJSONObject())
             optionalClaim("response_uri", r.responseUri?.toExternalForm())
             optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
-            optionalClaim("dcql_query", r.dcqlQuery?.toJackson())
-            optionalClaim("client_id_scheme", "x509_san_dns")
             build()
         }
     }
@@ -136,7 +134,6 @@ class SignRequestObjectNimbus : SignRequestObject {
             jwkSet?.let { this.jwkSet = it }
             jwkSetUri?.let { this.jwkSetURI = it.toURI() }
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
-            setCustomField("client_id_scheme", "x509_san_dns")
 
             if ("direct_post.jwt" == responseMode) {
                 c.jarmOption.jwsAlg?.let { setCustomField("authorization_signed_response_alg", it) }
