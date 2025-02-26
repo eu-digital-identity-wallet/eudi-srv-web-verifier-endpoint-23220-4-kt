@@ -78,8 +78,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 
         @Bean
         @Primary
-        fun validateVerifiablePresentation(): ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { verifiablePresentation, _, _ -> Result.success(verifiablePresentation) }
+        fun validateVerifiablePresentation(): ValidateVerifiablePresentation = ValidateVerifiablePresentation.NoOp
     }
 
     /**

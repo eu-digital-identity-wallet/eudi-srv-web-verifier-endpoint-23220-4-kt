@@ -19,6 +19,7 @@ import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionData
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
+import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormat
 
 /**
  * Validates Verifiable Presentations.
@@ -32,14 +33,13 @@ fun interface ValidateVerifiablePresentation {
 
     suspend operator fun invoke(
         verifiablePresentation: VerifiablePresentation,
+        vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
     ): Result<VerifiablePresentation>
 
     companion object {
         val NoOp: ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { verifiablePresentation, _, _ ->
-                Result.success(verifiablePresentation)
-            }
+            ValidateVerifiablePresentation { verifiablePresentation, _, _, _ -> Result.success(verifiablePresentation) }
     }
 }

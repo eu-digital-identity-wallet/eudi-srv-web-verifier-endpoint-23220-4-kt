@@ -15,4 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.collection
 
-internal inline fun <reified U> Iterable<*>.firstIsOrNull(): U? = firstOrNull { it is U }?.let { it as U }
+internal inline fun <reified U> Iterable<*>.firstIs(): U = filterIsInstance<U>().first()
+
+internal inline fun <reified U> Iterable<*>.firstIsOrNull(): U? = filterIsInstance<U>().firstOrNull()

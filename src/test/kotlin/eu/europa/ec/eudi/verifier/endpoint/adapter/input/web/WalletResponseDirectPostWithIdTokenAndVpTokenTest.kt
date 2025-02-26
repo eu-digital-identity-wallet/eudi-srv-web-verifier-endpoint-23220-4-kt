@@ -63,8 +63,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
         @Bean
         @Primary
-        fun validateVerifiablePresentation(): ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { verifiablePresentation, _, _ -> Result.success(verifiablePresentation) }
+        fun validateVerifiablePresentation(): ValidateVerifiablePresentation = ValidateVerifiablePresentation.NoOp
     }
 
     /**

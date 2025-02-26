@@ -24,7 +24,11 @@ import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.collection.firstIs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.JsonPathReader
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange.MsoMdocFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
@@ -84,6 +88,7 @@ sealed interface WalletResponseValidationError {
 private suspend fun AuthorisationResponseTO.toDomain(
     presentation: RequestObjectRetrieved,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
+    vpFormats: NonEmptyList<VpFormat>,
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
@@ -95,6 +100,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
                     presentation.nonce,
                     presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
+                    vpFormats,
                 )
             is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
                 dcqlVpContent(
@@ -102,6 +108,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
                     presentation.nonce,
                     presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
+                    vpFormats,
                 )
         }.bind()
 
@@ -126,6 +133,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
     nonce: Nonce,
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
+    vpFormats: NonEmptyList<VpFormat>,
 ): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -133,6 +141,34 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
         ensure(presentationSubmission.definitionId == presentationDefinition.id) {
             WalletResponseValidationError.InvalidPresentationSubmission
         }
+
+        fun eu.europa.ec.eudi.prex.Format.vpFormat(format: Format): VpFormat {
+            val serializedProperties = ensureNotNull(jsonObject()[format.value]) {
+                WalletResponseValidationError.InvalidPresentationSubmission
+            }
+
+            return when (format.value) {
+                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
+                    val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrThrow()
+                    VpFormat.SdJwtVc(
+                        properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
+                        properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
+                    )
+                }
+                OpenId4VPSpec.FORMAT_MSO_MDOC -> {
+                    val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrThrow()
+                    VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!)
+                }
+                else -> raise(WalletResponseValidationError.InvalidPresentationSubmission)
+            }
+        }
+
+        fun Iterable<VpFormat>.vpFormat(format: Format): VpFormat =
+            when (format.value) {
+                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> firstIs<VpFormat.SdJwtVc>()
+                OpenId4VPSpec.FORMAT_MSO_MDOC -> firstIs<VpFormat.MsoMdoc>()
+                else -> raise(WalletResponseValidationError.InvalidPresentationSubmission)
+            }
 
         val descriptorMaps = presentationSubmission.descriptorMaps
             .toNonEmptyListOrNull()
@@ -143,6 +179,10 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
                 WalletResponseValidationError.InvalidPresentationSubmission
             }
 
+            val inputDescriptor = ensureNotNull(presentationDefinition.inputDescriptors.firstOrNull { it.id == descriptorMap.id }) {
+                WalletResponseValidationError.InvalidPresentationSubmission
+            }
+            val inputDescriptorFormat = inputDescriptor.format ?: presentationDefinition.format
             val element = vpTokenReader.readPath(descriptorMap.path.value).getOrNull()
                 ?: raise(WalletResponseValidationError.InvalidVpToken)
             val format = Format(descriptorMap.format)
@@ -150,7 +190,9 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             val applicableTransactionData = transactionData?.filter {
                 descriptorMap.id.value in it.credentialIds
             }?.toNonEmptyListOrNull()
-            validateVerifiablePresentation(unvalidatedVerifiablePresentation, nonce, applicableTransactionData)
+            val vpFormat = inputDescriptorFormat?.vpFormat(format) ?: vpFormats.vpFormat(format)
+
+            validateVerifiablePresentation(unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData)
                 .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
         }.distinct()
 
@@ -162,10 +204,18 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
     nonce: Nonce,
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
+    vpFormats: NonEmptyList<VpFormat>,
 ): Either<WalletResponseValidationError, VpContent.DCQL> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
         ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
+
+        fun Iterable<VpFormat>.vpFormat(format: Format): VpFormat =
+            when (format.value) {
+                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> firstIs<VpFormat.SdJwtVc>()
+                OpenId4VPSpec.FORMAT_MSO_MDOC -> firstIs<VpFormat.MsoMdoc>()
+                else -> raise(WalletResponseValidationError.InvalidVpToken)
+            }
 
         suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
             val vpToken = runCatching {
@@ -179,7 +229,8 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
-                validateVerifiablePresentation(unvalidatedVerifiablePresentation, nonce, applicableTransactionData)
+                val vpFormat = vpFormats.vpFormat(format)
+                validateVerifiablePresentation(unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData)
                     .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
             }
         }
@@ -331,7 +382,12 @@ class PostWalletResponseLive(
         responseObject: AuthorisationResponseTO,
     ): Either<WalletResponseValidationError, Submitted> = either {
         // add the wallet response to the presentation
-        val walletResponse = responseObject.toDomain(presentation, validateVerifiablePresentation).bind()
+        val walletResponse = responseObject.toDomain(
+            presentation,
+            validateVerifiablePresentation,
+            verifierConfig.clientMetaData.vpFormats,
+        ).bind()
+
         val responseCode = when (presentation.getWalletResponseMethod) {
             GetWalletResponseMethod.Poll -> null
             is GetWalletResponseMethod.Redirect -> generateResponseCode()
