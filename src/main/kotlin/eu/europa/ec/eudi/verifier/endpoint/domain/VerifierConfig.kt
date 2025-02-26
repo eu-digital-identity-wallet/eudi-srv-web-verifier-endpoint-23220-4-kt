@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.NonEmptyList
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
@@ -254,3 +255,24 @@ private fun SanType.asInt() =
         SanType.URI -> 6
         SanType.DNS -> 2
     }
+
+/**
+ * Verifiable Presentation formats supported by Verifier Endpoint.
+ */
+sealed interface VpFormat {
+
+    /**
+     * SD-JWT VC
+     */
+    data class SdJwtVc(
+        val sdJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
+        val kbJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
+    ) : VpFormat
+
+    /**
+     * MSO MDoc
+     */
+    data class MsoMdoc(
+        val algorithms: NonEmptyList<JWSAlgorithm>,
+    ) : VpFormat
+}
