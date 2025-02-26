@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import arrow.core.nonEmptyListOf
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
@@ -67,6 +68,10 @@ object TestContext {
         idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
         jarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, "A256GCM")!!,
+        vpFormats = nonEmptyListOf(
+            VpFormat.SdJwtVc(nonEmptyListOf(JWSAlgorithm.ES256), nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256)),
+            VpFormat.MsoMdoc(nonEmptyListOf(JWSAlgorithm.ES256)),
+        ),
     )
     private val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
     val verifierId = VerifierId.X509SanDns("client-id", jarSigningConfig)

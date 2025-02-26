@@ -15,10 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import arrow.core.NonEmptyList
-import arrow.core.recover
-import arrow.core.some
-import arrow.core.toNonEmptyListOrNull
+import arrow.core.*
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
@@ -440,6 +437,27 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
     val defaultJarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, EncryptionMethod.A256GCM.name)
     checkNotNull(defaultJarmOption)
 
+    val vpFormats = nonEmptyListOf(
+        VpFormat.SdJwtVc(
+            sdJwtAlgorithms = getOptionalList(
+                name = "verifier.clientMetadata.vpFormats.sdJwtVc.sdJwtAlgorithms",
+                filter = { it.isNotBlank() },
+            )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
+
+            kbJwtAlgorithms = getOptionalList(
+                name = "verifier.clientMetadata.vpFormats.sdJwtVc.kbJwtAlgorithms",
+                filter = { it.isNotBlank() },
+            )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
+        ),
+
+        VpFormat.MsoMdoc(
+            algorithms = getOptionalList(
+                name = "verifier.clientMetadata.vpFormats.msoMdoc.algorithms",
+                filter = { it.isNotBlank() },
+            )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
+        ),
+    )
+
     return ClientMetaData(
         jwkOption = jwkOption,
         idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
@@ -453,6 +471,7 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
             authorizationEncryptedResponseAlg,
             authorizationEncryptedResponseEnc,
         ) ?: defaultJarmOption,
+        vpFormats = vpFormats,
     )
 }
 

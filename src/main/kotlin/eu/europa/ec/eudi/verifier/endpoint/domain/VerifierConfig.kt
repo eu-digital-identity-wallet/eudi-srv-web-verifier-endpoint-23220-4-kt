@@ -79,6 +79,42 @@ sealed interface JarmOption {
 }
 
 /**
+ * Verifiable Presentation formats supported by Verifier Endpoint.
+ */
+sealed interface VpFormat {
+
+    /**
+     * SD-JWT VC
+     */
+    data class SdJwtVc(
+        val sdJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
+        val kbJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
+    ) : VpFormat {
+        init {
+            require(sdJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
+                "sdJwtAlgorithms must contain asymmetric signature algorithms"
+            }
+            require(kbJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
+                "sdJwtAlgorithms must contain asymmetric signature algorithms"
+            }
+        }
+    }
+
+    /**
+     * MSO MDoc
+     */
+    data class MsoMdoc(
+        val algorithms: NonEmptyList<JWSAlgorithm>,
+    ) : VpFormat {
+        init {
+            require(algorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
+                "algorithms must contain asymmetric signature algorithms"
+            }
+        }
+    }
+}
+
+/**
  * By OpenID Connect Dynamic Client Registration specification
  *
  * @see <a href="https://openid.net/specs/openid-connect-registration-1_0.html">OpenID Connect Dynamic Client Registration specification</a>
@@ -90,7 +126,14 @@ data class ClientMetaData(
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
     val jarmOption: JarmOption,
-)
+    val vpFormats: NonEmptyList<VpFormat>,
+) {
+    init {
+        require(vpFormats.groupBy { it.javaClass }.all { (_, configurations) -> 1 == configurations.size }) {
+            "vpFormats must contain a single configuration per format"
+        }
+    }
+}
 
 /**
  * Configuration options for signing.
@@ -255,24 +298,3 @@ private fun SanType.asInt() =
         SanType.URI -> 6
         SanType.DNS -> 2
     }
-
-/**
- * Verifiable Presentation formats supported by Verifier Endpoint.
- */
-sealed interface VpFormat {
-
-    /**
-     * SD-JWT VC
-     */
-    data class SdJwtVc(
-        val sdJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
-        val kbJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
-    ) : VpFormat
-
-    /**
-     * MSO MDoc
-     */
-    data class MsoMdoc(
-        val algorithms: NonEmptyList<JWSAlgorithm>,
-    ) : VpFormat
-}
