@@ -27,17 +27,12 @@ import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
-import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange.MsoMdocFormatTO
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.encodeToJsonElement
 import java.time.Clock
 import java.util.*
 
@@ -149,22 +144,7 @@ class SignRequestObjectNimbus : SignRequestObject {
                 c.jarmOption.encryptionMethod?.let { setCustomField("authorization_encrypted_response_enc", it) }
             }
 
-            val vpFormats = buildJsonObject {
-                c.vpFormats.forEach {
-                    when (it) {
-                        is VpFormat.SdJwtVc -> {
-                            val formatTO = jsonSupport.encodeToJsonElement(SdJwtVcFormatTO(it.sdJwtAlgorithms, it.kbJwtAlgorithms))
-                            put(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, formatTO)
-                            put(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, formatTO)
-                        }
-                        is VpFormat.MsoMdoc -> {
-                            val formatTO = jsonSupport.encodeToJsonElement(MsoMdocFormatTO(it.algorithms))
-                            put(OpenId4VPSpec.FORMAT_MSO_MDOC, formatTO)
-                        }
-                    }
-                }
-            }.toJackson()
-            setCustomField("vp_formats", vpFormats)
+            setCustomField("vp_formats", c.vpFormats.toJsonObject().toJackson())
         }
     }
 

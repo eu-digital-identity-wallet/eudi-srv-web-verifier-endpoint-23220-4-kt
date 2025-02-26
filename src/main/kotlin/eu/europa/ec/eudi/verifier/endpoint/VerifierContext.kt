@@ -163,6 +163,7 @@ internal fun beans(clock: Clock) = beans {
     bean { GetWalletResponseLive(clock, ref(), ref()) }
     bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
+    bean(::GetClientMetadataLive)
     bean<DeviceResponseValidator> {
         val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
         val docValidator = DocumentValidator(
@@ -227,7 +228,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref<VerifierConfig>().verifierId.jarSigning.key,
         )
-        val verifierApi = VerifierApi(ref(), ref(), ref())
+        val verifierApi = VerifierApi(ref(), ref(), ref(), ref())
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),

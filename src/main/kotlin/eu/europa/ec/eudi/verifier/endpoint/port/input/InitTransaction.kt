@@ -28,8 +28,8 @@ import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.collection.firstIsOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange.MsoMdocFormatTO
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId

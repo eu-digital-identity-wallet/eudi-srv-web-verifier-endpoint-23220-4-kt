@@ -13,9 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata
 
 import com.nimbusds.jose.JWSAlgorithm
+import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormat
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -25,6 +29,9 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 
 internal object JWSAlgorithmStringSerializer : KSerializer<JWSAlgorithm> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("JWSAlgorithmString", PrimitiveKind.STRING)
@@ -67,5 +74,24 @@ internal data class MsoMdocFormatTO(
 ) {
     init {
         require(algorithms.isNotEmpty())
+    }
+}
+
+/**
+ * Converts this collection of VpFormats to a JsonObject that can be embedded in OIDCClientMetadata.
+ */
+internal fun Iterable<VpFormat>.toJsonObject(): JsonObject = buildJsonObject {
+    forEach {
+        when (it) {
+            is VpFormat.SdJwtVc -> {
+                val formatTO = jsonSupport.encodeToJsonElement(SdJwtVcFormatTO(it.sdJwtAlgorithms, it.kbJwtAlgorithms))
+                put(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, formatTO)
+                put(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, formatTO)
+            }
+            is VpFormat.MsoMdoc -> {
+                val formatTO = jsonSupport.encodeToJsonElement(MsoMdocFormatTO(it.algorithms))
+                put(OpenId4VPSpec.FORMAT_MSO_MDOC, formatTO)
+            }
+        }
     }
 }
