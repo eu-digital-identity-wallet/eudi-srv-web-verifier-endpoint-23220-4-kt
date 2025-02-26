@@ -419,7 +419,7 @@ class InitTransactionTest {
     }
 
     private fun testWithInvalidInput(input: InitTransactionTO, expectedError: ValidationError) =
-        input.toDomain(verifierConfig.transactionDataHashAlgorithm).fold(
+        input.toDomain(verifierConfig.transactionDataHashAlgorithm, verifierConfig.clientMetaData.vpFormats).fold(
             ifRight = { fail("Invalid input accepted") },
             ifLeft = { error -> assertEquals(expectedError, error) },
         )

@@ -105,6 +105,13 @@ sealed interface PresentationType {
     ) : PresentationType
 }
 
+val PresentationType.presentationQueryOrNull: PresentationQuery?
+    get() = when (this) {
+        is PresentationType.IdTokenRequest -> null
+        is PresentationType.VpTokenRequest -> presentationQuery
+        is PresentationType.IdAndVpToken -> presentationQuery
+    }
+
 val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
     get() = when (this) {
         is PresentationType.IdTokenRequest -> null

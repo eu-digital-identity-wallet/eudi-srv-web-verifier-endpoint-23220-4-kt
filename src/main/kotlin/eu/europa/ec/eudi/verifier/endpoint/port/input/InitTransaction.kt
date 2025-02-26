@@ -21,8 +21,15 @@ import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
+import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.collection.firstIsOrNull
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange.MsoMdocFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentationexchange.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
@@ -119,6 +126,7 @@ enum class ValidationError {
     MissingNonce,
     InvalidWalletResponseTemplate,
     InvalidTransactionData,
+    UnsupportedFormat,
 }
 
 /**
@@ -166,7 +174,10 @@ class InitTransactionLive(
 
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO> = either {
         // validate input
-        val (nonce, type) = initTransactionTO.toDomain(verifierConfig.transactionDataHashAlgorithm).bind()
+        val (nonce, type) = initTransactionTO.toDomain(
+            verifierConfig.transactionDataHashAlgorithm,
+            verifierConfig.clientMetaData.vpFormats,
+        ).bind()
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
@@ -290,14 +301,68 @@ class InitTransactionLive(
 
 internal fun InitTransactionTO.toDomain(
     transactionDataHashAlgorithm: HashAlgorithm,
+    vpFormats: NonEmptyList<VpFormat>,
 ): Either<ValidationError, Pair<Nonce, PresentationType>> = either {
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
     fun requiredPresentationQuery(): PresentationQuery =
         when {
-            presentationDefinition != null && dcqlQuery == null -> PresentationQuery.ByPresentationDefinition(presentationDefinition)
-            presentationDefinition == null && dcqlQuery != null -> PresentationQuery.ByDigitalCredentialsQueryLanguage(dcqlQuery)
+            presentationDefinition != null && dcqlQuery == null -> {
+                presentationDefinition.inputDescriptors.forEach { inputDescriptor ->
+                    val format = inputDescriptor.format ?: presentationDefinition.format
+                    format?.also {
+                        it.jsonObject().forEach { identifier, serializedProperties ->
+                            when (identifier) {
+                                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
+                                    val vpFormat = ensureNotNull(vpFormats.firstIsOrNull<VpFormat.SdJwtVc>()) {
+                                        ValidationError.UnsupportedFormat
+                                    }
+                                    val properties = ensureNotNull(serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrNull()) {
+                                        ValidationError.UnsupportedFormat
+                                    }
+
+                                    ensure(vpFormat.supports(properties.sdJwtAlgorithms, properties.kbJwtAlgorithms)) {
+                                        ValidationError.UnsupportedFormat
+                                    }
+                                }
+
+                                OpenId4VPSpec.FORMAT_MSO_MDOC -> {
+                                    val vpFormat = ensureNotNull(vpFormats.firstIsOrNull<VpFormat.MsoMdoc>()) {
+                                        ValidationError.UnsupportedFormat
+                                    }
+                                    val properties = ensureNotNull(serializedProperties.decodeAs<MsoMdocFormatTO>().getOrNull()) {
+                                        ValidationError.UnsupportedFormat
+                                    }
+
+                                    ensure(vpFormat.supports(properties.algorithms)) {
+                                        ValidationError.UnsupportedFormat
+                                    }
+                                }
+
+                                else -> raise(ValidationError.UnsupportedFormat)
+                            }
+                        }
+                    }
+                }
+
+                PresentationQuery.ByPresentationDefinition(presentationDefinition)
+            }
+            presentationDefinition == null && dcqlQuery != null -> {
+                dcqlQuery.credentials.forEach {
+                    when (it.format.value) {
+                        SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
+                            ensureNotNull(vpFormats.firstIsOrNull<VpFormat.SdJwtVc>()) { ValidationError.UnsupportedFormat }
+
+                        OpenId4VPSpec.FORMAT_MSO_MDOC ->
+                            ensureNotNull(vpFormats.firstIsOrNull<VpFormat.MsoMdoc>()) { ValidationError.UnsupportedFormat }
+
+                        else -> raise(ValidationError.UnsupportedFormat)
+                    }
+                }
+
+                PresentationQuery.ByDigitalCredentialsQueryLanguage(dcqlQuery)
+            }
             presentationDefinition == null && dcqlQuery == null -> raise(ValidationError.MissingPresentationQuery)
             else -> raise(ValidationError.MultiplePresentationQueries)
         }
@@ -370,3 +435,9 @@ private inline fun <reified T> Result<T>.applyCatching(block: T.() -> Unit): Res
             value
         }
     }
+
+private fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwtAlgorithms: List<JWSAlgorithm>): Boolean =
+    this.sdJwtAlgorithms.containsAll(sdJwtAlgorithms) && this.kbJwtAlgorithms.containsAll(kbJwtAlgorithms)
+
+private fun VpFormat.MsoMdoc.supports(algorithms: List<JWSAlgorithm>): Boolean =
+    this.algorithms.containsAll(algorithms)

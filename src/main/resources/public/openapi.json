@@ -849,7 +849,8 @@
           "MultiplePresentationQueries",
           "MissingNonce",
           "InvalidWalletResponseTemplate",
-          "InvalidTransactionData"
+          "InvalidTransactionData",
+          "UnsupportedFormat"
         ]
       },
       "InitTransactionError": {

@@ -5,7 +5,7 @@
     "credentials": [
       {
         "id": "employment_input",
-        "format": "jwt_vc_json",
+        "format": "dc+sd-jwt",
         "claims": [
           {
             "id": "dateOfBirth",
@@ -31,7 +31,7 @@
       },
       {
         "id": "employment_input_2",
-        "format": "jwt_vc_json",
+        "format": "dc+sd-jwt",
         "claims": [
           {
             "id": "dateOfBirth",

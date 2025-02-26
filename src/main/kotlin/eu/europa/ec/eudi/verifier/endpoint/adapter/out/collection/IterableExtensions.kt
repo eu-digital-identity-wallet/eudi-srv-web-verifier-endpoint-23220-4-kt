@@ -13,19 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.adapter.out.json
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.collection
 
-import kotlinx.serialization.DeserializationStrategy
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.serializer
-
-internal val jsonSupport = Json {
-    prettyPrint = false
-    ignoreUnknownKeys = true
-}
-
-internal inline fun <reified T> JsonElement.decodeAs(deserializer: DeserializationStrategy<T> = serializer()): Result<T> =
-    runCatching {
-        jsonSupport.decodeFromJsonElement(deserializer, this)
-    }
+internal inline fun <reified U> Iterable<*>.firstIsOrNull(): U? = firstOrNull { it is U }?.let { it as U }

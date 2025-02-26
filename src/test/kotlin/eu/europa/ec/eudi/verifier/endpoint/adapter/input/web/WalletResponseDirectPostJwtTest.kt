@@ -29,6 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
+import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
@@ -39,6 +40,9 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Primary
 import org.springframework.core.annotation.Order
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -49,7 +53,7 @@ import kotlin.test.*
 /*
   https://jira.intrasoft-intl.com/browse/EUDIW-693
  */
-@VerifierApplicationTest
+@VerifierApplicationTest([WalletResponseDirectPostJwtValidationsDisabledTest.Config::class])
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -62,12 +66,21 @@ import kotlin.test.*
 )
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
-internal class WalletResponseDirectPostJwtTest {
+internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 
-    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostJwtTest::class.java)
+    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostJwtValidationsDisabledTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient
+
+    @TestConfiguration
+    internal class Config {
+
+        @Bean
+        @Primary
+        fun validateVerifiablePresentation(): ValidateVerifiablePresentation =
+            ValidateVerifiablePresentation { verifiablePresentation, _, _ -> Result.success(verifiablePresentation) }
+    }
 
     /**
      * Unit test of flow:
@@ -201,9 +214,26 @@ internal class WalletResponseDirectPostJwtTest {
             assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
         }
     }
+}
+
+@VerifierApplicationTest
+@TestPropertySource(
+    properties = [
+        "verifier.maxAge=PT6400M",
+        "verifier.response.mode=DirectPostJwt",
+        "verifier.clientMetadata.authorizationSignedResponseAlg=",
+        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
+        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A256GCM",
+        "verifier.jwk.embed=ByValue",
+    ],
+)
+@AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
+internal class WalletResponseDirectPostJwtValidationsEnabledTest {
+
+    @Autowired
+    private lateinit var client: WebTestClient
 
     @Test
-    @Order(value = 3)
     fun `when wallet responds with a single deviceresponse that contains multiple documents, validations succeeds`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-presentationDefinition.json")
         val transactionDetails = VerifierApiClient.initTransaction(client, initTransaction)
