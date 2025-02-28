@@ -28,6 +28,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
@@ -142,6 +143,8 @@ class SignRequestObjectNimbus : SignRequestObject {
                 c.jarmOption.jweAlg?.let { setCustomField("authorization_encrypted_response_alg", it) }
                 c.jarmOption.encryptionMethod?.let { setCustomField("authorization_encrypted_response_enc", it) }
             }
+
+            setCustomField("vp_formats", c.vpFormats.toJsonObject().toJackson())
         }
     }
 

@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation
 
 import arrow.core.NonEmptyList
+import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.RFC7519
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
@@ -39,22 +40,28 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
 
     override suspend fun invoke(
         verifiablePresentation: VerifiablePresentation,
+        vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
     ): Result<VerifiablePresentation> = runCatching {
         when (verifiablePresentation.format) {
-            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc ->
-                validateSdJwtVcVerifiablePresentation(verifiablePresentation, nonce, transactionData)
+            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
+                require(vpFormat is VpFormat.SdJwtVc)
+                validateSdJwtVcVerifiablePresentation(vpFormat, verifiablePresentation, nonce, transactionData)
+            }
 
-            Format.MsoMdoc ->
-                validateMsoMdocVerifiablePresentation(verifiablePresentation)
+            Format.MsoMdoc -> {
+                require(vpFormat is VpFormat.MsoMdoc)
+                validateMsoMdocVerifiablePresentation(vpFormat, verifiablePresentation)
+            }
 
             else ->
-                verifiablePresentation
+                throw IllegalArgumentException("unsupported format '${verifiablePresentation.format}'")
         }
     }
 
     private suspend fun validateSdJwtVcVerifiablePresentation(
+        vpFormat: VpFormat.SdJwtVc,
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
@@ -64,14 +71,13 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             put("nonce", nonce.value)
         }
 
-        val kbJwt = when (verifiablePresentation) {
+        val (sdJwt, kbJwt) = when (verifiablePresentation) {
             is VerifiablePresentation.Str -> {
                 sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
                     .getOrElse {
                         log.warn("Failed to validate SD-JWT VC", it)
                         throw IllegalArgumentException("Invalid SdJwtVc", it)
                     }
-                    .keyBindingJwt
             }
 
             is VerifiablePresentation.Json -> {
@@ -80,8 +86,14 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                         log.warn("Failed to validate SD-JWT VC", it)
                         throw IllegalArgumentException("Invalid SdJwtVc", it)
                     }
-                    .keyBindingJwt
             }
+        }
+
+        require(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
+            "SD-JWT not signed with a supported algorithm"
+        }
+        require(kbJwt.header.algorithm in vpFormat.kbJwtAlgorithms) {
+            "Keybinding JWT not signed with a supported algorithm"
         }
 
         transactionData?.let {
@@ -92,6 +104,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 
     private fun validateMsoMdocVerifiablePresentation(
+        vpFormat: VpFormat.MsoMdoc,
         verifiablePresentation: VerifiablePresentation,
     ): VerifiablePresentation.Str {
         require(verifiablePresentation is VerifiablePresentation.Str)
@@ -101,7 +114,17 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                     log.warn("Failed to validate MsoMdoc VC. Reason: '$it'")
                     throw IllegalArgumentException("Invalid MsoMdoc DeviceResponse: '$it'")
                 },
-                ifRight = { verifiablePresentation },
+                ifRight = { documents ->
+                    documents.forEach {
+                        val algorithm = requireNotNull(it.issuerSigned.issuerAuth?.algorithm?.toJwsAlgorithm()) {
+                            "MSO MDoc is not signed"
+                        }
+                        require(algorithm in vpFormat.algorithms) {
+                            "MSO MDoc is not signed with a supported algorithms"
+                        }
+                    }
+                    verifiablePresentation
+                },
             )
     }
 }
@@ -125,3 +148,23 @@ private fun validateTransactionDataHashes(
         "hashes of transaction data do not match the expected values"
     }
 }
+
+// Mappings taken from https://www.iana.org/assignments/cose/cose.xhtml#algorithms
+private fun Int.toJwsAlgorithm(): JWSAlgorithm =
+    when (this) {
+        5 -> JWSAlgorithm.HS256
+        6 -> JWSAlgorithm.HS384
+        7 -> JWSAlgorithm.HS512
+        -257 -> JWSAlgorithm.RS256
+        -258 -> JWSAlgorithm.RS384
+        -259 -> JWSAlgorithm.RS512
+        -7 -> JWSAlgorithm.ES256
+        -47 -> JWSAlgorithm.ES256K
+        -35 -> JWSAlgorithm.ES384
+        -36 -> JWSAlgorithm.ES512
+        -37 -> JWSAlgorithm.PS256
+        -38 -> JWSAlgorithm.PS384
+        -39 -> JWSAlgorithm.PS512
+        -8 -> JWSAlgorithm.EdDSA
+        else -> throw IllegalArgumentException("Unknown AlgorithmID '$this'")
+    }

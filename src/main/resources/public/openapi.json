@@ -220,6 +220,32 @@
         }
       }
     },
+    "/ui/clientMetadata": {
+      "get": {
+        "tags": [
+          "verifier api"
+        ],
+        "description": "Gets the Client Metadata of this Verifier Endpoint",
+        "operationId": "getClientMetadata",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "nullable": false,
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error."
+          }
+        }
+      }
+    },
     "/utilities/validations/msoMdoc/deviceResponse": {
       "post": {
         "tags": [
@@ -849,7 +875,8 @@
           "MultiplePresentationQueries",
           "MissingNonce",
           "InvalidWalletResponseTemplate",
-          "InvalidTransactionData"
+          "InvalidTransactionData",
+          "UnsupportedFormat"
         ]
       },
       "InitTransactionError": {
@@ -1404,9 +1431,7 @@
                 "format": {
                   "mso_mdoc": {
                     "alg": [
-                      "ES256",
-                      "ES384",
-                      "ES512"
+                      "ES256"
                     ]
                   }
                 },
@@ -1478,9 +1503,7 @@
                 "format": {
                   "mso_mdoc": {
                     "alg": [
-                      "ES256",
-                      "ES384",
-                      "ES512"
+                      "ES256"
                     ]
                   }
                 },
@@ -1552,9 +1575,7 @@
                 "format": {
                   "mso_mdoc": {
                     "alg": [
-                      "ES256",
-                      "ES384",
-                      "ES512"
+                      "ES256"
                     ]
                   }
                 },
@@ -1629,9 +1650,7 @@
                 "format": {
                   "mso_mdoc": {
                     "alg": [
-                      "ES256",
-                      "ES384",
-                      "ES512"
+                      "ES256"
                     ]
                   }
                 },
@@ -1705,9 +1724,7 @@
                 "format": {
                   "mso_mdoc": {
                     "alg": [
-                      "ES256",
-                      "ES384",
-                      "ES512"
+                      "ES256"
                     ]
                   }
                 },
@@ -1781,9 +1798,7 @@
                 "format": {
                   "mso_mdoc": {
                     "alg": [
-                      "ES256",
-                      "ES384",
-                      "ES512"
+                      "ES256"
                     ]
                   }
                 },

@@ -15,9 +15,17 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.json
 
+import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.serializer
 
 internal val jsonSupport = Json {
     prettyPrint = false
     ignoreUnknownKeys = true
 }
+
+internal inline fun <reified T> JsonElement.decodeAs(deserializer: DeserializationStrategy<T> = serializer()): Result<T> =
+    runCatching {
+        jsonSupport.decodeFromJsonElement(deserializer, this)
+    }

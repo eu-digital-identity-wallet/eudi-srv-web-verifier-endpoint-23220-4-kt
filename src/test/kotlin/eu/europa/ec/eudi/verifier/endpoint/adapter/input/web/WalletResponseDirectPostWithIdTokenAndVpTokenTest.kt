@@ -19,6 +19,7 @@ import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
+import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -28,6 +29,9 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Primary
 import org.springframework.core.annotation.Order
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -35,7 +39,7 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import kotlin.test.*
 
-@VerifierApplicationTest
+@VerifierApplicationTest([WalletResponseDirectPostWithIdTokenAndVpTokenTest.Config::class])
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -53,6 +57,14 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
     @Autowired
     private lateinit var client: WebTestClient
+
+    @TestConfiguration
+    internal class Config {
+
+        @Bean
+        @Primary
+        fun validateVerifiablePresentation(): ValidateVerifiablePresentation = ValidateVerifiablePresentation.NoOp
+    }
 
     /**
      * Unit test of flow:
