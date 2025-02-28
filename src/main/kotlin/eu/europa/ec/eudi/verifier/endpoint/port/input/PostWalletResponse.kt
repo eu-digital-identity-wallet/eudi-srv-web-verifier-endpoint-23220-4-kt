@@ -141,34 +141,6 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             WalletResponseValidationError.InvalidPresentationSubmission
         }
 
-        fun eu.europa.ec.eudi.prex.Format.vpFormat(format: Format): VpFormat {
-            val serializedProperties = ensureNotNull(jsonObject()[format.value]) {
-                WalletResponseValidationError.InvalidPresentationSubmission
-            }
-
-            return when (format.value) {
-                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
-                    val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrThrow()
-                    VpFormat.SdJwtVc(
-                        properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
-                        properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
-                    )
-                }
-                OpenId4VPSpec.FORMAT_MSO_MDOC -> {
-                    val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrThrow()
-                    VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!)
-                }
-                else -> raise(WalletResponseValidationError.InvalidPresentationSubmission)
-            }
-        }
-
-        fun VpFormats.vpFormat(format: Format): VpFormat =
-            when (format.value) {
-                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
-                OpenId4VPSpec.FORMAT_MSO_MDOC -> msoMdoc
-                else -> raise(WalletResponseValidationError.InvalidPresentationSubmission)
-            }
-
         val descriptorMaps = presentationSubmission.descriptorMaps
             .toNonEmptyListOrNull()
             ?: raise(WalletResponseValidationError.InvalidPresentationSubmission)
@@ -189,7 +161,8 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             val applicableTransactionData = transactionData?.filter {
                 descriptorMap.id.value in it.credentialIds
             }?.toNonEmptyListOrNull()
-            val vpFormat = inputDescriptorFormat?.vpFormat(format) ?: vpFormats.vpFormat(format)
+            val vpFormat = inputDescriptorFormat?.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission)?.bind()
+                ?: vpFormats.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission).bind()
 
             validateVerifiablePresentation(unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData)
                 .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
@@ -209,13 +182,6 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
         ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
 
-        fun VpFormats.vpFormat(format: Format): VpFormat =
-            when (format.value) {
-                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
-                OpenId4VPSpec.FORMAT_MSO_MDOC -> msoMdoc
-                else -> raise(WalletResponseValidationError.InvalidVpToken)
-            }
-
         suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
             val vpToken = runCatching {
                 Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
@@ -228,7 +194,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
-                val vpFormat = vpFormats.vpFormat(format)
+                val vpFormat = vpFormats.vpFormat(format, WalletResponseValidationError.InvalidVpToken).bind()
                 validateVerifiablePresentation(unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData)
                     .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
             }
@@ -265,6 +231,43 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
             Format.MsoMdoc -> element.asString()
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> element.asStringOrObject()
             else -> element.asStringOrObject()
+        }
+    }
+
+private fun eu.europa.ec.eudi.prex.Format.vpFormat(
+    format: Format,
+    ifInvalid: WalletResponseValidationError,
+): Either<WalletResponseValidationError, VpFormat> =
+    either {
+        val serializedProperties = ensureNotNull(jsonObject()[format.value]) {
+            WalletResponseValidationError.InvalidPresentationSubmission
+        }
+
+        when (format.value) {
+            SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
+                val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrThrow()
+                VpFormat.SdJwtVc(
+                    properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
+                    properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
+                )
+            }
+            OpenId4VPSpec.FORMAT_MSO_MDOC -> {
+                val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrThrow()
+                VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!)
+            }
+            else -> raise(ifInvalid)
+        }
+    }
+
+private fun VpFormats.vpFormat(
+    format: Format,
+    ifInvalid: WalletResponseValidationError,
+): Either<WalletResponseValidationError, VpFormat> =
+    either {
+        when (format.value) {
+            SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
+            OpenId4VPSpec.FORMAT_MSO_MDOC -> msoMdoc
+            else -> raise(ifInvalid)
         }
     }
 

@@ -19,10 +19,8 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
-import arrow.core.nonEmptySetOf
 import arrow.core.raise.either
 import arrow.core.raise.ensure
-import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.prex.PresentationDefinition
@@ -309,43 +307,17 @@ internal fun InitTransactionTO.toDomain(
     fun requiredPresentationQuery(): PresentationQuery =
         when {
             presentationDefinition != null && dcqlQuery == null -> {
-                presentationDefinition.inputDescriptors.forEach { inputDescriptor ->
-                    val format = inputDescriptor.format ?: presentationDefinition.format
-                    format?.also {
-                        it.jsonObject().forEach { identifier, serializedProperties ->
-                            when (identifier) {
-                                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
-                                    val properties = ensureNotNull(serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrNull()) {
-                                        ValidationError.UnsupportedFormat
-                                    }
-
-                                    ensure(vpFormats.sdJwtVc.supports(properties.sdJwtAlgorithms, properties.kbJwtAlgorithms)) {
-                                        ValidationError.UnsupportedFormat
-                                    }
-                                }
-
-                                OpenId4VPSpec.FORMAT_MSO_MDOC -> {
-                                    val properties = ensureNotNull(serializedProperties.decodeAs<MsoMdocFormatTO>().getOrNull()) {
-                                        ValidationError.UnsupportedFormat
-                                    }
-
-                                    ensure(vpFormats.msoMdoc.supports(properties.algorithms)) {
-                                        ValidationError.UnsupportedFormat
-                                    }
-                                }
-
-                                else -> raise(ValidationError.UnsupportedFormat)
-                            }
-                        }
-                    }
-                }
-
+                ensure(vpFormats.supportsFormats(presentationDefinition)) { ValidationError.UnsupportedFormat }
                 PresentationQuery.ByPresentationDefinition(presentationDefinition)
             }
             presentationDefinition == null && dcqlQuery != null -> {
-                val supportedFormats =
-                    nonEmptySetOf(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, OpenId4VPSpec.FORMAT_MSO_MDOC)
-                ensure(supportedFormats.containsAll(dcqlQuery.credentials.map { it.format.value })) {
+                ensure(
+                    dcqlQuery.formatsAre(
+                        SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT,
+                        SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
+                        OpenId4VPSpec.FORMAT_MSO_MDOC,
+                    ),
+                ) {
                     ValidationError.UnsupportedFormat
                 }
 
@@ -407,6 +379,30 @@ internal fun InitTransactionTO.toDomain(
 
     nonce to presentationType
 }
+
+private fun VpFormats.supportsFormats(presentationDefinition: PresentationDefinition): Boolean =
+    presentationDefinition.inputDescriptors.all { inputDescriptor ->
+        val format = inputDescriptor.format ?: presentationDefinition.format
+        format?.let {
+            it.jsonObject().all { (identifier, serializedProperties) ->
+                when (identifier) {
+                    SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
+                        serializedProperties.decodeAs<SdJwtVcFormatTO>()
+                            .map { properties -> sdJwtVc.supports(properties.sdJwtAlgorithms, properties.kbJwtAlgorithms) }
+                            .getOrElse { false }
+
+                    OpenId4VPSpec.FORMAT_MSO_MDOC ->
+                        serializedProperties.decodeAs<MsoMdocFormatTO>()
+                            .map { properties -> msoMdoc.supports(properties.algorithms) }
+                            .getOrElse { false }
+
+                    else -> false
+                }
+            }
+        } ?: true
+    }
+
+private fun DCQL.formatsAre(vararg supportedFormats: String): Boolean = credentials.all { it.format.value in supportedFormats }
 
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
