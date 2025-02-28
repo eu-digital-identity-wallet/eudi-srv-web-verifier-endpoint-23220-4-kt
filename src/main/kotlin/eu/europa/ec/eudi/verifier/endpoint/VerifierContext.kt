@@ -438,7 +438,7 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
     val defaultJarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, EncryptionMethod.A256GCM.name)
     checkNotNull(defaultJarmOption)
 
-    val vpFormats = nonEmptyListOf(
+    val vpFormats = VpFormats(
         VpFormat.SdJwtVc(
             sdJwtAlgorithms = getOptionalList(
                 name = "verifier.clientMetadata.vpFormats.sdJwtVc.sdJwtAlgorithms",

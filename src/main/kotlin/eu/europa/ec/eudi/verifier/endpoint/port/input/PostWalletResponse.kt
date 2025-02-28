@@ -24,7 +24,6 @@ import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.collection.firstIs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.JsonPathReader
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
@@ -88,7 +87,7 @@ sealed interface WalletResponseValidationError {
 private suspend fun AuthorisationResponseTO.toDomain(
     presentation: RequestObjectRetrieved,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
-    vpFormats: NonEmptyList<VpFormat>,
+    vpFormats: VpFormats,
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
@@ -133,7 +132,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
     nonce: Nonce,
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
-    vpFormats: NonEmptyList<VpFormat>,
+    vpFormats: VpFormats,
 ): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -163,10 +162,10 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             }
         }
 
-        fun Iterable<VpFormat>.vpFormat(format: Format): VpFormat =
+        fun VpFormats.vpFormat(format: Format): VpFormat =
             when (format.value) {
-                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> firstIs<VpFormat.SdJwtVc>()
-                OpenId4VPSpec.FORMAT_MSO_MDOC -> firstIs<VpFormat.MsoMdoc>()
+                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
+                OpenId4VPSpec.FORMAT_MSO_MDOC -> msoMdoc
                 else -> raise(WalletResponseValidationError.InvalidPresentationSubmission)
             }
 
@@ -204,16 +203,16 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
     nonce: Nonce,
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
-    vpFormats: NonEmptyList<VpFormat>,
+    vpFormats: VpFormats,
 ): Either<WalletResponseValidationError, VpContent.DCQL> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
         ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
 
-        fun Iterable<VpFormat>.vpFormat(format: Format): VpFormat =
+        fun VpFormats.vpFormat(format: Format): VpFormat =
             when (format.value) {
-                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> firstIs<VpFormat.SdJwtVc>()
-                OpenId4VPSpec.FORMAT_MSO_MDOC -> firstIs<VpFormat.MsoMdoc>()
+                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
+                OpenId4VPSpec.FORMAT_MSO_MDOC -> msoMdoc
                 else -> raise(WalletResponseValidationError.InvalidVpToken)
             }
 

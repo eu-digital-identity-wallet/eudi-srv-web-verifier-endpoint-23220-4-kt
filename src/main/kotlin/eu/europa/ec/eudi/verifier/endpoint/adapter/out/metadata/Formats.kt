@@ -19,7 +19,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
-import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormat
+import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormats
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -80,18 +80,11 @@ internal data class MsoMdocFormatTO(
 /**
  * Converts this collection of VpFormats to a JsonObject that can be embedded in OIDCClientMetadata.
  */
-internal fun Iterable<VpFormat>.toJsonObject(): JsonObject = buildJsonObject {
-    forEach {
-        when (it) {
-            is VpFormat.SdJwtVc -> {
-                val formatTO = jsonSupport.encodeToJsonElement(SdJwtVcFormatTO(it.sdJwtAlgorithms, it.kbJwtAlgorithms))
-                put(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, formatTO)
-                put(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, formatTO)
-            }
-            is VpFormat.MsoMdoc -> {
-                val formatTO = jsonSupport.encodeToJsonElement(MsoMdocFormatTO(it.algorithms))
-                put(OpenId4VPSpec.FORMAT_MSO_MDOC, formatTO)
-            }
-        }
-    }
+internal fun VpFormats.toJsonObject(): JsonObject = buildJsonObject {
+    val sdJwtVcFormatTO = jsonSupport.encodeToJsonElement(SdJwtVcFormatTO(sdJwtVc.sdJwtAlgorithms, sdJwtVc.kbJwtAlgorithms))
+    put(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, sdJwtVcFormatTO)
+    put(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, sdJwtVcFormatTO)
+
+    val msoMdocFormatTO = jsonSupport.encodeToJsonElement(MsoMdocFormatTO(msoMdoc.algorithms))
+    put(OpenId4VPSpec.FORMAT_MSO_MDOC, msoMdocFormatTO)
 }

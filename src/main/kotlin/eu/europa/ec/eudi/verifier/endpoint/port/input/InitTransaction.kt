@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.nonEmptySetOf
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
@@ -26,7 +27,6 @@ import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.collection.firstIsOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
@@ -301,7 +301,7 @@ class InitTransactionLive(
 
 internal fun InitTransactionTO.toDomain(
     transactionDataHashAlgorithm: HashAlgorithm,
-    vpFormats: NonEmptyList<VpFormat>,
+    vpFormats: VpFormats,
 ): Either<ValidationError, Pair<Nonce, PresentationType>> = either {
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
@@ -315,27 +315,21 @@ internal fun InitTransactionTO.toDomain(
                         it.jsonObject().forEach { identifier, serializedProperties ->
                             when (identifier) {
                                 SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
-                                    val vpFormat = ensureNotNull(vpFormats.firstIsOrNull<VpFormat.SdJwtVc>()) {
-                                        ValidationError.UnsupportedFormat
-                                    }
                                     val properties = ensureNotNull(serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrNull()) {
                                         ValidationError.UnsupportedFormat
                                     }
 
-                                    ensure(vpFormat.supports(properties.sdJwtAlgorithms, properties.kbJwtAlgorithms)) {
+                                    ensure(vpFormats.sdJwtVc.supports(properties.sdJwtAlgorithms, properties.kbJwtAlgorithms)) {
                                         ValidationError.UnsupportedFormat
                                     }
                                 }
 
                                 OpenId4VPSpec.FORMAT_MSO_MDOC -> {
-                                    val vpFormat = ensureNotNull(vpFormats.firstIsOrNull<VpFormat.MsoMdoc>()) {
-                                        ValidationError.UnsupportedFormat
-                                    }
                                     val properties = ensureNotNull(serializedProperties.decodeAs<MsoMdocFormatTO>().getOrNull()) {
                                         ValidationError.UnsupportedFormat
                                     }
 
-                                    ensure(vpFormat.supports(properties.algorithms)) {
+                                    ensure(vpFormats.msoMdoc.supports(properties.algorithms)) {
                                         ValidationError.UnsupportedFormat
                                     }
                                 }
@@ -349,16 +343,10 @@ internal fun InitTransactionTO.toDomain(
                 PresentationQuery.ByPresentationDefinition(presentationDefinition)
             }
             presentationDefinition == null && dcqlQuery != null -> {
-                dcqlQuery.credentials.forEach {
-                    when (it.format.value) {
-                        SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
-                            ensureNotNull(vpFormats.firstIsOrNull<VpFormat.SdJwtVc>()) { ValidationError.UnsupportedFormat }
-
-                        OpenId4VPSpec.FORMAT_MSO_MDOC ->
-                            ensureNotNull(vpFormats.firstIsOrNull<VpFormat.MsoMdoc>()) { ValidationError.UnsupportedFormat }
-
-                        else -> raise(ValidationError.UnsupportedFormat)
-                    }
+                val supportedFormats =
+                    nonEmptySetOf(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, OpenId4VPSpec.FORMAT_MSO_MDOC)
+                ensure(supportedFormats.containsAll(dcqlQuery.credentials.map { it.format.value })) {
+                    ValidationError.UnsupportedFormat
                 }
 
                 PresentationQuery.ByDigitalCredentialsQueryLanguage(dcqlQuery)

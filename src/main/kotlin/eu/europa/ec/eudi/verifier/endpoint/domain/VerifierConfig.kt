@@ -115,6 +115,14 @@ sealed interface VpFormat {
 }
 
 /**
+ * Verifiable Presentation formats supported by Verifier Endpoint.
+ */
+data class VpFormats(
+    val sdJwtVc: VpFormat.SdJwtVc,
+    val msoMdoc: VpFormat.MsoMdoc,
+)
+
+/**
  * By OpenID Connect Dynamic Client Registration specification
  *
  * @see <a href="https://openid.net/specs/openid-connect-registration-1_0.html">OpenID Connect Dynamic Client Registration specification</a>
@@ -126,14 +134,8 @@ data class ClientMetaData(
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
     val jarmOption: JarmOption,
-    val vpFormats: NonEmptyList<VpFormat>,
-) {
-    init {
-        require(vpFormats.groupBy { it.javaClass }.all { (_, configurations) -> 1 == configurations.size }) {
-            "vpFormats must contain a single configuration per format"
-        }
-    }
-}
+    val vpFormats: VpFormats,
+)
 
 /**
  * Configuration options for signing.
