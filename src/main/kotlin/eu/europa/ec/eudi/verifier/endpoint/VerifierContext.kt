@@ -448,7 +448,7 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
             kbJwtAlgorithms = getOptionalList(
                 name = "verifier.clientMetadata.vpFormats.sdJwtVc.kbJwtAlgorithms",
                 filter = { it.isNotBlank() },
-            )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
+            )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
         ),
 
         VpFormat.MsoMdoc(

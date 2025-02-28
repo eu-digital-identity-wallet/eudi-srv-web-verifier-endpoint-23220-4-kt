@@ -643,7 +643,7 @@ Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_SDJWTVC_KBJWTALGORITHMS`
 Description: Comma separated list of signature algorithms the Key Binding JWT of an SD-JWT VC can be signed with     
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms
-Default value: `ES256,RS256`
+Default value: `ES256`
 
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_MSOMDOC_ALGORITHMS`  
 Description: Comma separated list of signature algorithms the `COSESign1` of an `IssuerSigned` in `MDoc` can be signed with        
