@@ -549,6 +549,11 @@ You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/utilit
 
 The Verifier Endpoint application can be configured using the following *environment* variables:
 
+Variable: `SPRING_PROFILES_ACTIVE`  
+Description: Comma separated list of Spring Profiles to activate  
+Available profiles:
+* `self-signed`: Configures a Ktor HttpClient that trusts self-signed certificates and performs no hostname verification
+
 Variable: `SPRING_WEBFLUX_BASEPATH`  
 Description: Context path for the Verifier Endpoint application.  
 Default value: `/`
