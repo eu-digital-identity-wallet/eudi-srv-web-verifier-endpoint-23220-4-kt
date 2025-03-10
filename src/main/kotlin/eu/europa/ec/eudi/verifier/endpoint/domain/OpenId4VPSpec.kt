@@ -36,6 +36,5 @@ object OpenId4VPSpec {
     const val DCQL_VALUES: String = "values"
     const val DCQL_SD_JWT_VC_VCT_VALUES: String = "vct_values"
     const val DCQL_MSO_MDOC_DOCTYPE_VALUE: String = "doctype_value"
-    const val DCQL_MSO_MDOC_NAMESPACE: String = "namespace"
-    const val DCQL_MSO_MDOC_CLAIM_NAME: String = "claim_name"
+    const val DCQL_MSO_MDOC_INTENT_TO_RETAIN: String = "intent_to_retain"
 }
