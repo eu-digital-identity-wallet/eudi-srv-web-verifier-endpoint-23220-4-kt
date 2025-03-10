@@ -51,7 +51,7 @@ dependencies {
         because("required by walt.id")
     }
     implementation(libs.sd.jwt)
-    implementation(libs.ktor.client.java) {
+    implementation(libs.ktor.client.apache) {
         because("ktor client engine to use (required by SdJwtVcVerifier)")
     }
     implementation(libs.jsonpathkt) {

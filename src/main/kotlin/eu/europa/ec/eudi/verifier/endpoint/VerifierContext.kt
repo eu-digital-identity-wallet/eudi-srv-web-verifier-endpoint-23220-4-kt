@@ -25,6 +25,7 @@ import com.nimbusds.jose.util.Base64
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps
 import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
+import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
@@ -40,6 +41,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEnc
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
@@ -50,8 +52,15 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
+import io.ktor.client.*
+import io.ktor.client.engine.apache.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import org.apache.http.conn.ssl.NoopHostnameVerifier
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy
+import org.apache.http.ssl.SSLContextBuilder
 import org.slf4j.LoggerFactory
 import org.springframework.boot.web.codec.CodecCustomizer
 import org.springframework.context.support.beans
@@ -118,6 +127,39 @@ internal fun beans(clock: Clock) = beans {
     }
 
     bean { CreateQueryWalletResponseRedirectUri.Simple }
+
+    //
+    // Ktor
+    //
+    profile("self-signed") {
+        log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification")
+        bean<KtorHttpClientFactory> {
+            {
+                HttpClient(Apache) {
+                    install(ContentNegotiation) {
+                        json(jsonSupport)
+                    }
+                    expectSuccess = true
+                    engine {
+                        followRedirects = true
+                        customizeClient {
+                            setSSLContext(
+                                SSLContextBuilder.create()
+                                    .loadTrustMaterial(TrustSelfSignedStrategy.INSTANCE)
+                                    .build(),
+                            )
+                            setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    profile("!self-signed") {
+        bean<KtorHttpClientFactory> {
+            DefaultHttpClientFactory
+        }
+    }
 
     //
     // Use cases
@@ -198,7 +240,7 @@ internal fun beans(clock: Clock) = beans {
         }
         NimbusSdJwtOps.SdJwtVcVerifier.usingX5cOrIssuerMetadata(
             x509CertificateTrust = x509CertificateTrust,
-            httpClientFactory = DefaultHttpClientFactory,
+            httpClientFactory = ref(),
         )
     }
     bean { ValidateMsoMdocDeviceResponse(clock, ref()) }
