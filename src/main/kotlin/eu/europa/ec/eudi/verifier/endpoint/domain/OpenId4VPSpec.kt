@@ -16,7 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 object OpenId4VPSpec {
-    const val VERSION: String = "draft 23"
+    const val VERSION: String = "draft 24"
 
     const val FORMAT_MSO_MDOC: String = "mso_mdoc"
     const val FORMAT_SD_JWT_VC: String = "dc+sd-jwt"
