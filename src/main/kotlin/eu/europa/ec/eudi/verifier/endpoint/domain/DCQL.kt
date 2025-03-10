@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import eu.europa.ec.eudi.sdjwt.vc.ClaimPath
+import eu.europa.ec.eudi.sdjwt.vc.ClaimPathElement
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -170,9 +171,8 @@ data class CredentialQuery(
             require(isNotEmpty()) { "At least one claim must be defined" }
             ensureUniqueIds()
             when (format) {
-                Format.MsoMdoc -> {
-                    forEach { ClaimsQuery.ensureMsoMdocExtensions(it) }
-                }
+                Format.MsoMdoc -> forEach { ClaimsQuery.ensureMsoMdoc(it) }
+                else -> forEach { ClaimsQuery.ensureNotMsoMdoc(it) }
             }
         }
 
@@ -251,21 +251,10 @@ value class ClaimId(val value: String) {
 @Serializable
 data class ClaimsQuery(
     @SerialName(OpenId4VPSpec.DCQL_ID) val id: ClaimId? = null,
-    @SerialName(OpenId4VPSpec.DCQL_PATH) val path: ClaimPath? = null,
+    @Required @SerialName(OpenId4VPSpec.DCQL_PATH) val path: ClaimPath,
     @SerialName(OpenId4VPSpec.DCQL_VALUES) val values: JsonArray? = null,
-    @SerialName(OpenId4VPSpec.DCQL_MSO_MDOC_NAMESPACE) override val namespace: MsoMdocNamespace? = null,
-    @SerialName(OpenId4VPSpec.DCQL_MSO_MDOC_CLAIM_NAME) override val claimName: MsoMdocClaimName? = null,
+    @SerialName(OpenId4VPSpec.DCQL_MSO_MDOC_INTENT_TO_RETAIN) override val intentToRetain: Boolean? = null,
 ) : MsoMdocClaimsQueryExtension {
-
-    init {
-        val isJson = path != null && namespace == null && claimName == null
-        val isMdoc = path == null && namespace != null && claimName != null
-
-        require(isJson xor isMdoc) {
-            "Either '${OpenId4VPSpec.DCQL_PATH}', or '${OpenId4VPSpec.DCQL_MSO_MDOC_NAMESPACE}' " +
-                "and '${OpenId4VPSpec.DCQL_MSO_MDOC_CLAIM_NAME}' must be provided"
-        }
-    }
 
     companion object {
 
@@ -273,21 +262,35 @@ data class ClaimsQuery(
             id: ClaimId? = null,
             path: ClaimPath,
             values: JsonArray? = null,
-        ): ClaimsQuery = ClaimsQuery(id, path, values)
+        ): ClaimsQuery = ClaimsQuery(id, path, values, null)
 
         fun mdoc(
             id: ClaimId? = null,
+            path: ClaimPath,
             values: JsonArray? = null,
-            namespace: MsoMdocNamespace,
-            claimName: MsoMdocClaimName,
-        ): ClaimsQuery = ClaimsQuery(id = id, path = null, values = values, namespace = namespace, claimName = claimName)
+            intentToRetain: Boolean? = null,
+        ): ClaimsQuery = ClaimsQuery(id, path, values, intentToRetain).also { ensureMsoMdoc(it) }
 
-        fun ensureMsoMdocExtensions(claimsQuery: ClaimsQuery) {
-            requireNotNull(claimsQuery.namespace) {
-                "Namespace is required if the credential format is based on the mdoc format "
+        fun mdoc(
+            id: ClaimId? = null,
+            namespace: String,
+            claimName: String,
+            values: JsonArray? = null,
+            intentToRetain: Boolean? = null,
+        ): ClaimsQuery = mdoc(id, ClaimPath.claim(namespace).claim(claimName), values, intentToRetain)
+
+        fun ensureMsoMdoc(claimsQuery: ClaimsQuery) {
+            require(2 == claimsQuery.path.value.size) {
+                "ClaimPaths for MSO MDoc based formats must have exactly two elements"
             }
-            requireNotNull(claimsQuery.claimName) {
-                "Claim name is required if the credential format is based on the mdoc format "
+            require(claimsQuery.path.value.all { it is ClaimPathElement.Claim }) {
+                "ClaimPaths for MSO MDoc based formats must contain only Claim ClaimPathElements"
+            }
+        }
+
+        fun ensureNotMsoMdoc(claimsQuery: ClaimsQuery) {
+            require(null == claimsQuery.intentToRetain) {
+                "'${OpenId4VPSpec.DCQL_MSO_MDOC_INTENT_TO_RETAIN}' can be used only with MSO MDoc based formats"
             }
         }
     }
@@ -360,21 +363,10 @@ value class MsoMdocClaimName(val value: String) {
 interface MsoMdocClaimsQueryExtension {
 
     /**
-     * Required if the Credential Format is based on the mdoc format.
-     * Must not be present otherwise.
-     * The namespace of the data element within the mdoc
+     * OPTIONAL. A boolean that is equivalent to IntentToRetain variable defined in Section 8.3.2.1.2.1 of [ISO.18013-5].
      */
-    @SerialName(OpenId4VPSpec.DCQL_MSO_MDOC_NAMESPACE)
-    val namespace: MsoMdocNamespace?
-
-    /**
-     * REQUIRED if the Credential Format is based on mdoc format
-     * Must not be present otherwise.
-     * Specifies the data element identifier of the data element
-     * within the provided [namespace] in the mdoc
-     */
-    @SerialName(OpenId4VPSpec.DCQL_MSO_MDOC_CLAIM_NAME)
-    val claimName: MsoMdocClaimName?
+    @SerialName(OpenId4VPSpec.DCQL_MSO_MDOC_INTENT_TO_RETAIN)
+    val intentToRetain: Boolean?
 }
 
 internal object DCQLId {
