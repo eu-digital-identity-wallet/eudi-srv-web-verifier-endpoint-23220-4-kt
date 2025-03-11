@@ -51,8 +51,8 @@ class GetPresentationEventsLive(
             val events = loadPresentationEvents(transactionId)
             checkNotNull(events) { "Didn't find any events for transaction $transactionId" }
             val lastTimestamp = events.map { it.timestamp }.max()
-            val transferOject = PresentationEventsTO(transactionId, lastTimestamp, events)
-            QueryResponse.Found(transferOject)
+            val transferObject = PresentationEventsTO(transactionId, lastTimestamp, events)
+            QueryResponse.Found(transferObject)
         } else {
             QueryResponse.NotFound
         }
@@ -169,6 +169,7 @@ private fun WalletResponseValidationError.asText(): String =
         WalletResponseValidationError.RequiredCredentialSetNotSatisfied ->
             "vp_token does not satisfy all the required credential sets of the query"
         WalletResponseValidationError.InvalidPresentationSubmission -> "Presentation submission is not valid"
+        is WalletResponseValidationError.InvalidJarm -> "JARM is not valid: '${error.message}'"
     }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)

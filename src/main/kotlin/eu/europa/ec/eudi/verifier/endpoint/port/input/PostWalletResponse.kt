@@ -21,6 +21,7 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
+import com.nimbusds.jose.proc.BadJOSEException
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
@@ -82,6 +83,7 @@ sealed interface WalletResponseValidationError {
     data object PresentationSubmissionMustNotBePresent : WalletResponseValidationError
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
     data object InvalidPresentationSubmission : WalletResponseValidationError
+    data class InvalidJarm(val error: BadJOSEException) : WalletResponseValidationError
 }
 
 private suspend fun AuthorisationResponseTO.toDomain(
@@ -373,7 +375,12 @@ class PostWalletResponseLive(
                     ephemeralEcPrivateKey = presentation.ephemeralEcPrivateKey,
                     jarmJwt = walletResponse.jarm,
                     apv = presentation.nonce,
-                ).getOrThrow()
+                ).getOrElse {
+                    when (it) {
+                        is BadJOSEException -> raise(WalletResponseValidationError.InvalidJarm(it))
+                        else -> throw it
+                    }
+                }
                 response
             }
         }
