@@ -208,7 +208,7 @@ sealed interface VerifierId {
             }
         }
 
-        override val clientId: ClientId = "x509_san_dns:$originalClientId"
+        override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_DNS}:$originalClientId"
     }
 
     /**
@@ -226,7 +226,7 @@ sealed interface VerifierId {
             }
         }
 
-        override val clientId: ClientId = "x509_san_uri:$originalClientId"
+        override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_URI}:$originalClientId"
     }
 }
 
