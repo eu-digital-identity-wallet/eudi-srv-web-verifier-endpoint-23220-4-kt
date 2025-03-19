@@ -43,16 +43,18 @@ class SignRequestObjectNimbus : SignRequestObject {
         verifierConfig: VerifierConfig,
         clock: Clock,
         presentation: Presentation.Requested,
+        walletNonce: String?,
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey
-        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
+        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject, walletNonce)
     }
 
     internal fun sign(
         clientMetaData: ClientMetaData,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
+        walletNonce: String?,
     ): Result<Jwt> = runCatching {
         val (key, algorithm) = requestObject.verifierId.jarSigning
         val header = JWSHeader.Builder(algorithm)
@@ -65,7 +67,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             .type(JOSEObjectType(JarSpec.REQUEST_OBJECT_MEDIA_SUBTYPE))
             .build()
         val responseMode = requestObject.responseMode
-        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, ecPublicKey), requestObject)
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, ecPublicKey), requestObject, walletNonce)
 
         SignedJWT(header, claimSet)
             .apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
@@ -75,7 +77,7 @@ class SignRequestObjectNimbus : SignRequestObject {
     /**
      * Maps a [RequestObject] into a Nimbus [JWTClaimsSet]
      */
-    private fun asClaimSet(clientMetaData: OIDCClientMetadata?, r: RequestObject): JWTClaimsSet {
+    private fun asClaimSet(clientMetaData: OIDCClientMetadata?, r: RequestObject, walletNonce: String?): JWTClaimsSet {
         val responseType = ResponseType(*r.responseType.map { ResponseType.Value(it) }.toTypedArray())
         val clientId = ClientID(r.verifierId.clientId)
         val scope = Scope(*r.scope.map { Scope.Value(it) }.toTypedArray())
@@ -110,6 +112,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
             optionalClaim("dcql_query", r.dcqlQuery?.toJackson())
             optionalClaim("transaction_data", r.transactionData?.toJackson())
+            optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
             build()
         }
     }

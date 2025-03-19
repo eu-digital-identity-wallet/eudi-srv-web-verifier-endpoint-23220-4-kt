@@ -28,5 +28,6 @@ fun interface SignRequestObject {
         verifierConfig: VerifierConfig,
         clock: Clock,
         presentation: Presentation.Requested,
+        walletNonce: String?,
     ): Result<Jwt>
 }

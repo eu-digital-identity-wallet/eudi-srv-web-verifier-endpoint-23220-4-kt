@@ -81,7 +81,7 @@ class RetrieveRequestObjectLive(
     ): Either<RetrieveRequestObjectError, Jwt> =
         either {
             suspend fun requestObjectOf(): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-                val jwt = signRequestObject(verifierConfig, clock, presentation).getOrThrow()
+                val jwt = signRequestObject(verifierConfig, clock, presentation, invocationMethod.walletNonceOrNull).getOrThrow()
                 val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
                 storePresentation(updatedPresentation)
                 return updatedPresentation to jwt
@@ -111,3 +111,15 @@ class RetrieveRequestObjectLive(
         return RetrieveRequestObjectError.InvalidState
     }
 }
+
+private val RetrieveRequestObjectMethod.walletMetadataOrNull: String?
+    get() = when (this) {
+        RetrieveRequestObjectMethod.Get -> null
+        is RetrieveRequestObjectMethod.Post -> walletMetadata
+    }
+
+private val RetrieveRequestObjectMethod.walletNonceOrNull: String?
+    get() = when (this) {
+        RetrieveRequestObjectMethod.Get -> null
+        is RetrieveRequestObjectMethod.Post -> walletNonce
+    }

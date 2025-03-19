@@ -81,8 +81,8 @@ class WalletApi(
                 HttpMethod.POST -> {
                     val form = awaitFormData()
                     RetrieveRequestObjectMethod.Post(
-                        walletMetadata = form.getFirst(OpenId4VPSpec.WALLET_METADATA_PARAMETER),
-                        walletNonce = form.getFirst(OpenId4VPSpec.WALLET_NONCE_PARAMETER),
+                        walletMetadata = form.getFirst(OpenId4VPSpec.WALLET_METADATA),
+                        walletNonce = form.getFirst(OpenId4VPSpec.WALLET_NONCE),
                     )
                 }
                 else -> error("Allowed HTTP Method: GET, POST")
