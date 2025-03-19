@@ -20,6 +20,7 @@ import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.JarSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.PresentationRelatedUrlBuilder
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -36,6 +37,8 @@ import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
+
+private val REQUEST_OBJECT_MEDIA_TYPE = MediaType.parseMediaType(JarSpec.REQUEST_OBJECT_MEDIA_TYPE)
 
 /**
  * The WEB API available to the wallet
@@ -54,6 +57,11 @@ class WalletApi(
      */
     val route = coRouter {
         GET(REQUEST_JWT_PATH, this@WalletApi::handleGetRequestObject)
+        POST(
+            REQUEST_JWT_PATH,
+            contentType(MediaType.APPLICATION_FORM_URLENCODED) and accept(REQUEST_OBJECT_MEDIA_TYPE),
+            this@WalletApi::handleGetRequestObject,
+        )
         GET(PRESENTATION_DEFINITION_PATH, this@WalletApi::handleGetPresentationDefinition)
         POST(
             WALLET_RESPONSE_PATH,
@@ -68,9 +76,7 @@ class WalletApi(
      * If found, the Request Object will be returned as JWT
      */
     private suspend fun handleGetRequestObject(req: ServerRequest): ServerResponse {
-        suspend fun requestObjectFound(jwt: String) =
-            ok().contentType(MediaType.parseMediaType("application/oauth-authz-req+jwt"))
-                .bodyValueAndAwait(jwt)
+        suspend fun requestObjectFound(jwt: String) = ok().contentType(REQUEST_OBJECT_MEDIA_TYPE).bodyValueAndAwait(jwt)
 
         val requestId = req.requestId()
         logger.info("Handling GetRequestObject for ${requestId.value} ...")
