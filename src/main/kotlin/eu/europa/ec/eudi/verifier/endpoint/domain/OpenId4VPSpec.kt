@@ -41,4 +41,12 @@ object OpenId4VPSpec {
 
     const val WALLET_METADATA: String = "wallet_metadata"
     const val WALLET_NONCE: String = "wallet_nonce"
+
+    const val PRESENTATION_DEFINITION_URI_SUPPORTED: String = "presentation_definition_uri_supported"
+    const val VP_FORMATS_SUPPORTED: String = "vp_formats_supported"
+    const val CLIENT_ID_SCHEMES_SUPPORTED: String = "client_id_schemes_supported"
+
+    const val CLIENT_ID_SCHEME_PRE_REGISTERED: String = "pre-registered"
+    const val CLIENT_ID_SCHEME_X509_SAN_DNS: String = "x509_san_dns"
+    const val CLIENT_ID_SCHEME_X509_SAN_URI: String = "x509_san_uri"
 }

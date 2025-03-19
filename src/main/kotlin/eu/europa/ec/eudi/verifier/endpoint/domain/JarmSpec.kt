@@ -15,9 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-object JarSpec {
-    const val REQUEST_OBJECT_MEDIA_TYPE: String = "application/oauth-authz-req+jwt"
-    const val REQUEST_OBJECT_MEDIA_SUBTYPE: String = "oauth-authz-req+jwt"
-
-    const val REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED: String = "request_object_signing_alg_values_supported"
+object JarmSpec {
+    const val ENCRYPTION_ALGORITHMS_SUPPORTED: String = "authorization_encryption_alg_values_supported"
+    const val ENCRYPTION_METHODS_SUPPORTED: String = "authorization_encryption_enc_values_supported"
 }

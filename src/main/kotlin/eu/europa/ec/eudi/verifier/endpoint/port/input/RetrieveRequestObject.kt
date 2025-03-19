@@ -18,12 +18,17 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import kotlinx.serialization.Required
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 
 /**
@@ -41,6 +46,8 @@ sealed interface RetrieveRequestObjectError {
     data object PresentationNotFound : RetrieveRequestObjectError
     data object InvalidState : RetrieveRequestObjectError
     data object InvalidRequestUriMethod : RetrieveRequestObjectError
+    data class UnparsableWalletMetadata(val cause: Throwable) : RetrieveRequestObjectError
+    data class UnsupportedWalletMetadata(val message: String) : RetrieveRequestObjectError
 }
 
 /**
@@ -51,7 +58,10 @@ sealed interface RetrieveRequestObjectError {
  * the wallet
  */
 fun interface RetrieveRequestObject {
-    suspend operator fun invoke(requestId: RequestId, method: RetrieveRequestObjectMethod): Either<RetrieveRequestObjectError, Jwt>
+    suspend operator fun invoke(
+        requestId: RequestId,
+        method: RetrieveRequestObjectMethod,
+    ): Either<RetrieveRequestObjectError, Jwt>
 }
 
 class RetrieveRequestObjectLive(
@@ -96,9 +106,61 @@ class RetrieveRequestObjectLive(
                 RetrieveRequestObjectError.InvalidRequestUriMethod
             }
 
+            val walletMetadata = runCatching {
+                method.walletMetadataOrNull?.let {
+                    jsonSupport.decodeFromString<WalletMetadataTO>(it)
+                }
+            }.getOrElse { raise(RetrieveRequestObjectError.UnparsableWalletMetadata(it)) }
+            walletMetadata?.validate(presentation)?.bind()
+
             val (updatePresentation, jwt) = requestObjectOf()
             log(updatePresentation, jwt)
             jwt
+        }
+
+    private fun WalletMetadataTO.validate(
+        presentation: Presentation.Requested,
+    ): Either<RetrieveRequestObjectError.UnsupportedWalletMetadata, Unit> =
+        either {
+            val requiresPresentationDefinitionByReference =
+                presentation.presentationDefinitionMode is EmbedOption.ByReference && null != presentation.type.presentationDefinitionOrNull
+            if (requiresPresentationDefinitionByReference) {
+                val supportsPresentationDefinitionByReference = presentationDefinitionUriSupported ?: true
+                ensure(supportsPresentationDefinitionByReference) {
+                    RetrieveRequestObjectError.UnsupportedWalletMetadata(
+                        "Wallet does not support fetching PresentationDefinition by reference",
+                    )
+                }
+            }
+
+            // TODO VpFormats validation
+
+            val clientIdScheme = verifierConfig.verifierId.clientIdScheme
+            val supportedClientIdSchemes = clientIdSchemesSupported ?: listOf(OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED)
+            ensure(clientIdScheme in supportedClientIdSchemes) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Client Id Scheme '$clientIdScheme'")
+            }
+
+            // TODO Encryption parameters validation
+
+            val jarSigningAlgorithm = verifierConfig.verifierId.jarSigning.algorithm.name
+            ensure(jarSigningAlgorithm in signingAlgorithmsSupported.orEmpty()) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata(
+                    "Wallet does not support JAR Signing Algorithms '$jarSigningAlgorithm'",
+                )
+            }
+
+            val responseType = presentation.type.responseType
+            ensure(responseType in responseTypesSupported) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Type '$responseType'")
+            }
+
+            val responseMode = presentation.responseMode.name
+            val supportedResponseModes = responseModesSupported
+                ?: listOf(AuthorizationServerMetadataSpec.RESPONSE_MODE_QUERY, AuthorizationServerMetadataSpec.RESPONSE_MODE_FRAGMENT)
+            ensure(responseMode in supportedResponseModes) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Mode '$responseMode'")
+            }
         }
 
     private suspend fun invalidState(presentation: Presentation): RetrieveRequestObjectError.InvalidState {
@@ -112,6 +174,44 @@ class RetrieveRequestObjectLive(
     }
 }
 
+/**
+ * Transfer object for Wallet metadata.
+ */
+@Serializable
+private data class WalletMetadataTO(
+    @SerialName(OpenId4VPSpec.PRESENTATION_DEFINITION_URI_SUPPORTED)
+    val presentationDefinitionUriSupported: Boolean,
+
+    @Required
+    @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
+    val vpFormatsSupported: JsonObject,
+
+    @SerialName(OpenId4VPSpec.CLIENT_ID_SCHEMES_SUPPORTED)
+    val clientIdSchemesSupported: List<String>?,
+
+    @SerialName(DynamicRegistrationSpec.JWKS)
+    val jwks: JsonObject?,
+
+    @SerialName(DynamicRegistrationSpec.JWKS_URI)
+    val jwksUri: String?,
+
+    @SerialName(JarmSpec.ENCRYPTION_ALGORITHMS_SUPPORTED)
+    val encryptionAlgorithmsSupported: List<String>?,
+
+    @SerialName(JarmSpec.ENCRYPTION_METHODS_SUPPORTED)
+    val encryptionMethodsSupported: List<String>?,
+
+    @SerialName(JarSpec.REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED)
+    val signingAlgorithmsSupported: List<String>?,
+
+    @Required
+    @SerialName(AuthorizationServerMetadataSpec.RESPONSE_TYPES_SUPPORTED)
+    val responseTypesSupported: List<String>,
+
+    @SerialName(AuthorizationServerMetadataSpec.RESPONSE_MODES_SUPPORTED)
+    val responseModesSupported: List<String>?,
+)
+
 private val RetrieveRequestObjectMethod.walletMetadataOrNull: String?
     get() = when (this) {
         RetrieveRequestObjectMethod.Get -> null
@@ -122,4 +222,24 @@ private val RetrieveRequestObjectMethod.walletNonceOrNull: String?
     get() = when (this) {
         RetrieveRequestObjectMethod.Get -> null
         is RetrieveRequestObjectMethod.Post -> walletNonce
+    }
+
+private val VerifierId.clientIdScheme: String
+    get() = when (this) {
+        is VerifierId.PreRegistered -> OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED
+        is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_DNS
+        is VerifierId.X509SanUri -> OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_URI
+    }
+
+private val PresentationType.responseType: String
+    get() = when (this) {
+        is PresentationType.IdTokenRequest -> "id_token"
+        is PresentationType.VpTokenRequest -> "vp_token"
+        is PresentationType.IdAndVpToken -> "vp_token id_token"
+    }
+
+private val ResponseModeOption.name: String
+    get() = when (this) {
+        ResponseModeOption.DirectPost -> "direct_post"
+        ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
     }
