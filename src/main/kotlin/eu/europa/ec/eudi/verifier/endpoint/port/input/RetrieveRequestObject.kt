@@ -77,11 +77,11 @@ class RetrieveRequestObjectLive(
 
     private suspend fun found(
         presentation: Presentation.Requested,
-        invocationMethod: RetrieveRequestObjectMethod,
+        method: RetrieveRequestObjectMethod,
     ): Either<RetrieveRequestObjectError, Jwt> =
         either {
             suspend fun requestObjectOf(): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-                val jwt = signRequestObject(verifierConfig, clock, presentation, invocationMethod.walletNonceOrNull).getOrThrow()
+                val jwt = signRequestObject(verifierConfig, clock, presentation, method.walletNonceOrNull).getOrThrow()
                 val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
                 storePresentation(updatedPresentation)
                 return updatedPresentation to jwt
@@ -92,7 +92,7 @@ class RetrieveRequestObjectLive(
                 publishPresentationEvent(event)
             }
 
-            ensure(invocationMethod is RetrieveRequestObjectMethod.Get || RequestUriMethod.Post == presentation.requestUriMethod) {
+            ensure(method is RetrieveRequestObjectMethod.Get || RequestUriMethod.Post == presentation.requestUriMethod) {
                 RetrieveRequestObjectError.InvalidRequestUriMethod
             }
 
