@@ -323,12 +323,13 @@ class InitTransactionLive(
 
     /**
      * Gets the JAR [RequestUriMethod] for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [RequestUriMethod.Get] to support legacy clients.
+     * If none has been provided, falls back to [VerifierConfig.requestJarMethod].
      */
     private fun jarMethod(initTransaction: InitTransactionTO): RequestUriMethod =
         when (initTransaction.jarMethod) {
-            null, RequestUriMethodTO.Get -> RequestUriMethod.Get
+            RequestUriMethodTO.Get -> RequestUriMethod.Get
             RequestUriMethodTO.Post -> RequestUriMethod.Post
+            null -> verifierConfig.requestJarMethod
         }
 
     /**

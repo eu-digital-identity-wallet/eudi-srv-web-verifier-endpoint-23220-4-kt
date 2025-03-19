@@ -594,6 +594,11 @@ Description: How Authorization Requests will be provided
 Possible values: `ByValue`, `ByReference`  
 Default value: `ByReference`
 
+Variable: `VERIFIER_REQUESTJWT_METHOD`  
+Description: Request method wallet is expected to use when fetching an authorization request. Advertised as `request_uri_method`. Applicable when `VERIFIER_REQUESTJWT_EMBED` is `ByReference`       
+Possible values: `Get`, `Post`  
+Default value: `Get`  
+
 Variable: `VERIFIER_JWK_EMBED`  
 Description: How the Ephemeral Keys used for Authorization Response Encryption will be provided in Authorization Requests    
 Possible values: `ByValue`, `ByReference`  
