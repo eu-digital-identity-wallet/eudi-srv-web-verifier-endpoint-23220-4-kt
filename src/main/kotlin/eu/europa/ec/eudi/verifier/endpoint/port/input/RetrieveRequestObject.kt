@@ -18,7 +18,14 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import arrow.core.toNonEmptyListOrNull
+import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.supports
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
@@ -47,7 +54,7 @@ sealed interface RetrieveRequestObjectError {
     data object InvalidState : RetrieveRequestObjectError
     data object InvalidRequestUriMethod : RetrieveRequestObjectError
     data class UnparsableWalletMetadata(val cause: Throwable) : RetrieveRequestObjectError
-    data class UnsupportedWalletMetadata(val message: String) : RetrieveRequestObjectError
+    data class UnsupportedWalletMetadata(val message: String, val cause: Throwable? = null) : RetrieveRequestObjectError
 }
 
 /**
@@ -133,7 +140,23 @@ class RetrieveRequestObjectLive(
                 }
             }
 
-            // TODO VpFormats validation
+            val walletSupportedVpFormats = vpFormatsSupported.toVpFormats().getOrElse {
+                raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet metadata contains malformed VpFormats", it))
+            }
+            val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
+            val verifierSupportsAllWalletVpFormats = walletSupportedVpFormats.map { walletSupportedVpFormat ->
+                when (walletSupportedVpFormat) {
+                    is VpFormat.SdJwtVc -> verifierSupportedVpFormats.sdJwtVc.supports(
+                        sdJwtAlgorithms = walletSupportedVpFormat.sdJwtAlgorithms,
+                        kbJwtAlgorithms = walletSupportedVpFormat.kbJwtAlgorithms,
+                    )
+
+                    is VpFormat.MsoMdoc -> verifierSupportedVpFormats.msoMdoc.supports(walletSupportedVpFormat.algorithms)
+                }
+            }.foldRight(true, Boolean::and)
+            ensure(verifierSupportsAllWalletVpFormats) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata("Verifier does not support all the VpFormats supported by the Wallet")
+            }
 
             val clientIdScheme = verifierConfig.verifierId.clientIdScheme
             val supportedClientIdSchemes = clientIdSchemesSupported ?: listOf(OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED)
@@ -243,3 +266,42 @@ private val ResponseModeOption.name: String
         ResponseModeOption.DirectPost -> "direct_post"
         ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
     }
+
+private fun JsonObject.toVpFormats(): Result<List<VpFormat>> =
+    runCatching {
+        mapNotNull { (identifier, serializedProperties) ->
+            when (identifier) {
+                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
+                    serializedProperties.decodeAs<SdJwtVcFormatTO>()
+                        .getOrThrow()
+                        .let { properties ->
+                            VpFormat.SdJwtVc(
+                                sdJwtAlgorithms = properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
+                                kbJwtAlgorithms = properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
+                            )
+                        }
+
+                OpenId4VPSpec.FORMAT_MSO_MDOC ->
+                    serializedProperties.decodeAs<MsoMdocFormatTO>()
+                        .getOrThrow()
+                        .let { properties -> VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!) }
+
+                else -> null
+            }
+        }.distinct()
+    }
+
+private fun PresentationDefinition.vpFormats(): List<VpFormat> =
+    inputDescriptors.flatMap { inputDescriptor ->
+        val format = inputDescriptor.format ?: format
+        format?.jsonObject()?.toVpFormats()?.getOrThrow() ?: emptyList()
+    }.distinct()
+
+private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =
+    credentials.map {
+        when (val format = it.format.value) {
+            SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> supported.sdJwtVc
+            OpenId4VPSpec.FORMAT_MSO_MDOC -> supported.msoMdoc
+            else -> error("Unsupported format '$format'")
+        }
+    }.distinct()

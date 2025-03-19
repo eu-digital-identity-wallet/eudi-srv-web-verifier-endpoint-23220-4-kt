@@ -19,6 +19,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormat
 import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormats
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Required
@@ -88,3 +89,10 @@ internal fun VpFormats.toJsonObject(): JsonObject = buildJsonObject {
     val msoMdocFormatTO = jsonSupport.encodeToJsonElement(MsoMdocFormatTO(msoMdoc.algorithms))
     put(OpenId4VPSpec.FORMAT_MSO_MDOC, msoMdocFormatTO)
 }
+
+internal fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwtAlgorithms: List<JWSAlgorithm>): Boolean =
+    this.sdJwtAlgorithms.intersect(sdJwtAlgorithms.toSet()).isNotEmpty() &&
+        this.kbJwtAlgorithms.intersect(kbJwtAlgorithms.toSet()).isNotEmpty()
+
+internal fun VpFormat.MsoMdoc.supports(algorithms: List<JWSAlgorithm>): Boolean =
+    this.algorithms.intersect(algorithms.toSet()).isNotEmpty()
