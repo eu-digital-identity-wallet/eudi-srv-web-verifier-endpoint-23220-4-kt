@@ -43,7 +43,7 @@ private val REQUEST_OBJECT_MEDIA_TYPE = MediaType.parseMediaType(JarSpec.REQUEST
  * The WEB API available to the wallet
  */
 class WalletApi(
-    private val getRequestObject: GetRequestObject,
+    private val retrieveRequestObject: RetrieveRequestObject,
     private val getPresentationDefinition: GetPresentationDefinition,
     private val postWalletResponse: PostWalletResponse,
     private val signingKey: JWK,
@@ -75,12 +75,12 @@ class WalletApi(
      * If found, the Request Object will be returned as JWT
      */
     private suspend fun handleGetRequestObject(req: ServerRequest): ServerResponse {
-        suspend fun ServerRequest.invocationMethod(): GetRequestObjectInvocationMethod =
+        suspend fun ServerRequest.invocationMethod(): RetrieveRequestObjectMethod =
             when (method()) {
-                HttpMethod.GET -> GetRequestObjectInvocationMethod.Get
+                HttpMethod.GET -> RetrieveRequestObjectMethod.Get
                 HttpMethod.POST -> {
                     val form = awaitFormData()
-                    GetRequestObjectInvocationMethod.Post(
+                    RetrieveRequestObjectMethod.Post(
                         walletMetadata = form.getFirst(OpenId4VPSpec.WALLET_METADATA_PARAMETER),
                         walletNonce = form.getFirst(OpenId4VPSpec.WALLET_NONCE_PARAMETER),
                     )
@@ -94,12 +94,12 @@ class WalletApi(
         val invocationMethod = req.invocationMethod()
 
         logger.info("Handling GetRequestObject for ${requestId.value} ...")
-        val result = getRequestObject(requestId, invocationMethod)
+        val result = retrieveRequestObject(requestId, invocationMethod)
         return result.fold(
             ifRight = { requestObjectFound(it) },
             ifLeft = {
                 val status = when (it) {
-                    GetRequestObjectError.PresentationNotFound -> HttpStatus.NOT_FOUND
+                    RetrieveRequestObjectError.PresentationNotFound -> HttpStatus.NOT_FOUND
                     else -> HttpStatus.BAD_REQUEST
                 }
                 status(status).buildAndAwait()
