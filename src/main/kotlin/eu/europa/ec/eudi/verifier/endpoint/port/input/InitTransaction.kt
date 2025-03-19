@@ -265,7 +265,7 @@ class InitTransactionLive(
     ): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
-                val jwt = signRequestObject(verifierConfig, clock, requestedPresentation).getOrThrow()
+                val jwt = signRequestObject(verifierConfig, clock, requestedPresentation, null).getOrThrow()
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO.byValue(
                     requestedPresentation.id.value,

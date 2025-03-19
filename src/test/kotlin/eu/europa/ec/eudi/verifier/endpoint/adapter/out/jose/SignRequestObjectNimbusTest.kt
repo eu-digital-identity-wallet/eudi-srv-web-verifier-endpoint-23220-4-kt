@@ -70,7 +70,7 @@ class SignRequestObjectNimbusTest {
             .keyID(UUID.randomUUID().toString())
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
-        val jwt = signRequestObject.sign(RequestId("r"), clientMetaData, ecPublicKey, requestObject)
+        val jwt = signRequestObject.sign(RequestId("r"), clientMetaData, ecPublicKey, requestObject, null)
             .getOrThrow()
             .also { println(it) }
         val signedJwt = decode(jwt).getOrThrow().also { println(it) }
