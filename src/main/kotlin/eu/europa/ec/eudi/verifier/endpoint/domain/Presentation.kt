@@ -243,6 +243,7 @@ sealed interface Presentation {
         override val initiatedAt: Instant,
         override val type: PresentationType,
         val requestId: RequestId,
+        val requestUriMethod: RequestUriMethod,
         val nonce: Nonce,
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,

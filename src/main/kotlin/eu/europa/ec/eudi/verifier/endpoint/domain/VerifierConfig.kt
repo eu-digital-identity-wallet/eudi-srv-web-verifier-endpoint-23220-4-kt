@@ -40,7 +40,15 @@ sealed interface EmbedOption<in ID> {
 }
 
 /**
- * Configure option for response mode
+ * Configuration option for `request_uri_method`
+ */
+enum class RequestUriMethod {
+    Get,
+    Post,
+}
+
+/**
+ * Configuration option for response mode
  */
 enum class ResponseModeOption {
     DirectPost,

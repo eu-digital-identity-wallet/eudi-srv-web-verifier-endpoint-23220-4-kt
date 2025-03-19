@@ -45,6 +45,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
+import java.net.URL
 import java.time.Clock
 
 /**
@@ -75,6 +76,18 @@ enum class IdTokenTypeTO {
 
     @SerialName("attester_signed_id_token")
     AttesterSigned,
+}
+
+/**
+ * Specifies request_uri_method for a request
+ */
+@Serializable
+enum class RequestUriMethodTO {
+    @SerialName("get")
+    Get,
+
+    @SerialName("post")
+    Post,
 }
 
 /**
@@ -110,6 +123,7 @@ data class InitTransactionTO(
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
+    @SerialName("jar_method") val jarMethod: RequestUriMethodTO? = null,
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
@@ -135,9 +149,32 @@ enum class ValidationError {
 data class JwtSecuredAuthorizationRequestTO(
     @Required @SerialName("transaction_id") val transactionId: String,
     @Required @SerialName("client_id") val clientId: ClientId,
-    @SerialName("request") val request: String? = null,
+    @SerialName("request") val request: String?,
     @SerialName("request_uri") val requestUri: String?,
-)
+    @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO?,
+) {
+    companion object {
+
+        fun byValue(
+            transactionId: String,
+            clientId: ClientId,
+            request: String,
+        ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(transactionId, clientId, request, null, null)
+
+        fun byReference(
+            transactionId: String,
+            clientId: ClientId,
+            requestUri: URL,
+            requestUriMethod: RequestUriMethodTO,
+        ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(
+            transactionId,
+            clientId,
+            null,
+            requestUri.toExternalForm(),
+            requestUriMethod,
+        )
+    }
+}
 
 /**
  * This is a use case that initializes the [Presentation] process.
@@ -193,6 +230,7 @@ class InitTransactionLive(
             responseMode = responseMode,
             presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
+            requestUriMethod = jarMethod(initTransactionTO),
         )
         // create request, which may update presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
@@ -229,21 +267,24 @@ class InitTransactionLive(
             is EmbedOption.ByValue -> {
                 val jwt = signRequestObject(verifierConfig, clock, requestedPresentation).getOrThrow()
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
-                requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(
+                requestObjectRetrieved to JwtSecuredAuthorizationRequestTO.byValue(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
                     jwt,
-                    null,
                 )
             }
 
             is EmbedOption.ByReference -> {
-                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId).toExternalForm()
-                requestedPresentation to JwtSecuredAuthorizationRequestTO(
+                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
+                val requestUriMethod = when (requestedPresentation.requestUriMethod) {
+                    RequestUriMethod.Get -> RequestUriMethodTO.Get
+                    RequestUriMethod.Post -> RequestUriMethodTO.Post
+                }
+                requestedPresentation to JwtSecuredAuthorizationRequestTO.byReference(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
-                    null,
                     requestUri,
+                    requestUriMethod,
                 )
             }
         }
@@ -278,6 +319,16 @@ class InitTransactionLive(
             EmbedModeTO.ByValue -> EmbedOption.ByValue
             EmbedModeTO.ByReference -> requestJarByReference
             null -> verifierConfig.requestJarOption
+        }
+
+    /**
+     * Gets the JAR [RequestUriMethod] for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [RequestUriMethod.Get] to support legacy clients.
+     */
+    private fun jarMethod(initTransaction: InitTransactionTO): RequestUriMethod =
+        when (initTransaction.jarMethod) {
+            null, RequestUriMethodTO.Get -> RequestUriMethod.Get
+            RequestUriMethodTO.Post -> RequestUriMethod.Post
         }
 
     /**
