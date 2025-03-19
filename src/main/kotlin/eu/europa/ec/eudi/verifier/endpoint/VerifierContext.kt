@@ -180,7 +180,7 @@ internal fun beans(clock: Clock) = beans {
         )
     }
 
-    bean { GetRequestObjectLive(ref(), ref(), ref(), ref(), clock, ref()) }
+    bean { RetrieveRequestObjectLive(ref(), ref(), ref(), ref(), clock, ref()) }
 
     bean { GetPresentationDefinitionLive(clock, ref(), ref()) }
     bean {
