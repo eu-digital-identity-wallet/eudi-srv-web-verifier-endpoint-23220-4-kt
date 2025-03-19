@@ -17,4 +17,5 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 
 object JarSpec {
     const val REQUEST_OBJECT_MEDIA_TYPE: String = "application/oauth-authz-req+jwt"
+    const val REQUEST_OBJECT_MEDIA_SUBTYPE: String = "oauth-authz-req+jwt"
 }
