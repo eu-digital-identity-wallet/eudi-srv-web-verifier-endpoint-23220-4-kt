@@ -15,14 +15,33 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.Either
+import arrow.core.raise.either
+import arrow.core.raise.ensure
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import java.time.Clock
+
+/**
+ * Method used to invoke GetRequestObject.
+ */
+sealed interface GetRequestObjectInvocationMethod {
+    data object Get : GetRequestObjectInvocationMethod
+    data class Post(val walletMetadata: String?, val walletNonce: String?) : GetRequestObjectInvocationMethod
+}
+
+/**
+ * Errors that can be produced by GetRequestObject
+ */
+sealed interface GetRequestObjectError {
+    data object PresentationNotFound : GetRequestObjectError
+    data object InvalidState : GetRequestObjectError
+    data object InvalidRequestUriMethod : GetRequestObjectError
+}
 
 /**
  * Given a [RequestId] it returns a RFC9101 Request Object
@@ -32,7 +51,10 @@ import java.time.Clock
  * the wallet
  */
 fun interface GetRequestObject {
-    suspend operator fun invoke(requestId: RequestId): QueryResponse<Jwt>
+    suspend operator fun invoke(
+        requestId: RequestId,
+        invocationMethod: GetRequestObjectInvocationMethod,
+    ): Either<GetRequestObjectError, Jwt>
 }
 
 class GetRequestObjectLive(
@@ -44,38 +66,51 @@ class GetRequestObjectLive(
     private val publishPresentationEvent: PublishPresentationEvent,
 ) : GetRequestObject {
 
-    override suspend operator fun invoke(requestId: RequestId): QueryResponse<Jwt> =
-        when (val presentation = loadPresentationByRequestId(requestId)) {
-            null -> NotFound
-            is Presentation.Requested -> found(presentation)
-            else -> invalidState(presentation)
+    override suspend operator fun invoke(
+        requestId: RequestId,
+        invocationMethod: GetRequestObjectInvocationMethod,
+    ): Either<GetRequestObjectError, Jwt> =
+        either {
+            when (val presentation = loadPresentationByRequestId(requestId)) {
+                null -> raise(GetRequestObjectError.PresentationNotFound)
+                is Presentation.Requested -> found(presentation, invocationMethod).bind()
+                else -> raise(invalidState(presentation))
+            }
         }
 
-    private suspend fun found(presentation: Presentation.Requested): Found<Jwt> {
-        suspend fun requestObjectOf(): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-            val jwt = signRequestObject(verifierConfig, clock, presentation).getOrThrow()
-            val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
-            storePresentation(updatedPresentation)
-            return updatedPresentation to jwt
+    private suspend fun found(
+        presentation: Presentation.Requested,
+        invocationMethod: GetRequestObjectInvocationMethod,
+    ): Either<GetRequestObjectError, Jwt> =
+        either {
+            suspend fun requestObjectOf(): Pair<Presentation.RequestObjectRetrieved, Jwt> {
+                val jwt = signRequestObject(verifierConfig, clock, presentation).getOrThrow()
+                val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
+                storePresentation(updatedPresentation)
+                return updatedPresentation to jwt
+            }
+
+            suspend fun log(p: Presentation.RequestObjectRetrieved, jwt: Jwt) {
+                val event = PresentationEvent.RequestObjectRetrieved(p.id, p.requestObjectRetrievedAt, jwt)
+                publishPresentationEvent(event)
+            }
+
+            ensure(invocationMethod is GetRequestObjectInvocationMethod.Get || RequestUriMethod.Post == presentation.requestUriMethod) {
+                GetRequestObjectError.InvalidRequestUriMethod
+            }
+
+            val (updatePresentation, jwt) = requestObjectOf()
+            log(updatePresentation, jwt)
+            jwt
         }
 
-        suspend fun log(p: Presentation.RequestObjectRetrieved, jwt: Jwt) {
-            val event = PresentationEvent.RequestObjectRetrieved(p.id, p.requestObjectRetrievedAt, jwt)
-            publishPresentationEvent(event)
-        }
-
-        val (updatePresentation, jwt) = requestObjectOf()
-        log(updatePresentation, jwt)
-        return Found(jwt)
-    }
-
-    private suspend fun invalidState(presentation: Presentation): InvalidState {
+    private suspend fun invalidState(presentation: Presentation): GetRequestObjectError.InvalidState {
         suspend fun log() {
             val cause = "Presentation should be in Requested state but is in ${presentation.javaClass.name}"
             val event = PresentationEvent.FailedToRetrieveRequestObject(presentation.id, clock.instant(), cause)
             publishPresentationEvent(event)
         }
         log()
-        return InvalidState
+        return GetRequestObjectError.InvalidState
     }
 }

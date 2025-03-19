@@ -38,4 +38,7 @@ object OpenId4VPSpec {
     const val DCQL_MSO_MDOC_DOCTYPE_VALUE: String = "doctype_value"
     const val DCQL_MSO_MDOC_NAMESPACE: String = "namespace"
     const val DCQL_MSO_MDOC_CLAIM_NAME: String = "claim_name"
+
+    const val WALLET_METADATA_PARAMETER: String = "wallet_metadata"
+    const val WALLET_NONCE_PARAMETER: String = "wallet_nonce"
 }
