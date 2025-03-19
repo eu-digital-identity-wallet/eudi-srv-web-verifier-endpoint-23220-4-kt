@@ -249,6 +249,7 @@ enum class HashAlgorithm(val ianaName: String) {
 data class VerifierConfig(
     val verifierId: VerifierId,
     val requestJarOption: EmbedOption<RequestId>,
+    val requestJarMethod: RequestUriMethod,
     val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseModeOption: ResponseModeOption,
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,

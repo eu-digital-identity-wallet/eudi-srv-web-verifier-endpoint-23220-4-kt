@@ -427,6 +427,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             ByReference, null -> WalletApi.requestJwtByReference(environment.publicUrl())
         }
     }
+    val requestJarMethod = environment.getProperty<RequestUriMethod>("verifier.requestJwt.method") ?: RequestUriMethod.Get
     val responseModeOption =
         environment.getProperty("verifier.response.mode", ResponseModeOption::class.java)
             ?: ResponseModeOption.DirectPostJwt
@@ -451,6 +452,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
     return VerifierConfig(
         verifierId = verifierId,
         requestJarOption = requestJarOption,
+        requestJarMethod = requestJarMethod,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = WalletApi.directPost(publicUrl),
         responseModeOption = responseModeOption,
