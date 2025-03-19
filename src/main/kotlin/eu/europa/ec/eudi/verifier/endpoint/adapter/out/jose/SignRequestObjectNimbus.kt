@@ -62,7 +62,7 @@ class SignRequestObjectNimbus : SignRequestObject {
                     is VerifierId.X509SanDns, is VerifierId.X509SanUri -> x509CertChain(key.x509CertChain)
                 }
             }
-            .type(JOSEObjectType(AuthReqJwt))
+            .type(JOSEObjectType(JarSpec.REQUEST_OBJECT_MEDIA_SUBTYPE))
             .build()
         val responseMode = requestObject.responseMode
         val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, ecPublicKey), requestObject)
@@ -138,9 +138,5 @@ class SignRequestObjectNimbus : SignRequestObject {
 
             setCustomField("vp_formats", c.vpFormats.toJsonObject().toJackson())
         }
-    }
-
-    companion object {
-        const val AuthReqJwt = "oauth-authz-req+jwt"
     }
 }
