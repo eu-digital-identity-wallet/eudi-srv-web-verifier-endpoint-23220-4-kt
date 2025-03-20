@@ -39,10 +39,10 @@ import java.net.URL
 import java.util.*
 import kotlin.test.*
 
-class SignRequestObjectNimbusTest {
+class CreateJarNimbusTest {
 
-    private val signRequestObject = TestContext.singRequestObject
-    private val verifier = TestContext.singRequestObjectVerifier
+    private val createJar = TestContext.createJar
+    private val verifier = TestContext.signedRequestObjectVerifier
     private val clientMetaData = TestContext.clientMetaData
     private val verifierId = TestContext.verifierId
 
@@ -70,8 +70,9 @@ class SignRequestObjectNimbusTest {
             .keyID(UUID.randomUUID().toString())
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
-        val jwt = signRequestObject.sign(RequestId("r"), clientMetaData, ecPublicKey, requestObject, null)
+        val jwt = createJar.sign(RequestId("r"), clientMetaData, ecPublicKey, requestObject, null)
             .getOrThrow()
+            .serialize()
             .also { println(it) }
         val signedJwt = decode(jwt).getOrThrow().also { println(it) }
         assertX5cHeaderClaimDoesNotContainPEM(signedJwt.header)

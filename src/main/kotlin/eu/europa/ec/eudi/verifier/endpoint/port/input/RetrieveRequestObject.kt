@@ -16,24 +16,34 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
+import arrow.core.NonEmptyList
+import arrow.core.nonEmptyListOf
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.toNonEmptyListOrNull
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
+import com.nimbusds.jose.jwk.*
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 
@@ -52,8 +62,9 @@ sealed interface RetrieveRequestObjectError {
     data object PresentationNotFound : RetrieveRequestObjectError
     data object InvalidState : RetrieveRequestObjectError
     data object InvalidRequestUriMethod : RetrieveRequestObjectError
-    data class UnparsableWalletMetadata(val cause: Throwable) : RetrieveRequestObjectError
+    data class UnparsableWalletMetadata(val message: String, val cause: Throwable? = null) : RetrieveRequestObjectError
     data class UnsupportedWalletMetadata(val message: String, val cause: Throwable? = null) : RetrieveRequestObjectError
+    data class InvalidWalletMetadata(val message: String, val cause: Throwable? = null) : RetrieveRequestObjectError
 }
 
 /**
@@ -73,10 +84,11 @@ fun interface RetrieveRequestObject {
 class RetrieveRequestObjectLive(
     private val loadPresentationByRequestId: LoadPresentationByRequestId,
     private val storePresentation: StorePresentation,
-    private val signRequestObject: SignRequestObject,
+    private val createJar: CreateJar,
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
+    private val clientFactory: KtorHttpClientFactory,
 ) : RetrieveRequestObject {
 
     override suspend operator fun invoke(
@@ -96,8 +108,10 @@ class RetrieveRequestObjectLive(
         method: RetrieveRequestObjectMethod,
     ): Either<RetrieveRequestObjectError, Jwt> =
         either {
-            suspend fun requestObjectOf(): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-                val jwt = signRequestObject(verifierConfig, clock, presentation, method.walletNonceOrNull).getOrThrow()
+            suspend fun updatePresentationAndCreateJar(
+                encryptionRequirement: EncryptionRequirement,
+            ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
+                val jwt = createJar(verifierConfig, clock, presentation, method.walletNonceOrNull, encryptionRequirement).getOrThrow()
                 val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
                 storePresentation(updatedPresentation)
                 return updatedPresentation to jwt
@@ -116,17 +130,17 @@ class RetrieveRequestObjectLive(
                 method.walletMetadataOrNull?.let {
                     jsonSupport.decodeFromString<WalletMetadataTO>(it)
                 }
-            }.getOrElse { raise(RetrieveRequestObjectError.UnparsableWalletMetadata(it)) }
-            walletMetadata?.validate(presentation)?.bind()
+            }.getOrElse { raise(RetrieveRequestObjectError.UnparsableWalletMetadata("Wallet Metadata cannot be parsed", it)) }
+            val encryptionRequirement = walletMetadata?.validate(presentation)?.bind() ?: EncryptionRequirement.NotRequired
 
-            val (updatePresentation, jwt) = requestObjectOf()
-            log(updatePresentation, jwt)
-            jwt
-        }
+            val (updatePresentation, jar) = updatePresentationAndCreateJar(encryptionRequirement)
+            log(updatePresentation, jar)
+            jar
+        }.onLeft { error -> TODO() }
 
-    private fun WalletMetadataTO.validate(
+    private suspend fun WalletMetadataTO.validate(
         presentation: Presentation.Requested,
-    ): Either<RetrieveRequestObjectError.UnsupportedWalletMetadata, Unit> =
+    ): Either<RetrieveRequestObjectError, EncryptionRequirement> =
         either {
             val requiresPresentationDefinitionByReference =
                 presentation.presentationDefinitionMode is EmbedOption.ByReference && null != presentation.type.presentationDefinitionOrNull
@@ -162,7 +176,42 @@ class RetrieveRequestObjectLive(
                 RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Client Id Scheme '$clientIdScheme'")
             }
 
-            // TODO Encryption parameters validation
+            val encryptionRequirement = run {
+                ensure((null == jwks && null == jwksUri) || ((null != jwks) xor (null != jwksUri))) {
+                    RetrieveRequestObjectError.InvalidWalletMetadata(
+                        "Either none of or only one of '${RFC8414.JWKS}', '${RFC8414.JWKS_URI}' must be provided",
+                    )
+                }
+
+                val jwks = jwks?.toJwks()?.bind() ?: jwksUri?.let { clientFactory().use { client -> client.getJwks(it).bind() } }
+                if (null == jwks) {
+                    EncryptionRequirement.NotRequired
+                } else {
+                    ensure(!encryptionAlgorithmsSupported.isNullOrEmpty()) {
+                        RetrieveRequestObjectError.InvalidWalletMetadata(
+                            "Missing '${JarmSpec.AUTHORIZATION_ENCRYPTION_ALGORITHMS_SUPPORTED}'",
+                        )
+                    }
+                    ensure(!encryptionMethodsSupported.isNullOrEmpty()) {
+                        RetrieveRequestObjectError.InvalidWalletMetadata(
+                            "Missing '${JarmSpec.AUTHORIZATION_ENCRYPTION_METHODS_SUPPORTED}'",
+                        )
+                    }
+
+                    val walletSupportedEncryptionAlgorithms = encryptionAlgorithmsSupported.map { JWEAlgorithm.parse(it) }
+                    val walletSupportedEncryptionMethods = encryptionMethodsSupported.map { EncryptionMethod.parse(it) }
+
+                    jwks.keys
+                        .firstNotNullOfOrNull {
+                            EncryptionRequirement.Required.create(it, walletSupportedEncryptionAlgorithms, walletSupportedEncryptionMethods)
+                        }
+                        ?: raise(
+                            RetrieveRequestObjectError.UnsupportedWalletMetadata(
+                                "Could not determine a way to encrypt JAR with the provided Wallet Metadata",
+                            ),
+                        )
+                }
+            }
 
             val jarSigningAlgorithm = verifierConfig.verifierId.jarSigning.algorithm.name
             ensure(jarSigningAlgorithm in signingAlgorithmsSupported.orEmpty()) {
@@ -184,6 +233,8 @@ class RetrieveRequestObjectLive(
             ensure(responseMode in supportedResponseModes) {
                 RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Mode '$responseMode'")
             }
+
+            encryptionRequirement
         }
 
     private suspend fun invalidState(presentation: Presentation): RetrieveRequestObjectError.InvalidState {
@@ -316,3 +367,83 @@ private fun VpFormat.supports(other: VpFormat): Boolean =
             other is VpFormat.MsoMdoc &&
                 algorithms.intersect(other.algorithms).isNotEmpty()
     }
+
+private fun JsonObject.toJwks(): Either<RetrieveRequestObjectError.InvalidWalletMetadata, JWKSet> =
+    Either.catch {
+        JWKSet.parse(jsonSupport.encodeToString(this))
+    }.mapLeft { RetrieveRequestObjectError.InvalidWalletMetadata("Cannot convert JsonObject to JWKS", it) }
+
+private suspend fun HttpClient.getJwks(jwksLocation: String): Either<RetrieveRequestObjectError.InvalidWalletMetadata, JWKSet> =
+    Either.catch {
+        JWKSet.parse(get(jwksLocation).bodyAsText())
+    }.mapLeft { RetrieveRequestObjectError.InvalidWalletMetadata("Unable to fetch encryption JWKS", it) }
+
+private fun JWK.isSupportedEncryptionJwk(): Boolean =
+    if (null == keyUse || KeyUse.ENCRYPTION == keyUse) {
+        when (this) {
+            is RSAKey -> true
+            is ECKey -> Curve.P_256 == curve || Curve.P_384 == curve || Curve.P_521 == curve
+            is OctetKeyPair -> Curve.X25519 == curve
+            else -> false
+        }
+    } else false
+
+private val JWK.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
+    get() = when (this) {
+        is RSAKey -> supportedEncryptionAlgorithms
+        is ECKey -> supportedEncryptionAlgorithms
+        is OctetKeyPair -> supportedEncryptionAlgorithms
+        else -> error("Unsupported JWK type '${this::class.qualifiedName}'")
+    }
+
+private val JWK.supportedEncryptionMethods: NonEmptyList<EncryptionMethod>
+    get() = nonEmptyListOf(
+        EncryptionMethod.A128CBC_HS256,
+        EncryptionMethod.A192CBC_HS384,
+        EncryptionMethod.A256CBC_HS512,
+        EncryptionMethod.A128GCM,
+        EncryptionMethod.A192GCM,
+        EncryptionMethod.A256GCM,
+        EncryptionMethod.A128CBC_HS256_DEPRECATED,
+        EncryptionMethod.A256CBC_HS512_DEPRECATED,
+        EncryptionMethod.XC20P,
+    )
+
+private val RSAKey.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
+    get() = nonEmptyListOf(
+        JWEAlgorithm.RSA_OAEP_256,
+        JWEAlgorithm.RSA_OAEP_384,
+        JWEAlgorithm.RSA_OAEP_512,
+        JWEAlgorithm.RSA_OAEP,
+        JWEAlgorithm.RSA1_5,
+    )
+
+private val ECKey.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
+    get() = nonEmptyListOf(
+        JWEAlgorithm.ECDH_ES,
+        JWEAlgorithm.ECDH_ES_A128KW,
+        JWEAlgorithm.ECDH_ES_A128KW,
+        JWEAlgorithm.ECDH_ES_A256KW,
+    )
+
+private val OctetKeyPair.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
+    get() = nonEmptyListOf(
+        JWEAlgorithm.ECDH_ES,
+        JWEAlgorithm.ECDH_ES_A128KW,
+        JWEAlgorithm.ECDH_ES_A128KW,
+        JWEAlgorithm.ECDH_ES_A256KW,
+    )
+
+private fun EncryptionRequirement.Required.Companion.create(
+    jwk: JWK,
+    algorithms: List<JWEAlgorithm>,
+    methods: List<EncryptionMethod>,
+): EncryptionRequirement.Required? =
+    jwk.takeIf { it.isSupportedEncryptionJwk() }
+        ?.let {
+            val jwkSupportedAlgorithms = it.supportedEncryptionAlgorithms.intersect(algorithms.toSet())
+            val jwkSupportedMethods = it.supportedEncryptionMethods.intersect(methods.toSet())
+            if (jwkSupportedAlgorithms.isNotEmpty() && jwkSupportedMethods.isNotEmpty()) {
+                EncryptionRequirement.Required(jwk.toPublicJWK(), jwkSupportedAlgorithms.first(), jwkSupportedMethods.first())
+            } else null
+        }
