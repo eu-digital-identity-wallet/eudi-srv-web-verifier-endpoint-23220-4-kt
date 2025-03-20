@@ -15,6 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+/**
+ * [OpenID for Verifiable Presentations](https://openid.net/specs/openid-4-verifiable-presentations-1_0-23.html)
+ */
 object OpenId4VPSpec {
     const val VERSION: String = "draft 23"
 

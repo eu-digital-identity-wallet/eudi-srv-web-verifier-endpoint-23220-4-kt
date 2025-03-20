@@ -15,6 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+/**
+ * [JWT Secured Authorization Response Mode for OAuth 2.0 (JARM)](https://openid.net/specs/oauth-v2-jarm.html)
+ */
 object JarmSpec {
     const val AUTHORIZATION_ENCRYPTION_ALGORITHMS_SUPPORTED: String = "authorization_encryption_alg_values_supported"
     const val AUTHORIZATION_ENCRYPTION_METHODS_SUPPORTED: String = "authorization_encryption_enc_values_supported"
