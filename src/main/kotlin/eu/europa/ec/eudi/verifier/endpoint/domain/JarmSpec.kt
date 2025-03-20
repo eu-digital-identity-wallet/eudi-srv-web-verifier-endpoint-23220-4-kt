@@ -16,6 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 object JarmSpec {
-    const val ENCRYPTION_ALGORITHMS_SUPPORTED: String = "authorization_encryption_alg_values_supported"
-    const val ENCRYPTION_METHODS_SUPPORTED: String = "authorization_encryption_enc_values_supported"
+    const val AUTHORIZATION_ENCRYPTION_ALGORITHMS_SUPPORTED: String = "authorization_encryption_alg_values_supported"
+    const val AUTHORIZATION_ENCRYPTION_METHODS_SUPPORTED: String = "authorization_encryption_enc_values_supported"
 }
