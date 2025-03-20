@@ -16,14 +16,13 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
-import arrow.core.NonEmptyList
-import arrow.core.nonEmptyListOf
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
-import com.nimbusds.jose.jwk.*
+import com.nimbusds.jose.jwk.JWK
+import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
@@ -111,10 +110,10 @@ class RetrieveRequestObjectLive(
             suspend fun updatePresentationAndCreateJar(
                 encryptionRequirement: EncryptionRequirement,
             ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-                val jwt = createJar(verifierConfig, clock, presentation, method.walletNonceOrNull, encryptionRequirement).getOrThrow()
+                val jar = createJar(verifierConfig, clock, presentation, method.walletNonceOrNull, encryptionRequirement).getOrThrow()
                 val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
                 storePresentation(updatedPresentation)
-                return updatedPresentation to jwt
+                return updatedPresentation to jar
             }
 
             suspend fun log(p: Presentation.RequestObjectRetrieved, jwt: Jwt) {
@@ -377,62 +376,6 @@ private suspend fun HttpClient.getJwks(jwksLocation: String): Either<RetrieveReq
     Either.catch {
         JWKSet.parse(get(jwksLocation).bodyAsText())
     }.mapLeft { RetrieveRequestObjectError.InvalidWalletMetadata("Unable to fetch encryption JWKS", it) }
-
-private fun JWK.isSupportedEncryptionJwk(): Boolean =
-    if (null == keyUse || KeyUse.ENCRYPTION == keyUse) {
-        when (this) {
-            is RSAKey -> true
-            is ECKey -> Curve.P_256 == curve || Curve.P_384 == curve || Curve.P_521 == curve
-            is OctetKeyPair -> Curve.X25519 == curve
-            else -> false
-        }
-    } else false
-
-private val JWK.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
-    get() = when (this) {
-        is RSAKey -> supportedEncryptionAlgorithms
-        is ECKey -> supportedEncryptionAlgorithms
-        is OctetKeyPair -> supportedEncryptionAlgorithms
-        else -> error("Unsupported JWK type '${this::class.qualifiedName}'")
-    }
-
-private val JWK.supportedEncryptionMethods: NonEmptyList<EncryptionMethod>
-    get() = nonEmptyListOf(
-        EncryptionMethod.A128CBC_HS256,
-        EncryptionMethod.A192CBC_HS384,
-        EncryptionMethod.A256CBC_HS512,
-        EncryptionMethod.A128GCM,
-        EncryptionMethod.A192GCM,
-        EncryptionMethod.A256GCM,
-        EncryptionMethod.A128CBC_HS256_DEPRECATED,
-        EncryptionMethod.A256CBC_HS512_DEPRECATED,
-        EncryptionMethod.XC20P,
-    )
-
-private val RSAKey.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
-    get() = nonEmptyListOf(
-        JWEAlgorithm.RSA_OAEP_256,
-        JWEAlgorithm.RSA_OAEP_384,
-        JWEAlgorithm.RSA_OAEP_512,
-        JWEAlgorithm.RSA_OAEP,
-        JWEAlgorithm.RSA1_5,
-    )
-
-private val ECKey.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
-    get() = nonEmptyListOf(
-        JWEAlgorithm.ECDH_ES,
-        JWEAlgorithm.ECDH_ES_A128KW,
-        JWEAlgorithm.ECDH_ES_A128KW,
-        JWEAlgorithm.ECDH_ES_A256KW,
-    )
-
-private val OctetKeyPair.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
-    get() = nonEmptyListOf(
-        JWEAlgorithm.ECDH_ES,
-        JWEAlgorithm.ECDH_ES_A128KW,
-        JWEAlgorithm.ECDH_ES_A128KW,
-        JWEAlgorithm.ECDH_ES_A256KW,
-    )
 
 private fun EncryptionRequirement.Required.Companion.create(
     jwk: JWK,
