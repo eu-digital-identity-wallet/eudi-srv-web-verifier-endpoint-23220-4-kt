@@ -15,7 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.JarSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.RFC9101
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -74,7 +74,7 @@ object WalletApiClient {
         // get the presentation definition
         val getResponse = client.get()
             .uri(relativeRequestUri)
-            .accept(MediaType.parseMediaType(JarSpec.REQUEST_OBJECT_MEDIA_TYPE))
+            .accept(MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE))
             .exchange()
             .expectStatus().isOk()
             .expectBody<String>().returnResult()

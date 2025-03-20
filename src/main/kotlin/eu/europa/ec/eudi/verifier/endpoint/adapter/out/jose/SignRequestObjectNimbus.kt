@@ -64,7 +64,7 @@ class SignRequestObjectNimbus : SignRequestObject {
                     is VerifierId.X509SanDns, is VerifierId.X509SanUri -> x509CertChain(key.x509CertChain)
                 }
             }
-            .type(JOSEObjectType(JarSpec.REQUEST_OBJECT_MEDIA_SUBTYPE))
+            .type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
             .build()
         val responseMode = requestObject.responseMode
         val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, ecPublicKey), requestObject, walletNonce)

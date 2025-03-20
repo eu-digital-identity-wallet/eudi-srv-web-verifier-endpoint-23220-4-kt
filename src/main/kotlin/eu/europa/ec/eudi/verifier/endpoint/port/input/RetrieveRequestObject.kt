@@ -181,7 +181,7 @@ class RetrieveRequestObjectLive(
 
             val responseMode = presentation.responseMode.name()
             val supportedResponseModes = responseModesSupported
-                ?: listOf(AuthorizationServerMetadataSpec.RESPONSE_MODE_QUERY, AuthorizationServerMetadataSpec.RESPONSE_MODE_FRAGMENT)
+                ?: listOf(RFC8414.RESPONSE_MODE_QUERY, RFC8414.RESPONSE_MODE_FRAGMENT)
             ensure(responseMode in supportedResponseModes) {
                 RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Mode '$responseMode'")
             }
@@ -213,25 +213,25 @@ private data class WalletMetadataTO(
     @SerialName(OpenId4VPSpec.CLIENT_ID_SCHEMES_SUPPORTED)
     val clientIdSchemesSupported: List<String>?,
 
-    @SerialName(DynamicRegistrationSpec.JWKS)
+    @SerialName(RFC8414.JWKS)
     val jwks: JsonObject?,
 
-    @SerialName(DynamicRegistrationSpec.JWKS_URI)
+    @SerialName(RFC8414.JWKS_URI)
     val jwksUri: String?,
 
-    @SerialName(JarmSpec.ENCRYPTION_ALGORITHMS_SUPPORTED)
+    @SerialName(JarmSpec.AUTHORIZATION_ENCRYPTION_ALGORITHMS_SUPPORTED)
     val encryptionAlgorithmsSupported: List<String>?,
 
-    @SerialName(JarmSpec.ENCRYPTION_METHODS_SUPPORTED)
+    @SerialName(JarmSpec.AUTHORIZATION_ENCRYPTION_METHODS_SUPPORTED)
     val encryptionMethodsSupported: List<String>?,
 
-    @SerialName(JarSpec.REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED)
+    @SerialName(RFC9101.REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED)
     val signingAlgorithmsSupported: List<String>?,
 
-    @SerialName(AuthorizationServerMetadataSpec.RESPONSE_TYPES_SUPPORTED)
+    @SerialName(RFC8414.RESPONSE_TYPES_SUPPORTED)
     val responseTypesSupported: List<String>?,
 
-    @SerialName(AuthorizationServerMetadataSpec.RESPONSE_MODES_SUPPORTED)
+    @SerialName(RFC8414.RESPONSE_MODES_SUPPORTED)
     val responseModesSupported: List<String>?,
 )
 

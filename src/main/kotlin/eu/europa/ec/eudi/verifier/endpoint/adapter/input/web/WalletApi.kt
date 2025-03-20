@@ -37,7 +37,7 @@ import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.util.DefaultUriBuilderFactory
 
-private val REQUEST_OBJECT_MEDIA_TYPE = MediaType.parseMediaType(JarSpec.REQUEST_OBJECT_MEDIA_TYPE)
+private val REQUEST_OBJECT_MEDIA_TYPE = MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE)
 
 /**
  * The WEB API available to the wallet

@@ -15,7 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-object DynamicRegistrationSpec {
-    const val JWKS: String = "jwks"
-    const val JWKS_URI: String = "jwks_uri"
+object RFC9101 {
+    const val REQUEST_OBJECT_MEDIA_TYPE: String = "application/oauth-authz-req+jwt"
+    const val REQUEST_OBJECT_MEDIA_SUBTYPE: String = "oauth-authz-req+jwt"
+
+    const val REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED: String = "request_object_signing_alg_values_supported"
 }
