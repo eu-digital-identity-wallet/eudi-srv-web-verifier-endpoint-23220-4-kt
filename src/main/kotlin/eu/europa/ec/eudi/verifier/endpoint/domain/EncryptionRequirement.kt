@@ -13,21 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
+package eu.europa.ec.eudi.verifier.endpoint.domain
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
-import java.time.Clock
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
+import com.nimbusds.jose.jwk.JWK
 
-/**
- * An out port that signs a [Presentation.Requested]
- */
-fun interface SignRequestObject {
-    operator fun invoke(
-        verifierConfig: VerifierConfig,
-        clock: Clock,
-        presentation: Presentation.Requested,
-        walletNonce: String?,
-    ): Result<Jwt>
+sealed interface EncryptionRequirement {
+
+    data object NotRequired : EncryptionRequirement
+
+    data class Required(
+        val jwk: JWK,
+        val algorithm: JWEAlgorithm,
+        val method: EncryptionMethod,
+    ) : EncryptionRequirement {
+        init {
+            require(!jwk.isPrivate) { "jwk must not be private" }
+        }
+
+        companion object
+    }
 }

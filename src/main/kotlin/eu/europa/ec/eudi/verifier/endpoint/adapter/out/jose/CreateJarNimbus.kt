@@ -15,9 +15,16 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.flatMap
 import com.nimbusds.jose.*
+import com.nimbusds.jose.crypto.ECDHEncrypter
+import com.nimbusds.jose.crypto.RSAEncrypter
+import com.nimbusds.jose.crypto.X25519Encrypter
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
+import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.JWKSet
+import com.nimbusds.jose.jwk.OctetKeyPair
+import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.oauth2.sdk.AuthorizationRequest
@@ -30,24 +37,29 @@ import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import java.time.Clock
 import java.util.*
 
 /**
- * An implementation of [SignRequestObject] that uses Nimbus SDK
+ * An implementation of [CreateJar] that uses Nimbus SDK
  */
-class SignRequestObjectNimbus : SignRequestObject {
+class CreateJarNimbus : CreateJar {
 
     override fun invoke(
         verifierConfig: VerifierConfig,
         clock: Clock,
         presentation: Presentation.Requested,
         walletNonce: String?,
+        encryptionRequirement: EncryptionRequirement,
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey
-        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject, walletNonce)
+        val signedJar = sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject, walletNonce)
+        return when (encryptionRequirement) {
+            EncryptionRequirement.NotRequired -> signedJar.map { it.serialize() }
+            is EncryptionRequirement.Required -> signedJar.flatMap { encrypt(encryptionRequirement, it) }.map { it.serialize() }
+        }
     }
 
     internal fun sign(
@@ -55,7 +67,7 @@ class SignRequestObjectNimbus : SignRequestObject {
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
         walletNonce: String?,
-    ): Result<Jwt> = runCatching {
+    ): Result<SignedJWT> = runCatching {
         val (key, algorithm) = requestObject.verifierId.jarSigning
         val header = JWSHeader.Builder(algorithm)
             .apply {
@@ -69,9 +81,27 @@ class SignRequestObjectNimbus : SignRequestObject {
         val responseMode = requestObject.responseMode
         val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, ecPublicKey), requestObject, walletNonce)
 
-        SignedJWT(header, claimSet)
-            .apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
-            .serialize()
+        SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
+    }
+
+    internal fun encrypt(
+        encryptionRequirement: EncryptionRequirement.Required,
+        signed: SignedJWT,
+    ): Result<JWEObject> = runCatching {
+        val (jwk, algorithm, method) = encryptionRequirement
+        val encrypter = when (jwk) {
+            is RSAKey -> RSAEncrypter(jwk)
+            is ECKey -> ECDHEncrypter(jwk)
+            is OctetKeyPair -> X25519Encrypter(jwk)
+            else -> error("Unsupported JWK type '${jwk::javaClass.name}'")
+        }
+
+        val header = JWEHeader.Builder(algorithm, method)
+            .contentType("JWT")
+            .build()
+        val payload = Payload(signed)
+
+        JWEObject(header, payload).apply { encrypt(encrypter) }
     }
 
     /**

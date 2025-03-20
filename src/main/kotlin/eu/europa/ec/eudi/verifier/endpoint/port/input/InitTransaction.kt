@@ -32,8 +32,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
@@ -196,7 +196,7 @@ class InitTransactionLive(
     private val generateTransactionId: GenerateTransactionId,
     private val generateRequestId: GenerateRequestId,
     private val storePresentation: StorePresentation,
-    private val signRequestObject: SignRequestObject,
+    private val createJar: CreateJar,
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
     private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
@@ -265,7 +265,14 @@ class InitTransactionLive(
     ): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
-                val jwt = signRequestObject(verifierConfig, clock, requestedPresentation, null).getOrThrow()
+                val jwt = createJar(
+                    verifierConfig,
+                    clock,
+                    requestedPresentation,
+                    null,
+                    EncryptionRequirement.NotRequired,
+                ).getOrThrow()
+
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to JwtSecuredAuthorizationRequestTO.byValue(
                     requestedPresentation.id.value,
