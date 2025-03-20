@@ -253,7 +253,8 @@ An endpoint to control the content of the authorization request that will be pre
 - `dcql_query`: A json object depicting the query, expressed using DCQL, to be included in the OpenId4VP authorization request in case `type` is 'vp_token', or 'vp_token id_token'. 
 - `nonce`: Nonce value to be included in the OpenId4VP authorization request.
 - `response_mode`: Controls the `response_mode` attribute of the OpenId4VP authorization request. Allowed values are one of `direct_post` or `direct_post.jwt`.  
-- `jar_mode`: Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if `by_reference` a `request_uri` url will be returned.  
+- `jar_mode`: Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if `by_reference` a `request_uri` url will be returned.
+- `jar_method`: When `post`, `request_uri_method` for the Transaction is `post`, when `get` `request_uri_method` for the Transaction is `get`. Applicable only when `jar_mode` is `by_reference`.
 - `presentation_definition_mode`: Controls how the presentation definition will be embedded in the request. If 'by_value' it will be embedded inline, if `by_reference` a `presentation_definition_uri` url will be embedded in the request.
 - `wallet_response_redirect_uri_template`: If provided will be used to construct the response to wallet, when it posts its response to the authorization request.   
 
@@ -295,7 +296,9 @@ curl -X POST -H "Content-type: application/json" -d '{
         ]
   },
   "dcql_query": null,
-  "nonce": "nonce"
+  "nonce": "nonce",
+  "jar_mode": "by_reference",
+  "jar_method": "post"
 }' 'http://localhost:8080/ui/presentations'
 ```
 
@@ -331,7 +334,9 @@ curl -X POST -H "Content-type: application/json" -d '{
       }
     ]
   },
-  "nonce": "nonce"
+  "nonce": "nonce",
+  "jar_mode": "by_reference",
+  "jar_method": "post"
 }' 'http://localhost:8080/ui/presentations'
 ```
 
@@ -340,7 +345,8 @@ curl -X POST -H "Content-type: application/json" -d '{
 {
   "transaction_id": "STMMbidoCQTtyk9id5IcoL8CqdC8rxgks5FF8cqqUrHvw0IL3AaIHGnwxvrvcEyUJ6uUPNdoBQDa7yCqpjtKaw",
   "client_id": "x509_san_dns:localhost",
-  "request_uri": "https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw"
+  "request_uri": "https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw",
+  "request_uri_method": "post"
 }
 ```
 
@@ -348,20 +354,42 @@ You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/verifi
 
 ### Get authorization request
 
+An endpoint to be used by wallet when the OpenId4VP authorization request is passed to wallet by reference as a request_uri.
+In essence this is the endpoint that responds to the url included as the `request_uri` attribute of the [Initialize transaction endpoint](#initialize-transaction-endpoint)'s response.
+
+This endpoint also support `request_uri_method` `post`. More details can be found [here](https://openid.net/specs/openid-4-verifiable-presentations-1_0-23.html#name-request-uri-method-post).
+
+#### request_uri_method: get
+
 - _Method_: GET
 - _URL_: http://localhost:8080/wallet/request.jwt/{requestId}
 - _Parameters_
   - `requestId`: The identifier of the authorization request
 - _Actor_: [Wallet](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
 
-An endpoint to be used by wallet when the OpenId4VP authorization request is passed to wallet by reference as a request_uri.
-In essence this is the endpoint that responds to the url included as the `request_uri` attribute of the [Initialize transaction endpoint](#initialize-transaction-endpoint)'s response.
-
 **Usage:**
 ```bash
 curl https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw
 ```
-**Returns:** The authorization request payload as a signed JWT. 
+**Returns:** The authorization request payload as a signed JWT.
+
+#### request_uri_method: post
+
+- _Method_: POST
+- _URL_: http://localhost:8080/wallet/request.jwt/{requestId}
+- _Parameters_
+    - `requestId`: The identifier of the authorization request
+    - `wallet_metadata`: A string containing a JSON object containing metadata parameters of the Wallet
+    - `wallet_nonce`: A String value used to mitigate replay attacks of the Authorization Request
+- _Actor_: [Wallet](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
+
+**Usage:**
+```bash
+curl -X POST https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw \
+  -H "Content-Type: application/x-www-form-urlencoded" \ 
+  -d "wallet_metadata=...&wallet_nonce=..."
+```
+**Returns:** The authorization request payload as a signed or, signed and encrypted JWT.
 
 ### Get presentation definition
 
@@ -595,9 +623,9 @@ Possible values: `ByValue`, `ByReference`
 Default value: `ByReference`
 
 Variable: `VERIFIER_REQUESTJWT_METHOD`  
-Description: Request method wallet is expected to use when fetching an authorization request. Advertised as `request_uri_method`. Applicable when `VERIFIER_REQUESTJWT_EMBED` is `ByReference`       
+Description: Default `request_uri_method` to use for a Presentation when one is not provided during its initialization. Applicable when `VERIFIER_REQUESTJWT_EMBED` is `ByReference`          
 Possible values: `Get`, `Post`  
-Default value: `Get`
+Default value: `Post`  
 
 Variable: `VERIFIER_PRESENTATIONDEFINITION_EMBED`  
 Description: How Presentation Definitions will be provided in Authorization Requests    
