@@ -177,7 +177,7 @@ class RetrieveRequestObjectLive(
                 RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Type '$responseType'")
             }
 
-            val responseMode = presentation.responseMode.name
+            val responseMode = presentation.responseMode.name()
             val supportedResponseModes = responseModesSupported
                 ?: listOf(AuthorizationServerMetadataSpec.RESPONSE_MODE_QUERY, AuthorizationServerMetadataSpec.RESPONSE_MODE_FRAGMENT)
             ensure(responseMode in supportedResponseModes) {
@@ -260,8 +260,8 @@ private val PresentationType.responseType: String
         is PresentationType.IdAndVpToken -> "vp_token id_token"
     }
 
-private val ResponseModeOption.name: String
-    get() = when (this) {
+private fun ResponseModeOption.name(): String =
+    when (this) {
         ResponseModeOption.DirectPost -> "direct_post"
         ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
     }
