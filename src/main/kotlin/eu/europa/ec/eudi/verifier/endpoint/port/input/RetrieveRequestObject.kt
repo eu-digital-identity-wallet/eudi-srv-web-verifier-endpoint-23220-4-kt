@@ -25,7 +25,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.supports
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
@@ -309,8 +308,11 @@ private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =
 private fun VpFormat.supports(other: VpFormat): Boolean =
     when (this) {
         is VpFormat.SdJwtVc ->
-            other is VpFormat.SdJwtVc && supports(sdJwtAlgorithms = other.sdJwtAlgorithms, kbJwtAlgorithms = other.kbJwtAlgorithms)
+            other is VpFormat.SdJwtVc &&
+                sdJwtAlgorithms.intersect(other.sdJwtAlgorithms).isNotEmpty() &&
+                kbJwtAlgorithms.intersect(other.kbJwtAlgorithms).isNotEmpty()
 
         is VpFormat.MsoMdoc ->
-            other is VpFormat.MsoMdoc && supports(other.algorithms)
+            other is VpFormat.MsoMdoc &&
+                algorithms.intersect(other.algorithms).isNotEmpty()
     }
