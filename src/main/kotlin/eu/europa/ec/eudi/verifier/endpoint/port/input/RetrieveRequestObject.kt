@@ -142,20 +142,19 @@ class RetrieveRequestObjectLive(
 
             val walletSupportedVpFormats = vpFormatsSupported.toVpFormats().getOrElse {
                 raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet metadata contains malformed VpFormats", it))
-            }
+            }.groupBy { it::class }
             val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
-            val verifierSupportsAllWalletVpFormats = walletSupportedVpFormats.map { walletSupportedVpFormat ->
-                when (walletSupportedVpFormat) {
-                    is VpFormat.SdJwtVc -> verifierSupportedVpFormats.sdJwtVc.supports(
-                        sdJwtAlgorithms = walletSupportedVpFormat.sdJwtAlgorithms,
-                        kbJwtAlgorithms = walletSupportedVpFormat.kbJwtAlgorithms,
-                    )
-
-                    is VpFormat.MsoMdoc -> verifierSupportedVpFormats.msoMdoc.supports(walletSupportedVpFormat.algorithms)
-                }
+            val queryRequiredVpFormats = when (val query = presentation.type.presentationQueryOrNull) {
+                is PresentationQuery.ByPresentationDefinition -> query.presentationDefinition.vpFormats(verifierSupportedVpFormats)
+                is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.vpFormats(verifierSupportedVpFormats)
+                null -> emptyList()
+            }.groupBy { it::class }
+            val walletSupportsAllRequiredVpFormats = queryRequiredVpFormats.map { (vpFormatType, vpFormats) ->
+                val walletSupported = walletSupportedVpFormats[vpFormatType].orEmpty()
+                vpFormats.all { required -> walletSupported.any { supported -> supported.supports(required) } }
             }.foldRight(true, Boolean::and)
-            ensure(verifierSupportsAllWalletVpFormats) {
-                RetrieveRequestObjectError.UnsupportedWalletMetadata("Verifier does not support all the VpFormats supported by the Wallet")
+            ensure(walletSupportsAllRequiredVpFormats) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support all required VpFormats")
             }
 
             val clientIdScheme = verifierConfig.verifierId.clientIdScheme
@@ -291,17 +290,26 @@ private fun JsonObject.toVpFormats(): Result<List<VpFormat>> =
         }.distinct()
     }
 
-private fun PresentationDefinition.vpFormats(): List<VpFormat> =
+private fun PresentationDefinition.vpFormats(supported: VpFormats): List<VpFormat> =
     inputDescriptors.flatMap { inputDescriptor ->
         val format = inputDescriptor.format ?: format
-        format?.jsonObject()?.toVpFormats()?.getOrThrow() ?: emptyList()
+        format?.jsonObject()?.toVpFormats()?.getOrThrow() ?: listOf(supported.sdJwtVc, supported.msoMdoc)
     }.distinct()
 
 private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =
-    credentials.map {
-        when (val format = it.format.value) {
+    credentials.mapNotNull {
+        when (it.format.value) {
             SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> supported.sdJwtVc
             OpenId4VPSpec.FORMAT_MSO_MDOC -> supported.msoMdoc
-            else -> error("Unsupported format '$format'")
+            else -> null
         }
     }.distinct()
+
+private fun VpFormat.supports(other: VpFormat): Boolean =
+    when (this) {
+        is VpFormat.SdJwtVc ->
+            other is VpFormat.SdJwtVc && supports(sdJwtAlgorithms = other.sdJwtAlgorithms, kbJwtAlgorithms = other.kbJwtAlgorithms)
+
+        is VpFormat.MsoMdoc ->
+            other is VpFormat.MsoMdoc && supports(other.algorithms)
+    }
