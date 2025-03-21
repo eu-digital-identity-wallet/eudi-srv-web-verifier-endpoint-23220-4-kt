@@ -67,8 +67,6 @@ internal val JWK.supportedEncryptionMethods: NonEmptyList<EncryptionMethod>
         EncryptionMethod.A128GCM,
         EncryptionMethod.A192GCM,
         EncryptionMethod.A256GCM,
-        EncryptionMethod.A128CBC_HS256_DEPRECATED,
-        EncryptionMethod.A256CBC_HS512_DEPRECATED,
         EncryptionMethod.XC20P,
     )
 
@@ -77,8 +75,6 @@ internal val RSAKey.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
         JWEAlgorithm.RSA_OAEP_256,
         JWEAlgorithm.RSA_OAEP_384,
         JWEAlgorithm.RSA_OAEP_512,
-        JWEAlgorithm.RSA_OAEP,
-        JWEAlgorithm.RSA1_5,
     )
 
 internal val ECKey.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorithm>
