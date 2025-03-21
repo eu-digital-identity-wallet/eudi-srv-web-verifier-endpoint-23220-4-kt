@@ -386,11 +386,17 @@ private fun EncryptionRequirement.Required.Companion.create(
         ensure(methods.isNotEmpty()) { RetrieveRequestObjectError.InvalidWalletMetadata("Missing encryption methods") }
 
         val encryptionRequirement = jwks.filter { it.isSupportedEncryptionJwk() }
-            .firstNotNullOfOrNull {
-                val jwkSupportedAlgorithms = it.supportedEncryptionAlgorithms.intersect(algorithms.toSet())
-                val jwkSupportedMethods = it.supportedEncryptionMethods.intersect(methods.toSet())
-                if (jwkSupportedAlgorithms.isNotEmpty() && jwkSupportedMethods.isNotEmpty()) {
-                    EncryptionRequirement.Required(it.toPublicJWK(), jwkSupportedAlgorithms.first(), jwkSupportedMethods.first())
+            .firstNotNullOfOrNull { encryptionKey ->
+                val encryptionKeySupportedEncryptionAlgorithms = encryptionKey.supportedEncryptionAlgorithms.intersect(algorithms.toSet())
+                    .sortedBy { encryptionAlgorithm -> encryptionAlgorithmPreferenceMap[encryptionAlgorithm] }
+                val encryptionKeySupportedEncryptionMethods = encryptionKey.supportedEncryptionMethods.intersect(methods.toSet())
+                    .sortedBy { encryptionMethod -> encryptionMethodPreferenceMap[encryptionMethod] }
+                if (encryptionKeySupportedEncryptionAlgorithms.isNotEmpty() && encryptionKeySupportedEncryptionMethods.isNotEmpty()) {
+                    EncryptionRequirement.Required(
+                        encryptionKey.toPublicJWK(),
+                        encryptionKeySupportedEncryptionAlgorithms.first(),
+                        encryptionKeySupportedEncryptionMethods.first(),
+                    )
                 } else null
             }
 

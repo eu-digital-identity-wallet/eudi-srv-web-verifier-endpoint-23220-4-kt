@@ -92,3 +92,23 @@ internal val OctetKeyPair.supportedEncryptionAlgorithms: NonEmptyList<JWEAlgorit
         JWEAlgorithm.ECDH_ES_A128KW,
         JWEAlgorithm.ECDH_ES_A256KW,
     )
+
+internal val encryptionMethodPreferenceMap = mapOf(
+    EncryptionMethod.XC20P to 0,
+    EncryptionMethod.A256GCM to 1,
+    EncryptionMethod.A256CBC_HS512 to 2,
+    EncryptionMethod.A192GCM to 3,
+    EncryptionMethod.A192CBC_HS384 to 4,
+    EncryptionMethod.A128GCM to 5,
+    EncryptionMethod.A128CBC_HS256 to 6,
+)
+
+internal val encryptionAlgorithmPreferenceMap = mapOf(
+    JWEAlgorithm.ECDH_ES_A256KW to 0,
+    JWEAlgorithm.RSA_OAEP_512 to 0,
+    JWEAlgorithm.ECDH_ES_A128KW to 1,
+    JWEAlgorithm.RSA_OAEP_384 to 1,
+    JWEAlgorithm.ECDH_ES_A128KW to 2,
+    JWEAlgorithm.RSA_OAEP_256 to 2,
+    JWEAlgorithm.ECDH_ES to 3,
+)
