@@ -26,15 +26,15 @@ sealed interface EncryptionRequirement {
     data object NotRequired : EncryptionRequirement
 
     data class Required(
-        val encryptionKey: JWK,
+        val recipientKey: JWK,
         val encryptionAlgorithm: JWEAlgorithm,
         val encryptionMethod: EncryptionMethod,
     ) : EncryptionRequirement {
         init {
-            require(encryptionKey.isSupportedEncryptionJwk()) { "unsupported jwk" }
-            require(!encryptionKey.isPrivate) { "jwk must not be private" }
-            require(encryptionAlgorithm in encryptionKey.supportedEncryptionAlgorithms) { "unsupported encryption algorithm" }
-            require(encryptionMethod in encryptionKey.supportedEncryptionMethods) { "unsupported encryption method" }
+            require(recipientKey.isSupportedEncryptionJwk()) { "unsupported jwk" }
+            require(!recipientKey.isPrivate) { "jwk must not be private" }
+            require(encryptionAlgorithm in recipientKey.supportedEncryptionAlgorithms) { "unsupported encryption algorithm" }
+            require(encryptionMethod in recipientKey.supportedEncryptionMethods) { "unsupported encryption method" }
         }
 
         companion object
