@@ -21,6 +21,20 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 object OpenId4VPSpec {
     const val VERSION: String = "draft 23"
 
+    const val RESPONSE_URI: String = "response_uri"
+    const val PRESENTATION_DEFINITION: String = "presentation_definition"
+    const val PRESENTATION_DEFINITION_URI: String = "presentation_definition_uri"
+    const val DCQL_QUERY: String = "dcql_query"
+    const val TRANSACTION_DATA: String = "transaction_data"
+
+    const val RESPONSE_URI_METHOD_GET: String = "get"
+    const val RESPONSE_URI_METHOD_POST: String = "post"
+
+    const val DIRECT_POST: String = "direct_post"
+    const val DIRECT_POST_JWT: String = "direct_post.jwt"
+
+    const val VP_FORMATS: String = "vp_formats"
+
     const val FORMAT_MSO_MDOC: String = "mso_mdoc"
     const val FORMAT_SD_JWT_VC: String = "dc+sd-jwt"
     const val FORMAT_W3C_SIGNED_JWT: String = "jwt_vc_json"

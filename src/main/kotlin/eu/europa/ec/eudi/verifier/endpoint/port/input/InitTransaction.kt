@@ -83,10 +83,10 @@ enum class IdTokenTypeTO {
  */
 @Serializable
 enum class RequestUriMethodTO {
-    @SerialName("get")
+    @SerialName(OpenId4VPSpec.RESPONSE_URI_METHOD_GET)
     Get,
 
-    @SerialName("post")
+    @SerialName(OpenId4VPSpec.RESPONSE_URI_METHOD_POST)
     Post,
 }
 
@@ -95,10 +95,10 @@ enum class RequestUriMethodTO {
  */
 @Serializable
 enum class ResponseModeTO {
-    @SerialName("direct_post")
+    @SerialName(OpenId4VPSpec.DIRECT_POST)
     DirectPost,
 
-    @SerialName("direct_post.jwt")
+    @SerialName(OpenId4VPSpec.DIRECT_POST_JWT)
     DirectPostJwt,
 }
 
