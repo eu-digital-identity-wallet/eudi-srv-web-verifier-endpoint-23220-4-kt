@@ -30,6 +30,6 @@ fun interface CreateJar {
         clock: Clock,
         presentation: Presentation.Requested,
         walletNonce: String?,
-        encryptionRequirement: EncryptionRequirement,
+        walletJarEncryptionRequirement: EncryptionRequirement,
     ): Result<Jwt>
 }

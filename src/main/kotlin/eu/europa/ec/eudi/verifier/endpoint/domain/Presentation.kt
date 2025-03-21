@@ -245,7 +245,7 @@ sealed interface Presentation {
         val requestId: RequestId,
         val requestUriMethod: RequestUriMethod,
         val nonce: Nonce,
-        val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
+        val jarmEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,
         val presentationDefinitionMode: EmbedOption<RequestId>,
         val getWalletResponseMethod: GetWalletResponseMethod,
@@ -282,7 +282,7 @@ sealed interface Presentation {
                         requested.requestId,
                         at,
                         requested.nonce,
-                        requested.ephemeralEcPrivateKey,
+                        requested.jarmEncryptionEphemeralKey,
                         requested.responseMode,
                         requested.getWalletResponseMethod,
                     )
