@@ -134,14 +134,14 @@ class CreateJarNimbus : CreateJar {
                 } else r.idTokenType.joinToString(" "),
             )
             optionalClaim(
-                "presentation_definition",
+                OpenId4VPSpec.PRESENTATION_DEFINITION,
                 r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) },
             )
             optionalClaim("client_metadata", clientMetaData?.toJSONObject())
-            optionalClaim("response_uri", r.responseUri?.toExternalForm())
-            optionalClaim("presentation_definition_uri", r.presentationDefinitionUri?.toExternalForm())
-            optionalClaim("dcql_query", r.dcqlQuery?.toJackson())
-            optionalClaim("transaction_data", r.transactionData?.toJackson())
+            optionalClaim(OpenId4VPSpec.RESPONSE_URI, r.responseUri?.toExternalForm())
+            optionalClaim(OpenId4VPSpec.PRESENTATION_DEFINITION_URI, r.presentationDefinitionUri?.toExternalForm())
+            optionalClaim(OpenId4VPSpec.DCQL_QUERY, r.dcqlQuery?.toJackson())
+            optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, r.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
             build()
         }
@@ -163,13 +163,13 @@ class CreateJarNimbus : CreateJar {
             jwkSet?.let { this.jwkSet = it }
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
 
-            if ("direct_post.jwt" == responseMode) {
+            if (OpenId4VPSpec.DIRECT_POST_JWT == responseMode) {
                 c.jarmOption.jwsAlg?.let { setCustomField("authorization_signed_response_alg", it) }
                 c.jarmOption.jweAlg?.let { setCustomField("authorization_encrypted_response_alg", it) }
                 c.jarmOption.encryptionMethod?.let { setCustomField("authorization_encrypted_response_enc", it) }
             }
 
-            setCustomField("vp_formats", c.vpFormats.toJsonObject().toJackson())
+            setCustomField(OpenId4VPSpec.VP_FORMATS, c.vpFormats.toJsonObject().toJackson())
         }
     }
 }

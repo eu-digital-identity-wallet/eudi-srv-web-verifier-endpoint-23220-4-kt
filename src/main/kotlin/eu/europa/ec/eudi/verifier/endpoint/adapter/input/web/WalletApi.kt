@@ -55,11 +55,11 @@ class WalletApi(
      * The routes available to the wallet
      */
     val route = coRouter {
-        GET(REQUEST_JWT_PATH, this@WalletApi::handleGetRequestObject)
+        GET(REQUEST_JWT_PATH, this@WalletApi::handleRetrieveRequestObject)
         POST(
             REQUEST_JWT_PATH,
             contentType(MediaType.APPLICATION_FORM_URLENCODED) and accept(REQUEST_OBJECT_MEDIA_TYPE),
-            this@WalletApi::handleGetRequestObject,
+            this@WalletApi::handleRetrieveRequestObject,
         )
         GET(PRESENTATION_DEFINITION_PATH, this@WalletApi::handleGetPresentationDefinition)
         POST(
@@ -74,7 +74,7 @@ class WalletApi(
      * the Request Object of the presentation.
      * If found, the Request Object will be returned as JWT
      */
-    private suspend fun handleGetRequestObject(req: ServerRequest): ServerResponse {
+    private suspend fun handleRetrieveRequestObject(req: ServerRequest): ServerResponse {
         suspend fun ServerRequest.invocationMethod(): RetrieveRequestObjectMethod =
             when (method()) {
                 HttpMethod.GET -> RetrieveRequestObjectMethod.Get

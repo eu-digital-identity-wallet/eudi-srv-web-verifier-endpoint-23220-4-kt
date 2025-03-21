@@ -32,6 +32,7 @@ import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import net.minidev.json.JSONObject
 import java.net.URL
 import java.util.*
@@ -94,13 +95,13 @@ class CreateJarNimbusTest {
     private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c: JWTClaimsSet) {
         assertEquals(r.verifierId.clientId, c.getStringClaim("client_id"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
-        assertEquals(r.presentationDefinitionUri?.toExternalForm(), c.getStringClaim("presentation_definition_uri"))
-        assertEquals(r.presentationDefinition, c.getJSONObjectClaim("presentation_definition"))
+        assertEquals(r.presentationDefinitionUri?.toExternalForm(), c.getStringClaim(OpenId4VPSpec.PRESENTATION_DEFINITION_URI))
+        assertEquals(r.presentationDefinition, c.getJSONObjectClaim(OpenId4VPSpec.PRESENTATION_DEFINITION))
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
         assertEquals(r.idTokenType.joinToString(separator = " "), c.getStringClaim("id_token_type"))
         assertEquals(r.nonce, c.getStringClaim("nonce"))
         assertEquals(r.responseMode, c.getStringClaim("response_mode"))
-        assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim("response_uri"))
+        assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim(OpenId4VPSpec.RESPONSE_URI))
         assertEquals(r.state, c.getStringClaim("state"))
     }
 
