@@ -51,20 +51,20 @@ class CreateJarNimbus : CreateJar {
         clock: Clock,
         presentation: Presentation.Requested,
         walletNonce: String?,
-        encryptionRequirement: EncryptionRequirement,
+        walletJarEncryptionRequirement: EncryptionRequirement,
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey
-        val signedJar = sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject, walletNonce)
-        return when (encryptionRequirement) {
+        val jarmEncryptionEphemeralKey = presentation.jarmEncryptionEphemeralKey
+        val signedJar = sign(verifierConfig.clientMetaData, jarmEncryptionEphemeralKey, requestObject, walletNonce)
+        return when (walletJarEncryptionRequirement) {
             EncryptionRequirement.NotRequired -> signedJar.map { it.serialize() }
-            is EncryptionRequirement.Required -> signedJar.flatMap { encrypt(encryptionRequirement, it) }.map { it.serialize() }
+            is EncryptionRequirement.Required -> signedJar.flatMap { encrypt(walletJarEncryptionRequirement, it) }.map { it.serialize() }
         }
     }
 
     internal fun sign(
         clientMetaData: ClientMetaData,
-        ecPublicKey: EphemeralEncryptionKeyPairJWK?,
+        jarmEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
         walletNonce: String?,
     ): Result<SignedJWT> = runCatching {
@@ -79,24 +79,24 @@ class CreateJarNimbus : CreateJar {
             .type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
             .build()
         val responseMode = requestObject.responseMode
-        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, ecPublicKey), requestObject, walletNonce)
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, jarmEncryptionEphemeralKey), requestObject, walletNonce)
 
         SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
     }
 
     internal fun encrypt(
-        encryptionRequirement: EncryptionRequirement.Required,
+        walletJarEncryptionRequirement: EncryptionRequirement.Required,
         signed: SignedJWT,
     ): Result<JWEObject> = runCatching {
-        val (jwk, algorithm, method) = encryptionRequirement
-        val encrypter = when (jwk) {
-            is RSAKey -> RSAEncrypter(jwk)
-            is ECKey -> ECDHEncrypter(jwk)
-            is OctetKeyPair -> X25519Encrypter(jwk)
-            else -> error("Unsupported JWK type '${jwk::javaClass.name}'")
+        val (walletJarEncryptionKey, encryptionAlgorithm, encryptionMethod) = walletJarEncryptionRequirement
+        val encrypter = when (walletJarEncryptionKey) {
+            is RSAKey -> RSAEncrypter(walletJarEncryptionKey)
+            is ECKey -> ECDHEncrypter(walletJarEncryptionKey)
+            is OctetKeyPair -> X25519Encrypter(walletJarEncryptionKey)
+            else -> error("Unsupported JWK type '${walletJarEncryptionKey::javaClass.name}'")
         }
 
-        val header = JWEHeader.Builder(algorithm, method)
+        val header = JWEHeader.Builder(encryptionAlgorithm, encryptionMethod)
             .contentType("JWT")
             .build()
         val payload = Payload(signed)
