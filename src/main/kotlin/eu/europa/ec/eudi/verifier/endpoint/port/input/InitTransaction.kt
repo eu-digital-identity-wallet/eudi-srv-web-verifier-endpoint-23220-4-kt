@@ -421,7 +421,8 @@ private inline fun <reified T> Result<T>.applyCatching(block: T.() -> Unit): Res
     }
 
 private fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwtAlgorithms: List<JWSAlgorithm>): Boolean =
-    this.sdJwtAlgorithms.containsAll(sdJwtAlgorithms) && this.kbJwtAlgorithms.containsAll(kbJwtAlgorithms)
+    this.sdJwtAlgorithms.toSet().intersect(sdJwtAlgorithms.toSet()).isNotEmpty() &&
+        this.kbJwtAlgorithms.toSet().intersect(kbJwtAlgorithms.toSet()).isNotEmpty()
 
 private fun VpFormat.MsoMdoc.supports(algorithms: List<JWSAlgorithm>): Boolean =
-    this.algorithms.containsAll(algorithms)
+    this.algorithms.toSet().intersect(algorithms.toSet()).isNotEmpty()
