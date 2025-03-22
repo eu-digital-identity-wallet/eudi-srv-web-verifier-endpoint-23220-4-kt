@@ -15,8 +15,25 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+/**
+ * [OpenID for Verifiable Presentations](https://openid.net/specs/openid-4-verifiable-presentations-1_0-23.html)
+ */
 object OpenId4VPSpec {
     const val VERSION: String = "draft 23"
+
+    const val RESPONSE_URI: String = "response_uri"
+    const val PRESENTATION_DEFINITION: String = "presentation_definition"
+    const val PRESENTATION_DEFINITION_URI: String = "presentation_definition_uri"
+    const val DCQL_QUERY: String = "dcql_query"
+    const val TRANSACTION_DATA: String = "transaction_data"
+
+    const val RESPONSE_URI_METHOD_GET: String = "get"
+    const val RESPONSE_URI_METHOD_POST: String = "post"
+
+    const val DIRECT_POST: String = "direct_post"
+    const val DIRECT_POST_JWT: String = "direct_post.jwt"
+
+    const val VP_FORMATS: String = "vp_formats"
 
     const val FORMAT_MSO_MDOC: String = "mso_mdoc"
     const val FORMAT_SD_JWT_VC: String = "dc+sd-jwt"
@@ -38,4 +55,15 @@ object OpenId4VPSpec {
     const val DCQL_MSO_MDOC_DOCTYPE_VALUE: String = "doctype_value"
     const val DCQL_MSO_MDOC_NAMESPACE: String = "namespace"
     const val DCQL_MSO_MDOC_CLAIM_NAME: String = "claim_name"
+
+    const val WALLET_METADATA: String = "wallet_metadata"
+    const val WALLET_NONCE: String = "wallet_nonce"
+
+    const val PRESENTATION_DEFINITION_URI_SUPPORTED: String = "presentation_definition_uri_supported"
+    const val VP_FORMATS_SUPPORTED: String = "vp_formats_supported"
+    const val CLIENT_ID_SCHEMES_SUPPORTED: String = "client_id_schemes_supported"
+
+    const val CLIENT_ID_SCHEME_PRE_REGISTERED: String = "pre-registered"
+    const val CLIENT_ID_SCHEME_X509_SAN_DNS: String = "x509_san_dns"
+    const val CLIENT_ID_SCHEME_X509_SAN_URI: String = "x509_san_uri"
 }

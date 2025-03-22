@@ -20,6 +20,7 @@ waltid = "0.11.0"
 sdJwt = "0.10.0"
 ktor = "3.1.1"
 jsonpathkt = "2.0.1"
+tink = "1.17.0"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -34,6 +35,7 @@ waltid-mdoc-credentials = { module = "id.walt.mdoc-credentials:waltid-mdoc-crede
 sd-jwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sdJwt" }
 ktor-client-apache = { module = "io.ktor:ktor-client-apache", version.ref = "ktor" }
 jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
+tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }

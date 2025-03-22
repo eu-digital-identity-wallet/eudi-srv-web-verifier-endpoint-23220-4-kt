@@ -57,6 +57,9 @@ dependencies {
     implementation(libs.jsonpathkt) {
         because("Evaluate JsonPaths on vp_token")
     }
+    implementation(libs.tink) {
+        because("Support OctetKeyPairs and extra EncryptionMethods")
+    }
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)

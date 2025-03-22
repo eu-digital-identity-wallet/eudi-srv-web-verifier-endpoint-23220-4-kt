@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
+import eu.europa.ec.eudi.verifier.endpoint.domain.RFC9101
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -61,7 +62,7 @@ internal class PresentationDefinitionTest {
 
         // then
         val getResponse = client.get().uri(relativeRequestUri.value)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE))
             .exchange()
             .expectStatus().isOk()
             .expectBody().returnResult()

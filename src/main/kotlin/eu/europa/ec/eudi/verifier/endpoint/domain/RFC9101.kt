@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
-
-import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
-import java.time.Clock
+package eu.europa.ec.eudi.verifier.endpoint.domain
 
 /**
- * An out port that signs a [Presentation.Requested]
+ * [JWT-Secured Authorization Request (JAR)](https://www.rfc-editor.org/rfc/rfc9101.html)
  */
-fun interface SignRequestObject {
-    operator fun invoke(
-        verifierConfig: VerifierConfig,
-        clock: Clock,
-        presentation: Presentation.Requested,
-    ): Result<Jwt>
+object RFC9101 {
+    const val REQUEST_OBJECT_MEDIA_TYPE: String = "application/oauth-authz-req+jwt"
+    const val REQUEST_OBJECT_MEDIA_SUBTYPE: String = "oauth-authz-req+jwt"
+
+    const val REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED: String = "request_object_signing_alg_values_supported"
 }
