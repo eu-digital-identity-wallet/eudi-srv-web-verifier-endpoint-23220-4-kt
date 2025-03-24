@@ -26,4 +26,6 @@ object RFC8414 {
 
     const val RESPONSE_MODE_QUERY = "query"
     const val RESPONSE_MODE_FRAGMENT = "fragment"
+
+    val DEFAULT_RESPONSE_MODES_SUPPORTED: List<String> = listOf(RESPONSE_MODE_QUERY, RESPONSE_MODE_FRAGMENT)
 }
