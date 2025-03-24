@@ -187,7 +187,8 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
     ) {
-        val supportsPresentationDefinitionByReference = metadata.presentationDefinitionUriSupported ?: true
+        val supportsPresentationDefinitionByReference =
+            metadata.presentationDefinitionUriSupported ?: OpenId4VPSpec.DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED
         val requiresPresentationDefinitionByReference =
             presentation.presentationDefinitionMode is EmbedOption.ByReference && null != presentation.type.presentationDefinitionOrNull
         ensure(supportsPresentationDefinitionByReference || !requiresPresentationDefinitionByReference) {
@@ -221,7 +222,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
 
     private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsVerifierClientIdScheme(metadata: WalletMetadataTO) {
         val clientIdScheme = verifierConfig.verifierId.clientIdScheme
-        val supportedClientIdSchemes = metadata.clientIdSchemesSupported ?: listOf(OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED)
+        val supportedClientIdSchemes = metadata.clientIdSchemesSupported ?: OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED
         ensure(clientIdScheme in supportedClientIdSchemes) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Client Id Scheme '$clientIdScheme'")
         }
@@ -251,7 +252,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         presentation: Presentation.Requested,
     ) {
         val responseMode = presentation.responseMode.name()
-        val supportedResponseModes = metadata.responseModesSupported ?: listOf(RFC8414.RESPONSE_MODE_QUERY, RFC8414.RESPONSE_MODE_FRAGMENT)
+        val supportedResponseModes = metadata.responseModesSupported ?: RFC8414.DEFAULT_RESPONSE_MODES_SUPPORTED
         ensure(responseMode in supportedResponseModes) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Mode '$responseMode'")
         }
@@ -286,14 +287,14 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
 @Serializable
 private data class WalletMetadataTO(
     @SerialName(OpenId4VPSpec.PRESENTATION_DEFINITION_URI_SUPPORTED)
-    val presentationDefinitionUriSupported: Boolean? = true,
+    val presentationDefinitionUriSupported: Boolean? = OpenId4VPSpec.DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED,
 
     @Required
     @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
     val vpFormatsSupported: JsonObject,
 
     @SerialName(OpenId4VPSpec.CLIENT_ID_SCHEMES_SUPPORTED)
-    val clientIdSchemesSupported: List<String>? = listOf(OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED),
+    val clientIdSchemesSupported: List<String>? = OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED,
 
     @SerialName(RFC8414.JWKS)
     val jwks: JsonObject? = null,
@@ -315,7 +316,7 @@ private data class WalletMetadataTO(
     val responseTypesSupported: List<String>,
 
     @SerialName(RFC8414.RESPONSE_MODES_SUPPORTED)
-    val responseModesSupported: List<String>? = listOf(RFC8414.RESPONSE_MODE_QUERY, RFC8414.RESPONSE_MODE_FRAGMENT),
+    val responseModesSupported: List<String>? = RFC8414.DEFAULT_RESPONSE_MODES_SUPPORTED,
 )
 
 private fun parseWalletMetadata(serialized: String): Either<RetrieveRequestObjectError.UnparsableWalletMetadata, WalletMetadataTO> =
