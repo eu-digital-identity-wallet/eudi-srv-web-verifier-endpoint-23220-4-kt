@@ -351,8 +351,8 @@ private val PresentationType.responseType: String
 
 private fun ResponseModeOption.name(): String =
     when (this) {
-        ResponseModeOption.DirectPost -> "direct_post"
-        ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
+        ResponseModeOption.DirectPost -> OpenId4VPSpec.DIRECT_POST
+        ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.DIRECT_POST_JWT
     }
 
 private fun JsonObject.toVpFormats(): Result<List<VpFormat>> =
