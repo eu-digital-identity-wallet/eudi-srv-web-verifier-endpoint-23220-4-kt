@@ -435,7 +435,7 @@
           "by_reference"
         ]
       },
-      "JarMethod": {
+      "RequestUriMethod": {
         "type": "string",
         "nullable": false,
         "enum": [
@@ -500,13 +500,13 @@
               }
             ]
           },
-          "jar_method": {
+          "request_uri_method": {
             "allOf": [
               {
                 "description": "The method the wallet must use to fetch the generated authorization request, advertised as 'request_uri_method'. Applicable only when 'jar_mode' is set to 'by_reference'."
               },
               {
-                "$ref": "#/components/schemas/JarMethod"
+                "$ref": "#/components/schemas/RequestUriMethod"
               }
             ]
           },
@@ -631,13 +631,13 @@
               }
             ]
           },
-          "jar_method": {
+          "request_uri_method": {
             "allOf": [
               {
                 "description": "The method the wallet must use to fetch the generated authorization request, advertised as 'request_uri_method'. Applicable only when 'jar_mode' is set to 'by_reference'."
               },
               {
-                "$ref": "#/components/schemas/JarMethod"
+                "$ref": "#/components/schemas/RequestUriMethod"
               }
             ]
           },
@@ -749,13 +749,13 @@
               }
             ]
           },
-          "jar_method": {
+          "request_uri_method": {
             "allOf": [
               {
                 "description": "The method the wallet must use to fetch the generated authorization request, advertised as 'request_uri_method'. Applicable only when 'jar_mode' is set to 'by_reference'."
               },
               {
-                "$ref": "#/components/schemas/JarMethod"
+                "$ref": "#/components/schemas/RequestUriMethod"
               }
             ]
           },
@@ -908,7 +908,7 @@
                 "description": "The method the wallet must use to fetch the generated authorization request."
               },
               {
-                "$ref": "#/components/schemas/JarMethod"
+                "$ref": "#/components/schemas/RequestUriMethod"
               }
             ]
           }
@@ -1477,7 +1477,7 @@
           "type": "id_token",
           "id_token_type": "subject_signed_id_token",
           "jar_mode": "by_reference",
-          "jar_method": "post",
+          "request_uri_method": "post",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
@@ -1633,7 +1633,7 @@
           },
           "dcql_query": null,
           "jar_mode": "by_reference",
-          "jar_method": "post",
+          "request_uri_method": "post",
           "presentation_definition_mode": "by_reference",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
@@ -1705,7 +1705,7 @@
             ]
           },
           "jar_mode": "by_reference",
-          "jar_method": "post",
+          "request_uri_method": "post",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
@@ -1929,7 +1929,7 @@
           },
           "dcql_query": null,
           "jar_mode": "by_reference",
-          "jar_method": "post",
+          "request_uri_method": "post",
           "presentation_definition_mode": "by_reference",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
@@ -2003,7 +2003,7 @@
             ]
           },
           "jar_mode": "by_reference",
-          "jar_method": "post",
+          "request_uri_method": "post",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },

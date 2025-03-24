@@ -123,7 +123,7 @@ data class InitTransactionTO(
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
-    @SerialName("jar_method") val jarMethod: RequestUriMethodTO? = null,
+    @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO? = null,
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
@@ -230,7 +230,7 @@ class InitTransactionLive(
             responseMode = responseMode,
             presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
-            requestUriMethod = jarMethod(initTransactionTO),
+            requestUriMethod = requestUriMethod(initTransactionTO),
         )
         // create request, which may update presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
@@ -330,13 +330,13 @@ class InitTransactionLive(
 
     /**
      * Gets the JAR [RequestUriMethod] for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.requestJarMethod].
+     * If none has been provided, falls back to [VerifierConfig.requestUriMethod].
      */
-    private fun jarMethod(initTransaction: InitTransactionTO): RequestUriMethod =
-        when (initTransaction.jarMethod) {
+    private fun requestUriMethod(initTransaction: InitTransactionTO): RequestUriMethod =
+        when (initTransaction.requestUriMethod) {
             RequestUriMethodTO.Get -> RequestUriMethod.Get
             RequestUriMethodTO.Post -> RequestUriMethod.Post
-            null -> verifierConfig.requestJarMethod
+            null -> verifierConfig.requestUriMethod
         }
 
     /**
