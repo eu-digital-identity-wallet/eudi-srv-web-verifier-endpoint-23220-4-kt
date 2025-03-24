@@ -594,11 +594,6 @@ Description: How Authorization Requests will be provided
 Possible values: `ByValue`, `ByReference`  
 Default value: `ByReference`
 
-Variable: `VERIFIER_JWK_EMBED`  
-Description: How the Ephemeral Keys used for Authorization Response Encryption will be provided in Authorization Requests    
-Possible values: `ByValue`, `ByReference`  
-Default value: `ByReference`
-
 Variable: `VERIFIER_PRESENTATIONDEFINITION_EMBED`  
 Description: How Presentation Definitions will be provided in Authorization Requests    
 Possible values: `ByValue`, `ByReference`  

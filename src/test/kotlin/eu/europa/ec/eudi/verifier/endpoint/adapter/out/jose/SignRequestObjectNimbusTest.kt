@@ -31,9 +31,7 @@ import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
-import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
-import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import net.minidev.json.JSONObject
 import java.net.URL
 import java.util.*
@@ -70,7 +68,7 @@ class SignRequestObjectNimbusTest {
             .keyID(UUID.randomUUID().toString())
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
-        val jwt = signRequestObject.sign(RequestId("r"), clientMetaData, ecPublicKey, requestObject)
+        val jwt = signRequestObject.sign(clientMetaData, ecPublicKey, requestObject)
             .getOrThrow()
             .also { println(it) }
         val signedJwt = decode(jwt).getOrThrow().also { println(it) }
@@ -78,12 +76,10 @@ class SignRequestObjectNimbusTest {
         val claimSet = signedJwt.jwtClaimsSet
         assertEqualsRequestObjectJWTClaimSet(requestObject, claimSet)
 
-        if (clientMetaData.jwkOption == EmbedOption.ByValue) {
-            assertTrue { claimSet.claims.containsKey("client_metadata") }
-            val clientMetadata = OIDCClientMetadata.parse(JSONObject(claimSet.getJSONObjectClaim("client_metadata")))
-            assertNull(clientMetadata.jwkSetURI)
-            assertEquals(JWKSet(ecPublicKey.jwk()).toPublicJWKSet(), clientMetadata.jwkSet)
-        }
+        assertTrue { claimSet.claims.containsKey("client_metadata") }
+        val clientMetadata = OIDCClientMetadata.parse(JSONObject(claimSet.getJSONObjectClaim("client_metadata")))
+        assertNull(clientMetadata.jwkSetURI)
+        assertEquals(JWKSet(ecPublicKey.jwk()).toPublicJWKSet(), clientMetadata.jwkSet)
     }
 
     private fun decode(jwt: String): Result<SignedJWT> {
