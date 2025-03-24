@@ -19,11 +19,12 @@ import arrow.core.nonEmptyListOf
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSVerifier
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.RSAKey
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
@@ -73,8 +74,8 @@ object TestContext {
     )
     private val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
     val verifierId = VerifierId.X509SanDns("client-id", jarSigningConfig)
-    val singRequestObject: SignRequestObjectNimbus = SignRequestObjectNimbus()
-    val singRequestObjectVerifier = RSASSAVerifier(rsaJwk)
+    val createJar: CreateJarNimbus = CreateJarNimbus()
+    val signedRequestObjectVerifier: JWSVerifier = RSASSAVerifier(rsaJwk)
     private val repo = PresentationInMemoryRepo()
     val loadPresentationById = repo.loadPresentationById
     private val storePresentation = repo.storePresentation
@@ -89,7 +90,7 @@ object TestContext {
             generatedTransactionId,
             generateRequestId,
             storePresentation,
-            singRequestObject,
+            createJar,
             verifierConfig,
             testClock,
             generateEphemeralKey,

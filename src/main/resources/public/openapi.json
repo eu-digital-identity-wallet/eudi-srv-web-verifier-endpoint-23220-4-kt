@@ -37,6 +37,9 @@
                 "InitIdTokenTransactionByReferenceCrossDevice": {
                   "$ref": "#/components/examples/InitIdTokenTransactionByReferenceCrossDevice"
                 },
+                "InitIdTokenTransactionByReferenceCrossDeviceRequestUriMethodPost": {
+                  "$ref": "#/components/examples/InitIdTokenTransactionByReferenceCrossDeviceRequestUriMethodPost"
+                },
                 "InitIdTokenTransactionByValueSameDevice": {
                   "$ref": "#/components/examples/InitIdTokenTransactionByValueSameDevice"
                 },
@@ -49,8 +52,14 @@
                 "InitVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDevicePresentationExchange"
                 },
+                "InitVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost": {
+                  "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost"
+                },
                 "InitVpTokenTransactionByReferenceCrossDeviceDCQL": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQL"
+                },
+                "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost": {
+                  "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost"
                 },
                 "InitVpTokenTransactionByValueSameDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDevicePresentationExchange"
@@ -67,8 +76,14 @@
                 "InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchange"
                 },
+                "InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost": {
+                  "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost"
+                },
                 "InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQL": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQL"
+                },
+                "InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost": {
+                  "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost"
                 },
                 "InitIdTokenAndVpTokenTransactionByValueSameDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByValueSameDevicePresentationExchange"
@@ -420,6 +435,14 @@
           "by_reference"
         ]
       },
+      "RequestUriMethod": {
+        "type": "string",
+        "nullable": false,
+        "enum": [
+          "get",
+          "post"
+        ]
+      },
       "UriTemplate": {
         "type": "string",
         "nullable": false,
@@ -474,6 +497,16 @@
               },
               {
                 "$ref": "#/components/schemas/EmbedMode"
+              }
+            ]
+          },
+          "request_uri_method": {
+            "allOf": [
+              {
+                "description": "The method the wallet must use to fetch the generated authorization request, advertised as 'request_uri_method'. Applicable only when 'jar_mode' is set to 'by_reference'."
+              },
+              {
+                "$ref": "#/components/schemas/RequestUriMethod"
               }
             ]
           },
@@ -598,6 +631,16 @@
               }
             ]
           },
+          "request_uri_method": {
+            "allOf": [
+              {
+                "description": "The method the wallet must use to fetch the generated authorization request, advertised as 'request_uri_method'. Applicable only when 'jar_mode' is set to 'by_reference'."
+              },
+              {
+                "$ref": "#/components/schemas/RequestUriMethod"
+              }
+            ]
+          },
           "presentation_definition_mode": {
             "allOf": [
               {
@@ -703,6 +746,16 @@
               },
               {
                 "$ref": "#/components/schemas/EmbedMode"
+              }
+            ]
+          },
+          "request_uri_method": {
+            "allOf": [
+              {
+                "description": "The method the wallet must use to fetch the generated authorization request, advertised as 'request_uri_method'. Applicable only when 'jar_mode' is set to 'by_reference'."
+              },
+              {
+                "$ref": "#/components/schemas/RequestUriMethod"
               }
             ]
           },
@@ -848,12 +901,23 @@
                 "$ref": "#/components/schemas/RequestUri"
               }
             ]
+          },
+          "request_uri_method": {
+            "allOf": [
+              {
+                "description": "The method the wallet must use to fetch the generated authorization request."
+              },
+              {
+                "$ref": "#/components/schemas/RequestUriMethod"
+              }
+            ]
           }
         },
         "required": [
           "transaction_id",
           "client_id",
-          "request_uri"
+          "request_uri",
+          "request_uri_method"
         ],
         "additionalProperties": false
       },
@@ -1407,6 +1471,16 @@
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
+      "InitIdTokenTransactionByReferenceCrossDeviceRequestUriMethodPost": {
+        "description": "Initialize an ID Token Transaction for 'cross device' scenario. JAR is passed by reference.",
+        "value": {
+          "type": "id_token",
+          "id_token_type": "subject_signed_id_token",
+          "jar_mode": "by_reference",
+          "request_uri_method": "post",
+          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
+        }
+      },
       "InitIdTokenTransactionByValueSameDevice": {
         "description": "Initialize an ID Token Transaction for 'same device' scenario. JAR is passed by value.",
         "value": {
@@ -1526,6 +1600,44 @@
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
+      "InitVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost": {
+        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by reference.",
+        "value": {
+          "type": "vp_token",
+          "presentation_definition": {
+            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
+            "input_descriptors": [
+              {
+                "id": "eu.europa.ec.eudi.pid.1",
+                "name": "EUDI PID",
+                "purpose": "We need to verify your identity",
+                "format": {
+                  "mso_mdoc": {
+                    "alg": [
+                      "ES256"
+                    ]
+                  }
+                },
+                "constraints": {
+                  "fields": [
+                    {
+                      "path": [
+                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
+                      ],
+                      "intent_to_retain": false
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "dcql_query": null,
+          "jar_mode": "by_reference",
+          "request_uri_method": "post",
+          "presentation_definition_mode": "by_reference",
+          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
+        }
+      },
       "InitVpTokenTransactionByReferenceCrossDeviceDCQL": {
         "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by reference.",
         "value": {
@@ -1558,6 +1670,42 @@
             ]
           },
           "jar_mode": "by_reference",
+          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
+        }
+      },
+      "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost": {
+        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by reference.",
+        "value": {
+          "type": "vp_token",
+          "dcql_query": {
+            "credentials": [
+              {
+                "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
+                "format": "mso_mdoc",
+                "meta": {
+                  "doctype_value": "eu.europa.ec.eudi.pid.1"
+                },
+                "claims": [
+                  {
+                    "namespace": "eu.europa.ec.eudi.pid.1",
+                    "claim_name": "family_name"
+                  }
+                ]
+              }
+            ],
+            "credential_sets": [
+              {
+                "options": [
+                  [
+                    "c4822b58-7fb4-454e-b827-f8758fe27f9a"
+                  ]
+                ],
+                "purpose": "We need to verify your identity"
+              }
+            ]
+          },
+          "jar_mode": "by_reference",
+          "request_uri_method": "post",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
@@ -1747,6 +1895,45 @@
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
+      "InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost": {
+        "description": "Initialize an ID Token and VP Token Transaction for 'cross device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by reference.",
+        "value": {
+          "type": "vp_token id_token",
+          "id_token_type": "subject_signed_id_token",
+          "presentation_definition": {
+            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
+            "input_descriptors": [
+              {
+                "id": "eu.europa.ec.eudi.pid.1",
+                "name": "EUDI PID",
+                "purpose": "We need to verify your identity",
+                "format": {
+                  "mso_mdoc": {
+                    "alg": [
+                      "ES256"
+                    ]
+                  }
+                },
+                "constraints": {
+                  "fields": [
+                    {
+                      "path": [
+                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
+                      ],
+                      "intent_to_retain": false
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "dcql_query": null,
+          "jar_mode": "by_reference",
+          "request_uri_method": "post",
+          "presentation_definition_mode": "by_reference",
+          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
+        }
+      },
       "InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQL": {
         "description": "Initialize an ID Token and VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by reference.",
         "value": {
@@ -1780,6 +1967,43 @@
             ]
           },
           "jar_mode": "by_reference",
+          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
+        }
+      },
+      "InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost": {
+        "description": "Initialize an ID Token and VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by reference.",
+        "value": {
+          "type": "vp_token id_token",
+          "id_token_type": "subject_signed_id_token",
+          "dcql_query": {
+            "credentials": [
+              {
+                "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
+                "format": "mso_mdoc",
+                "meta": {
+                  "doctype_value": "eu.europa.ec.eudi.pid.1"
+                },
+                "claims": [
+                  {
+                    "namespace": "eu.europa.ec.eudi.pid.1",
+                    "claim_name": "family_name"
+                  }
+                ]
+              }
+            ],
+            "credential_sets": [
+              {
+                "options": [
+                  [
+                    "c4822b58-7fb4-454e-b827-f8758fe27f9a"
+                  ]
+                ],
+                "purpose": "We need to verify your identity"
+              }
+            ]
+          },
+          "jar_mode": "by_reference",
+          "request_uri_method": "post",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
@@ -1864,7 +2088,8 @@
         "value": {
           "transaction_id": "r_BAGodYBO7yocWzxY6xmPgwOuXsepOI-JwZ5neKXXIvwr66NN-8WX-O74nUX0J5fpSRQvYkEwwiSvDyKDggoA",
           "client_id": "dev.verifier-backend.eudiw.dev",
-          "request_uri": "https://dev.verifier-backend.eudiw.dev/wallet/request.jwt/KgNRHgSJU3O1xcsE1Jc50bIWVPCB9DKPhHBSAH7CQcOfZH-MPeaCaDA6XiJyXUH_caSjVLvrP6f57f51bhn8Uw"
+          "request_uri": "https://dev.verifier-backend.eudiw.dev/wallet/request.jwt/KgNRHgSJU3O1xcsE1Jc50bIWVPCB9DKPhHBSAH7CQcOfZH-MPeaCaDA6XiJyXUH_caSjVLvrP6f57f51bhn8Uw",
+          "request_uri_method": "get"
         }
       },
       "TransactionByValue": {

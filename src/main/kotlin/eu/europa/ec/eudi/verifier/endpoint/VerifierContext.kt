@@ -37,9 +37,9 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
@@ -108,7 +108,7 @@ internal fun beans(clock: Clock) = beans {
     //
     // JOSE
     //
-    bean { SignRequestObjectNimbus() }
+    bean { CreateJarNimbus() }
     bean { VerifyJarmEncryptedJwtNimbus }
 
     //
@@ -180,7 +180,7 @@ internal fun beans(clock: Clock) = beans {
         )
     }
 
-    bean { GetRequestObjectLive(ref(), ref(), ref(), ref(), clock, ref()) }
+    bean { RetrieveRequestObjectLive(ref(), ref(), ref(), ref(), clock, ref(), ref()) }
 
     bean { GetPresentationDefinitionLive(clock, ref(), ref()) }
     bean {
@@ -427,6 +427,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             ByReference, null -> WalletApi.requestJwtByReference(environment.publicUrl())
         }
     }
+    val requestUriMethod = environment.getProperty<RequestUriMethod>("verifier.requestJwt.requestUriMethod") ?: RequestUriMethod.Get
     val responseModeOption =
         environment.getProperty("verifier.response.mode", ResponseModeOption::class.java)
             ?: ResponseModeOption.DirectPostJwt
@@ -451,6 +452,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
     return VerifierConfig(
         verifierId = verifierId,
         requestJarOption = requestJarOption,
+        requestUriMethod = requestUriMethod,
         presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = WalletApi.directPost(publicUrl),
         responseModeOption = responseModeOption,

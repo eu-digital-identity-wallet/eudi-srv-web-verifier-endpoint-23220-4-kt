@@ -32,8 +32,8 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
@@ -45,6 +45,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
+import java.net.URL
 import java.time.Clock
 
 /**
@@ -78,14 +79,26 @@ enum class IdTokenTypeTO {
 }
 
 /**
+ * Specifies request_uri_method for a request
+ */
+@Serializable
+enum class RequestUriMethodTO {
+    @SerialName(OpenId4VPSpec.RESPONSE_URI_METHOD_GET)
+    Get,
+
+    @SerialName(OpenId4VPSpec.RESPONSE_URI_METHOD_POST)
+    Post,
+}
+
+/**
  * Specifies the response_mode for a request
  */
 @Serializable
 enum class ResponseModeTO {
-    @SerialName("direct_post")
+    @SerialName(OpenId4VPSpec.DIRECT_POST)
     DirectPost,
 
-    @SerialName("direct_post.jwt")
+    @SerialName(OpenId4VPSpec.DIRECT_POST_JWT)
     DirectPostJwt,
 }
 
@@ -110,6 +123,7 @@ data class InitTransactionTO(
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
+    @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO? = null,
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
@@ -135,9 +149,32 @@ enum class ValidationError {
 data class JwtSecuredAuthorizationRequestTO(
     @Required @SerialName("transaction_id") val transactionId: String,
     @Required @SerialName("client_id") val clientId: ClientId,
-    @SerialName("request") val request: String? = null,
+    @SerialName("request") val request: String?,
     @SerialName("request_uri") val requestUri: String?,
-)
+    @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO?,
+) {
+    companion object {
+
+        fun byValue(
+            transactionId: String,
+            clientId: ClientId,
+            request: String,
+        ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(transactionId, clientId, request, null, null)
+
+        fun byReference(
+            transactionId: String,
+            clientId: ClientId,
+            requestUri: URL,
+            requestUriMethod: RequestUriMethodTO,
+        ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(
+            transactionId,
+            clientId,
+            null,
+            requestUri.toExternalForm(),
+            requestUriMethod,
+        )
+    }
+}
 
 /**
  * This is a use case that initializes the [Presentation] process.
@@ -159,7 +196,7 @@ class InitTransactionLive(
     private val generateTransactionId: GenerateTransactionId,
     private val generateRequestId: GenerateRequestId,
     private val storePresentation: StorePresentation,
-    private val signRequestObject: SignRequestObject,
+    private val createJar: CreateJar,
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
     private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
@@ -189,10 +226,11 @@ class InitTransactionLive(
             requestId = generateRequestId(),
             type = type,
             nonce = nonce,
-            ephemeralEcPrivateKey = newEphemeralEcPublicKey,
+            jarmEncryptionEphemeralKey = newEphemeralEcPublicKey,
             responseMode = responseMode,
             presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
+            requestUriMethod = requestUriMethod(initTransactionTO),
         )
         // create request, which may update presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
@@ -227,23 +265,33 @@ class InitTransactionLive(
     ): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
-                val jwt = signRequestObject(verifierConfig, clock, requestedPresentation).getOrThrow()
+                val jwt = createJar(
+                    verifierConfig,
+                    clock,
+                    requestedPresentation,
+                    null,
+                    EncryptionRequirement.NotRequired,
+                ).getOrThrow()
+
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
-                requestObjectRetrieved to JwtSecuredAuthorizationRequestTO(
+                requestObjectRetrieved to JwtSecuredAuthorizationRequestTO.byValue(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
                     jwt,
-                    null,
                 )
             }
 
             is EmbedOption.ByReference -> {
-                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId).toExternalForm()
-                requestedPresentation to JwtSecuredAuthorizationRequestTO(
+                val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
+                val requestUriMethod = when (requestedPresentation.requestUriMethod) {
+                    RequestUriMethod.Get -> RequestUriMethodTO.Get
+                    RequestUriMethod.Post -> RequestUriMethodTO.Post
+                }
+                requestedPresentation to JwtSecuredAuthorizationRequestTO.byReference(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
-                    null,
                     requestUri,
+                    requestUriMethod,
                 )
             }
         }
@@ -278,6 +326,17 @@ class InitTransactionLive(
             EmbedModeTO.ByValue -> EmbedOption.ByValue
             EmbedModeTO.ByReference -> requestJarByReference
             null -> verifierConfig.requestJarOption
+        }
+
+    /**
+     * Gets the JAR [RequestUriMethod] for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.requestUriMethod].
+     */
+    private fun requestUriMethod(initTransaction: InitTransactionTO): RequestUriMethod =
+        when (initTransaction.requestUriMethod) {
+            RequestUriMethodTO.Get -> RequestUriMethod.Get
+            RequestUriMethodTO.Post -> RequestUriMethod.Post
+            null -> verifierConfig.requestUriMethod
         }
 
     /**
@@ -421,8 +480,8 @@ private inline fun <reified T> Result<T>.applyCatching(block: T.() -> Unit): Res
     }
 
 private fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwtAlgorithms: List<JWSAlgorithm>): Boolean =
-    this.sdJwtAlgorithms.toSet().intersect(sdJwtAlgorithms.toSet()).isNotEmpty() &&
-        this.kbJwtAlgorithms.toSet().intersect(kbJwtAlgorithms.toSet()).isNotEmpty()
+    this.sdJwtAlgorithms.intersect(sdJwtAlgorithms.toSet()).isNotEmpty() &&
+        this.kbJwtAlgorithms.intersect(kbJwtAlgorithms.toSet()).isNotEmpty()
 
 private fun VpFormat.MsoMdoc.supports(algorithms: List<JWSAlgorithm>): Boolean =
-    this.algorithms.toSet().intersect(algorithms.toSet()).isNotEmpty()
+    this.algorithms.intersect(algorithms.toSet()).isNotEmpty()
