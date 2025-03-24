@@ -160,15 +160,13 @@ class RetrieveRequestObjectLive(
         presentation: Presentation.Requested,
     ): Either<RetrieveRequestObjectError, EncryptionRequirement> =
         either {
+            val supportsPresentationDefinitionByReference = presentationDefinitionUriSupported ?: true
             val requiresPresentationDefinitionByReference =
                 presentation.presentationDefinitionMode is EmbedOption.ByReference && null != presentation.type.presentationDefinitionOrNull
-            if (requiresPresentationDefinitionByReference) {
-                val supportsPresentationDefinitionByReference = presentationDefinitionUriSupported ?: true
-                ensure(supportsPresentationDefinitionByReference) {
-                    RetrieveRequestObjectError.UnsupportedWalletMetadata(
-                        "Wallet does not support fetching PresentationDefinition by reference",
-                    )
-                }
+            ensure(supportsPresentationDefinitionByReference || !requiresPresentationDefinitionByReference) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata(
+                    "Wallet does not support fetching PresentationDefinition by reference",
+                )
             }
 
             val walletSupportedVpFormats = vpFormatsSupported.toVpFormats().getOrElse {
@@ -246,7 +244,7 @@ class RetrieveRequestObjectLive(
 @Serializable
 private data class WalletMetadataTO(
     @SerialName(OpenId4VPSpec.PRESENTATION_DEFINITION_URI_SUPPORTED)
-    val presentationDefinitionUriSupported: Boolean,
+    val presentationDefinitionUriSupported: Boolean?,
 
     @Required
     @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
