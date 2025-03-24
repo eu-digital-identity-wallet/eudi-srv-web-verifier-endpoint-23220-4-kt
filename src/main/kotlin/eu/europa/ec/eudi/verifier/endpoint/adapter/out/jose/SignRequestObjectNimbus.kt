@@ -30,8 +30,6 @@ import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByReference
-import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.SignRequestObject
 import java.time.Clock
 import java.util.*
@@ -48,11 +46,10 @@ class SignRequestObjectNimbus : SignRequestObject {
     ): Result<Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         val ephemeralEcPublicKey = presentation.ephemeralEcPrivateKey
-        return sign(presentation.requestId, verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
+        return sign(verifierConfig.clientMetaData, ephemeralEcPublicKey, requestObject)
     }
 
     internal fun sign(
-        requestId: RequestId,
         clientMetaData: ClientMetaData,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
@@ -68,7 +65,7 @@ class SignRequestObjectNimbus : SignRequestObject {
             .type(JOSEObjectType(AuthReqJwt))
             .build()
         val responseMode = requestObject.responseMode
-        val claimSet = asClaimSet(toNimbus(requestId, clientMetaData, responseMode, ecPublicKey), requestObject)
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, ecPublicKey), requestObject)
 
         SignedJWT(header, claimSet)
             .apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
@@ -118,24 +115,19 @@ class SignRequestObjectNimbus : SignRequestObject {
     }
 
     private fun toNimbus(
-        requestId: RequestId,
         c: ClientMetaData,
         responseMode: String,
         ecPublicKey: EphemeralEncryptionKeyPairJWK?,
     ): OIDCClientMetadata {
-        val (jwkSet, jwkSetUri) = if (ecPublicKey != null) {
-            when (val option = c.jwkOption) {
-                is ByValue -> JWKSet(listOf(ecPublicKey.jwk())).toPublicJWKSet() to null
-                is ByReference -> null to option.buildUrl(requestId)
-            }
-        } else null to null
+        val jwkSet = if (ecPublicKey != null) {
+            JWKSet(listOf(ecPublicKey.jwk())).toPublicJWKSet()
+        } else null
 
         return OIDCClientMetadata().apply {
             idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
             idTokenJWEAlg = JWEAlgorithm.parse(c.idTokenEncryptedResponseAlg)
             idTokenJWEEnc = EncryptionMethod.parse(c.idTokenEncryptedResponseEnc)
             jwkSet?.let { this.jwkSet = it }
-            jwkSetUri?.let { this.jwkSetURI = it.toURI() }
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
 
             if ("direct_post.jwt" == responseMode) {

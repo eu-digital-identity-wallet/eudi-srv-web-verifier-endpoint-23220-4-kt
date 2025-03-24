@@ -26,7 +26,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbu
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.SignRequestObjectNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransaction
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -62,7 +61,6 @@ object TestContext {
         }
     }
     val clientMetaData = ClientMetaData(
-        jwkOption = ByValue,
         idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
         idTokenEncryptedResponseAlg = JWEAlgorithm.RSA_OAEP_256.name,
         idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,

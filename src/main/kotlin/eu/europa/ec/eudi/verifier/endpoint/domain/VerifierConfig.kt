@@ -128,7 +128,6 @@ data class VpFormats(
  * @see <a href="https://openid.net/specs/openid-connect-registration-1_0.html">OpenID Connect Dynamic Client Registration specification</a>
  */
 data class ClientMetaData(
-    val jwkOption: EmbedOption<RequestId>,
     val idTokenSignedResponseAlg: String,
     val idTokenEncryptedResponseAlg: String,
     val idTokenEncryptedResponseEnc: String,

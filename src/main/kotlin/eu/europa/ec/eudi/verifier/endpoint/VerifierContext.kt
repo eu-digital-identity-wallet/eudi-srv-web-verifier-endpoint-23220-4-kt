@@ -203,7 +203,6 @@ internal fun beans(clock: Clock) = beans {
     bean { PostWalletResponseLive(ref(), ref(), ref(), clock, ref(), ref(), ref(), ref(), ref()) }
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
     bean { GetWalletResponseLive(clock, ref(), ref()) }
-    bean { GetJarmJwksLive(ref(), clock, ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
     bean(::GetClientMetadataLive)
     bean<DeviceResponseValidator> {
@@ -264,7 +263,6 @@ internal fun beans(clock: Clock) = beans {
 
     bean {
         val walletApi = WalletApi(
-            ref(),
             ref(),
             ref(),
             ref(),
@@ -457,19 +455,12 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         responseUriBuilder = WalletApi.directPost(publicUrl),
         responseModeOption = responseModeOption,
         maxAge = maxAge,
-        clientMetaData = environment.clientMetaData(publicUrl),
+        clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
     )
 }
 
-private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
-    val jwkOption = getProperty("verifier.jwk.embed", EmbedOptionEnum::class.java).let {
-        when (it) {
-            ByReference -> WalletApi.jarmJwksByReference(publicUrl)
-            ByValue, null -> EmbedOption.ByValue
-        }
-    }
-
+private fun Environment.clientMetaData(): ClientMetaData {
     val authorizationSignedResponseAlg =
         getProperty("verifier.clientMetadata.authorizationSignedResponseAlg")
     val authorizationEncryptedResponseAlg =
@@ -502,7 +493,6 @@ private fun Environment.clientMetaData(publicUrl: String): ClientMetaData {
     )
 
     return ClientMetaData(
-        jwkOption = jwkOption,
         idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
         idTokenEncryptedResponseAlg = JWEAlgorithm.RSA_OAEP_256.name,
         idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,
