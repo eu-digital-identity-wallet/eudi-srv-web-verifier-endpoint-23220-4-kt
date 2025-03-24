@@ -222,10 +222,8 @@ class RetrieveRequestObjectLive(
             }
 
             val responseType = presentation.type.responseType
-            if (null != responseTypesSupported) {
-                ensure(responseType in responseTypesSupported) {
-                    RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Type '$responseType'")
-                }
+            ensure(responseType in responseTypesSupported) {
+                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Type '$responseType'")
             }
 
             val responseMode = presentation.responseMode.name()
@@ -268,8 +266,9 @@ private data class WalletMetadataTO(
     @SerialName(RFC9101.REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED)
     val signingAlgorithmsSupported: List<String>?,
 
+    @Required
     @SerialName(RFC8414.RESPONSE_TYPES_SUPPORTED)
-    val responseTypesSupported: List<String>?,
+    val responseTypesSupported: List<String>,
 
     @SerialName(RFC8414.RESPONSE_MODES_SUPPORTED)
     val responseModesSupported: List<String>?,
