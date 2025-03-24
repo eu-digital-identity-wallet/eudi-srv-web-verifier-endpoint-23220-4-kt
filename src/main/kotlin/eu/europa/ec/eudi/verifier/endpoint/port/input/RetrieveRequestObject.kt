@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
+import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.toNonEmptyListOrNull
@@ -91,6 +92,8 @@ class RetrieveRequestObjectLive(
     private val clientFactory: KtorHttpClientFactory,
 ) : RetrieveRequestObject {
 
+    private val walletMetadataValidator = WalletMetadataValidator(verifierConfig, clientFactory)
+
     override suspend operator fun invoke(
         requestId: RequestId,
         method: RetrieveRequestObjectMethod,
@@ -159,81 +162,122 @@ class RetrieveRequestObjectLive(
     private suspend fun WalletMetadataTO.validate(
         presentation: Presentation.Requested,
     ): Either<RetrieveRequestObjectError, EncryptionRequirement> =
-        either {
-            val supportsPresentationDefinitionByReference = presentationDefinitionUriSupported ?: true
-            val requiresPresentationDefinitionByReference =
-                presentation.presentationDefinitionMode is EmbedOption.ByReference && null != presentation.type.presentationDefinitionOrNull
-            ensure(supportsPresentationDefinitionByReference || !requiresPresentationDefinitionByReference) {
-                RetrieveRequestObjectError.UnsupportedWalletMetadata(
-                    "Wallet does not support fetching PresentationDefinition by reference",
-                )
-            }
+        walletMetadataValidator.validate(this, presentation)
+}
 
-            val walletSupportedVpFormats = vpFormatsSupported.toVpFormats().getOrElse {
-                raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet metadata contains malformed VpFormats", it))
-            }.groupBy { it::class }
-            val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
-            val queryRequiredVpFormats = when (val query = presentation.type.presentationQueryOrNull) {
-                is PresentationQuery.ByPresentationDefinition -> query.presentationDefinition.vpFormats(verifierSupportedVpFormats)
-                is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.vpFormats(verifierSupportedVpFormats)
-                null -> emptyList()
-            }.groupBy { it::class }
-            val walletSupportsAllRequiredVpFormats = queryRequiredVpFormats.map { (vpFormatType, vpFormats) ->
-                val walletSupported = walletSupportedVpFormats[vpFormatType].orEmpty()
-                vpFormats.all { required -> walletSupported.any { supported -> supported.supports(required) } }
-            }.foldRight(true, Boolean::and)
-            ensure(walletSupportsAllRequiredVpFormats) {
-                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support all required VpFormats")
-            }
+/**
+ * Validator for Wallet Metadata.
+ */
+private class WalletMetadataValidator(private val verifierConfig: VerifierConfig, private val clientFactory: KtorHttpClientFactory) {
 
-            val clientIdScheme = verifierConfig.verifierId.clientIdScheme
-            val supportedClientIdSchemes = clientIdSchemesSupported ?: listOf(OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED)
-            ensure(clientIdScheme in supportedClientIdSchemes) {
-                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Client Id Scheme '$clientIdScheme'")
-            }
+    suspend fun validate(
+        metadata: WalletMetadataTO,
+        presentation: Presentation.Requested,
+    ): Either<RetrieveRequestObjectError, EncryptionRequirement> = either {
+        ensureWalletSupportPresentationDefinitionUriIfRequired(metadata, presentation)
+        ensureWalletSupportsRequiredVpFormats(metadata, presentation)
+        ensureWalletSupportsVerifierClientIdScheme(metadata)
+        ensureVerifierSupportsWalletJarSigningAlgorithms(metadata)
+        ensureWalletSupportsRequiredResponseType(metadata, presentation)
+        ensureWalletSupportsRequiredResponseMode(metadata, presentation)
+        encryptionRequirement(metadata)
+    }
 
-            val encryptionRequirement = run {
-                ensure((null == jwks && null == jwksUri) || ((null != jwks) xor (null != jwksUri))) {
-                    RetrieveRequestObjectError.InvalidWalletMetadata(
-                        "Either none of or only one of '${RFC8414.JWKS}', '${RFC8414.JWKS_URI}' must be provided",
-                    )
-                }
-
-                val jwks = jwks?.toJwks()?.bind() ?: jwksUri?.let { clientFactory().use { client -> client.getJwks(it).bind() } }
-                if (null == jwks) {
-                    EncryptionRequirement.NotRequired
-                } else {
-                    val walletSupportedEncryptionAlgorithms = encryptionAlgorithmsSupported.orEmpty().map { JWEAlgorithm.parse(it) }
-                    val walletSupportedEncryptionMethods = encryptionMethodsSupported.orEmpty().map { EncryptionMethod.parse(it) }
-
-                    EncryptionRequirement.Required.create(
-                        jwks.keys,
-                        walletSupportedEncryptionAlgorithms,
-                        walletSupportedEncryptionMethods,
-                    ).bind()
-                }
-            }
-
-            val jarSigningAlgorithm = verifierConfig.verifierId.jarSigning.algorithm.name
-            ensure(jarSigningAlgorithm in signingAlgorithmsSupported.orEmpty()) {
-                RetrieveRequestObjectError.UnsupportedWalletMetadata(
-                    "Wallet does not support JAR Signing Algorithms '$jarSigningAlgorithm'",
-                )
-            }
-
-            val responseType = presentation.type.responseType
-            ensure(responseType in responseTypesSupported) {
-                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Type '$responseType'")
-            }
-
-            val responseMode = presentation.responseMode.name()
-            val supportedResponseModes = responseModesSupported ?: listOf(RFC8414.RESPONSE_MODE_QUERY, RFC8414.RESPONSE_MODE_FRAGMENT)
-            ensure(responseMode in supportedResponseModes) {
-                RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Mode '$responseMode'")
-            }
-
-            encryptionRequirement
+    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportPresentationDefinitionUriIfRequired(
+        metadata: WalletMetadataTO,
+        presentation: Presentation.Requested,
+    ) {
+        val supportsPresentationDefinitionByReference = metadata.presentationDefinitionUriSupported ?: true
+        val requiresPresentationDefinitionByReference =
+            presentation.presentationDefinitionMode is EmbedOption.ByReference && null != presentation.type.presentationDefinitionOrNull
+        ensure(supportsPresentationDefinitionByReference || !requiresPresentationDefinitionByReference) {
+            RetrieveRequestObjectError.UnsupportedWalletMetadata(
+                "Wallet does not support fetching PresentationDefinition by reference",
+            )
         }
+    }
+
+    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredVpFormats(
+        metadata: WalletMetadataTO,
+        presentation: Presentation.Requested,
+    ) {
+        val walletSupportedVpFormats = metadata.vpFormatsSupported.toVpFormats().getOrElse {
+            raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet metadata contains malformed VpFormats", it))
+        }.groupBy { it::class }
+        val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
+        val queryRequiredVpFormats = when (val query = presentation.type.presentationQueryOrNull) {
+            is PresentationQuery.ByPresentationDefinition -> query.presentationDefinition.vpFormats(verifierSupportedVpFormats)
+            is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.vpFormats(verifierSupportedVpFormats)
+            null -> emptyList()
+        }.groupBy { it::class }
+        val walletSupportsAllRequiredVpFormats = queryRequiredVpFormats.map { (vpFormatType, vpFormats) ->
+            val walletSupported = walletSupportedVpFormats[vpFormatType].orEmpty()
+            vpFormats.all { required -> walletSupported.any { supported -> supported.supports(required) } }
+        }.foldRight(true, Boolean::and)
+        ensure(walletSupportsAllRequiredVpFormats) {
+            RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support all required VpFormats")
+        }
+    }
+
+    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsVerifierClientIdScheme(metadata: WalletMetadataTO) {
+        val clientIdScheme = verifierConfig.verifierId.clientIdScheme
+        val supportedClientIdSchemes = metadata.clientIdSchemesSupported ?: listOf(OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED)
+        ensure(clientIdScheme in supportedClientIdSchemes) {
+            RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Client Id Scheme '$clientIdScheme'")
+        }
+    }
+
+    private fun Raise<RetrieveRequestObjectError>.ensureVerifierSupportsWalletJarSigningAlgorithms(metadata: WalletMetadataTO) {
+        val jarSigningAlgorithm = verifierConfig.verifierId.jarSigning.algorithm.name
+        ensure(jarSigningAlgorithm in metadata.signingAlgorithmsSupported.orEmpty()) {
+            RetrieveRequestObjectError.UnsupportedWalletMetadata(
+                "Wallet does not support JAR Signing Algorithms '$jarSigningAlgorithm'",
+            )
+        }
+    }
+
+    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredResponseType(
+        metadata: WalletMetadataTO,
+        presentation: Presentation.Requested,
+    ) {
+        val responseType = presentation.type.responseType
+        ensure(responseType in metadata.responseTypesSupported) {
+            RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Type '$responseType'")
+        }
+    }
+
+    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredResponseMode(
+        metadata: WalletMetadataTO,
+        presentation: Presentation.Requested,
+    ) {
+        val responseMode = presentation.responseMode.name()
+        val supportedResponseModes = metadata.responseModesSupported ?: listOf(RFC8414.RESPONSE_MODE_QUERY, RFC8414.RESPONSE_MODE_FRAGMENT)
+        ensure(responseMode in supportedResponseModes) {
+            RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Mode '$responseMode'")
+        }
+    }
+
+    private suspend fun Raise<RetrieveRequestObjectError>.encryptionRequirement(metadata: WalletMetadataTO): EncryptionRequirement {
+        ensure((null == metadata.jwks && null == metadata.jwksUri) || ((null != metadata.jwks) xor (null != metadata.jwksUri))) {
+            RetrieveRequestObjectError.InvalidWalletMetadata(
+                "Either none of or only one of '${RFC8414.JWKS}', '${RFC8414.JWKS_URI}' must be provided",
+            )
+        }
+
+        val jwks = metadata.jwks?.toJwks()?.bind() ?: metadata.jwksUri?.let { clientFactory().use { client -> client.getJwks(it).bind() } }
+        return if (null == jwks) {
+            EncryptionRequirement.NotRequired
+        } else {
+            val walletSupportedEncryptionAlgorithms = metadata.encryptionAlgorithmsSupported.orEmpty().map { JWEAlgorithm.parse(it) }
+            val walletSupportedEncryptionMethods = metadata.encryptionMethodsSupported.orEmpty().map { EncryptionMethod.parse(it) }
+
+            EncryptionRequirement.Required.create(
+                jwks.keys,
+                walletSupportedEncryptionAlgorithms,
+                walletSupportedEncryptionMethods,
+            ).bind()
+        }
+    }
 }
 
 /**
