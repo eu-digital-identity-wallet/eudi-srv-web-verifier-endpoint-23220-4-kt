@@ -1435,6 +1435,27 @@
         "additionalProperties": false
       },
       "SdJwtVcValidationError": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/SdJwtVcValidationErrorCode"
+          },
+          "description": {
+            "type": "string",
+            "nullable": false
+          },
+          "cause": {
+            "type": "string",
+            "nullable": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "SdJwtVcValidationErrorCode": {
         "type": "string",
         "nullable": false,
         "enum": [
