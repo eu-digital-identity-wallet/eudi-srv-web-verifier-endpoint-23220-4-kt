@@ -47,7 +47,7 @@ class InitTransactionTest {
         maxAge = Duration.ofDays(3),
         clientMetaData = TestContext.clientMetaData,
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
-        requestUriMethod = RequestUriMethod.Post,
+        requestUriMethod = RequestUriMethod.Get,
     )
 
     @Test
@@ -88,7 +88,7 @@ class InitTransactionTest {
                 maxAge = Duration.ofDays(3),
                 clientMetaData = TestContext.clientMetaData,
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
-                requestUriMethod = RequestUriMethod.Post,
+                requestUriMethod = RequestUriMethod.Get,
             )
 
             val input = InitTransactionTO(
