@@ -20,6 +20,7 @@ import arrow.core.getOrElse
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
@@ -93,25 +94,7 @@ internal class ValidateSdJwtVc(
             SdJwtVcValidationResult.Valid(payload)
         }.getOrElse {
             val (reason, description) = when (it) {
-                is SdJwtVerificationException -> {
-                    val description = when (val reason = it.reason) {
-                        is VerificationError.InvalidDisclosures -> "sd-jwt vc contains invalid disclosures"
-                        VerificationError.InvalidJwt -> "sd-jwt vc contains an invalid jwt"
-                        is VerificationError.KeyBindingFailed -> when (reason.details) {
-                            KeyBindingError.InvalidKeyBindingJwt -> "keybinding jwt is not valid"
-                            KeyBindingError.MissingHolderPubKey -> "missing holder public key (cnf)"
-                            KeyBindingError.MissingKeyBindingJwt -> "missing keybinding jwt"
-                            KeyBindingError.UnexpectedKeyBindingJwt -> "keybinding jwt was not expected"
-                        }
-                        is VerificationError.MissingDigests -> "sd-jwt vc contains disclosures for non-existing digests"
-                        VerificationError.MissingOrUnknownHashingAlgorithm -> "sd-jwt vc contains an unknown or unsupported hash algorithm"
-                        VerificationError.NonUniqueDisclosureDigests -> "sd-jwt vc contains non-unique digests"
-                        VerificationError.NonUniqueDisclosures -> "sd-jwt vc contains non-unique disclosures"
-                        is VerificationError.Other -> reason.value
-                        VerificationError.ParsingError -> "sd-jwt vc could not be parsed"
-                    }
-                    it.toSdJwtVcValidationErrorTO() to description
-                }
+                is SdJwtVerificationException -> it.toSdJwtVcValidationErrorTO() to it.description
                 else -> SdJwtVcValidationErrorTO.Other to "an unexpected error occurred"
             }
             log.error("SD-JWT-VC validation failed: $description", it)

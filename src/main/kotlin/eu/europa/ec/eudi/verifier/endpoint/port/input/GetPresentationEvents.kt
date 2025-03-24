@@ -162,7 +162,7 @@ private fun WalletResponseValidationError.asText(): String =
         WalletResponseValidationError.MissingVpToken -> "Missing vp_token"
         WalletResponseValidationError.MissingPresentationSubmission -> "Missing presentation_submission"
         WalletResponseValidationError.PresentationSubmissionMustNotBePresent -> "presentation_submission must not be provided"
-        WalletResponseValidationError.InvalidVpToken -> "vp_token is not valid"
+        is WalletResponseValidationError.InvalidVpToken -> "vp_token is not valid: ${message}${cause?.message?.let { ", $it"}}"
         is WalletResponseValidationError.PresentationNotFound -> "Presentation not found"
         is WalletResponseValidationError.PresentationNotInExpectedState -> "Presentation non in expected state"
         is WalletResponseValidationError.UnexpectedResponseMode -> "Unexpected response mode. Expected $expected, actual $actual"

@@ -19,11 +19,14 @@ import arrow.core.NonEmptyList
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.RFC7519
+import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.serialization.json.buildJsonObject
@@ -66,27 +69,31 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
     ): VerifiablePresentation {
+        fun Result<SdJwtAndKbJwt<SignedJWT>>.get(): SdJwtAndKbJwt<SignedJWT> =
+            getOrElse {
+                val description = when (it) {
+                    is SdJwtVerificationException -> it.description
+                    else -> "an unexpected error occurred"
+                }
+                log.warn("Failed to validate SD-JWT VC: $description", it)
+                throw IllegalArgumentException("Failed to validate SD-JWT VC: $description", it)
+            }
+
         val challenge = buildJsonObject {
             put(RFC7519.AUDIENCE, config.verifierId.clientId)
             put("nonce", nonce.value)
         }
 
         val (sdJwt, kbJwt) = when (verifiablePresentation) {
-            is VerifiablePresentation.Str -> {
-                sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
-                    .getOrElse {
-                        log.warn("Failed to validate SD-JWT VC", it)
-                        throw IllegalArgumentException("Invalid SdJwtVc", it)
-                    }
-            }
+            is VerifiablePresentation.Str -> sdJwtVcVerifier.verify(
+                unverifiedSdJwt = verifiablePresentation.value,
+                challenge = challenge,
+            ).get()
 
-            is VerifiablePresentation.Json -> {
-                sdJwtVcVerifier.verify(unverifiedSdJwt = verifiablePresentation.value, challenge = challenge)
-                    .getOrElse {
-                        log.warn("Failed to validate SD-JWT VC", it)
-                        throw IllegalArgumentException("Invalid SdJwtVc", it)
-                    }
-            }
+            is VerifiablePresentation.Json -> sdJwtVcVerifier.verify(
+                unverifiedSdJwt = verifiablePresentation.value,
+                challenge = challenge,
+            ).get()
         }
 
         require(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
