@@ -52,7 +52,6 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
-import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
 import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.engine.apache.*
