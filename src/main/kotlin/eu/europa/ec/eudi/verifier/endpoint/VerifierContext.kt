@@ -26,6 +26,7 @@ import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshKeystores
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
@@ -37,6 +38,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEnc
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl.FetchLOTLCertificatesDSS
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
@@ -51,6 +53,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
+import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
 import io.ktor.client.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -256,11 +259,14 @@ internal fun beans(clock: Clock) = beans {
         )
     }
 
+    bean { FetchLOTLCertificatesDSS() }
+
     //
     // Scheduled
     //
     bean(::ScheduleTimeoutPresentations)
     bean(::ScheduleDeleteOldPresentations)
+    bean(::RefreshKeystores)
 
     //
     // Config
