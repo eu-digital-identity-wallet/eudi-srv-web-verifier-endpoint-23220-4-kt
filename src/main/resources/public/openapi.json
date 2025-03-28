@@ -1459,17 +1459,23 @@
         "type": "string",
         "nullable": false,
         "enum": [
-          "ContainsInvalidDisclosures",
+          "IsUnparsable",
           "ContainsInvalidJwt",
-          "ContainsInvalidKeyBindingJwt",
           "IsMissingHolderPublicKey",
+          "ContainsInvalidKeyBindingJwt",
+          "ContainsKeyBindingJwt",
           "IsMissingKeyBindingJwt",
-          "ContainsDisclosuresWithNoDigests",
-          "ContainsUnknownHashingAlgorithm",
+          "ContainsInvalidDisclosures",
+          "ContainsUnsupportedHashingAlgorithm",
           "ContainsNonUniqueDigests",
           "ContainsNonUniqueDisclosures",
-          "IsUnparsable",
-          "Other"
+          "ContainsDisclosuresWithNoDigests",
+          "UnsupportedVerificationMethod",
+          "UnableToResolveIssuerMetadata",
+          "IssuerCertificateIsNotTrusted",
+          "UnableToLookupDID",
+          "UnableToDetermineVerificationMethod",
+          "UnexpectedError"
         ]
       }
     },

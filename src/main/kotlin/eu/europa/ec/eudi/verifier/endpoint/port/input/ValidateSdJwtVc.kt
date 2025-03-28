@@ -19,6 +19,8 @@ import arrow.core.Either
 import arrow.core.getOrElse
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.*
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
@@ -33,17 +35,27 @@ import org.slf4j.LoggerFactory
  */
 @Serializable
 enum class SdJwtVcValidationErrorTO {
-    ContainsInvalidDisclosures,
+    IsUnparsable,
     ContainsInvalidJwt,
-    ContainsInvalidKeyBindingJwt,
+
     IsMissingHolderPublicKey,
+    ContainsInvalidKeyBindingJwt,
+    ContainsKeyBindingJwt,
     IsMissingKeyBindingJwt,
-    ContainsDisclosuresWithNoDigests,
-    ContainsUnknownHashingAlgorithm,
+
+    ContainsInvalidDisclosures,
+    ContainsUnsupportedHashingAlgorithm,
     ContainsNonUniqueDigests,
     ContainsNonUniqueDisclosures,
-    IsUnparsable,
-    Other,
+    ContainsDisclosuresWithNoDigests,
+
+    UnsupportedVerificationMethod,
+    UnableToResolveIssuerMetadata,
+    IssuerCertificateIsNotTrusted,
+    UnableToLookupDID,
+    UnableToDetermineVerificationMethod,
+
+    UnexpectedError,
 }
 
 sealed interface SdJwtVcValidationResult {
@@ -95,7 +107,7 @@ internal class ValidateSdJwtVc(
         }.getOrElse {
             val (reason, description) = when (it) {
                 is SdJwtVerificationException -> it.toSdJwtVcValidationErrorTO() to it.description
-                else -> SdJwtVcValidationErrorTO.Other to "an unexpected error occurred"
+                else -> SdJwtVcValidationErrorTO.UnexpectedError to "an unexpected error occurred: ${it.message}"
             }
             log.error("SD-JWT-VC validation failed: $description", it)
             SdJwtVcValidationResult.Invalid(reason, description, it)
@@ -107,21 +119,30 @@ private val log = LoggerFactory.getLogger(ValidateSdJwtVc::class.java)
 
 private fun SdJwtVerificationException.toSdJwtVcValidationErrorTO(): SdJwtVcValidationErrorTO =
     when (val reason = this.reason) {
-        is VerificationError.InvalidDisclosures -> SdJwtVcValidationErrorTO.ContainsInvalidDisclosures
-        VerificationError.InvalidJwt -> SdJwtVcValidationErrorTO.ContainsInvalidJwt
-        is VerificationError.KeyBindingFailed -> reason.details.toSdJwtVcValidationErrorTO()
-        is VerificationError.MissingDigests -> SdJwtVcValidationErrorTO.ContainsDisclosuresWithNoDigests
-        VerificationError.MissingOrUnknownHashingAlgorithm -> SdJwtVcValidationErrorTO.ContainsUnknownHashingAlgorithm
-        VerificationError.NonUniqueDisclosureDigests -> SdJwtVcValidationErrorTO.ContainsNonUniqueDigests
-        VerificationError.NonUniqueDisclosures -> SdJwtVcValidationErrorTO.ContainsNonUniqueDisclosures
-        is VerificationError.Other -> SdJwtVcValidationErrorTO.Other
         VerificationError.ParsingError -> SdJwtVcValidationErrorTO.IsUnparsable
+        is VerificationError.InvalidJwt -> SdJwtVcValidationErrorTO.ContainsInvalidJwt
+        is VerificationError.KeyBindingFailed -> reason.details.toSdJwtVcValidationErrorTO()
+        is VerificationError.InvalidDisclosures -> SdJwtVcValidationErrorTO.ContainsInvalidDisclosures
+        is VerificationError.UnsupportedHashingAlgorithm -> SdJwtVcValidationErrorTO.ContainsUnsupportedHashingAlgorithm
+        VerificationError.NonUniqueDisclosures -> SdJwtVcValidationErrorTO.ContainsNonUniqueDisclosures
+        VerificationError.NonUniqueDisclosureDigests -> SdJwtVcValidationErrorTO.ContainsNonUniqueDigests
+        is VerificationError.MissingDigests -> SdJwtVcValidationErrorTO.ContainsDisclosuresWithNoDigests
+        is VerificationError.SdJwtVcError -> reason.error.toSdJwtVcValidationErrorTO()
     }
 
 private fun KeyBindingError.toSdJwtVcValidationErrorTO(): SdJwtVcValidationErrorTO =
     when (this) {
-        KeyBindingError.InvalidKeyBindingJwt -> SdJwtVcValidationErrorTO.ContainsInvalidKeyBindingJwt
         KeyBindingError.MissingHolderPubKey -> SdJwtVcValidationErrorTO.IsMissingHolderPublicKey
+        KeyBindingError.InvalidKeyBindingJwt -> SdJwtVcValidationErrorTO.ContainsInvalidKeyBindingJwt
+        KeyBindingError.UnexpectedKeyBindingJwt -> SdJwtVcValidationErrorTO.ContainsKeyBindingJwt
         KeyBindingError.MissingKeyBindingJwt -> SdJwtVcValidationErrorTO.IsMissingKeyBindingJwt
-        KeyBindingError.UnexpectedKeyBindingJwt -> error("KeyBindingJwt is required, but verification failed with '$this'")
+    }
+
+private fun SdJwtVcVerificationError.toSdJwtVcValidationErrorTO(): SdJwtVcValidationErrorTO =
+    when (this) {
+        is IssuerKeyVerificationError.UnsupportedVerificationMethod -> SdJwtVcValidationErrorTO.UnsupportedVerificationMethod
+        is IssuerKeyVerificationError.IssuerMetadataResolutionFailure -> SdJwtVcValidationErrorTO.UnableToResolveIssuerMetadata
+        is IssuerKeyVerificationError.UntrustedIssuerCertificate -> SdJwtVcValidationErrorTO.IssuerCertificateIsNotTrusted
+        is IssuerKeyVerificationError.DIDLookupFailure -> SdJwtVcValidationErrorTO.UnableToLookupDID
+        IssuerKeyVerificationError.CannotDetermineIssuerVerificationMethod -> SdJwtVcValidationErrorTO.UnableToDetermineVerificationMethod
     }

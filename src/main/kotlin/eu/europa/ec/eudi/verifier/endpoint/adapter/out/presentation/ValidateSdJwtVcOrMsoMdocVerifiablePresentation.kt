@@ -73,7 +73,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             getOrElse {
                 val description = when (it) {
                     is SdJwtVerificationException -> it.description
-                    else -> "an unexpected error occurred"
+                    else -> "an unexpected error occurred: ${it.message}"
                 }
                 log.warn("Failed to validate SD-JWT VC: $description", it)
                 throw IllegalArgumentException("Failed to validate SD-JWT VC: $description", it)
