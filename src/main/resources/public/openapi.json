@@ -375,7 +375,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SdJwtVcValidationError"
+                  "$ref": "#/components/schemas/SdJwtVcValidationErrors"
                 }
               }
             }
@@ -1433,6 +1433,14 @@
           "nonce"
         ],
         "additionalProperties": false
+      },
+      "SdJwtVcValidationErrors": {
+        "type": "array",
+        "nullable": false,
+        "items": {
+          "$ref": "#/components/schemas/SdJwtVcValidationError"
+        },
+        "minItems": 1
       },
       "SdJwtVcValidationError": {
         "type": "object",
