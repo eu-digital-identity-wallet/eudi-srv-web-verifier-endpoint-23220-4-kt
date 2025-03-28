@@ -29,8 +29,6 @@ import kotlin.test.Test
 import kotlin.test.assertNull
 
 /**
- * https://jira.intrasoft-intl.com/browse/EUDIW-693
- *
  * when response mode is direct_post the ResponseObject must not contain JARM parameters
  */
 @VerifierApplicationTest

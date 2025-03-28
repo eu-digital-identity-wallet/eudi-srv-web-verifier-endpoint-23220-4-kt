@@ -20,6 +20,10 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.DeviceResponseValidationRe
 import eu.europa.ec.eudi.verifier.endpoint.port.input.SdJwtVcValidationResult
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateMsoMdocDeviceResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateSdJwtVc
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.put
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
@@ -81,9 +85,19 @@ internal class UtilityApi(
                 Nonce(it)
             }
 
+        fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray = buildJsonArray {
+            errors.forEach {
+                addJsonObject {
+                    put("error", it.reason.name)
+                    it.description?.let { put("description", it) }
+                    it.cause?.let { cause -> cause.message?.let { message -> put("cause", message) } }
+                }
+            }
+        }
+
         return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce)) {
             is SdJwtVcValidationResult.Valid -> ok().json().bodyValueAndAwait(result.payload)
-            is SdJwtVcValidationResult.Invalid -> badRequest().json().bodyValueAndAwait(result.reason)
+            is SdJwtVcValidationResult.Invalid -> badRequest().json().bodyValueAndAwait(result.toJson())
         }
     }
 

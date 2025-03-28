@@ -77,7 +77,7 @@ sealed interface WalletResponseValidationError {
 
     data object IncorrectState : WalletResponseValidationError
     data object MissingIdToken : WalletResponseValidationError
-    data object InvalidVpToken : WalletResponseValidationError
+    data class InvalidVpToken(val message: String, val cause: Throwable?) : WalletResponseValidationError
     data object MissingVpToken : WalletResponseValidationError
     data object MissingPresentationSubmission : WalletResponseValidationError
     data object PresentationSubmissionMustNotBePresent : WalletResponseValidationError
@@ -157,7 +157,12 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             }
             val inputDescriptorFormat = inputDescriptor.format ?: presentationDefinition.format
             val element = vpTokenReader.readPath(descriptorMap.path.value).getOrNull()
-                ?: raise(WalletResponseValidationError.InvalidVpToken)
+                ?: raise(
+                    WalletResponseValidationError.InvalidVpToken(
+                        "JsonPath of DescriptorMap does not point to a valid vp_token element",
+                        null,
+                    ),
+                )
             val format = Format(descriptorMap.format)
             val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
             val applicableTransactionData = transactionData?.filter {
@@ -167,7 +172,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
                 ?: vpFormats.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission).bind()
 
             validateVerifiablePresentation(unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData)
-                .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
+                .getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to validate Verifiable Presentation", it)) }
         }.distinct()
 
         VpContent.PresentationExchange(verifiablePresentations, presentationSubmission)
@@ -187,18 +192,25 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
         suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
             val vpToken = runCatching {
                 Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
-            }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
+            }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 
             val credentialQueries = query.credentials.associateBy { it.id }
             return vpToken.mapValues { (queryId, value) ->
-                val format = credentialQueries[queryId]?.format ?: raise(WalletResponseValidationError.InvalidVpToken)
+                val format = credentialQueries[queryId]?.format
+                    ?: raise(WalletResponseValidationError.InvalidVpToken("vp_token references non-existing Credential Query", null))
                 val unvalidatedVerifiablePresentation = value.toVerifiablePresentation(format).bind()
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
-                val vpFormat = vpFormats.vpFormat(format, WalletResponseValidationError.InvalidVpToken).bind()
+                val vpFormat = vpFormats.vpFormat(
+                    format,
+                    WalletResponseValidationError.InvalidVpToken(
+                        "vp_token contains a Verifiable Presentation in an unsupported format",
+                        null,
+                    ),
+                ).bind()
                 validateVerifiablePresentation(unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData)
-                    .getOrElse { raise(WalletResponseValidationError.InvalidVpToken) }
+                    .getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to validate Verifiable Presentation", it)) }
             }
         }
 
@@ -214,18 +226,24 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
     either {
         fun JsonElement.asString(): VerifiablePresentation.Str {
             val element = this@asString
-            ensure(element is JsonPrimitive && element.isString) { WalletResponseValidationError.InvalidVpToken }
+            ensure(element is JsonPrimitive && element.isString) {
+                WalletResponseValidationError.InvalidVpToken("vp_token contains a non-string element", null)
+            }
             return VerifiablePresentation.Str(element.content, format)
         }
 
         fun JsonElement.asStringOrObject(): VerifiablePresentation =
             when (val element = this@asStringOrObject) {
                 is JsonPrimitive -> {
-                    ensure(element.isString) { WalletResponseValidationError.InvalidVpToken }
+                    ensure(
+                        element.isString,
+                    ) { WalletResponseValidationError.InvalidVpToken("vp_token contains a non-string element", null) }
                     VerifiablePresentation.Str(element.content, format)
                 }
                 is JsonObject -> VerifiablePresentation.Json(element, format)
-                else -> raise(WalletResponseValidationError.InvalidVpToken)
+                else -> raise(
+                    WalletResponseValidationError.InvalidVpToken("vp_token must contain either json strings, or json objects", null),
+                )
             }
 
         val element = this@toVerifiablePresentation

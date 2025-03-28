@@ -50,9 +50,6 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import kotlin.test.*
 
-/*
-  https://jira.intrasoft-intl.com/browse/EUDIW-693
- */
 @VerifierApplicationTest([WalletResponseDirectPostJwtValidationsDisabledTest.Config::class])
 @TestPropertySource(
     properties = [
