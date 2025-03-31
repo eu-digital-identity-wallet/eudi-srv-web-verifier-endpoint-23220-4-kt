@@ -48,6 +48,7 @@ enum class SdJwtVcValidationErrorTO {
     ContainsInvalidJwt,
 
     IsMissingHolderPublicKey,
+    UnsupportedHolderPublicKey,
     ContainsInvalidKeyBindingJwt,
     ContainsKeyBindingJwt,
     IsMissingKeyBindingJwt,
@@ -211,8 +212,9 @@ private fun SdJwtVerificationException.toSdJwtVcValidationErrorTO(): SdJwtVcVali
 
 private fun KeyBindingError.toSdJwtVcValidationErrorTO(): SdJwtVcValidationErrorTO =
     when (this) {
-        KeyBindingError.MissingHolderPubKey -> SdJwtVcValidationErrorTO.IsMissingHolderPublicKey
-        KeyBindingError.InvalidKeyBindingJwt -> SdJwtVcValidationErrorTO.ContainsInvalidKeyBindingJwt
+        KeyBindingError.MissingHolderPublicKey -> SdJwtVcValidationErrorTO.IsMissingHolderPublicKey
+        KeyBindingError.UnsupportedHolderPublicKey -> SdJwtVcValidationErrorTO.UnsupportedHolderPublicKey
+        is KeyBindingError.InvalidKeyBindingJwt -> SdJwtVcValidationErrorTO.ContainsInvalidKeyBindingJwt
         KeyBindingError.UnexpectedKeyBindingJwt -> SdJwtVcValidationErrorTO.ContainsKeyBindingJwt
         KeyBindingError.MissingKeyBindingJwt -> SdJwtVcValidationErrorTO.IsMissingKeyBindingJwt
     }

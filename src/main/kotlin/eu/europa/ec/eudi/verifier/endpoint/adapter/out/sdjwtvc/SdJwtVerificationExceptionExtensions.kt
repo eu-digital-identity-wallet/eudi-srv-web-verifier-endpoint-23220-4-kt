@@ -22,19 +22,20 @@ import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
 
 internal val SdJwtVerificationException.description: String
     get() {
-        fun joinNotNullToString(vararg values: String?): String = values.filterNotNull().joinToString(separator = ", ")
         fun joinNotBlank(vararg values: String?): String = values.filterNot { it.isNullOrBlank() }.joinToString(", ")
 
         return when (val sdJwtError = reason) {
             VerificationError.ParsingError -> "sd-jwt could not be parsed"
             is VerificationError.InvalidJwt ->
-                joinNotBlank("sd-jwt contains an invalid jwt", joinNotNullToString(sdJwtError.message, sdJwtError.cause?.message))
+                joinNotBlank("sd-jwt contains an invalid jwt", sdJwtError.message, sdJwtError.cause?.message)
 
-            is VerificationError.KeyBindingFailed -> when (sdJwtError.details) {
-                KeyBindingError.InvalidKeyBindingJwt -> "keybinding jwt is not valid"
-                KeyBindingError.MissingHolderPubKey -> "missing holder public key (cnf)"
-                KeyBindingError.MissingKeyBindingJwt -> "missing keybinding jwt"
+            is VerificationError.KeyBindingFailed -> when (val details = sdJwtError.details) {
+                KeyBindingError.MissingHolderPublicKey -> "missing holder public key (cnf)"
+                KeyBindingError.UnsupportedHolderPublicKey -> "unsupported holder public key (cnf) type"
+                is KeyBindingError.InvalidKeyBindingJwt ->
+                    joinNotBlank("keybinding jwt is not valid", details.message, details.cause?.message)
                 KeyBindingError.UnexpectedKeyBindingJwt -> "keybinding jwt was not expected"
+                KeyBindingError.MissingKeyBindingJwt -> "missing keybinding jwt"
             }
 
             is VerificationError.InvalidDisclosures -> "sd-jwt contains invalid disclosures"
@@ -53,7 +54,7 @@ internal val SdJwtVerificationException.description: String
                     joinNotBlank("sd-jwt vc issuer certificate is not trusted", sdJwtVcError.reason)
 
                 is SdJwtVcVerificationError.IssuerKeyVerificationError.DIDLookupFailure ->
-                    joinNotBlank("did lookup failed", joinNotNullToString(sdJwtVcError.message, sdJwtVcError.cause?.message))
+                    joinNotBlank("did lookup failed", sdJwtVcError.message, sdJwtVcError.cause?.message)
 
                 SdJwtVcVerificationError.IssuerKeyVerificationError.CannotDetermineIssuerVerificationMethod ->
                     "cannot determine verification method for sd-jwt vc. missing 'x5c' header claim, issuer is not an https url or did"

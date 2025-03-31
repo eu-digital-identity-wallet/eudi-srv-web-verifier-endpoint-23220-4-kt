@@ -1470,6 +1470,7 @@
           "IsUnparsable",
           "ContainsInvalidJwt",
           "IsMissingHolderPublicKey",
+          "UnsupportedHolderPublicKey",
           "ContainsInvalidKeyBindingJwt",
           "ContainsKeyBindingJwt",
           "IsMissingKeyBindingJwt",
