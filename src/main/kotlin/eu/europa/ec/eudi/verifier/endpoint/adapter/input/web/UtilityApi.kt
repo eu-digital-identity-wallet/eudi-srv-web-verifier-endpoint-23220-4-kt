@@ -86,11 +86,11 @@ internal class UtilityApi(
             }
 
         fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray = buildJsonArray {
-            errors.forEach {
+            errors.forEach { error ->
                 addJsonObject {
-                    put("error", it.reason.name)
-                    it.description?.let { put("description", it) }
-                    it.cause?.let { cause -> cause.message?.let { message -> put("cause", message) } }
+                    put("error", error.reason.name)
+                    put("description", error.description)
+                    error.cause?.message?.let { cause -> put("cause", cause) }
                 }
             }
         }
