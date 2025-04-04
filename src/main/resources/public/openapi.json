@@ -375,7 +375,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SdJwtVcValidationError"
+                  "$ref": "#/components/schemas/SdJwtVcValidationErrors"
                 }
               }
             }
@@ -1434,21 +1434,57 @@
         ],
         "additionalProperties": false
       },
+      "SdJwtVcValidationErrors": {
+        "type": "array",
+        "nullable": false,
+        "items": {
+          "$ref": "#/components/schemas/SdJwtVcValidationError"
+        },
+        "minItems": 1
+      },
       "SdJwtVcValidationError": {
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/SdJwtVcValidationErrorCode"
+          },
+          "description": {
+            "type": "string",
+            "nullable": false
+          },
+          "cause": {
+            "type": "string",
+            "nullable": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "SdJwtVcValidationErrorCode": {
         "type": "string",
         "nullable": false,
         "enum": [
-          "ContainsInvalidDisclosures",
+          "IsUnparsable",
           "ContainsInvalidJwt",
-          "ContainsInvalidKeyBindingJwt",
           "IsMissingHolderPublicKey",
+          "UnsupportedHolderPublicKey",
+          "ContainsInvalidKeyBindingJwt",
+          "ContainsKeyBindingJwt",
           "IsMissingKeyBindingJwt",
-          "ContainsDisclosuresWithNoDigests",
-          "ContainsUnknownHashingAlgorithm",
+          "ContainsInvalidDisclosures",
+          "ContainsUnsupportedHashingAlgorithm",
           "ContainsNonUniqueDigests",
           "ContainsNonUniqueDisclosures",
-          "IsUnparsable",
-          "Other"
+          "ContainsDisclosuresWithNoDigests",
+          "UnsupportedVerificationMethod",
+          "UnableToResolveIssuerMetadata",
+          "IssuerCertificateIsNotTrusted",
+          "UnableToLookupDID",
+          "UnableToDetermineVerificationMethod",
+          "UnexpectedError"
         ]
       }
     },
