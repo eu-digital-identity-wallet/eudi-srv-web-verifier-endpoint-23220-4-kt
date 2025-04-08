@@ -25,6 +25,7 @@ import com.nimbusds.jose.proc.BadJOSEException
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.JsonPathReader
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
@@ -103,6 +104,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
                     presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
                     vpFormats,
+                    presentation.trustedIssuers,
                 )
             is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
                 dcqlVpContent(
@@ -112,6 +114,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
                     presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
                     vpFormats,
+                    presentation.trustedIssuers,
                 )
         }.bind()
 
@@ -138,6 +141,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
+    trustedIssuers: X5CShouldBe.Trusted?,
 ): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -180,6 +184,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
                 vpFormat,
                 nonce,
                 applicableTransactionData,
+                trustedIssuers,
             ).bind()
         }.distinct()
 
@@ -193,6 +198,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
+    trustedIssuers: X5CShouldBe.Trusted?,
 ): Either<WalletResponseValidationError, VpContent.DCQL> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -224,6 +230,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                     vpFormat,
                     nonce,
                     applicableTransactionData,
+                    trustedIssuers,
                 ).bind()
             }
         }

@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.presentation
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.raise.either
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 
@@ -37,10 +38,11 @@ fun interface ValidateVerifiablePresentation {
         vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
+        trustedIssuers: X5CShouldBe.Trusted?,
     ): Either<WalletResponseValidationError, VerifiablePresentation>
 
     companion object {
         val NoOp: ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { _, verifiablePresentation, _, _, _ -> either { verifiablePresentation } }
+            ValidateVerifiablePresentation { _, verifiablePresentation, _, _, _, _ -> either { verifiablePresentation } }
     }
 }

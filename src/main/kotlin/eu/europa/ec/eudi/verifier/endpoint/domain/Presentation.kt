@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationSubmission
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 import java.time.Instant
@@ -249,6 +250,7 @@ sealed interface Presentation {
         val responseMode: ResponseModeOption,
         val presentationDefinitionMode: EmbedOption<RequestId>,
         val getWalletResponseMethod: GetWalletResponseMethod,
+        val trustedIssuers: X5CShouldBe.Trusted?,
     ) : Presentation
 
     /**
@@ -267,6 +269,7 @@ sealed interface Presentation {
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,
         val getWalletResponseMethod: GetWalletResponseMethod,
+        val trustedIssuers: X5CShouldBe.Trusted?,
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
@@ -285,6 +288,7 @@ sealed interface Presentation {
                         requested.jarmEncryptionEphemeralKey,
                         requested.responseMode,
                         requested.getWalletResponseMethod,
+                        requested.trustedIssuers,
                     )
                 }
         }

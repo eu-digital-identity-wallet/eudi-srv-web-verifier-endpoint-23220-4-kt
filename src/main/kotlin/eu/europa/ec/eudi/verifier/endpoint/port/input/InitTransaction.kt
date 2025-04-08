@@ -25,6 +25,7 @@ import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
@@ -37,6 +38,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryp
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificate
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -127,6 +129,7 @@ data class InitTransactionTO(
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
+    @SerialName("trusted_issuers") val trustedIssuers: List<String>? = null,
 )
 
 /**
@@ -139,6 +142,7 @@ enum class ValidationError {
     InvalidWalletResponseTemplate,
     InvalidTransactionData,
     UnsupportedFormat,
+    InvalidTrustedIssuers,
 }
 
 /**
@@ -204,7 +208,7 @@ class InitTransactionLive(
     private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
-
+    private val parsePemEncodedX509Certificate: ParsePemEncodedX509Certificate,
 ) : InitTransaction {
 
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO> = either {
@@ -217,7 +221,9 @@ class InitTransactionLive(
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
         val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
+
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
+        val trustedIssuers = trustedIssuers(initTransactionTO).bind()
 
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
@@ -231,7 +237,9 @@ class InitTransactionLive(
             presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
+            trustedIssuers = trustedIssuers,
         )
+
         // create request, which may update presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
@@ -354,6 +362,19 @@ class InitTransactionLive(
         val event = PresentationEvent.TransactionInitialized(p.id, p.initiatedAt, request)
         publishPresentationEvent(event)
     }
+
+    private fun trustedIssuers(initTransaction: InitTransactionTO): Either<ValidationError, X5CShouldBe.Trusted?> =
+        Either.catch {
+            val trustedIssuers = initTransaction.trustedIssuers
+                ?.map { pem -> parsePemEncodedX509Certificate(pem).getOrThrow() }
+                ?.toNonEmptyListOrNull()
+
+            trustedIssuers?.let {
+                X5CShouldBe.Trusted(it) {
+                    isRevocationEnabled = false
+                }
+            }
+        }.mapLeft { ValidationError.InvalidTrustedIssuers }
 }
 
 internal fun InitTransactionTO.toDomain(

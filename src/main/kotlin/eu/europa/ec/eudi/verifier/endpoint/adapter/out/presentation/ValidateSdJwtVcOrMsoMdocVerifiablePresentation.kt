@@ -23,6 +23,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
@@ -38,8 +39,8 @@ private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePres
 
 internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val config: VerifierConfig,
-    private val deviceResponseValidator: DeviceResponseValidator,
-    private val validateSdJwtVc: ValidateSdJwtVc,
+    private val validateSdJwtVcFactory: (X5CShouldBe.Trusted?) -> ValidateSdJwtVc,
+    private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
 ) : ValidateVerifiablePresentation {
 
     override suspend fun invoke(
@@ -48,16 +49,25 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
+        trustedIssuers: X5CShouldBe.Trusted?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
                 require(vpFormat is VpFormat.SdJwtVc)
-                validateSdJwtVcVerifiablePresentation(vpFormat, verifiablePresentation, nonce, transactionData, transactionId).bind()
+                val validator = validateSdJwtVcFactory(trustedIssuers)
+                validator.validateSdJwtVcVerifiablePresentation(
+                    vpFormat,
+                    verifiablePresentation,
+                    nonce,
+                    transactionData,
+                    transactionId,
+                ).bind()
             }
 
             Format.MsoMdoc -> {
                 require(vpFormat is VpFormat.MsoMdoc)
-                validateMsoMdocVerifiablePresentation(vpFormat, verifiablePresentation)
+                val validator = deviceResponseValidatorFactory(trustedIssuers)
+                validator.validateMsoMdocVerifiablePresentation(vpFormat, verifiablePresentation)
             }
 
             else ->
@@ -65,7 +75,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         }
     }
 
-    private suspend fun validateSdJwtVcVerifiablePresentation(
+    private suspend fun ValidateSdJwtVc.validateSdJwtVcVerifiablePresentation(
         vpFormat: VpFormat.SdJwtVc,
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
@@ -83,13 +93,13 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             }
 
         val (sdJwt, kbJwt) = when (verifiablePresentation) {
-            is VerifiablePresentation.Str -> validateSdJwtVc(
+            is VerifiablePresentation.Str -> invoke(
                 unverified = verifiablePresentation.value,
                 nonce = nonce,
                 transactionId = transactionId,
             ).get()
 
-            is VerifiablePresentation.Json -> validateSdJwtVc(
+            is VerifiablePresentation.Json -> invoke(
                 unverified = verifiablePresentation.value,
                 nonce = nonce,
                 transactionId = transactionId,
@@ -112,12 +122,12 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         verifiablePresentation
     }
 
-    private fun validateMsoMdocVerifiablePresentation(
+    private fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
         vpFormat: VpFormat.MsoMdoc,
         verifiablePresentation: VerifiablePresentation,
     ): VerifiablePresentation.Str {
         require(verifiablePresentation is VerifiablePresentation.Str)
-        return deviceResponseValidator.ensureValid(verifiablePresentation.value)
+        return ensureValid(verifiablePresentation.value)
             .fold(
                 ifLeft = {
                     log.warn("Failed to validate MsoMdoc VC. Reason: '$it'")
