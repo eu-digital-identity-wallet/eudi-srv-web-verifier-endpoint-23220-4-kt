@@ -15,15 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.port.input.DeviceResponseValidationResult
-import eu.europa.ec.eudi.verifier.endpoint.port.input.SdJwtVcValidationResult
-import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateMsoMdocDeviceResponse
-import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateSdJwtVc
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.addJsonObject
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.put
+import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.web.reactive.function.server.*
@@ -85,18 +79,13 @@ internal class UtilityApi(
                 Nonce(it)
             }
 
-        fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray = buildJsonArray {
-            errors.forEach { error ->
-                addJsonObject {
-                    put("error", error.reason.name)
-                    put("description", error.description)
-                    error.cause?.message?.let { cause -> put("cause", cause) }
-                }
-            }
-        }
-
         return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce)) {
-            is SdJwtVcValidationResult.Valid -> ok().json().bodyValueAndAwait(result.payload)
+            is SdJwtVcValidationResult.Valid -> {
+                val reCreated = with(NimbusSdJwtOps) {
+                    result.payload.sdJwt.recreateClaims(visitor = null)
+                }
+                ok().json().bodyValueAndAwait(reCreated)
+            }
             is SdJwtVcValidationResult.Invalid -> badRequest().json().bodyValueAndAwait(result.toJson())
         }
     }

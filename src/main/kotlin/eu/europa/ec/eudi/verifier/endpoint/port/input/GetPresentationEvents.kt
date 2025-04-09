@@ -125,6 +125,9 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
 
         is PresentationEvent.PresentationExpired -> {
         }
+
+        is PresentationEvent.AttestationStatusCheckSuccessful -> {
+        }
     }
 }
 
@@ -149,6 +152,7 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
         is PresentationEvent.VerifierGotWalletResponse -> "Verifier got wallet response" to Actor.Verifier
         is PresentationEvent.VerifierFailedToGetWalletResponse -> "Verifier failed to get wallet" to Actor.Verifier
         is PresentationEvent.PresentationExpired -> "Presentation expired" to Actor.VerifierEndPoint
+        is PresentationEvent.AttestationStatusCheckSuccessful -> "Attestation status check succeeded" to Actor.VerifierEndPoint
     }
     put("event", eventName)
     put("actor", actor.json())

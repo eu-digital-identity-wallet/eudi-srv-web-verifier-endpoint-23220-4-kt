@@ -100,4 +100,9 @@ sealed interface PresentationEvent {
         override val transactionId: TransactionId,
         override val timestamp: Instant,
     ) : PresentationEvent
+
+    data class AttestationStatusCheckSuccessful(
+        override val transactionId: TransactionId,
+        override val timestamp: Instant,
+    ) : PresentationEvent
 }

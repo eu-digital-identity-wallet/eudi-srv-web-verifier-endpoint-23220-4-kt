@@ -15,11 +15,11 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.presentation
 
+import arrow.core.Either
 import arrow.core.NonEmptyList
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionData
-import eu.europa.ec.eudi.verifier.endpoint.domain.VerifiablePresentation
-import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormat
+import arrow.core.raise.either
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 
 /**
  * Validates Verifiable Presentations.
@@ -32,14 +32,15 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormat
 fun interface ValidateVerifiablePresentation {
 
     suspend operator fun invoke(
+        transactionId: TransactionId?,
         verifiablePresentation: VerifiablePresentation,
         vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-    ): Result<VerifiablePresentation>
+    ): Either<WalletResponseValidationError, VerifiablePresentation>
 
     companion object {
         val NoOp: ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { verifiablePresentation, _, _, _ -> Result.success(verifiablePresentation) }
+            ValidateVerifiablePresentation { _, verifiablePresentation, _, _, _ -> either { verifiablePresentation } }
     }
 }

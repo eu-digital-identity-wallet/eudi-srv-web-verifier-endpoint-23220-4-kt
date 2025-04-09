@@ -123,5 +123,6 @@ private fun log(e: PresentationEvent) {
         is PresentationEvent.TransactionInitialized -> info("Verifier initialized transaction")
         is PresentationEvent.VerifierGotWalletResponse -> info("Verifier retrieved wallet response")
         is PresentationEvent.WalletResponsePosted -> info("Wallet posted response")
+        is PresentationEvent.AttestationStatusCheckSuccessful -> info("Attestation status check successful")
     }
 }

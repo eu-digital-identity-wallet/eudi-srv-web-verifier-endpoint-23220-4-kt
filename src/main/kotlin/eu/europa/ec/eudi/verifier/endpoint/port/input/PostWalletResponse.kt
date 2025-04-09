@@ -77,7 +77,7 @@ sealed interface WalletResponseValidationError {
 
     data object IncorrectState : WalletResponseValidationError
     data object MissingIdToken : WalletResponseValidationError
-    data class InvalidVpToken(val message: String, val cause: Throwable?) : WalletResponseValidationError
+    data class InvalidVpToken(val message: String, val cause: Throwable? = null) : WalletResponseValidationError
     data object MissingVpToken : WalletResponseValidationError
     data object MissingPresentationSubmission : WalletResponseValidationError
     data object PresentationSubmissionMustNotBePresent : WalletResponseValidationError
@@ -98,6 +98,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
             is PresentationQuery.ByPresentationDefinition ->
                 presentationExchangeVpContent(
                     presentationQuery.presentationDefinition,
+                    presentation.id,
                     presentation.nonce,
                     presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
@@ -106,6 +107,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
             is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
                 dcqlVpContent(
                     presentationQuery.query,
+                    presentation.id,
                     presentation.nonce,
                     presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
@@ -131,6 +133,7 @@ private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
 
 private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
     presentationDefinition: PresentationDefinition,
+    transactionId: TransactionId,
     nonce: Nonce,
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
@@ -171,8 +174,8 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             val vpFormat = inputDescriptorFormat?.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission)?.bind()
                 ?: vpFormats.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission).bind()
 
-            validateVerifiablePresentation(unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData)
-                .getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to validate Verifiable Presentation", it)) }
+            validateVerifiablePresentation(transactionId, unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData).bind()
+
         }.distinct()
 
         VpContent.PresentationExchange(verifiablePresentations, presentationSubmission)
@@ -180,6 +183,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
 
 private suspend fun AuthorisationResponseTO.dcqlVpContent(
     query: DCQL,
+    transactionId: TransactionId,
     nonce: Nonce,
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
@@ -209,8 +213,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                         null,
                     ),
                 ).bind()
-                validateVerifiablePresentation(unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData)
-                    .getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to validate Verifiable Presentation", it)) }
+                validateVerifiablePresentation(transactionId, unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData).bind()
             }
         }
 

@@ -22,21 +22,27 @@ import com.nimbusds.jose.JOSEObjectType
 import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier
 import com.nimbusds.jose.proc.SecurityContext
+import com.nimbusds.jose.util.JSONObjectUtils
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
-import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps.HolderPubKeyInConfirmationClaim
-import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps.mustBePresentAndValid
+import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
+import eu.europa.ec.eudi.statium.*
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.toKotlinInstant
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 
 /**
@@ -78,12 +84,23 @@ sealed interface SdJwtVcValidationResult {
     /**
      * Successfully validated an SD-JWT Verifiable Credential.
      */
-    data class Valid(val payload: JsonObject) : SdJwtVcValidationResult
+    data class Valid(val payload: SdJwtAndKbJwt<SignedJWT>) : SdJwtVcValidationResult
 
     /**
      * SD-JWT Verifiable Credential validation failed.
      */
     data class Invalid(val errors: NonEmptyList<SdJwtVcValidationError>) : SdJwtVcValidationResult
+}
+
+
+fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray = buildJsonArray {
+    errors.forEach { error ->
+        addJsonObject {
+            put("error", error.reason.name)
+            put("description", error.description)
+            error.cause?.message?.let { cause -> put("cause", cause) }
+        }
+    }
 }
 
 internal typealias SdJwt = String
@@ -103,8 +120,11 @@ private val log = LoggerFactory.getLogger(ValidateSdJwtVc::class.java)
  * @param audience the Client Id of this Verifier, expected to be found in the KeyBinding JWT
  */
 internal class ValidateSdJwtVc(
+    private val publishPresentationEvent: PublishPresentationEvent,
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT>,
     private val audience: Audience,
+    private val ktorHttpClientFactory: KtorHttpClientFactory,
+    private val clock: java.time.Clock,
 ) {
     private val sdJwtVcNoSignatureVerification: JwtSignatureVerifier<SignedJWT> by lazy {
         val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
@@ -126,13 +146,32 @@ internal class ValidateSdJwtVc(
         }
     }
 
-    suspend operator fun invoke(unverified: SdJwt, nonce: Nonce): SdJwtVcValidationResult {
+    private val kbJwtVcNoSignatureVerification: JwtSignatureVerifier<SignedJWT> by lazy {
+        val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
+            JOSEObjectType("kb+jwt"),
+        )
+        val claimSetVerifier = DefaultJWTClaimsVerifier<SecurityContext>(
+            JWTClaimsSet.Builder().build(),
+            setOf("sd_hash", "nonce", "iat"),
+        )
+
+        JwtSignatureVerifier {
+            runCatching {
+                val signedJwt = SignedJWT.parse(it)
+                typeVerifier.verify(signedJwt.header.type, null)
+                claimSetVerifier.verify(signedJwt.jwtClaimsSet, null)
+                signedJwt
+            }.getOrNull()
+        }
+    }
+
+    suspend operator fun invoke(unverified: SdJwt, nonce: Nonce, transactionId: TransactionId? = null): SdJwtVcValidationResult {
         val challenge = buildJsonObject {
             put(Claims.Audience, audience)
             put(Claims.Nonce, nonce.value)
         }
 
-        return verifySdJwtVc(unverified, challenge)
+        return verifySdJwtVc(unverified, challenge, transactionId)
             .fold(
                 ifRight = { SdJwtVcValidationResult.Valid(it) },
                 ifLeft = { sdJwtVcError ->
@@ -140,7 +179,7 @@ internal class ValidateSdJwtVc(
                     log.error("SD-JWT-VC validation failed: ${sdJwtVcValidationError.description}", sdJwtVcError)
                     val errors =
                         if (!sdJwtVcError.isSignatureVerificationFailure()) nonEmptyListOf(sdJwtVcValidationError)
-                        else verifySdJwt(unverified, challenge)
+                        else verifySdJwtVcNoSig(unverified, challenge, transactionId)
                             .fold(
                                 ifRight = { nonEmptyListOf(sdJwtVcValidationError) },
                                 ifLeft = { sdJwtError ->
@@ -154,27 +193,78 @@ internal class ValidateSdJwtVc(
             )
     }
 
-    private suspend fun verifySdJwtVc(unverified: SdJwt, challenge: JsonObject): Either<Throwable, JsonObject> =
+    private suspend fun verifySdJwtVc(unverified: SdJwt, challenge: JsonObject, transactionId: TransactionId?): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
         Either.catch {
-            val (presentation, _) = sdJwtVcVerifier.verify(unverified, challenge).getOrThrow()
-
-            with(NimbusSdJwtOps) {
-                presentation.recreateClaims(visitor = null)
-            }
+            val sdJwtAndKbJwt= sdJwtVcVerifier.verify(unverified, challenge).getOrThrow()
+            sdJwtAndKbJwt.sdJwt.jwt.verifyStatus()
+            transactionId?.let { logStatusCheckSuccess(transactionId) }
+            sdJwtAndKbJwt
         }
 
-    private suspend fun verifySdJwt(unverified: SdJwt, challenge: JsonObject): Either<Throwable, JsonObject> =
+    private suspend fun verifySdJwtVcNoSig(unverified: SdJwt, challenge: JsonObject, transactionId: TransactionId?): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
         Either.catch {
-            val (presentation, _) = NimbusSdJwtOps.verify(
+            val sdJwtAndKbJwt = NimbusSdJwtOps.verify(
                 jwtSignatureVerifier = sdJwtVcNoSignatureVerification,
                 unverifiedSdJwt = unverified,
-                keyBindingVerifier = KeyBindingVerifier.mustBePresentAndValid(HolderPubKeyInConfirmationClaim, challenge),
+                keyBindingVerifier = KeyBindingVerifier.mustBePresent(kbJwtVcNoSignatureVerification),
+//                keyBindingVerifier = KeyBindingVerifier.mustBePresentAndValid(HolderPubKeyInConfirmationClaim, challenge),
             ).getOrThrow()
+            sdJwtAndKbJwt.sdJwt.jwt.verifyStatus()
+            transactionId?.let { logStatusCheckSuccess(transactionId) }
+            sdJwtAndKbJwt
+        }
 
-            with(NimbusSdJwtOps) {
-                presentation.recreateClaims(visitor = null)
+    private suspend fun SignedJWT.verifyStatus() {
+        val statusReference = statusReference()
+        val status = with(getStatus()) {
+            statusReference.currentStatus().getOrElse {
+                throw IllegalStateException("Referenced status list not found")
             }
         }
+        require(status == Status.Valid) {
+            "Attestation status expected to be VALID but is $status"
+        }
+    }
+
+    private fun SignedJWT.statusReference(): StatusReference {
+        val statusElement = jwtClaimsSet.getJSONObjectClaim(TokenStatusListSpec.STATUS)
+        requireNotNull(statusElement ) {
+            "Expected status element but not found"
+        }
+        val statusJsonObject = statusElement.toJsonObject()
+        val statusListElement = statusJsonObject[TokenStatusListSpec.STATUS_LIST]
+        requireNotNull(statusListElement) {
+            "Expected status_list element but not found"
+        }
+        require(statusListElement is JsonObject)
+
+        val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX].toString().toInt())
+        val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()?.getOrThrow()!!
+
+        return StatusReference(index, uri)
+    }
+
+    private fun getStatus(): GetStatus {
+        val delegateClock = object : Clock {
+            override fun now(): Instant = clock.instant().toKotlinInstant()
+        }
+        val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
+            clock = delegateClock,
+            httpClientFactory = ktorHttpClientFactory,
+            verifyStatusListTokenSignature = VerifyStatusListTokenSignature.Ignore // TODO: control it via configuration
+        )
+        return GetStatus(getStatusListToken)
+    }
+
+    suspend fun logStatusCheckSuccess(transactionId: TransactionId) {
+        val event = PresentationEvent.AttestationStatusCheckSuccessful(transactionId, clock.instant())
+        publishPresentationEvent(event)
+    }
+}
+
+private fun Map<String, Any?>.toJsonObject(): JsonObject {
+    val jsonString = JSONObjectUtils.toJSONString(this)
+    return Json.decodeFromString(jsonString)
 }
 
 private fun Throwable.isSignatureVerificationFailure(): Boolean =
