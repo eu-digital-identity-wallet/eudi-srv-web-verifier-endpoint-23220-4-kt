@@ -256,7 +256,16 @@ data class VerifierConfig(
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
+    val validation: Validation,
 )
+
+data class Validation(
+    val sdJwtVc: SdJwtVc,
+) {
+    data class SdJwtVc(
+        val statusCheckEnabled: Boolean,
+    )
+}
 
 /**
  * Checks if [value] is a Subject Alternative Name of [type] in this [X509Certificate].

@@ -92,7 +92,6 @@ sealed interface SdJwtVcValidationResult {
     data class Invalid(val errors: NonEmptyList<SdJwtVcValidationError>) : SdJwtVcValidationResult
 }
 
-
 fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray = buildJsonArray {
     errors.forEach { error ->
         addJsonObject {
@@ -125,6 +124,7 @@ internal class ValidateSdJwtVc(
     private val audience: Audience,
     private val ktorHttpClientFactory: KtorHttpClientFactory,
     private val clock: java.time.Clock,
+    private val checkStatus: Boolean,
 ) {
     private val sdJwtVcNoSignatureVerification: JwtSignatureVerifier<SignedJWT> by lazy {
         val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
@@ -193,15 +193,26 @@ internal class ValidateSdJwtVc(
             )
     }
 
-    private suspend fun verifySdJwtVc(unverified: SdJwt, challenge: JsonObject, transactionId: TransactionId?): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
-        Either.catch {
-            val sdJwtAndKbJwt= sdJwtVcVerifier.verify(unverified, challenge).getOrThrow()
+    private suspend fun verifySdJwtVc(
+        unverified: SdJwt,
+        challenge: JsonObject,
+        transactionId: TransactionId?,
+    ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> = Either.catch {
+        val sdJwtAndKbJwt = sdJwtVcVerifier.verify(unverified, challenge).getOrThrow()
+
+        if (checkStatus) {
             sdJwtAndKbJwt.sdJwt.jwt.verifyStatus()
             transactionId?.let { logStatusCheckSuccess(transactionId) }
-            sdJwtAndKbJwt
         }
 
-    private suspend fun verifySdJwtVcNoSig(unverified: SdJwt, challenge: JsonObject, transactionId: TransactionId?): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
+        sdJwtAndKbJwt
+    }
+
+    private suspend fun verifySdJwtVcNoSig(
+        unverified: SdJwt,
+        challenge: JsonObject,
+        transactionId: TransactionId?,
+    ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
         Either.catch {
             val sdJwtAndKbJwt = NimbusSdJwtOps.verify(
                 jwtSignatureVerifier = sdJwtVcNoSignatureVerification,
@@ -209,8 +220,12 @@ internal class ValidateSdJwtVc(
                 keyBindingVerifier = KeyBindingVerifier.mustBePresent(kbJwtVcNoSignatureVerification),
 //                keyBindingVerifier = KeyBindingVerifier.mustBePresentAndValid(HolderPubKeyInConfirmationClaim, challenge),
             ).getOrThrow()
-            sdJwtAndKbJwt.sdJwt.jwt.verifyStatus()
-            transactionId?.let { logStatusCheckSuccess(transactionId) }
+
+            if (checkStatus) {
+                sdJwtAndKbJwt.sdJwt.jwt.verifyStatus()
+                transactionId?.let { logStatusCheckSuccess(transactionId) }
+            }
+
             sdJwtAndKbJwt
         }
 
@@ -228,7 +243,7 @@ internal class ValidateSdJwtVc(
 
     private fun SignedJWT.statusReference(): StatusReference {
         val statusElement = jwtClaimsSet.getJSONObjectClaim(TokenStatusListSpec.STATUS)
-        requireNotNull(statusElement ) {
+        requireNotNull(statusElement) {
             "Expected status element but not found"
         }
         val statusJsonObject = statusElement.toJsonObject()
@@ -251,7 +266,7 @@ internal class ValidateSdJwtVc(
         val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
             clock = delegateClock,
             httpClientFactory = ktorHttpClientFactory,
-            verifyStatusListTokenSignature = VerifyStatusListTokenSignature.Ignore // TODO: control it via configuration
+            verifyStatusListTokenSignature = VerifyStatusListTokenSignature.Ignore, // TODO: control it via configuration
         )
         return GetStatus(getStatusListToken)
     }
@@ -272,10 +287,13 @@ private fun Throwable.isSignatureVerificationFailure(): Boolean =
         is SdJwtVerificationException -> when (val reason = reason) {
             is VerificationError.InvalidJwt ->
                 reason.cause is BadJOSEException && (reason.cause?.message?.startsWith("Signed JWT rejected") ?: false)
+
             is VerificationError.SdJwtVcError ->
                 reason.error is IssuerKeyVerificationError
+
             else -> false
         }
+
         else -> false
     }
 

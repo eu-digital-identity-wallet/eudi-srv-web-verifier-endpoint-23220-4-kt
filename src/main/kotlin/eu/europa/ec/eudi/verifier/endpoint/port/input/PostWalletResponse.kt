@@ -174,8 +174,13 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             val vpFormat = inputDescriptorFormat?.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission)?.bind()
                 ?: vpFormats.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission).bind()
 
-            validateVerifiablePresentation(transactionId, unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData).bind()
-
+            validateVerifiablePresentation(
+                transactionId,
+                unvalidatedVerifiablePresentation,
+                vpFormat,
+                nonce,
+                applicableTransactionData,
+            ).bind()
         }.distinct()
 
         VpContent.PresentationExchange(verifiablePresentations, presentationSubmission)
@@ -213,7 +218,13 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                         null,
                     ),
                 ).bind()
-                validateVerifiablePresentation(transactionId, unvalidatedVerifiablePresentation, vpFormat, nonce, applicableTransactionData).bind()
+                validateVerifiablePresentation(
+                    transactionId,
+                    unvalidatedVerifiablePresentation,
+                    vpFormat,
+                    nonce,
+                    applicableTransactionData,
+                ).bind()
             }
         }
 

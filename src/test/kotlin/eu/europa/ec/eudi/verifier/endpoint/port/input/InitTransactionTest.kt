@@ -48,6 +48,9 @@ class InitTransactionTest {
         clientMetaData = TestContext.clientMetaData,
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
         requestUriMethod = RequestUriMethod.Get,
+        validation = Validation(
+            sdJwtVc = Validation.SdJwtVc(false),
+        ),
     )
 
     @Test
@@ -89,6 +92,9 @@ class InitTransactionTest {
                 clientMetaData = TestContext.clientMetaData,
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                 requestUriMethod = RequestUriMethod.Get,
+                validation = Validation(
+                    sdJwtVc = Validation.SdJwtVc(false),
+                ),
             )
 
             val input = InitTransactionTO(
