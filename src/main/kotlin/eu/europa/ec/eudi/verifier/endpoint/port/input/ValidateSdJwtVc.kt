@@ -22,7 +22,6 @@ import com.nimbusds.jose.JOSEObjectType
 import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier
 import com.nimbusds.jose.proc.SecurityContext
-import com.nimbusds.jose.util.JSONObjectUtils
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
@@ -33,6 +32,7 @@ import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerification
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.statium.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
@@ -230,30 +230,31 @@ internal class ValidateSdJwtVc(
         }
 
     private suspend fun SignedJWT.verifyStatus() {
-        val statusReference = statusReference()
-        val status = with(getStatus()) {
-            statusReference.currentStatus().getOrElse {
-                throw IllegalStateException("Referenced status list not found")
+        statusReference()?.let { statusReference ->
+            with(getStatus()) {
+                statusReference.currentStatus().getOrElse {
+                    throw IllegalStateException("Referenced status list not found")
+                }
+            }.also {
+                require(it == Status.Valid) {
+                    "Attestation status expected to be VALID but is $it"
+                }
             }
-        }
-        require(status == Status.Valid) {
-            "Attestation status expected to be VALID but is $status"
         }
     }
 
-    private fun SignedJWT.statusReference(): StatusReference {
-        val statusElement = jwtClaimsSet.getJSONObjectClaim(TokenStatusListSpec.STATUS)
-        requireNotNull(statusElement) {
-            "Expected status element but not found"
-        }
+    private fun SignedJWT.statusReference(): StatusReference? {
+        val statusElement = jwtClaimsSet.getJSONObjectClaim(TokenStatusListSpec.STATUS) ?: return null
         val statusJsonObject = statusElement.toJsonObject()
         val statusListElement = statusJsonObject[TokenStatusListSpec.STATUS_LIST]
         requireNotNull(statusListElement) {
             "Expected status_list element but not found"
         }
-        require(statusListElement is JsonObject)
+        require(statusListElement is JsonObject) {
+            "Malformed status_list element"
+        }
 
-        val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX].toString().toInt())
+        val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX]?.decodeAs<Int>()?.getOrThrow()!!)
         val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()?.getOrThrow()!!
 
         return StatusReference(index, uri)
@@ -275,11 +276,6 @@ internal class ValidateSdJwtVc(
         val event = PresentationEvent.AttestationStatusCheckSuccessful(transactionId, clock.instant())
         publishPresentationEvent(event)
     }
-}
-
-private fun Map<String, Any?>.toJsonObject(): JsonObject {
-    val jsonString = JSONObjectUtils.toJSONString(this)
-    return Json.decodeFromString(jsonString)
 }
 
 private fun Throwable.isSignatureVerificationFailure(): Boolean =
