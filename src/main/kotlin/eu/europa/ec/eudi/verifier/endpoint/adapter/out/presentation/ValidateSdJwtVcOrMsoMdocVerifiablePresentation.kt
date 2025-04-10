@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.raise.either
+import arrow.core.raise.ensure
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
@@ -96,12 +97,12 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         }
 
         // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
-        require(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
-            "SD-JWT not signed with a supported algorithm"
+        ensure(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
+            WalletResponseValidationError.InvalidVpToken("SD-JWT not signed with a supported algorithm")
         }
         // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
-        require(kbJwt.header.algorithm in vpFormat.kbJwtAlgorithms) {
-            "Keybinding JWT not signed with a supported algorithm"
+        ensure(kbJwt.header.algorithm in vpFormat.kbJwtAlgorithms) {
+            WalletResponseValidationError.InvalidVpToken("Keybinding JWT not signed with a supported algorithm")
         }
 
         transactionData?.let {

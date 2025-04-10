@@ -21,7 +21,7 @@ sdJwt = "0.12.0"
 ktor = "3.1.1"
 jsonpathkt = "2.0.1"
 tink = "1.17.0"
-statium = "0.2.0"
+statium = "0.2.1"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
