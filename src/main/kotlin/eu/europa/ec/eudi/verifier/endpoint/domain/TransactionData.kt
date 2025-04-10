@@ -318,7 +318,7 @@ internal data class DocumentAccessMethod(
     val accessMode: AccessMode,
 
     @SerialName("oneTimePassword")
-    val oneTimePassword: OneTimePassword?,
+    val oneTimePassword: OneTimePassword? = null,
 
 ) {
     init {
@@ -339,23 +339,23 @@ internal data class DocumentDigest(
     val label: Label,
 
     @SerialName("hash")
-    val hash: Base64Url?,
+    val hash: Base64Url? = null,
 
     @SerialName("hashAlgorithmOID")
-    val hashAlgorithm: HashAlgorithmOID?,
+    val hashAlgorithm: HashAlgorithmOID? = null,
 
     @SerialName("documentLocation_uri")
     @Serializable(with = URLStringSerializer::class)
-    val documentLocation: URL?,
+    val documentLocation: URL? = null,
 
     @SerialName("documentLocation_method")
-    val documentAccessMethod: DocumentAccessMethod?,
+    val documentAccessMethod: DocumentAccessMethod? = null,
 
     @SerialName("DTBS/R")
-    val dataToBeSignedRepresentation: Base64Url?,
+    val dataToBeSignedRepresentation: Base64Url? = null,
 
     @SerialName("DTBS/RHashAlgorithmOID")
-    val dataToBeSignedRepresentationHashAlgorithm: HashAlgorithmOID?,
+    val dataToBeSignedRepresentationHashAlgorithm: HashAlgorithmOID? = null,
 
 ) {
     init {
@@ -407,20 +407,20 @@ internal data class QesAuthorization(
     val credentialIds: List<String>,
 
     @SerialName("transaction_data_hashes_alg")
-    val hashAlgorithms: List<String>?,
+    val hashAlgorithms: List<String>? = null,
 
     @SerialName("signatureQualifier")
-    val signatureQualifier: SignatureQualifier?,
+    val signatureQualifier: SignatureQualifier? = null,
 
     @SerialName("credentialID")
-    val credentialId: CredentialId?,
+    val credentialId: CredentialId? = null,
 
     @SerialName("documentDigests")
     @Required
     val documentDigests: List<DocumentDigest>,
 
     @SerialName("processID")
-    val processId: ProcessId?,
+    val processId: ProcessId? = null,
 
 ) {
     init {
@@ -451,7 +451,7 @@ internal data class QCertCreationAcceptance(
     val credentialIds: List<String>,
 
     @SerialName("transaction_data_hashes_alg")
-    val hashAlgorithms: List<String>?,
+    val hashAlgorithms: List<String>? = null,
 
     @SerialName("QC_terms_conditions_uri")
     @Required
