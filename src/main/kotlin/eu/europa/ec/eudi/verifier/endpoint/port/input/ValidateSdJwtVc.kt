@@ -26,6 +26,7 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
+import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps.HolderPubKeyInConfirmationClaim
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
@@ -71,6 +72,8 @@ enum class SdJwtVcValidationErrorTO {
     UnableToLookupDID,
     UnableToDetermineVerificationMethod,
 
+    StatusCheckFailed,
+
     UnexpectedError,
 }
 
@@ -79,6 +82,8 @@ data class SdJwtVcValidationError(
     val description: String,
     val cause: Throwable?,
 )
+
+data class StatusCheckException(val reason: String, val causedBy: Throwable) : Exception(reason, causedBy)
 
 sealed interface SdJwtVcValidationResult {
     /**
@@ -124,8 +129,14 @@ internal class ValidateSdJwtVc(
     private val audience: Audience,
     private val ktorHttpClientFactory: KtorHttpClientFactory,
     private val clock: java.time.Clock,
-    private val checkStatus: Boolean,
+    private val shouldCheckStatus: Boolean,
 ) {
+
+    private sealed interface SdJwtSerialization {
+        data class Compact(val value: SdJwt) : SdJwtSerialization
+        data class Flattened(val value: JsonObject) : SdJwtSerialization
+    }
+
     private val sdJwtVcNoSignatureVerification: JwtSignatureVerifier<SignedJWT> by lazy {
         val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
             JOSEObjectType(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT),
@@ -146,26 +157,25 @@ internal class ValidateSdJwtVc(
         }
     }
 
-    private val kbJwtVcNoSignatureVerification: JwtSignatureVerifier<SignedJWT> by lazy {
-        val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
-            JOSEObjectType("kb+jwt"),
-        )
-        val claimSetVerifier = DefaultJWTClaimsVerifier<SecurityContext>(
-            JWTClaimsSet.Builder().build(),
-            setOf("sd_hash", "nonce", "iat"),
+    suspend operator fun invoke(unverified: JsonObject, nonce: Nonce, transactionId: TransactionId? = null): SdJwtVcValidationResult =
+        doInvoke(
+            unverified = SdJwtSerialization.Flattened(unverified),
+            nonce = nonce,
+            transactionId = transactionId,
         )
 
-        JwtSignatureVerifier {
-            runCatching {
-                val signedJwt = SignedJWT.parse(it)
-                typeVerifier.verify(signedJwt.header.type, null)
-                claimSetVerifier.verify(signedJwt.jwtClaimsSet, null)
-                signedJwt
-            }.getOrNull()
-        }
-    }
+    suspend operator fun invoke(unverified: SdJwt, nonce: Nonce, transactionId: TransactionId? = null): SdJwtVcValidationResult =
+        doInvoke(
+            unverified = SdJwtSerialization.Compact(unverified),
+            nonce = nonce,
+            transactionId = transactionId,
+        )
 
-    suspend operator fun invoke(unverified: SdJwt, nonce: Nonce, transactionId: TransactionId? = null): SdJwtVcValidationResult {
+    private suspend fun doInvoke(
+        unverified: SdJwtSerialization,
+        nonce: Nonce,
+        transactionId: TransactionId? = null,
+    ): SdJwtVcValidationResult {
         val challenge = buildJsonObject {
             put(Claims.Audience, audience)
             put(Claims.Nonce, nonce.value)
@@ -194,52 +204,64 @@ internal class ValidateSdJwtVc(
     }
 
     private suspend fun verifySdJwtVc(
-        unverified: SdJwt,
+        unverified: SdJwtSerialization,
         challenge: JsonObject,
         transactionId: TransactionId?,
     ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> = Either.catch {
-        val sdJwtAndKbJwt = sdJwtVcVerifier.verify(unverified, challenge).getOrThrow()
-
-        if (checkStatus) {
-            sdJwtAndKbJwt.sdJwt.jwt.verifyStatus()
-            transactionId?.let { logStatusCheckSuccess(transactionId) }
+        val sdJwtAndKbJwt = when (unverified) {
+            is SdJwtSerialization.Compact -> sdJwtVcVerifier.verify(unverified.value, challenge).getOrThrow()
+            is SdJwtSerialization.Flattened -> sdJwtVcVerifier.verify(unverified.value, challenge).getOrThrow()
+        }
+        if (shouldCheckStatus) {
+            sdJwtAndKbJwt.sdJwt.jwt.verifyStatus(transactionId)
         }
 
         sdJwtAndKbJwt
     }
 
     private suspend fun verifySdJwtVcNoSig(
-        unverified: SdJwt,
+        unverified: SdJwtSerialization,
         challenge: JsonObject,
         transactionId: TransactionId?,
-    ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
-        Either.catch {
-            val sdJwtAndKbJwt = NimbusSdJwtOps.verify(
-                jwtSignatureVerifier = sdJwtVcNoSignatureVerification,
-                unverifiedSdJwt = unverified,
-                keyBindingVerifier = KeyBindingVerifier.mustBePresent(kbJwtVcNoSignatureVerification),
-//                keyBindingVerifier = KeyBindingVerifier.mustBePresentAndValid(HolderPubKeyInConfirmationClaim, challenge),
+    ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> = Either.catch {
+        val keyBindingVerifier = KeyBindingVerifier.mustBePresentAndValid(HolderPubKeyInConfirmationClaim, challenge)
+        val sdJwtAndKbJwt = when (unverified) {
+            is SdJwtSerialization.Compact -> NimbusSdJwtOps.verify(
+                sdJwtVcNoSignatureVerification,
+                keyBindingVerifier,
+                unverified.value,
             ).getOrThrow()
 
-            if (checkStatus) {
-                sdJwtAndKbJwt.sdJwt.jwt.verifyStatus()
-                transactionId?.let { logStatusCheckSuccess(transactionId) }
-            }
-
-            sdJwtAndKbJwt
+            is SdJwtSerialization.Flattened -> NimbusSdJwtOps.verify(
+                sdJwtVcNoSignatureVerification,
+                keyBindingVerifier,
+                unverified.value,
+            ).getOrThrow()
+        }
+        if (shouldCheckStatus) {
+            sdJwtAndKbJwt.sdJwt.jwt.verifyStatus(transactionId)
         }
 
-    private suspend fun SignedJWT.verifyStatus() {
+        sdJwtAndKbJwt
+    }
+
+    private suspend fun SignedJWT.verifyStatus(transactionId: TransactionId?) {
         statusReference()?.let { statusReference ->
-            with(getStatus()) {
-                statusReference.currentStatus().getOrElse {
-                    throw IllegalStateException("Referenced status list not found")
+            runCatching {
+                with(getStatus()) {
+                    statusReference.currentStatus().getOrThrow()
+                }.also {
+                    require(it == Status.Valid) { "Attestation status expected to be VALID but is $it" }
                 }
-            }.also {
-                require(it == Status.Valid) {
-                    "Attestation status expected to be VALID but is $it"
-                }
-            }
+            }.fold(
+                onSuccess = {
+                    transactionId?.let { logStatusCheckSuccess(transactionId, statusReference) }
+                },
+                onFailure = { error ->
+                    transactionId?.let { logStatusCheckFailed(transactionId, statusReference, error) }
+                    throw StatusCheckException("Attestation status check failed, ${error.message}", error)
+                },
+            )
         }
     }
 
@@ -272,8 +294,13 @@ internal class ValidateSdJwtVc(
         return GetStatus(getStatusListToken)
     }
 
-    suspend fun logStatusCheckSuccess(transactionId: TransactionId) {
-        val event = PresentationEvent.AttestationStatusCheckSuccessful(transactionId, clock.instant())
+    private suspend fun logStatusCheckSuccess(transactionId: TransactionId, statusReference: StatusReference) {
+        val event = PresentationEvent.AttestationStatusCheckSuccessful(transactionId, clock.instant(), statusReference)
+        publishPresentationEvent(event)
+    }
+
+    private suspend fun logStatusCheckFailed(transactionId: TransactionId, statusReference: StatusReference, error: Throwable) {
+        val event = PresentationEvent.AttestationStatusCheckFailed(transactionId, clock.instant(), statusReference, error.message)
         publishPresentationEvent(event)
     }
 }
@@ -296,6 +323,7 @@ private fun Throwable.isSignatureVerificationFailure(): Boolean =
 private fun Throwable.toSdJwtVcValidationError(): SdJwtVcValidationError {
     val (reason, description) = when (this) {
         is SdJwtVerificationException -> toSdJwtVcValidationErrorTO() to description
+        is StatusCheckException -> SdJwtVcValidationErrorTO.StatusCheckFailed to reason
         else -> SdJwtVcValidationErrorTO.UnexpectedError to "an unexpected error occurred${message?.let { ": $it" } ?: ""}"
     }
     return SdJwtVcValidationError(reason, description, this)

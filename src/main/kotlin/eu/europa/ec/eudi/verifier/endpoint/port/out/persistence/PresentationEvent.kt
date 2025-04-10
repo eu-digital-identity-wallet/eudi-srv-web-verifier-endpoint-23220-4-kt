@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.persistence
 
 import eu.europa.ec.eudi.prex.PresentationDefinition
+import eu.europa.ec.eudi.statium.StatusReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
@@ -104,5 +105,13 @@ sealed interface PresentationEvent {
     data class AttestationStatusCheckSuccessful(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
+        val statusReference: StatusReference,
+    ) : PresentationEvent
+
+    data class AttestationStatusCheckFailed(
+        override val transactionId: TransactionId,
+        override val timestamp: Instant,
+        val statusReference: StatusReference?,
+        val cause: String?,
     ) : PresentationEvent
 }

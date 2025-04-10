@@ -124,5 +124,6 @@ private fun log(e: PresentationEvent) {
         is PresentationEvent.VerifierGotWalletResponse -> info("Verifier retrieved wallet response")
         is PresentationEvent.WalletResponsePosted -> info("Wallet posted response")
         is PresentationEvent.AttestationStatusCheckSuccessful -> info("Attestation status check successful")
+        is PresentationEvent.AttestationStatusCheckFailed -> warn("Attestation status check failed")
     }
 }

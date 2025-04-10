@@ -127,6 +127,12 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
         }
 
         is PresentationEvent.AttestationStatusCheckSuccessful -> {
+            put("status_reference", event.statusReference.json())
+        }
+
+        is PresentationEvent.AttestationStatusCheckFailed -> {
+            put("status_reference", event.statusReference.json())
+            put("cause", event.cause)
         }
     }
 }
@@ -153,6 +159,7 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
         is PresentationEvent.VerifierFailedToGetWalletResponse -> "Verifier failed to get wallet" to Actor.Verifier
         is PresentationEvent.PresentationExpired -> "Presentation expired" to Actor.VerifierEndPoint
         is PresentationEvent.AttestationStatusCheckSuccessful -> "Attestation status check succeeded" to Actor.VerifierEndPoint
+        is PresentationEvent.AttestationStatusCheckFailed -> "Attestation status check failed" to Actor.VerifierEndPoint
     }
     put("event", eventName)
     put("actor", actor.json())

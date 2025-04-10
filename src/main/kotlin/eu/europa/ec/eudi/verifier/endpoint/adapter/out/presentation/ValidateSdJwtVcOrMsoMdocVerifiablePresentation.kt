@@ -88,16 +88,18 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 transactionId = transactionId,
             ).get()
 
-            is VerifiablePresentation.Json -> error("Not supported")
-//            is VerifiablePresentation.Json -> validateSdJwtVc(
-//                unverified = verifiablePresentation.value,
-//                nonce = nonce,
-//            ).get()
+            is VerifiablePresentation.Json -> validateSdJwtVc(
+                unverified = verifiablePresentation.value,
+                nonce = nonce,
+                transactionId = transactionId,
+            ).get()
         }
 
+        // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
         require(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
             "SD-JWT not signed with a supported algorithm"
         }
+        // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
         require(kbJwt.header.algorithm in vpFormat.kbJwtAlgorithms) {
             "Keybinding JWT not signed with a supported algorithm"
         }
