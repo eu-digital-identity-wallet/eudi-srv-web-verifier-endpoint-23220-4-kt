@@ -39,7 +39,7 @@ class QesAuthorizationSerializationTest {
         // Create a DocumentDigest instance
         val documentDigest = DocumentDigest(
             label = Label("Example Contract"),
-            hash = Base64Url("7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA"),
+            hash = "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
             hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
             documentLocation = null,
             documentAccessMethod = null,
@@ -85,7 +85,7 @@ class QesAuthorizationSerializationTest {
         val originalDigest = qesAuthorization.documentDigests[0]
         val deserializedDigest = deserializedQesAuthorization.documentDigests[0]
         assertEquals(originalDigest.label.value, deserializedDigest.label.value)
-        assertEquals(originalDigest.hash?.value, deserializedDigest.hash?.value)
+        assertEquals(originalDigest.hash, deserializedDigest.hash)
         assertEquals(originalDigest.hashAlgorithm?.value, deserializedDigest.hashAlgorithm?.value)
     }
 
@@ -94,7 +94,7 @@ class QesAuthorizationSerializationTest {
         // Create a DocumentDigest instance
         val documentDigest = DocumentDigest(
             label = Label("Example Contract"),
-            hash = Base64Url("7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA"),
+            hash = "7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA",
             hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
             documentLocation = null,
             documentAccessMethod = null,
@@ -176,7 +176,7 @@ class QesAuthorizationSerializationTest {
 
         val digest = qesAuthorization.documentDigests[0]
         assertEquals("Example Contract", digest.label.value)
-        assertEquals("7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA", digest.hash?.value)
+        assertEquals("7Qzm5EjuzXKSHFlc0OH9PP9qUaH-VBl2aGNbwYj1oOA", digest.hash)
         assertEquals("2.16.840.1.101.3.4.2.1", digest.hashAlgorithm?.value)
     }
 }

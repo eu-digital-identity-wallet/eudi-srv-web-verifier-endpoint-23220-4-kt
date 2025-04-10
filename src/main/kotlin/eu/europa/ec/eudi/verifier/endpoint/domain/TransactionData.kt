@@ -223,21 +223,6 @@ internal value class Label(val value: String) {
 }
 
 /**
- * A base64url encoded value.
- *
- * No padding is used.
- */
-@Serializable
-@JvmInline
-internal value class Base64Url(val value: String) {
-    init {
-        runCatching {
-            base64UrlNoPadding.decode(value)
-        }.getOrElse { throw IllegalArgumentException("value is not base64url encoded", it) }
-    }
-}
-
-/**
  * OID Hash Algorithm.
  */
 @Serializable
@@ -339,7 +324,7 @@ internal data class DocumentDigest(
     val label: Label,
 
     @SerialName("hash")
-    val hash: Base64Url? = null,
+    val hash: String? = null,
 
     @SerialName("hashAlgorithmOID")
     val hashAlgorithm: HashAlgorithmOID? = null,
@@ -352,7 +337,7 @@ internal data class DocumentDigest(
     val documentAccessMethod: DocumentAccessMethod? = null,
 
     @SerialName("DTBS/R")
-    val dataToBeSignedRepresentation: Base64Url? = null,
+    val dataToBeSignedRepresentation: String? = null,
 
     @SerialName("DTBS/RHashAlgorithmOID")
     val dataToBeSignedRepresentationHashAlgorithm: HashAlgorithmOID? = null,
@@ -460,7 +445,7 @@ internal data class QCertCreationAcceptance(
 
     @SerialName("QC_hash")
     @Required
-    val documentHash: Base64Url,
+    val documentHash: String,
 
     @SerialName("QC_hashAlgorithmOID")
     @Required

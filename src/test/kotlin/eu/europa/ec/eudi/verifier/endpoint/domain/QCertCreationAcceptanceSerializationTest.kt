@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -44,7 +43,7 @@ class QCertCreationAcceptanceSerializationTest {
             credentialIds = listOf("credential1", "credential2"),
             hashAlgorithms = listOf("SHA-256", "SHA-512"),
             termsAndConditions = URL("https://example.com/terms"),
-            documentHash = Base64Url("dGVzdEhhc2g"), // "testHash" in Base64 without padding
+            documentHash = "dGVzdEhhc2g", // "testHash" in Base64 without padding
             hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
         )
 
@@ -70,7 +69,7 @@ class QCertCreationAcceptanceSerializationTest {
             qCertCreationAcceptance.termsAndConditions.toString(),
             deserializedQCertCreationAcceptance.termsAndConditions.toString(),
         )
-        assertEquals(qCertCreationAcceptance.documentHash.value, deserializedQCertCreationAcceptance.documentHash.value)
+        assertEquals(qCertCreationAcceptance.documentHash, deserializedQCertCreationAcceptance.documentHash)
         assertEquals(qCertCreationAcceptance.hashAlgorithm.value, deserializedQCertCreationAcceptance.hashAlgorithm.value)
     }
 
@@ -82,7 +81,7 @@ class QCertCreationAcceptanceSerializationTest {
             credentialIds = listOf("credential1", "credential2"),
             hashAlgorithms = listOf("SHA-256", "SHA-512"),
             termsAndConditions = URL("https://example.com/terms"),
-            documentHash = Base64Url("dGVzdEhhc2g"), // "testHash" in Base64 without padding
+            documentHash = "dGVzdEhhc2g", // "testHash" in Base64 without padding
             hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
         )
 
@@ -145,7 +144,7 @@ class QCertCreationAcceptanceSerializationTest {
         assertEquals(listOf("credential3", "credential4"), deserializedQCertCreationAcceptance.credentialIds)
         assertEquals(listOf("SHA-384", "SHA-512"), deserializedQCertCreationAcceptance.hashAlgorithms)
         assertEquals("https://example.org/terms-and-conditions", deserializedQCertCreationAcceptance.termsAndConditions.toString())
-        assertEquals("ZXhhbXBsZUhhc2g", deserializedQCertCreationAcceptance.documentHash.value)
+        assertEquals("ZXhhbXBsZUhhc2g", deserializedQCertCreationAcceptance.documentHash)
         assertEquals("2.16.840.1.101.3.4.2.2", deserializedQCertCreationAcceptance.hashAlgorithm.value)
     }
 }
