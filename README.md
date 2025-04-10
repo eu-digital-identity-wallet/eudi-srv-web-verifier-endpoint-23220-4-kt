@@ -684,6 +684,10 @@ Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms
 Default value: `ES256`
 
+Variable: `VERIFIER_VALIDATION_SDJWTVC_STATUSCHECK_ENABLED`  
+Description: Enables status check validation for sd-jwt-vc attestations shared.  
+Default value: `true`  
+
 Variable: `VERIFIER_TRANSACTIONDATA_HASHALGORITHM`  
 Description: Hash algorithm to communicate in the `transaction_data_hashes_alg` claim of transaction data  
 Default value: `sha-256`  

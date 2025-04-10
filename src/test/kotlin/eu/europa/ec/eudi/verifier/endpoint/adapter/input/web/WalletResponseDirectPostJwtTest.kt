@@ -269,4 +269,45 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         assertEquals(1, vpToken.size)
         assertIs<JsonPrimitive>(vpToken.first())
     }
+
+    @Test
+    fun `when wallet posts sd-jwt-vc with invalid status list details, post fails`() = runTest {
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("07-ehicSdJwtVc-presentationDefinition.json")
+        val transactionDetails = VerifierApiClient.initTransaction(client, initTransaction)
+        val requestObject = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
+
+        val jarmOption = assertIs<JarmOption.Encrypted>(requestObject.jarmOption())
+        assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
+        val ecKey = assertNotNull(requestObject.ecKey())
+
+        val requestId = RequestId(transactionDetails.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        val encryptedJwt = run {
+            val presentationSubmission: JsonElement = Json.decodeFromString(
+                TestUtils.loadResource("07-ehicSdJwtVc-presentationSubmission.json"),
+            )
+            val jwtClaims: JWTClaimsSet = buildJsonObject {
+                put("state", requestId.value)
+                put("vp_token", Json.decodeFromString(TestUtils.loadResource("07-ehicSdJwtVc-vpToken.json")))
+                put("presentation_submission", presentationSubmission)
+            }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
+
+            val jweHeader = JWEHeader.Builder(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
+                .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
+                .build()
+
+            EncryptedJWT(jweHeader, jwtClaims)
+        }.apply { encrypt(ECDHEncrypter(ecKey)) }
+
+        val walletResponse = LinkedMultiValueMap<String, Any>()
+            .apply {
+                add("response", encryptedJwt.serialize())
+            }
+
+        try {
+            WalletApiClient.directPostJwt(client, requestId, walletResponse)
+            fail("Expected to fail but didn't")
+        } catch (error: AssertionError) {
+            assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
+        }
+    }
 }

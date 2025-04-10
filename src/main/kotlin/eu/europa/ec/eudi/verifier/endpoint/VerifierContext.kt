@@ -243,7 +243,16 @@ internal fun beans(clock: Clock) = beans {
         )
     }
     bean { ValidateMsoMdocDeviceResponse(clock, ref()) }
-    bean { ValidateSdJwtVc(ref(), ref<VerifierConfig>().verifierId.clientId) }
+    bean {
+        ValidateSdJwtVc(
+            ref(),
+            ref(),
+            ref<VerifierConfig>().verifierId.clientId,
+            ref(),
+            clock,
+            ref<VerifierConfig>().validation.sdJwtVc.statusCheckEnabled,
+        )
+    }
     bean { ValidateSdJwtVcOrMsoMdocVerifiablePresentation(ref(), ref(), ref()) }
 
     //
@@ -449,6 +458,9 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             }
         }
 
+    val validation = environment.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)
+        .let { configured -> Validation(sdJwtVc = Validation.SdJwtVc(configured)) }
+
     return VerifierConfig(
         verifierId = verifierId,
         requestJarOption = requestJarOption,
@@ -459,6 +471,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
+        validation = validation,
     )
 }
 

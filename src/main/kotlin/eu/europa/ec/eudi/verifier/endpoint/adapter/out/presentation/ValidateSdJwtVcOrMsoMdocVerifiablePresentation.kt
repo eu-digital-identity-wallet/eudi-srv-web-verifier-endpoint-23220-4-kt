@@ -15,42 +15,44 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation
 
+import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.raise.either
+import arrow.core.raise.ensure
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.eudi.sdjwt.RFC7519
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
-import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
-import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.port.input.SdJwtVcValidationResult
+import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateSdJwtVc
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
+import eu.europa.ec.eudi.verifier.endpoint.port.input.toJson
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePresentation::class.java)
 
 internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val config: VerifierConfig,
-    private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT>,
     private val deviceResponseValidator: DeviceResponseValidator,
+    private val validateSdJwtVc: ValidateSdJwtVc,
 ) : ValidateVerifiablePresentation {
 
     override suspend fun invoke(
+        transactionId: TransactionId?,
         verifiablePresentation: VerifiablePresentation,
         vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-    ): Result<VerifiablePresentation> = runCatching {
+    ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
                 require(vpFormat is VpFormat.SdJwtVc)
-                validateSdJwtVcVerifiablePresentation(vpFormat, verifiablePresentation, nonce, transactionData)
+                validateSdJwtVcVerifiablePresentation(vpFormat, verifiablePresentation, nonce, transactionData, transactionId).bind()
             }
 
             Format.MsoMdoc -> {
@@ -68,46 +70,46 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-    ): VerifiablePresentation {
-        fun Result<SdJwtAndKbJwt<SignedJWT>>.get(): SdJwtAndKbJwt<SignedJWT> =
-            getOrElse {
-                val description = when (it) {
-                    is SdJwtVerificationException -> it.description
-                    else -> "an unexpected error occurred: ${it.message}"
+        transactionId: TransactionId?,
+    ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
+        fun SdJwtVcValidationResult.get(): SdJwtAndKbJwt<SignedJWT> =
+            when (this) {
+                is SdJwtVcValidationResult.Valid -> this.payload
+                is SdJwtVcValidationResult.Invalid -> {
+                    val validationFailures = this.toJson().toString()
+                    log.warn("Failed to validate SD-JWT VC: $validationFailures")
+                    raise(WalletResponseValidationError.InvalidVpToken(validationFailures))
                 }
-                log.warn("Failed to validate SD-JWT VC: $description", it)
-                throw IllegalArgumentException("Failed to validate SD-JWT VC: $description", it)
             }
 
-        val challenge = buildJsonObject {
-            put(RFC7519.AUDIENCE, config.verifierId.clientId)
-            put("nonce", nonce.value)
-        }
-
         val (sdJwt, kbJwt) = when (verifiablePresentation) {
-            is VerifiablePresentation.Str -> sdJwtVcVerifier.verify(
-                unverifiedSdJwt = verifiablePresentation.value,
-                challenge = challenge,
+            is VerifiablePresentation.Str -> validateSdJwtVc(
+                unverified = verifiablePresentation.value,
+                nonce = nonce,
+                transactionId = transactionId,
             ).get()
 
-            is VerifiablePresentation.Json -> sdJwtVcVerifier.verify(
-                unverifiedSdJwt = verifiablePresentation.value,
-                challenge = challenge,
+            is VerifiablePresentation.Json -> validateSdJwtVc(
+                unverified = verifiablePresentation.value,
+                nonce = nonce,
+                transactionId = transactionId,
             ).get()
         }
 
-        require(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
-            "SD-JWT not signed with a supported algorithm"
+        // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
+        ensure(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
+            WalletResponseValidationError.InvalidVpToken("SD-JWT not signed with a supported algorithm")
         }
-        require(kbJwt.header.algorithm in vpFormat.kbJwtAlgorithms) {
-            "Keybinding JWT not signed with a supported algorithm"
+        // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
+        ensure(kbJwt.header.algorithm in vpFormat.kbJwtAlgorithms) {
+            WalletResponseValidationError.InvalidVpToken("Keybinding JWT not signed with a supported algorithm")
         }
 
         transactionData?.let {
             validateTransactionDataHashes(kbJwt, transactionData, config.transactionDataHashAlgorithm)
         }
 
-        return verifiablePresentation
+        verifiablePresentation
     }
 
     private fun validateMsoMdocVerifiablePresentation(
