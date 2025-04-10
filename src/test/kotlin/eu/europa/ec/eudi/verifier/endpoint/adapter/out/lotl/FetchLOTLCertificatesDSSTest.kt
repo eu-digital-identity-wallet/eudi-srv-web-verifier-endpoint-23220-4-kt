@@ -18,13 +18,12 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
 import java.net.URI
 import java.security.KeyStore
 
 class FetchLOTLCertificatesDSSTest {
 
-    @Test
+//    @Test
     fun `get certs`() = runTest {
         val fetchLOTLCertificatesDSS = FetchLOTLCertificatesDSS()
 

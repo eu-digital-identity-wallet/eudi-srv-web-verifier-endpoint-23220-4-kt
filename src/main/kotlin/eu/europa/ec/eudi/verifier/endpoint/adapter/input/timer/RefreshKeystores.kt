@@ -29,11 +29,9 @@ import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.SchedulingConfigurer
 import org.springframework.scheduling.config.CronTask
 import org.springframework.scheduling.config.ScheduledTaskRegistrar
-import org.springframework.stereotype.Component
 import java.security.cert.X509Certificate
 
 @EnableScheduling
-@Component
 class RefreshKeystores(
     private val fetchLOTLCertificates: FetchLOTLCertificates,
     private var trustSources: TrustSources,

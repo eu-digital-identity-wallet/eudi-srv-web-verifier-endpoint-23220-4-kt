@@ -231,15 +231,7 @@ internal fun beans(clock: Clock) = beans {
     }
 
     // Default DeviceResponseValidator
-    bean {
-//        val x5cShouldBeMap = verifierConfig.trustSourcesConfig.map {
-//            val regex = it.key
-//            val trustSourceConfig = it.value
-//            val x5CShouldBe = X5CShouldBe.fromTrustSources(it.value)
-//            regex to x5CShouldBe
-//        }.toMap()
-        TrustSources()
-    }
+    bean { TrustSources() }
     bean<DeviceResponseValidator> {
         val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
         deviceResponseValidator(x5cShouldBe)
