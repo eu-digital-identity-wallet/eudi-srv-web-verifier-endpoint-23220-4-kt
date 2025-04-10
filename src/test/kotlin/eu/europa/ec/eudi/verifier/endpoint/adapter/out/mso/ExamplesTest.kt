@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.getOrElse
 import cbor.Cbor
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import id.walt.mdoc.dataelement.toDataElement
 import id.walt.mdoc.doc.MDoc
@@ -58,9 +59,17 @@ class ExamplesTest {
     @Test
     fun `waltId example is valid, skipping x5c checks`() {
         val issuedAt = ZonedDateTime.parse("2023-08-02T16:22:19.252519705Z")
+
+        val trustSources = TrustSources().apply {
+            updateWithX5CShouldBe(
+                Regex(".*"),
+                X5CShouldBe.Ignored,
+            )
+        }
+
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant(), issuedAt.zone),
-            x5CShouldBe = X5CShouldBe.Ignored,
+            trustSources = trustSources,
         )
         val document = MDoc.fromCBORHex(waltIdExample)
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
@@ -75,9 +84,15 @@ class ExamplesTest {
             return Cbor.decodeFromByteArray<IssuerSigned>(cbor)
         }
 
+        val trustSources = TrustSources().apply {
+            updateWithX5CShouldBe(
+                Regex(".*"),
+                X5CShouldBe.Ignored,
+            )
+        }
         val document = issuerSigned().asMDocWithDocType("org.iso.18013.5.1.mDL")
         val documentValidator = DocumentValidator(
-            x5CShouldBe = X5CShouldBe.Ignored,
+            trustSources = trustSources,
         )
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
     }

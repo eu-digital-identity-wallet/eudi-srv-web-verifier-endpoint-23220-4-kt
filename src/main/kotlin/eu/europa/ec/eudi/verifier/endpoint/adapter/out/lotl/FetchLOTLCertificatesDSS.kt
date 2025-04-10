@@ -83,12 +83,12 @@ class FetchLOTLCertificatesDSS() : FetchLOTLCertificates {
 }
 
 private const val europeanLOTLUrl = "https://ec.europa.eu/tools/lotl/eu-lotl.xml"
-private const val officialJournalUrl = "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG";
+private const val officialJournalUrl = "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG"
 
 private fun europeanLOTL(): LOTLSource {
     val lotlSource = LOTLSource()
     lotlSource.url = europeanLOTLUrl
-    //lotlSource.certificateSource = officialJournalContentKeyStore()// TODO GD: uncomment
+    // lotlSource.certificateSource = officialJournalContentKeyStore()// TODO GD: uncomment
     lotlSource.signingCertificatesAnnouncementPredicate = OfficialJournalSchemeInformationURI(officialJournalUrl)
     lotlSource.isPivotSupport = false
     lotlSource.tlVersions = listOf(5, 6)
