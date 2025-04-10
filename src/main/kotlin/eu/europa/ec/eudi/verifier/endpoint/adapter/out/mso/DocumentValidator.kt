@@ -20,6 +20,7 @@ import arrow.core.*
 import arrow.core.raise.*
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import id.walt.mdoc.COSECryptoProviderKeyInfo
@@ -51,18 +52,21 @@ sealed interface DocumentError {
     data class X5CNotTrusted(val cause: String?) : DocumentError
     data object DocumentTypeNotMatching : DocumentError
     data object InvalidIssuerSignedItems : DocumentError
+    data object NoMatchingX5CValidator : DocumentError
 }
 
 class DocumentValidator(
     private val clock: Clock = Clock.systemDefaultZone(),
     private val validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
     private val issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
-    private val x5CShouldBe: X5CShouldBe,
+    private val trustSources: TrustSources,
 ) {
 
     fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> =
         either {
             document.decodeMso()
+
+            val x5CShouldBe = ensureMatchingX5CValidator(document, trustSources.x5CShouldBeMap)
 
             val issuerChain = ensureTrustedChain(document, x5CShouldBe)
             zipOrAccumulate(
@@ -194,4 +198,22 @@ private fun Raise<DocumentError.X5CNotTrusted>.ensureValidChain(
         DocumentError.X5CNotTrusted(exception.message)
     }
     return validChain.bind()
+}
+
+private fun Raise<Nel<DocumentError.NoMatchingX5CValidator>>.ensureMatchingX5CValidator(
+    document: MDoc,
+    x5CShouldBeMap: Map<Regex, X5CShouldBe>,
+): X5CShouldBe {
+    val docType = document.docType.value
+
+    fun findX5CValidatorForDocType(docType: String): Option<X5CShouldBe> {
+        return x5CShouldBeMap.entries
+            .firstOrNull { (pattern, _) -> pattern.matches(docType) }
+            ?.value
+            .toOption()
+    }
+
+    val x5CShouldBe = findX5CValidatorForDocType(docType).getOrNull()
+        ?: raise(DocumentError.NoMatchingX5CValidator.nel())
+    return x5CShouldBe
 }
