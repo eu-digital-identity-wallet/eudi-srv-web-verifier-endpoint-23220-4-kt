@@ -15,34 +15,81 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer
 
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourceConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
+import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.SchedulingConfigurer
+import org.springframework.scheduling.config.CronTask
 import org.springframework.scheduling.config.ScheduledTaskRegistrar
-import java.net.URI
-import kotlin.time.Duration.Companion.minutes
+import org.springframework.stereotype.Component
+import java.security.cert.X509Certificate
 
 @EnableScheduling
-class RefreshKeystores(private val fetchLOTLCertificates: FetchLOTLCertificates) : SchedulingConfigurer {
+@Component
+class RefreshKeystores(
+    private val fetchLOTLCertificates: FetchLOTLCertificates,
+    private var trustSources: TrustSources,
+    private val verifierConfig: VerifierConfig,
+) : SchedulingConfigurer {
 
-    private val logger: Logger = LoggerFactory.getLogger(ScheduleTimeoutPresentations::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(RefreshKeystores::class.java)
 
-    private val europeanLOTLUrl = "https://ec.europa.eu/tools/lotl/eu-lotl.xml"
+    @PostConstruct // TODO GD: remove annotation and initialize in verifier context
+    fun initializeTrustSources() {
+        verifierConfig.trustSourcesConfig.forEach { trustSource ->
+            trustSource.value.keystore?.let { loadCertificatesFromKeystore(trustSource.key, it) }
+        }
+    }
+
+    private fun loadCertificatesFromKeystore(regex: Regex, keystoreConfig: TrustSourceConfig.Keystore): List<X509Certificate> {
+        val x5CShouldBe = keystoreConfig.value.let {
+            X5CShouldBe.fromKeystore(it)
+        }
+        trustSources.updateWithX5CShouldBe(regex, x5CShouldBe)
+        return x5CShouldBe.caCertificates()
+    }
 
     override fun configureTasks(taskRegistrar: ScheduledTaskRegistrar) {
-        taskRegistrar.addFixedRateTask(2.minutes) {
-            runBlocking(Dispatchers.IO) {
-                fetchLOTLCertificates(URI(europeanLOTLUrl).toURL()).also {
-                    if (it.isFailure) {
-                        logger.error("Failed to fetch LOTL certificates", it.exceptionOrNull())
-                    } else {
-                        logger.info("Fetched ${it.getOrNull()?.size} LOTL certificates")
-                    }
-                }
+        // Configure LOTL refresh tasks for each trust source that has LOTL configuration
+        verifierConfig.trustSourcesConfig.forEach { trustSource ->
+            val regex = trustSource.key
+            val trustSourceConfig = trustSource.value
+
+            val keystoreCertificates = trustSourceConfig.keystore?.let {
+                loadCertificatesFromKeystore(regex, it)
+            } ?: emptyList()
+
+            trustSourceConfig.trustedList?.let {
+                taskRegistrar.addCronTask(
+                    CronTask({
+                        runBlocking(Dispatchers.IO) {
+                            val lotlUrl = it.location
+                            // TODO GD: use map
+                            fetchLOTLCertificates(lotlUrl, it.serviceTypeFilter).also { result ->
+                                if (result.isFailure) {
+                                    logger.error(
+                                        "Failed to fetch LOTL certificates from $lotlUrl",
+                                        result.exceptionOrNull(),
+                                    )
+                                } else {
+                                    val lotlCertificates = result.getOrNull() ?: emptyList()
+                                    logger.info("Fetched ${lotlCertificates.size} LOTL certificates from $lotlUrl")
+
+                                    // Update the trust sources with the fetched certificates
+                                    trustSources.updateWithCertificates(regex, lotlCertificates + keystoreCertificates)
+                                }
+                            }
+                        }
+                    }, it.refreshInterval),
+                )
             }
         }
     }

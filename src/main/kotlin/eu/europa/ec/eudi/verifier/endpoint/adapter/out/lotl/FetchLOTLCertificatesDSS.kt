@@ -26,7 +26,7 @@ import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI
 import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.sha2.Sha2FileCacheDataLoader
 import eu.europa.esig.dss.tsl.source.LOTLSource
-import eu.europa.esig.dss.tsl.sync.AcceptAllStrategy
+import eu.europa.esig.dss.tsl.sync.ExpirationAndSignatureCheckStrategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -37,7 +37,7 @@ class FetchLOTLCertificatesDSS() : FetchLOTLCertificates {
 
     private val logger: Logger = LoggerFactory.getLogger(FetchLOTLCertificatesDSS::class.java)
 
-    override suspend fun invoke(lotlUrl: URL): Result<List<X509Certificate>> = runCatching {
+    override suspend fun invoke(lotlUrl: URL, serviceTypeFilter: String?): Result<List<X509Certificate>> = runCatching {
         val trustedListsCertificateSource = TrustedListsCertificateSource()
 
         val tlCacheDirectory = File(System.getProperty("java.io.tmpdir")) // TODO GD: make configurable
@@ -67,7 +67,9 @@ class FetchLOTLCertificatesDSS() : FetchLOTLCertificates {
             setOfflineDataLoader(offlineLoader)
             setOnlineDataLoader(onlineLoader)
             setTrustedListCertificateSource(trustedListsCertificateSource)
-            setSynchronizationStrategy(AcceptAllStrategy()) // TODO GD: could also be ExpirationAndSignatureCheckStrategy()
+            setSynchronizationStrategy(
+                ExpirationAndSignatureCheckStrategy(),
+            ) // TODO GD: could also be ExpirationAndSignatureCheckStrategy()
             setCacheCleaner(cacheCleaner)
         }
 
@@ -81,12 +83,12 @@ class FetchLOTLCertificatesDSS() : FetchLOTLCertificates {
 }
 
 private const val europeanLOTLUrl = "https://ec.europa.eu/tools/lotl/eu-lotl.xml"
-private const val officialJournalUrl = "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG"
+private const val officialJournalUrl = "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG";
 
 private fun europeanLOTL(): LOTLSource {
     val lotlSource = LOTLSource()
     lotlSource.url = europeanLOTLUrl
-    // lotlSource.certificateSource = officialJournalContentKeyStore()// TODO GD: uncomment
+    //lotlSource.certificateSource = officialJournalContentKeyStore()// TODO GD: uncomment
     lotlSource.signingCertificatesAnnouncementPredicate = OfficialJournalSchemeInformationURI(officialJournalUrl)
     lotlSource.isPivotSupport = false
     lotlSource.tlVersions = listOf(5, 6)
