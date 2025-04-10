@@ -212,15 +212,7 @@ internal fun beans(clock: Clock) = beans {
     bean { GetWalletResponseLive(clock, ref(), ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
     bean(::GetClientMetadataLive)
-    bean {
-//        val x5cShouldBeMap = verifierConfig.trustSourcesConfig.map {
-//            val regex = it.key
-//            val trustSourceConfig = it.value
-//            val x5CShouldBe = X5CShouldBe.fromTrustSources(it.value)
-//            regex to x5CShouldBe
-//        }.toMap()
-        TrustSources()
-    }
+    bean { TrustSources() }
     bean<DeviceResponseValidator> {
         val docValidator = DocumentValidator(
             clock = clock,
