@@ -30,6 +30,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshKeystores
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
@@ -75,6 +76,7 @@ import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.config.web.server.invoke
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
+import java.net.URI
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -87,6 +89,7 @@ private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 internal fun beans(clock: Clock) = beans {
     bean { clock }
 
+    // TODO GD: remove this
     val trustedIssuers: KeyStore? by lazy {
         env.getProperty("trustedIssuers.keystore.path")
             ?.takeIf { it.isNotBlank() }
@@ -107,6 +110,8 @@ internal fun beans(clock: Clock) = beans {
                     }
             }
     }
+
+    val verifierConfig = verifierConfig(env, ref())
 
     //
     // JOSE
@@ -211,6 +216,15 @@ internal fun beans(clock: Clock) = beans {
     }
 
     // Default DeviceResponseValidator
+    bean {
+//        val x5cShouldBeMap = verifierConfig.trustSourcesConfig.map {
+//            val regex = it.key
+//            val trustSourceConfig = it.value
+//            val x5CShouldBe = X5CShouldBe.fromTrustSources(it.value)
+//            regex to x5CShouldBe
+//        }.toMap()
+        TrustSources()
+    }
     bean<DeviceResponseValidator> {
         val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
         deviceResponseValidator(x5cShouldBe)
@@ -263,12 +277,12 @@ internal fun beans(clock: Clock) = beans {
     //
     bean(::ScheduleTimeoutPresentations)
     bean(::ScheduleDeleteOldPresentations)
-    bean(::RefreshKeystores)
+    bean { RefreshKeystores(ref(), ref(), verifierConfig) }
 
     //
     // Config
     //
-    bean { verifierConfig(env, ref()) }
+    bean { verifierConfig }
 
     //
     // End points
@@ -343,7 +357,7 @@ private fun BeanSupplierContext.deviceResponseValidator(trustedIssuers: X5CShoul
         clock = ref(),
         issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
         validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-        x5CShouldBe = trustedIssuers,
+        trustSources = ref(),
     )
     log.info(
         "Created DocumentValidator using: \n\t" +
@@ -495,7 +509,74 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
+        validation = validation,
+        trustSourcesConfig = environment.trustSources(),
     )
+}
+
+/**
+ * Parses the trust sources configuration from the environment.
+ * Handles array-like property names: verifier.trustSources[0].pattern, etc.
+ */
+private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
+    val result = mutableMapOf<Regex, TrustSourcesConfig>()
+    val prefix = "verifier.trustSources"
+
+    // Find all unique indices in properties
+
+    var index = 0
+
+    while (true) {
+        val indexPrefix = "$prefix[$index]"
+        val patternStr = getProperty("$indexPrefix.pattern") ?: break
+        val pattern = patternStr.toRegex()
+        val trustSourceConfigs = mutableListOf<TrustSourceConfig>()
+
+        // Parse LOTL configuration if present
+        val lotlSourceConfig = getProperty("$indexPrefix.lotl.location")?.let { lotlLocation ->
+            try {
+                val location = URI(lotlLocation).toURL()
+                val serviceTypeFilter = getProperty("$indexPrefix.lotl.serviceTypeFilter")
+                val refreshInterval = getProperty("$indexPrefix.lotl.refreshInterval", "0 * * * * ?")
+
+                TrustSourceConfig.TrustedList(location, serviceTypeFilter, refreshInterval)
+            } catch (e: Exception) {
+                log.warn("Failed to parse LOTL configuration at index $index: ${e.message}")
+                null
+            }
+        }
+
+        // Parse keystore configuration if present
+        val keystoreConfig = getProperty("$indexPrefix.keystore.path")?.let { keystorePath ->
+            try {
+                val keystoreType = getProperty("$indexPrefix.keystore.type") ?: "JKS"
+                val keystorePassword = getProperty("$indexPrefix.keystore.password")
+                    ?.takeIf { it.isNotBlank() }
+                    ?.toCharArray()
+                val ks = DefaultResourceLoader().getResource(keystorePath)
+                    .inputStream
+                    .use {
+                        KeyStore.getInstance(keystoreType)
+                            .apply {
+                                load(it, keystorePassword)
+                            }
+                    }
+                TrustSourceConfig.Keystore(ks)
+            } catch (e: Exception) {
+                log.warn("Failed to parse keystore configuration at index $index: ${e.message}")
+                null
+            }
+        }
+
+        result[pattern] = TrustSourcesConfig(
+            trustedList = lotlSourceConfig,
+            keystore = keystoreConfig,
+        )
+
+        index++
+    }
+
+    return result
 }
 
 private fun Environment.clientMetaData(): ClientMetaData {

@@ -18,9 +18,15 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.lotl
 import java.net.URL
 import java.security.cert.X509Certificate
 
-fun interface FetchLOTLCertificates {
-
-    suspend operator fun invoke(
-        lotlUrl: URL,
-    ): Result<List<X509Certificate>>
+/**
+ * Interface for fetching LOTL certificates
+ */
+interface FetchLOTLCertificates {
+    /**
+     * Fetch certificates from a LOTL URL
+     * @param url The LOTL URL
+     * @param serviceTypeFilter Optional filter for service types
+     * @return Result containing a list of X509 certificates or an exception
+     */
+    suspend operator fun invoke(url: URL, serviceTypeFilter: String? = null): Result<List<X509Certificate>>
 }
