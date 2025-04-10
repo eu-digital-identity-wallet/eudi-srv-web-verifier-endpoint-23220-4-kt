@@ -51,6 +51,7 @@ class InitTransactionTest {
         validation = Validation(
             sdJwtVc = Validation.SdJwtVc(false),
         ),
+        trustSourcesConfig = mapOf(),
     )
 
     @Test
@@ -95,6 +96,7 @@ class InitTransactionTest {
                 validation = Validation(
                     sdJwtVc = Validation.SdJwtVc(false),
                 ),
+                trustSourcesConfig = mapOf(),
             )
 
             val input = InitTransactionTO(
