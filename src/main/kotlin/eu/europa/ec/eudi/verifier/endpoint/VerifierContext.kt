@@ -22,17 +22,14 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
-import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps
 import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
-import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
@@ -46,6 +43,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShou
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -212,29 +211,35 @@ internal fun beans(clock: Clock) = beans {
     bean { GetPresentationEventsLive(ref(), ref()) }
     bean(::GetClientMetadataLive)
 
+    if (env.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)) {
+        log.info("Enabling Status List Token validations")
+        bean(::StatusListTokenValidator)
+    }
+
     // Default DeviceResponseValidator
     bean<DeviceResponseValidator> {
         val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
         deviceResponseValidator(x5cShouldBe)
     }
 
-    // Default ValidateSdJwtVc
-    bean<ValidateSdJwtVc> {
+    // Default SdJwtVcValidator
+    bean<SdJwtVcValidator> {
         val x5CShouldBe = trustedIssuers?.let {
             X5CShouldBe.fromKeystore(it) {
                 isRevocationEnabled = false
             }
         } ?: X5CShouldBe.Ignored
-        validateSdJwtVc(x5CShouldBe)
+        sdJwtVcValidator(x5CShouldBe)
     }
 
-    bean { ValidateMsoMdocDeviceResponse(ref(), ref()) }
+    bean(::ValidateMsoMdocDeviceResponse)
+    bean(::ValidateSdJwtVc)
 
     bean {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             config = ref(),
             validateSdJwtVcFactory = { trustedIssuers ->
-                trustedIssuers?.let { validateSdJwtVc(it) } ?: ref()
+                trustedIssuers?.let { sdJwtVcValidator(it) } ?: ref()
             },
             deviceResponseValidatorFactory = { trustedIssuers ->
                 trustedIssuers?.let { deviceResponseValidator(it) } ?: ref()
@@ -337,27 +342,12 @@ private fun BeanSupplierContext.deviceResponseValidator(trustedIssuers: X5CShoul
     return DeviceResponseValidator(docValidator)
 }
 
-private fun BeanSupplierContext.validateSdJwtVc(trustedIssuers: X5CShouldBe): ValidateSdJwtVc {
-    val x5cValidator = X5CValidator(trustedIssuers)
-    val x509CertificateTrust = X509CertificateTrust { chain ->
-        chain.toNonEmptyListOrNull()?.let {
-            x5cValidator.ensureTrusted(it).fold(
-                ifLeft = { _ -> false },
-                ifRight = { _ -> true },
-            )
-        } ?: false
-    }
-    val sdJwtVcVerifier = NimbusSdJwtOps.SdJwtVcVerifier.usingX5c(x509CertificateTrust)
-
-    return ValidateSdJwtVc(
-        ref(),
-        sdJwtVcVerifier,
-        ref<VerifierConfig>().verifierId.clientId,
-        ref(),
-        ref(),
-        ref<VerifierConfig>().validation.sdJwtVc.statusCheckEnabled,
+private fun BeanSupplierContext.sdJwtVcValidator(trustedIssuers: X5CShouldBe): SdJwtVcValidator =
+    SdJwtVcValidator(
+        trustedIssuers = trustedIssuers,
+        audience = ref<VerifierConfig>().verifierId,
+        provider<StatusListTokenValidator>().ifAvailable,
     )
-}
 
 private enum class EmbedOptionEnum {
     ByValue,
@@ -483,9 +473,6 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             }
         }
 
-    val validation = environment.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)
-        .let { configured -> Validation(sdJwtVc = Validation.SdJwtVc(configured)) }
-
     return VerifierConfig(
         verifierId = verifierId,
         requestJarOption = requestJarOption,
@@ -496,7 +483,6 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
-        validation = validation,
     )
 }
 

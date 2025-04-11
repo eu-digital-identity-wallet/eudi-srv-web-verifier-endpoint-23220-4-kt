@@ -29,6 +29,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
@@ -488,17 +489,6 @@ private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
-
-private inline fun <reified T> Result<T>.applyCatching(block: T.() -> Unit): Result<T> =
-    if (isFailure) {
-        this
-    } else {
-        runCatching {
-            val value = getOrThrow()
-            value.block()
-            value
-        }
-    }
 
 private fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwtAlgorithms: List<JWSAlgorithm>): Boolean =
     this.sdJwtAlgorithms.intersect(sdJwtAlgorithms.toSet()).isNotEmpty() &&
