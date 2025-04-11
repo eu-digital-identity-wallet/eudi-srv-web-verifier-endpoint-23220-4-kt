@@ -15,30 +15,60 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
-import arrow.core.NonEmptyList
+import arrow.core.*
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationErrorCode
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificate
 import kotlinx.serialization.json.*
 
-data class SdJwtVcValidationErrorDetailsTO(val reason: String, val description: String, val cause: Throwable?)
+internal enum class SdJwtVcValidationErrorCodeTO {
+    IsUnparsable,
+    ContainsInvalidJwt,
+    IsMissingHolderPublicKey,
+    UnsupportedHolderPublicKey,
+    ContainsInvalidKeyBindingJwt,
+    ContainsKeyBindingJwt,
+    IsMissingKeyBindingJwt,
+    ContainsInvalidDisclosures,
+    ContainsUnsupportedHashingAlgorithm,
+    ContainsNonUniqueDigests,
+    ContainsNonUniqueDisclosures,
+    ContainsDisclosuresWithNoDigests,
+    UnsupportedVerificationMethod,
+    UnableToResolveIssuerMetadata,
+    IssuerCertificateIsNotTrusted,
+    UnableToLookupDID,
+    UnableToDetermineVerificationMethod,
+    StatusCheckFailed,
+    UnexpectedError,
+    InvalidTrustedIssuers,
+}
 
-fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray = buildJsonArray {
+internal data class SdJwtVcValidationErrorDetailsTO(
+    val reason: SdJwtVcValidationErrorCodeTO,
+    val description: String,
+    val cause: Throwable?,
+)
+
+internal fun SdJwtVcValidationResult.Invalid.toJson(): JsonArray = buildJsonArray {
     errors.forEach { error ->
         addJsonObject {
-            put("error", error.reason)
+            put("error", error.reason.name)
             put("description", error.description)
             error.cause?.message?.let { cause -> put("cause", cause) }
         }
     }
 }
 
-sealed interface SdJwtVcValidationResult {
+internal sealed interface SdJwtVcValidationResult {
     /**
      * Successfully validated an SD-JWT Verifiable Credential.
      */
@@ -54,27 +84,57 @@ sealed interface SdJwtVcValidationResult {
  * Validates an SD-JWT Verifiable Credential.
  */
 internal class ValidateSdJwtVc(
-    private val sdJwtVcValidator: SdJwtVcValidator,
+    private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
+    private val parsePemEncodedX509Certificate: ParsePemEncodedX509Certificate,
 ) {
 
-    suspend operator fun invoke(unverified: JsonObject, nonce: Nonce): SdJwtVcValidationResult =
-        sdJwtVcValidator.validate(unverified, nonce, null)
-            .fold(
-                ifRight = { SdJwtVcValidationResult.Valid(it) },
-                ifLeft = { errors -> SdJwtVcValidationResult.Invalid(errors.map { it.toSdJwtVcValidationError() }) },
-            )
+    suspend operator fun invoke(unverified: JsonObject, nonce: Nonce, trustedIssuers: NonEmptyList<String>?): SdJwtVcValidationResult =
+        validate(unverified.left(), nonce, trustedIssuers)
 
-    suspend operator fun invoke(unverified: String, nonce: Nonce): SdJwtVcValidationResult =
-        sdJwtVcValidator.validate(unverified, nonce, null)
-            .fold(
-                ifRight = { SdJwtVcValidationResult.Valid(it) },
-                ifLeft = { errors -> SdJwtVcValidationResult.Invalid(errors.map { it.toSdJwtVcValidationError() }) },
-            )
+    suspend operator fun invoke(unverified: String, nonce: Nonce, trustedIssuers: NonEmptyList<String>?): SdJwtVcValidationResult =
+        validate(unverified.right(), nonce, trustedIssuers)
+
+    private suspend fun validate(
+        unverified: Either<JsonObject, String>,
+        nonce: Nonce,
+        trustedIssuers: NonEmptyList<String>?,
+    ): SdJwtVcValidationResult {
+        val sdJwtVcValidator = sdJwtVcValidator(trustedIssuers)
+            .getOrElse {
+                return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidTrustedIssuersSdJwtVcValidationError()))
+            }
+
+        return unverified.fold(
+            ifLeft = { sdJwtVcValidator.validate(it, nonce, null) },
+            ifRight = { sdJwtVcValidator.validate(it, nonce, null) },
+        ).fold(
+            ifLeft = { errors -> SdJwtVcValidationResult.Invalid(errors.map { it.toSdJwtVcValidationError() }) },
+            ifRight = { SdJwtVcValidationResult.Valid(it) },
+        )
+    }
+
+    private fun sdJwtVcValidator(certificates: NonEmptyList<String>?): Result<SdJwtVcValidator> =
+        runCatching {
+            val x5cShouldBe = certificates?.map { parsePemEncodedX509Certificate(it).getOrThrow() }
+                ?.let {
+                    X5CShouldBe.Trusted(it) {
+                        isRevocationEnabled = false
+                    }
+                }
+            sdJwtVcValidatorFactory(x5cShouldBe)
+        }
 }
+
+private fun Throwable.toInvalidTrustedIssuersSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
+    SdJwtVcValidationErrorDetailsTO(
+        reason = SdJwtVcValidationErrorCodeTO.InvalidTrustedIssuers,
+        description = "unable to parse Trusted Issuers certificates",
+        cause = this,
+    )
 
 private fun SdJwtVcValidationError.toSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
     SdJwtVcValidationErrorDetailsTO(
-        reason = reason.name,
+        reason = reason.toSdJwtVcValidationErrorCodeTO(),
         description = when (cause) {
             is SdJwtVerificationException -> cause.description
             is StatusCheckException -> cause.reason
@@ -82,3 +142,6 @@ private fun SdJwtVcValidationError.toSdJwtVcValidationError(): SdJwtVcValidation
         },
         cause = cause.cause,
     )
+
+private fun SdJwtVcValidationErrorCode.toSdJwtVcValidationErrorCodeTO(): SdJwtVcValidationErrorCodeTO =
+    SdJwtVcValidationErrorCodeTO.valueOf(name)

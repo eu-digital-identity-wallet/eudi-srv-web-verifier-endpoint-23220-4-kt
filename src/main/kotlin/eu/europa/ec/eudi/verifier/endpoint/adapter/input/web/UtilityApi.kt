@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -46,12 +47,15 @@ internal class UtilityApi(
      * Handles a request to validate an MsoMdoc DeviceResponse.
      */
     private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse {
-        val vpToken = request.awaitFormData()["device_response"]
+        val form = request.awaitFormData()
+        val vpToken = form["device_response"]
             ?.firstOrNull { it.isNotBlank() }
             .let {
                 requireNotNull(it) { "device_response must be provided" }
             }
-        return when (val result = validateMsoMdocDeviceResponse(vpToken)) {
+        val trustedIssuers = form["trusted_issuers"]?.filterNot { it.isNullOrBlank() }?.toNonEmptyListOrNull()
+
+        return when (val result = validateMsoMdocDeviceResponse(vpToken, trustedIssuers)) {
             is DeviceResponseValidationResult.Valid ->
                 ok().json()
                     .bodyValueAndAwait(result.documents)
@@ -78,8 +82,9 @@ internal class UtilityApi(
                 requireNotNull(it) { "nonce must be provided" }
                 Nonce(it)
             }
+        val trustedIssuers = form["trusted_issuers"]?.filterNot { it.isNullOrBlank() }?.toNonEmptyListOrNull()
 
-        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce)) {
+        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, trustedIssuers)) {
             is SdJwtVcValidationResult.Valid -> {
                 val reCreated = with(NimbusSdJwtOps) {
                     result.payload.sdJwt.recreateClaims(visitor = null)

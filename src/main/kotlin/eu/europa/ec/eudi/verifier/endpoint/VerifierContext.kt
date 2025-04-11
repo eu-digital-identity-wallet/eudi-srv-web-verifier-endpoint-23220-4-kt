@@ -232,13 +232,28 @@ internal fun beans(clock: Clock) = beans {
         sdJwtVcValidator(x5CShouldBe)
     }
 
-    bean(::ValidateMsoMdocDeviceResponse)
-    bean(::ValidateSdJwtVc)
+    bean {
+        ValidateMsoMdocDeviceResponse(
+            ref(),
+            ref(),
+            deviceResponseValidatorFactory = { trustedIssuers ->
+                trustedIssuers?.let { deviceResponseValidator(it) } ?: ref()
+            },
+        )
+    }
+    bean {
+        ValidateSdJwtVc(
+            sdJwtVcValidatorFactory = { trustedIssuers ->
+                trustedIssuers?.let { sdJwtVcValidator(it) } ?: ref()
+            },
+            ref(),
+        )
+    }
 
     bean {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             config = ref(),
-            validateSdJwtVcFactory = { trustedIssuers ->
+            sdJwtVcValidatorFactory = { trustedIssuers ->
                 trustedIssuers?.let { sdJwtVcValidator(it) } ?: ref()
             },
             deviceResponseValidatorFactory = { trustedIssuers ->

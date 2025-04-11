@@ -46,7 +46,7 @@ private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePres
 
 internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val config: VerifierConfig,
-    private val validateSdJwtVcFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
+    private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
     private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
 ) : ValidateVerifiablePresentation {
 
@@ -61,7 +61,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         when (verifiablePresentation.format) {
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
                 require(vpFormat is VpFormat.SdJwtVc)
-                val validator = validateSdJwtVcFactory(trustedIssuers)
+                val validator = sdJwtVcValidatorFactory(trustedIssuers)
                 validator.validateSdJwtVcVerifiablePresentation(
                     vpFormat,
                     verifiablePresentation,
