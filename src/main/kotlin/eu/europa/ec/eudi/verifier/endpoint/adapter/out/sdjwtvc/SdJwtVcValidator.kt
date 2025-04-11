@@ -110,11 +110,6 @@ private fun SdJwtVcVerificationError.toSdJwtVcValidationErrorCode(): SdJwtVcVali
         IssuerKeyVerificationError.CannotDetermineIssuerVerificationMethod -> SdJwtVcValidationErrorCode.UnableToDetermineVerificationMethod
     }
 
-private sealed interface SdJwtVcSerialization {
-    data class Compact(val value: String) : SdJwtVcSerialization
-    data class Flattened(val value: JsonObject) : SdJwtVcSerialization
-}
-
 private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)
 
 internal class SdJwtVcValidator(
@@ -182,17 +177,17 @@ internal class SdJwtVcValidator(
         nonce: Nonce,
         transactionId: TransactionId? = null,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> =
-        validate(SdJwtVcSerialization.Compact(unverified), nonce, transactionId)
+        validate(unverified.right(), nonce, transactionId)
 
     suspend fun validate(
         unverified: JsonObject,
         nonce: Nonce,
         transactionId: TransactionId? = null,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> =
-        validate(SdJwtVcSerialization.Flattened(unverified), nonce, transactionId)
+        validate(unverified.left(), nonce, transactionId)
 
     private suspend fun validate(
-        unverified: SdJwtVcSerialization,
+        unverified: Either<JsonObject, String>,
         nonce: Nonce,
         transactionId: TransactionId?,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> {
@@ -224,14 +219,14 @@ internal class SdJwtVcValidator(
     }
 
     private suspend fun SdJwtVcVerifier<SignedJWT>.verify(
-        unverified: SdJwtVcSerialization,
+        unverified: Either<JsonObject, String>,
         challenge: JsonObject,
         transactionId: TransactionId?,
     ): Result<SdJwtAndKbJwt<SignedJWT>> =
-        when (unverified) {
-            is SdJwtVcSerialization.Compact -> verify(unverified.value, challenge)
-            is SdJwtVcSerialization.Flattened -> verify(unverified.value, challenge)
-        }.applyCatching {
+        unverified.fold(
+            ifLeft = { verify(it, challenge) },
+            ifRight = { verify(it, challenge) },
+        ).applyCatching {
             statusListTokenValidator?.validate(this, transactionId)
         }
 }
