@@ -1297,6 +1297,9 @@
             "type": "string",
             "format": "base64url",
             "nullable": false
+          },
+          "trusted_issuers": {
+            "$ref": "#/components/schemas/TrustedIssuers"
           }
         },
         "required": [
@@ -1443,6 +1446,24 @@
         ],
         "additionalProperties": false
       },
+      "MsoMdocDeviceResponseInvalidTrustedIssuersFailure": {
+        "description": "The list of Trusted Issuers certificates contains invalid values.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "InvalidTrustedIssuers"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      },
       "MsoMdocDeviceResponseValidationFailure": {
         "oneOf": [
           {
@@ -1453,6 +1474,9 @@
           },
           {
             "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
+          },
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseInvalidTrustedIssuersFailure"
           }
         ]
       },
@@ -1466,6 +1490,9 @@
           },
           "nonce": {
             "$ref": "#/components/schemas/Nonce"
+          },
+          "trusted_issuers": {
+            "$ref": "#/components/schemas/TrustedIssuers"
           }
         },
         "required": [
@@ -1525,7 +1552,8 @@
           "UnableToLookupDID",
           "UnableToDetermineVerificationMethod",
           "StatusCheckFailed",
-          "UnexpectedError"
+          "UnexpectedError",
+          "InvalidTrustedIssuers"
         ]
       }
     },
