@@ -25,7 +25,12 @@ statium = "0.2.1"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
+kotlinx-serialization-core-jvm = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-serialization-json-jvm = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm", version.ref = "kotlinxSerialization" }
+kotlinx-serialization-json-io = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-io", version.ref = "kotlinxSerialization" }
+kotlinx-serialization-json-io-jvm = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-io-jvm", version.ref = "kotlinxSerialization" }
 nimbusds-oauth2-oidc-sdk = { module = "com.nimbusds:oauth2-oidc-sdk", version.ref = "oauth2OidcSdk" }
 presentation-exchange = { module = "eu.europa.ec.eudi:eudi-lib-jvm-presentation-exchange-kt", version.ref = "presentationExchange" }
 bouncy-castle = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncyCastle" }
@@ -37,7 +42,7 @@ sd-jwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sd
 ktor-client-apache = { module = "io.ktor:ktor-client-apache", version.ref = "ktor" }
 jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
-statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium-jvm", version.ref = "statium" }
+statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "statium" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }

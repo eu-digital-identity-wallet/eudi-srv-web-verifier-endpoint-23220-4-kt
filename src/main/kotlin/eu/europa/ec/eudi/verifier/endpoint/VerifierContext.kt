@@ -248,7 +248,6 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref(),
             ref<VerifierConfig>().verifierId.clientId,
-            ref(),
             clock,
             ref<VerifierConfig>().validation.sdJwtVc.statusCheckEnabled,
         )

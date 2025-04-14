@@ -26,6 +26,12 @@ repositories {
 }
 
 dependencies {
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.json.jvm)
+    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.core.jvm)
+    implementation(libs.kotlinx.serialization.json.io)
+    implementation(libs.kotlinx.serialization.json.io.jvm)
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

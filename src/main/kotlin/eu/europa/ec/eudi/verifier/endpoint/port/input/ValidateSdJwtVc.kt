@@ -27,7 +27,6 @@ import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
 import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps.HolderPubKeyInConfirmationClaim
-import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
@@ -39,6 +38,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
+import io.ktor.client.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.toKotlinInstant
@@ -127,7 +127,6 @@ internal class ValidateSdJwtVc(
     private val publishPresentationEvent: PublishPresentationEvent,
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT>,
     private val audience: Audience,
-    private val ktorHttpClientFactory: KtorHttpClientFactory,
     private val clock: java.time.Clock,
     private val shouldCheckStatus: Boolean,
 ) {
@@ -288,7 +287,7 @@ internal class ValidateSdJwtVc(
         }
         val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
             clock = delegateClock,
-            httpClientFactory = ktorHttpClientFactory,
+            httpClientFactory = { HttpClient() },
             verifyStatusListTokenSignature = VerifyStatusListTokenSignature.Ignore, // TODO: control it via configuration
         )
         return GetStatus(getStatusListToken)
