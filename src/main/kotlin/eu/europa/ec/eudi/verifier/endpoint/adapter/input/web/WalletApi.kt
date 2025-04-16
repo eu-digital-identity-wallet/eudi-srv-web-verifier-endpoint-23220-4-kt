@@ -23,10 +23,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpMethod
@@ -146,7 +143,7 @@ class WalletApi(
             },
             ifLeft = { error ->
                 logger.error("$error while handling post of wallet response ")
-                badRequest().buildAndAwait()
+                badRequest().json().bodyValueAndAwait(error.toJson())
             },
         )
     } catch (t: SerializationException) {
@@ -242,6 +239,69 @@ class WalletApi(
                 .uriString(pathTemplate)
                 .build(requestId.value)
                 .toURL()
+        }
+
+        private fun WalletResponseValidationError.toJson(): JsonObject = buildJsonObject {
+            when (this@toJson) {
+                WalletResponseValidationError.IncorrectState -> {
+                    put("error", "IncorrectState")
+                    put("description", "Wallet responded with a 'state' that does not match the expected one.")
+                }
+                is WalletResponseValidationError.InvalidJarm -> {
+                    put("error", "InvalidJarm")
+                    put("description", this@toJson.error.message)
+                    put("cause", this@toJson.error.cause?.message)
+                }
+                WalletResponseValidationError.InvalidPresentationSubmission -> {
+                    put("error", "InvalidPresentationSubmission")
+                    put("description", "The 'presentation_submission' posted by wallet does not match vp_token")
+                }
+                is WalletResponseValidationError.InvalidVpToken -> {
+                    put("error", "InvalidVpToken")
+                    put("description", this@toJson.message)
+                    this@toJson.cause?.let { put("cause", message) }
+                }
+                WalletResponseValidationError.MissingIdToken -> {
+                    put("error", "MissingIdToken")
+                    put("description", "Expected an id_token to be presented but was not.")
+                }
+                WalletResponseValidationError.MissingPresentationSubmission -> {
+                    put("error", "MissingPresentationSubmission")
+                    put("description", "Expected 'presentation_submission' to be posted by wallet but was not.")
+                }
+                WalletResponseValidationError.MissingState -> {
+                    put("error", "MissingState")
+                    put("description", "Missing state from JARM")
+                }
+                WalletResponseValidationError.MissingVpToken -> {
+                    put("error", "MissingVpToken")
+                    put("description", "Expected 'vp_token' to be posted by wallet but was not.")
+                }
+                WalletResponseValidationError.PresentationNotFound -> {
+                    put("error", "PresentationNotFound")
+                    put("description", "The referenced presentation transaction does not exist or has expired.")
+                }
+                WalletResponseValidationError.PresentationNotInExpectedState -> {
+                    put("error", "PresentationNotInExpectedState")
+                    put("description", "The referenced presentation transaction is not in state to accept wallet response.")
+                }
+                WalletResponseValidationError.PresentationSubmissionMustNotBePresent -> {
+                    put("error", "PresentationSubmissionMustNotBePresent")
+                    put(
+                        "description",
+                        "Wallet posted 'presentation_submission' while not expected to. " +
+                            "A response to a DCQL presentation query must not include a 'presentation_submission'.",
+                    )
+                }
+                WalletResponseValidationError.RequiredCredentialSetNotSatisfied -> {
+                    put("error", "RequiredCredentialSetNotSatisfied")
+                    put("description", "One or more of the required clauses of the DCQL presentation query was not answered.")
+                }
+                is WalletResponseValidationError.UnexpectedResponseMode -> {
+                    put("error", "UnexpectedResponseMode")
+                    put("description", "Wallet expected to respond with ${this@toJson.expected} but responsed with ${this@toJson.actual}")
+                }
+            }
         }
     }
 }
