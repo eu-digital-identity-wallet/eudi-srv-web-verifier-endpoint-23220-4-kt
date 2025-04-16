@@ -26,6 +26,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import java.time.Clock
 
 /**
@@ -35,7 +36,7 @@ import java.time.Clock
 @SerialName("wallet_response")
 data class WalletResponseTO(
     @SerialName("id_token") val idToken: String? = null,
-    @SerialName("vp_token") val vpToken: JsonArray? = null,
+    @SerialName("vp_token") val vpToken: JsonElement? = null,
     @SerialName("presentation_submission") val presentationSubmission: PresentationSubmission? = null,
     @SerialName("error") val error: String? = null,
     @SerialName("error_description") val errorDescription: String? = null,
@@ -48,16 +49,33 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
             is VerifiablePresentation.Json -> value
         }
 
+    fun VpContent.DCQL.toJsonElement(): JsonElement = buildJsonObject {
+        verifiablePresentations.forEach { (key, value) ->
+            put(key.value, value.toJsonElement())
+        }
+    }
+
+    fun VpContent.PresentationExchange.toJsonElement(): JsonElement = when {
+        verifiablePresentations.size == 1 -> verifiablePresentations.first().toJsonElement()
+        verifiablePresentations.size > 1 -> JsonArray(verifiablePresentations.map { it.toJsonElement() })
+        else -> throw IllegalStateException("No attestations shared from wallet")
+    }
+
+    fun VpContent.toJsonElement(): JsonElement = when (this) {
+        is VpContent.DCQL -> toJsonElement()
+        is VpContent.PresentationExchange -> toJsonElement()
+    }
+
     return when (this) {
         is WalletResponse.IdToken -> WalletResponseTO(idToken = idToken)
         is WalletResponse.VpToken -> WalletResponseTO(
-            vpToken = JsonArray(vpContent.verifiablePresentations().map { it.toJsonElement() }),
+            vpToken = vpContent.toJsonElement(),
             presentationSubmission = vpContent.presentationSubmissionOrNull(),
         )
 
         is WalletResponse.IdAndVpToken -> WalletResponseTO(
             idToken = idToken,
-            vpToken = JsonArray(vpContent.verifiablePresentations().map { it.toJsonElement() }),
+            vpToken = vpContent.toJsonElement(),
             presentationSubmission = vpContent.presentationSubmissionOrNull(),
         )
 
