@@ -16,10 +16,12 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.NonEmptyList
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificate
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
 import kotlinx.datetime.atStartOfDayIn
@@ -41,6 +43,7 @@ internal enum class ValidationFailureErrorTypeTO {
     CannotBeDecoded,
     NotOkDeviceResponseStatus,
     InvalidDocuments,
+    InvalidTrustedIssuers,
 }
 
 /**
@@ -67,6 +70,9 @@ internal data class ValidationErrorTO(
                 type = ValidationFailureErrorTypeTO.InvalidDocuments,
                 invalidDocuments = invalidDocuments,
             )
+
+        fun invalidTrustedIssuers(): ValidationErrorTO =
+            ValidationErrorTO(type = ValidationFailureErrorTypeTO.InvalidTrustedIssuers)
     }
 }
 
@@ -116,17 +122,34 @@ internal sealed interface DeviceResponseValidationResult {
  */
 internal class ValidateMsoMdocDeviceResponse(
     private val clock: Clock,
-    private val defaultValidator: DeviceResponseValidator,
+    private val parsePemEncodedX509Certificate: ParsePemEncodedX509Certificate,
+    private val deviceResponseValidatorFactory: (X5CShouldBe?) -> DeviceResponseValidator,
 ) {
-    operator fun invoke(deviceResponse: String): DeviceResponseValidationResult =
-        defaultValidator.ensureValid(deviceResponse)
+    operator fun invoke(deviceResponse: String, trustedIssuers: NonEmptyList<String>?): DeviceResponseValidationResult {
+        val validator = deviceResponseValidator(trustedIssuers)
+            .getOrElse {
+                return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidTrustedIssuers())
+            }
+
+        return validator.ensureValid(deviceResponse)
             .fold(
-                ifRight = {
-                        documents ->
+                ifRight = { documents ->
                     DeviceResponseValidationResult.Valid(JsonArray(documents.map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }))
                 },
                 ifLeft = { DeviceResponseValidationResult.Invalid(it.toValidationFailureTO()) },
             )
+    }
+
+    private fun deviceResponseValidator(trustedIssuers: NonEmptyList<String>?): Result<DeviceResponseValidator> =
+        runCatching {
+            val x5cShouldBe = trustedIssuers?.map { parsePemEncodedX509Certificate(it).getOrThrow() }
+                ?.let {
+                    X5CShouldBe.Trusted(it) {
+                        isRevocationEnabled = false
+                    }
+                }
+            deviceResponseValidatorFactory(x5cShouldBe)
+        }
 }
 
 private fun DeviceResponseError.toValidationFailureTO(): ValidationErrorTO =
