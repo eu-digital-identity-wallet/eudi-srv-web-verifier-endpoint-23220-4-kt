@@ -26,7 +26,7 @@ import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshKeystores
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
@@ -271,7 +271,7 @@ internal fun beans(clock: Clock) = beans {
     //
     bean(::ScheduleTimeoutPresentations)
     bean(::ScheduleDeleteOldPresentations)
-    bean { RefreshKeystores(ref(), ref(), verifierConfig) }
+    bean { RefreshTrustSources(ref(), ref(), verifierConfig).also { it.initializeTrustSources() } }
 
     //
     // Config
@@ -541,7 +541,7 @@ private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
             try {
                 val location = URI(lotlLocation).toURL()
                 val serviceTypeFilter = getProperty("$indexPrefix.lotl.serviceTypeFilter")
-                val refreshInterval = getProperty("$indexPrefix.lotl.refreshInterval", "0 * * * * ?")
+                val refreshInterval = getProperty("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
 
                 TrustSourceConfig.TrustedList(location, serviceTypeFilter, refreshInterval)
             } catch (e: Exception) {
