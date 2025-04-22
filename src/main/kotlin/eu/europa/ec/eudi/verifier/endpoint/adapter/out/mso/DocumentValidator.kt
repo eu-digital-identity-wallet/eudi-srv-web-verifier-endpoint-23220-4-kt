@@ -66,7 +66,7 @@ class DocumentValidator(
         either {
             document.decodeMso()
 
-            val x5CShouldBe = ensureMatchingX5CValidator(document, trustSources.x5CShouldBeMap)
+            val x5CShouldBe = ensureMatchingX5CShouldBe(document, trustSources)
 
             val issuerChain = ensureTrustedChain(document, x5CShouldBe)
             zipOrAccumulate(
@@ -200,20 +200,13 @@ private fun Raise<DocumentError.X5CNotTrusted>.ensureValidChain(
     return validChain.bind()
 }
 
-private fun Raise<Nel<DocumentError.NoMatchingX5CValidator>>.ensureMatchingX5CValidator(
+private fun Raise<Nel<DocumentError.NoMatchingX5CValidator>>.ensureMatchingX5CShouldBe(
     document: MDoc,
-    x5CShouldBeMap: Map<Regex, X5CShouldBe>,
+    trustSources: TrustSources,
 ): X5CShouldBe {
     val docType = document.docType.value
 
-    fun findX5CValidatorForDocType(docType: String): Option<X5CShouldBe> {
-        return x5CShouldBeMap.entries
-            .firstOrNull { (pattern, _) -> pattern.matches(docType) }
-            ?.value
-            .toOption()
-    }
-
-    val x5CShouldBe = findX5CValidatorForDocType(docType).getOrNull()
+    val x5CShouldBe = trustSources.forType(docType).getOrNull()
         ?: raise(DocumentError.NoMatchingX5CValidator.nel())
     return x5CShouldBe
 }
