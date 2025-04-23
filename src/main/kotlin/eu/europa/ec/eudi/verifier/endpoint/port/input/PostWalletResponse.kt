@@ -48,7 +48,7 @@ import java.time.Clock
 import java.util.regex.Pattern
 
 /**
- * Represent the Authorisation Response placed by wallet
+ * Represent the Authorization Response placed by wallet
  */
 data class AuthorisationResponseTO(
     val state: String?, // this is the request_id
@@ -94,8 +94,14 @@ private suspend fun AuthorisationResponseTO.toDomain(
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
-    suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent =
-        when (presentationQuery) {
+    suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent {
+        val x5cShouldBe = presentation.trustedIssuers
+            ?.let { trustedIssuers ->
+                X5CShouldBe.Trusted(trustedIssuers) {
+                    isRevocationEnabled = false
+                }
+            }
+        return when (presentationQuery) {
             is PresentationQuery.ByPresentationDefinition ->
                 presentationExchangeVpContent(
                     presentationQuery.presentationDefinition,
@@ -104,8 +110,9 @@ private suspend fun AuthorisationResponseTO.toDomain(
                     presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
                     vpFormats,
-                    presentation.trustedIssuers,
+                    x5cShouldBe,
                 )
+
             is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
                 dcqlVpContent(
                     presentationQuery.query,
@@ -114,9 +121,10 @@ private suspend fun AuthorisationResponseTO.toDomain(
                     presentation.type.transactionDataOrNull,
                     validateVerifiablePresentation,
                     vpFormats,
-                    presentation.trustedIssuers,
+                    x5cShouldBe,
                 )
         }.bind()
+    }
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
     maybeError ?: when (val type = presentation.type) {
@@ -159,9 +167,10 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
                 WalletResponseValidationError.InvalidPresentationSubmission
             }
 
-            val inputDescriptor = ensureNotNull(presentationDefinition.inputDescriptors.firstOrNull { it.id == descriptorMap.id }) {
-                WalletResponseValidationError.InvalidPresentationSubmission
-            }
+            val inputDescriptor =
+                ensureNotNull(presentationDefinition.inputDescriptors.firstOrNull { it.id == descriptorMap.id }) {
+                    WalletResponseValidationError.InvalidPresentationSubmission
+                }
             val inputDescriptorFormat = inputDescriptor.format ?: presentationDefinition.format
             val element = vpTokenReader.readPath(descriptorMap.path.value).getOrNull()
                 ?: raise(
@@ -175,8 +184,10 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
             val applicableTransactionData = transactionData?.filter {
                 descriptorMap.id.value in it.credentialIds
             }?.toNonEmptyListOrNull()
-            val vpFormat = inputDescriptorFormat?.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission)?.bind()
-                ?: vpFormats.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission).bind()
+            val vpFormat =
+                inputDescriptorFormat?.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission)
+                    ?.bind()
+                    ?: vpFormats.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission).bind()
 
             validateVerifiablePresentation(
                 transactionId,
@@ -212,7 +223,12 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
             val credentialQueries = query.credentials.associateBy { it.id }
             return vpToken.mapValues { (queryId, value) ->
                 val format = credentialQueries[queryId]?.format
-                    ?: raise(WalletResponseValidationError.InvalidVpToken("vp_token references non-existing Credential Query", null))
+                    ?: raise(
+                        WalletResponseValidationError.InvalidVpToken(
+                            "vp_token references non-existing Credential Query",
+                            null,
+                        ),
+                    )
                 val unvalidatedVerifiablePresentation = value.toVerifiablePresentation(format).bind()
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
@@ -261,9 +277,13 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
                     ) { WalletResponseValidationError.InvalidVpToken("vp_token contains a non-string element", null) }
                     VerifiablePresentation.Str(element.content, format)
                 }
+
                 is JsonObject -> VerifiablePresentation.Json(element, format)
                 else -> raise(
-                    WalletResponseValidationError.InvalidVpToken("vp_token must contain either json strings, or json objects", null),
+                    WalletResponseValidationError.InvalidVpToken(
+                        "vp_token must contain either json strings, or json objects",
+                        null,
+                    ),
                 )
             }
 
@@ -292,10 +312,12 @@ private fun eu.europa.ec.eudi.prex.Format.vpFormat(
                     properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
                 )
             }
+
             OpenId4VPSpec.FORMAT_MSO_MDOC -> {
                 val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrThrow()
                 VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!)
             }
+
             else -> raise(ifInvalid)
         }
     }
@@ -318,7 +340,7 @@ data class WalletResponseAcceptedTO(
 )
 
 /**
- * This is use case 12 of the [Presentation] process.
+ * This is use-case 12 of the [Presentation] process.
  *
  * The caller (wallet) may POST the [AuthorisationResponseTO] to the verifier back-end
  */

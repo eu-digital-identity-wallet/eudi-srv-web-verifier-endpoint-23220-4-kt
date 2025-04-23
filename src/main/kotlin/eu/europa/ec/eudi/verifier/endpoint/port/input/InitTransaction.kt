@@ -25,7 +25,6 @@ import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
@@ -49,6 +48,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import java.net.URL
+import java.security.cert.X509Certificate
 import java.time.Clock
 
 /**
@@ -241,7 +241,7 @@ class InitTransactionLive(
             trustedIssuers = trustedIssuers,
         )
 
-        // create request, which may update presentation
+        // create the request, which may update the presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
         storePresentation(updatedPresentation)
@@ -364,17 +364,11 @@ class InitTransactionLive(
         publishPresentationEvent(event)
     }
 
-    private fun trustedIssuers(initTransaction: InitTransactionTO): Either<ValidationError, X5CShouldBe.Trusted?> =
+    private fun trustedIssuers(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
         Either.catch {
-            val trustedIssuers = initTransaction.trustedIssuers
+            initTransaction.trustedIssuers
                 ?.map { pem -> parsePemEncodedX509Certificate(pem).getOrThrow() }
                 ?.toNonEmptyListOrNull()
-
-            trustedIssuers?.let {
-                X5CShouldBe.Trusted(it) {
-                    isRevocationEnabled = false
-                }
-            }
         }.mapLeft { ValidationError.InvalidTrustedIssuers }
 }
 
