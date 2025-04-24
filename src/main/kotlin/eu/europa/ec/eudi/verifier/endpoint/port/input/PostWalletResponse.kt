@@ -25,7 +25,6 @@ import com.nimbusds.jose.proc.BadJOSEException
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.JsonPathReader
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
@@ -44,6 +43,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifia
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import java.security.cert.X509Certificate
 import java.time.Clock
 import java.util.regex.Pattern
 
@@ -94,37 +94,29 @@ private suspend fun AuthorisationResponseTO.toDomain(
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
-    suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent {
-        val x5cShouldBe = presentation.trustedIssuers
-            ?.let { trustedIssuers ->
-                X5CShouldBe.Trusted(trustedIssuers) {
-                    isRevocationEnabled = false
-                }
-            }
-        return when (presentationQuery) {
-            is PresentationQuery.ByPresentationDefinition ->
-                presentationExchangeVpContent(
-                    presentationQuery.presentationDefinition,
-                    presentation.id,
-                    presentation.nonce,
-                    presentation.type.transactionDataOrNull,
-                    validateVerifiablePresentation,
-                    vpFormats,
-                    x5cShouldBe,
-                )
+    suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent = when (presentationQuery) {
+        is PresentationQuery.ByPresentationDefinition ->
+            presentationExchangeVpContent(
+                presentationQuery.presentationDefinition,
+                presentation.id,
+                presentation.nonce,
+                presentation.type.transactionDataOrNull,
+                validateVerifiablePresentation,
+                vpFormats,
+                presentation.trustedIssuers,
+            )
 
-            is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
-                dcqlVpContent(
-                    presentationQuery.query,
-                    presentation.id,
-                    presentation.nonce,
-                    presentation.type.transactionDataOrNull,
-                    validateVerifiablePresentation,
-                    vpFormats,
-                    x5cShouldBe,
-                )
-        }.bind()
-    }
+        is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
+            dcqlVpContent(
+                presentationQuery.query,
+                presentation.id,
+                presentation.nonce,
+                presentation.type.transactionDataOrNull,
+                validateVerifiablePresentation,
+                vpFormats,
+                presentation.trustedIssuers,
+            )
+    }.bind()
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
     maybeError ?: when (val type = presentation.type) {
@@ -149,7 +141,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
-    trustedIssuers: X5CShouldBe.Trusted?,
+    trustedIssuers: NonEmptyList<X509Certificate>?,
 ): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -209,7 +201,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
-    trustedIssuers: X5CShouldBe.Trusted?,
+    trustedIssuers: NonEmptyList<X509Certificate>?,
 ): Either<WalletResponseValidationError, VpContent.DCQL> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
