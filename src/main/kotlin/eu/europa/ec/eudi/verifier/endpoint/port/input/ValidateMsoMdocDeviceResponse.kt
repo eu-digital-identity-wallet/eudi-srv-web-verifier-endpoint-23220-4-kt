@@ -22,6 +22,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidat
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificate
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
 import kotlinx.datetime.atStartOfDayIn
@@ -134,22 +135,26 @@ internal class ValidateMsoMdocDeviceResponse(
         return validator.ensureValid(deviceResponse)
             .fold(
                 ifRight = { documents ->
-                    DeviceResponseValidationResult.Valid(JsonArray(documents.map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }))
+                    DeviceResponseValidationResult.Valid(
+                        JsonArray(
+                            documents.map {
+                                Json.encodeToJsonElement(
+                                    it.toDocumentTO(
+                                        clock,
+                                    ),
+                                )
+                            },
+                        ),
+                    )
                 },
                 ifLeft = { DeviceResponseValidationResult.Invalid(it.toValidationFailureTO()) },
             )
     }
 
-    private fun deviceResponseValidator(trustedIssuers: NonEmptyList<String>?): Result<DeviceResponseValidator> =
-        runCatching {
-            val x5cShouldBe = trustedIssuers?.map { parsePemEncodedX509Certificate(it).getOrThrow() }
-                ?.let {
-                    X5CShouldBe.Trusted(it) {
-                        isRevocationEnabled = false
-                    }
-                }
-            deviceResponseValidatorFactory(x5cShouldBe)
-        }
+    private fun deviceResponseValidator(trustedIssuersInPem: NonEmptyList<String>?): Result<DeviceResponseValidator> =
+        parsePemEncodedX509Certificate
+            .x5cShouldBeTrustedOrNull(trustedIssuersInPem)
+            .map(deviceResponseValidatorFactory)
 }
 
 private fun DeviceResponseError.toValidationFailureTO(): ValidationErrorTO =

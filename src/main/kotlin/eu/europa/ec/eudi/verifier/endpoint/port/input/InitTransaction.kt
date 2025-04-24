@@ -367,8 +367,8 @@ class InitTransactionLive(
     private fun trustedIssuers(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
         Either.catch {
             initTransaction.trustedIssuers
-                ?.map { pem -> parsePemEncodedX509Certificate(pem).getOrThrow() }
                 ?.toNonEmptyListOrNull()
+                ?.let { pems -> parsePemEncodedX509Certificate(pems).getOrThrow() }
         }.mapLeft { ValidationError.InvalidTrustedIssuers }
 }
 

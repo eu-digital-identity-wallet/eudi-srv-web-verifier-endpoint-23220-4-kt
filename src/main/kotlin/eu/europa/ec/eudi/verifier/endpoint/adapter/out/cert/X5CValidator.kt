@@ -24,7 +24,7 @@ import java.security.cert.*
 
 typealias ConfigurePKIXParameters = PKIXParameters.() -> Unit
 
-private val SkipRevocation: ConfigurePKIXParameters = { isRevocationEnabled = false }
+internal val SkipRevocation: ConfigurePKIXParameters = { isRevocationEnabled = false }
 
 /**
  * Options about [certificate chain validator][X5CValidator]

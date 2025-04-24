@@ -27,6 +27,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusCheckExcept
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificate
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
 import kotlinx.serialization.json.*
 
 internal enum class SdJwtVcValidationErrorCodeTO {
@@ -88,10 +89,18 @@ internal class ValidateSdJwtVc(
     private val parsePemEncodedX509Certificate: ParsePemEncodedX509Certificate,
 ) {
 
-    suspend operator fun invoke(unverified: JsonObject, nonce: Nonce, trustedIssuers: NonEmptyList<String>?): SdJwtVcValidationResult =
+    suspend operator fun invoke(
+        unverified: JsonObject,
+        nonce: Nonce,
+        trustedIssuers: NonEmptyList<String>?,
+    ): SdJwtVcValidationResult =
         validate(unverified.left(), nonce, trustedIssuers)
 
-    suspend operator fun invoke(unverified: String, nonce: Nonce, trustedIssuers: NonEmptyList<String>?): SdJwtVcValidationResult =
+    suspend operator fun invoke(
+        unverified: String,
+        nonce: Nonce,
+        trustedIssuers: NonEmptyList<String>?,
+    ): SdJwtVcValidationResult =
         validate(unverified.right(), nonce, trustedIssuers)
 
     private suspend fun validate(
@@ -113,16 +122,10 @@ internal class ValidateSdJwtVc(
         )
     }
 
-    private fun sdJwtVcValidator(certificates: NonEmptyList<String>?): Result<SdJwtVcValidator> =
-        runCatching {
-            val x5cShouldBe = certificates?.map { parsePemEncodedX509Certificate(it).getOrThrow() }
-                ?.let {
-                    X5CShouldBe.Trusted(it) {
-                        isRevocationEnabled = false
-                    }
-                }
-            sdJwtVcValidatorFactory(x5cShouldBe)
-        }
+    private fun sdJwtVcValidator(trustedIssuers: NonEmptyList<String>?): Result<SdJwtVcValidator> =
+        parsePemEncodedX509Certificate
+            .x5cShouldBeTrustedOrNull(trustedIssuers)
+            .map(sdJwtVcValidatorFactory)
 }
 
 private fun Throwable.toInvalidTrustedIssuersSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
