@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.sdjwt.NimbusSdJwtOps
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -53,7 +52,7 @@ internal class UtilityApi(
             .let {
                 requireNotNull(it) { "device_response must be provided" }
             }
-        val trustedIssuers = form["trusted_issuers"]?.filterNot { it.isNullOrBlank() }?.toNonEmptyListOrNull()
+        val trustedIssuers = form["trusted_issuers"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
         return when (val result = validateMsoMdocDeviceResponse(vpToken, trustedIssuers)) {
             is DeviceResponseValidationResult.Valid ->
@@ -82,7 +81,7 @@ internal class UtilityApi(
                 requireNotNull(it) { "nonce must be provided" }
                 Nonce(it)
             }
-        val trustedIssuers = form["trusted_issuers"]?.filterNot { it.isNullOrBlank() }?.toNonEmptyListOrNull()
+        val trustedIssuers = form["trusted_issuers"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
         return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, trustedIssuers)) {
             is SdJwtVcValidationResult.Valid -> {

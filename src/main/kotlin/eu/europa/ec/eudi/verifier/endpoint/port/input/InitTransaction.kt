@@ -130,7 +130,7 @@ data class InitTransactionTO(
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
-    @SerialName("trusted_issuers") val trustedIssuers: List<String>? = null,
+    @SerialName("trusted_issuers") val trustedIssuers: String? = null,
 )
 
 /**
@@ -366,9 +366,7 @@ class InitTransactionLive(
 
     private fun trustedIssuers(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
         Either.catch {
-            initTransaction.trustedIssuers
-                ?.toNonEmptyListOrNull()
-                ?.let { pems -> parsePemEncodedX509Certificate(pems).getOrThrow() }
+            initTransaction.trustedIssuers?.let { pems -> parsePemEncodedX509Certificate(pems).getOrThrow() }
         }.mapLeft { ValidationError.InvalidTrustedIssuers }
 }
 

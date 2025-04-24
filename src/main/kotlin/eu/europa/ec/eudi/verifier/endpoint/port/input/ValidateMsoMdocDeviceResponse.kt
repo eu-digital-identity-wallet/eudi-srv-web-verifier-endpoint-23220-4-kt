@@ -126,7 +126,7 @@ internal class ValidateMsoMdocDeviceResponse(
     private val parsePemEncodedX509Certificate: ParsePemEncodedX509Certificate,
     private val deviceResponseValidatorFactory: (X5CShouldBe?) -> DeviceResponseValidator,
 ) {
-    operator fun invoke(deviceResponse: String, trustedIssuers: NonEmptyList<String>?): DeviceResponseValidationResult {
+    operator fun invoke(deviceResponse: String, trustedIssuers: String?): DeviceResponseValidationResult {
         val validator = deviceResponseValidator(trustedIssuers)
             .getOrElse {
                 return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidTrustedIssuers())
@@ -151,10 +151,11 @@ internal class ValidateMsoMdocDeviceResponse(
             )
     }
 
-    private fun deviceResponseValidator(trustedIssuersInPem: NonEmptyList<String>?): Result<DeviceResponseValidator> =
-        parsePemEncodedX509Certificate
-            .x5cShouldBeTrustedOrNull(trustedIssuersInPem)
-            .map(deviceResponseValidatorFactory)
+    private fun deviceResponseValidator(trustedIssuersInPem: String?): Result<DeviceResponseValidator> = runCatching {
+        val x5cShouldBe = trustedIssuersInPem
+            ?.let { parsePemEncodedX509Certificate.x5cShouldBeTrustedOrNull(it).getOrThrow() }
+        deviceResponseValidatorFactory(x5cShouldBe)
+    }
 }
 
 private fun DeviceResponseError.toValidationFailureTO(): ValidationErrorTO =

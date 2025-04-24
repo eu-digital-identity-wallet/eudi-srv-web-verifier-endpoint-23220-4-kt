@@ -15,7 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509
 
-import com.nimbusds.jose.util.X509CertUtils
+import arrow.core.NonEmptyList
+import arrow.core.toNonEmptyListOrNull
+import com.nimbusds.jose.util.X509CertChainUtils
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificate
 import java.security.cert.X509Certificate
 
@@ -24,9 +26,9 @@ import java.security.cert.X509Certificate
  */
 internal object ParsePemEncodedX509CertificateWithNimbus : ParsePemEncodedX509Certificate {
 
-    override fun invoke(pem: String): Result<X509Certificate> =
+    override fun invoke(pems: String): Result<NonEmptyList<X509Certificate>> =
         runCatching {
-            require(pem.isNotBlank()) { "pem cannot be blank" }
-            X509CertUtils.parseWithException(pem)
+            val certs = X509CertChainUtils.parse(pems).toNonEmptyListOrNull()
+            requireNotNull(certs) { "Failed to parse certificates from PEM" }
         }
 }

@@ -92,21 +92,21 @@ internal class ValidateSdJwtVc(
     suspend operator fun invoke(
         unverified: JsonObject,
         nonce: Nonce,
-        trustedIssuers: NonEmptyList<String>?,
+        trustedIssuers: String?,
     ): SdJwtVcValidationResult =
         validate(unverified.left(), nonce, trustedIssuers)
 
     suspend operator fun invoke(
         unverified: String,
         nonce: Nonce,
-        trustedIssuers: NonEmptyList<String>?,
+        trustedIssuers: String?,
     ): SdJwtVcValidationResult =
         validate(unverified.right(), nonce, trustedIssuers)
 
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
-        trustedIssuers: NonEmptyList<String>?,
+        trustedIssuers: String?,
     ): SdJwtVcValidationResult {
         val sdJwtVcValidator = sdJwtVcValidator(trustedIssuers)
             .getOrElse {
@@ -122,10 +122,11 @@ internal class ValidateSdJwtVc(
         )
     }
 
-    private fun sdJwtVcValidator(trustedIssuers: NonEmptyList<String>?): Result<SdJwtVcValidator> =
-        parsePemEncodedX509Certificate
-            .x5cShouldBeTrustedOrNull(trustedIssuers)
-            .map(sdJwtVcValidatorFactory)
+    private fun sdJwtVcValidator(trustedIssuers: String?): Result<SdJwtVcValidator> = runCatching {
+        val x5cShouldBe = trustedIssuers
+            ?.let { parsePemEncodedX509Certificate.x5cShouldBeTrustedOrNull(it).getOrThrow() }
+        sdJwtVcValidatorFactory(x5cShouldBe)
+    }
 }
 
 private fun Throwable.toInvalidTrustedIssuersSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
