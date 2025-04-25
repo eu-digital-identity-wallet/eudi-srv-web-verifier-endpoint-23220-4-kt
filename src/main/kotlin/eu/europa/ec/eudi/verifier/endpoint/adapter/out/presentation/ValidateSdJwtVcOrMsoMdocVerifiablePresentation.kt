@@ -23,23 +23,30 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
+import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusCheckException
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.port.input.SdJwtVcValidationResult
-import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateSdJwtVc
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
-import eu.europa.ec.eudi.verifier.endpoint.port.input.toJson
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(ValidateSdJwtVcOrMsoMdocVerifiablePresentation::class.java)
 
 internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private val config: VerifierConfig,
-    private val deviceResponseValidator: DeviceResponseValidator,
-    private val validateSdJwtVc: ValidateSdJwtVc,
+    private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
+    private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
 ) : ValidateVerifiablePresentation {
 
     override suspend fun invoke(
@@ -48,16 +55,25 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
+        issuerChain: X5CShouldBe.Trusted?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
                 require(vpFormat is VpFormat.SdJwtVc)
-                validateSdJwtVcVerifiablePresentation(vpFormat, verifiablePresentation, nonce, transactionData, transactionId).bind()
+                val validator = sdJwtVcValidatorFactory(issuerChain)
+                validator.validateSdJwtVcVerifiablePresentation(
+                    vpFormat,
+                    verifiablePresentation,
+                    nonce,
+                    transactionData,
+                    transactionId,
+                ).bind()
             }
 
             Format.MsoMdoc -> {
                 require(vpFormat is VpFormat.MsoMdoc)
-                validateMsoMdocVerifiablePresentation(vpFormat, verifiablePresentation)
+                val validator = deviceResponseValidatorFactory(issuerChain)
+                validator.validateMsoMdocVerifiablePresentation(vpFormat, verifiablePresentation)
             }
 
             else ->
@@ -65,31 +81,31 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         }
     }
 
-    private suspend fun validateSdJwtVcVerifiablePresentation(
+    private suspend fun SdJwtVcValidator.validateSdJwtVcVerifiablePresentation(
         vpFormat: VpFormat.SdJwtVc,
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         transactionId: TransactionId?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
-        fun SdJwtVcValidationResult.get(): SdJwtAndKbJwt<SignedJWT> =
-            when (this) {
-                is SdJwtVcValidationResult.Valid -> this.payload
-                is SdJwtVcValidationResult.Invalid -> {
-                    val validationFailures = this.toJson().toString()
+        fun Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>>.get(): SdJwtAndKbJwt<SignedJWT> =
+            fold(
+                ifRight = { it },
+                ifLeft = { errors ->
+                    val validationFailures = jsonSupport.encodeToString(errors.toJson())
                     log.warn("Failed to validate SD-JWT VC: $validationFailures")
                     raise(WalletResponseValidationError.InvalidVpToken(validationFailures))
-                }
-            }
+                },
+            )
 
         val (sdJwt, kbJwt) = when (verifiablePresentation) {
-            is VerifiablePresentation.Str -> validateSdJwtVc(
+            is VerifiablePresentation.Str -> validate(
                 unverified = verifiablePresentation.value,
                 nonce = nonce,
                 transactionId = transactionId,
             ).get()
 
-            is VerifiablePresentation.Json -> validateSdJwtVc(
+            is VerifiablePresentation.Json -> validate(
                 unverified = verifiablePresentation.value,
                 nonce = nonce,
                 transactionId = transactionId,
@@ -112,12 +128,12 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         verifiablePresentation
     }
 
-    private fun validateMsoMdocVerifiablePresentation(
+    private fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
         vpFormat: VpFormat.MsoMdoc,
         verifiablePresentation: VerifiablePresentation,
     ): VerifiablePresentation.Str {
         require(verifiablePresentation is VerifiablePresentation.Str)
-        return deviceResponseValidator.ensureValid(verifiablePresentation.value)
+        return ensureValid(verifiablePresentation.value)
             .fold(
                 ifLeft = {
                     log.warn("Failed to validate MsoMdoc VC. Reason: '$it'")
@@ -177,3 +193,19 @@ private fun Int.toJwsAlgorithm(): JWSAlgorithm =
         -8 -> JWSAlgorithm.EdDSA
         else -> throw IllegalArgumentException("Unknown AlgorithmID '$this'")
     }
+
+private fun Collection<SdJwtVcValidationError>.toJson(): JsonArray =
+    JsonArray(
+        map { error ->
+            buildJsonObject {
+                put("error", error.reason.name)
+                val (description, cause) = when (val cause = error.cause) {
+                    is SdJwtVerificationException -> cause.description to null
+                    is StatusCheckException -> cause.reason to cause.causedBy
+                    else -> "an unexpected error occurred${cause.message?.let { ": $it" } ?: ""}" to cause
+                }
+                put("description", description)
+                cause?.message?.let { put("cause", it) }
+            }
+        },
+    )

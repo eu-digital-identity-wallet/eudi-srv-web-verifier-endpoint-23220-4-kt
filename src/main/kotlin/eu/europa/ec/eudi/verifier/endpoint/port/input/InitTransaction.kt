@@ -28,6 +28,7 @@ import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
@@ -37,6 +38,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryp
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -46,6 +48,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import java.net.URL
+import java.security.cert.X509Certificate
 import java.time.Clock
 
 /**
@@ -127,6 +130,7 @@ data class InitTransactionTO(
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
+    @SerialName("issuer_chain") val issuerChain: String? = null,
 )
 
 /**
@@ -139,6 +143,7 @@ enum class ValidationError {
     InvalidWalletResponseTemplate,
     InvalidTransactionData,
     UnsupportedFormat,
+    InvalidIssuerChain,
 }
 
 /**
@@ -204,7 +209,7 @@ class InitTransactionLive(
     private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
-
+    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
 ) : InitTransaction {
 
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO> = either {
@@ -217,7 +222,9 @@ class InitTransactionLive(
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
         val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
+
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
+        val issuerChain = issuerChain(initTransactionTO).bind()
 
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
@@ -231,8 +238,10 @@ class InitTransactionLive(
             presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
+            issuerChain = issuerChain,
         )
-        // create request, which may update presentation
+
+        // create the request, which may update the presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
         storePresentation(updatedPresentation)
@@ -354,6 +363,11 @@ class InitTransactionLive(
         val event = PresentationEvent.TransactionInitialized(p.id, p.initiatedAt, request)
         publishPresentationEvent(event)
     }
+
+    private fun issuerChain(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
+        Either.catch {
+            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
+        }.mapLeft { ValidationError.InvalidIssuerChain }
 }
 
 internal fun InitTransactionTO.toDomain(
@@ -467,17 +481,6 @@ private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
-
-private inline fun <reified T> Result<T>.applyCatching(block: T.() -> Unit): Result<T> =
-    if (isFailure) {
-        this
-    } else {
-        runCatching {
-            val value = getOrThrow()
-            value.block()
-            value
-        }
-    }
 
 private fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwtAlgorithms: List<JWSAlgorithm>): Boolean =
     this.sdJwtAlgorithms.intersect(sdJwtAlgorithms.toSet()).isNotEmpty() &&

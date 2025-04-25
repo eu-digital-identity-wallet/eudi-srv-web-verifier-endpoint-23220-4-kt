@@ -49,6 +49,9 @@
                 "InitVpTokenTransactionByValueCrossDeviceDCQL": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueCrossDeviceDCQL"
                 },
+                "InitVpTokenTransactionByValueCrossDeviceDCQLWithIssuerChain": {
+                  "$ref": "#/components/examples/InitVpTokenTransactionByValueCrossDeviceDCQLWithIssuerChain"
+                },
                 "InitVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDevicePresentationExchange"
                 },
@@ -61,11 +64,17 @@
                 "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost"
                 },
+                "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithIssuerChain": {
+                  "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithIssuerChain"
+                },
                 "InitVpTokenTransactionByValueSameDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDevicePresentationExchange"
                 },
                 "InitVpTokenTransactionByValueSameDeviceDCQL": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDeviceDCQL"
+                },
+                "InitVpTokenTransactionByValueSameDeviceDCQLWithIssuerChain": {
+                  "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDeviceDCQLWithIssuerChain"
                 },
                 "InitIdTokenAndVpTokenTransactionByValueCrossDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByValueCrossDevicePresentationExchange"
@@ -569,6 +578,11 @@
         ],
         "additionalProperties": true
       },
+      "IssuerChain": {
+        "type": "string",
+        "nullable": false,
+        "minLength": 1
+      },
       "InitVpTokenTransaction": {
         "type": "object",
         "nullable": false,
@@ -669,6 +683,16 @@
               "$ref": "#/components/schemas/TransactionData"
             },
             "minItems": 1
+          },
+          "issuer_chain": {
+            "allOf": [
+              {
+                "description": "PEM encoded X509 Certificate chain (including start and end markers) of a Verifiable Credential Issuer trusted during this Transaction."
+              },
+              {
+                "$ref": "#/components/schemas/IssuerChain"
+              }
+            ]
           }
         },
         "required": [
@@ -787,6 +811,16 @@
               "$ref": "#/components/schemas/TransactionData"
             },
             "minItems": 1
+          },
+          "issuer_chain": {
+            "allOf": [
+              {
+                "description": "PEM encoded X509 Certificate chain (including start and end markers) of a Verifiable Credential Issuer trusted during this Transaction."
+              },
+              {
+                "$ref": "#/components/schemas/IssuerChain"
+              }
+            ]
           }
         },
         "required": [
@@ -940,7 +974,8 @@
           "MissingNonce",
           "InvalidWalletResponseTemplate",
           "InvalidTransactionData",
-          "UnsupportedFormat"
+          "UnsupportedFormat",
+          "InvalidIssuerChain"
         ]
       },
       "InitTransactionError": {
@@ -1257,6 +1292,9 @@
             "type": "string",
             "format": "base64url",
             "nullable": false
+          },
+          "issuer_chain": {
+            "$ref": "#/components/schemas/IssuerChain"
           }
         },
         "required": [
@@ -1403,6 +1441,24 @@
         ],
         "additionalProperties": false
       },
+      "MsoMdocDeviceResponseInvalidIssuerChainFailure": {
+        "description": "The issuer chain certificates contains invalid values.",
+        "type": "object",
+        "nullable": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": false,
+            "enum": [
+              "InvalidIssuerChain"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      },
       "MsoMdocDeviceResponseValidationFailure": {
         "oneOf": [
           {
@@ -1413,6 +1469,9 @@
           },
           {
             "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
+          },
+          {
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseInvalidIssuerChainFailure"
           }
         ]
       },
@@ -1426,6 +1485,9 @@
           },
           "nonce": {
             "$ref": "#/components/schemas/Nonce"
+          },
+          "issuer_chain": {
+            "$ref": "#/components/schemas/IssuerChain"
           }
         },
         "required": [
@@ -1485,7 +1547,8 @@
           "UnableToLookupDID",
           "UnableToDetermineVerificationMethod",
           "StatusCheckFailed",
-          "UnexpectedError"
+          "UnexpectedError",
+          "InvalidIssuerChain"
         ]
       }
     },
@@ -1598,6 +1661,44 @@
           },
           "jar_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
+        }
+      },
+      "InitVpTokenTransactionByValueCrossDeviceDCQLWithIssuerChain": {
+        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by value. An issuer chain is also provided.",
+        "value": {
+          "type": "vp_token",
+          "dcql_query": {
+            "credentials": [
+              {
+                "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
+                "format": "mso_mdoc",
+                "meta": {
+                  "doctype_value": "eu.europa.ec.eudi.pid.1"
+                },
+                "claims": [
+                  {
+                    "namespace": "eu.europa.ec.eudi.pid.1",
+                    "claim_name": "family_name"
+                  }
+                ]
+              }
+            ],
+            "credential_sets": [
+              {
+                "options": [
+                  [
+                    "c4822b58-7fb4-454e-b827-f8758fe27f9a"
+                  ]
+                ],
+                "purpose": "We need to verify your identity"
+              }
+            ]
+          },
+          "jar_mode": "by_value",
+          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
+          "issuer_chain": [
+            "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
+          ]
         }
       },
       "InitVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
@@ -1746,6 +1847,45 @@
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
+      "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithIssuerChain": {
+        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by reference. An issuer chain is also provided.",
+        "value": {
+          "type": "vp_token",
+          "dcql_query": {
+            "credentials": [
+              {
+                "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
+                "format": "mso_mdoc",
+                "meta": {
+                  "doctype_value": "eu.europa.ec.eudi.pid.1"
+                },
+                "claims": [
+                  {
+                    "namespace": "eu.europa.ec.eudi.pid.1",
+                    "claim_name": "family_name"
+                  }
+                ]
+              }
+            ],
+            "credential_sets": [
+              {
+                "options": [
+                  [
+                    "c4822b58-7fb4-454e-b827-f8758fe27f9a"
+                  ]
+                ],
+                "purpose": "We need to verify your identity"
+              }
+            ]
+          },
+          "jar_mode": "by_reference",
+          "request_uri_method": "post",
+          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
+          "issuer_chain": [
+            "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
+          ]
+        }
+      },
       "InitVpTokenTransactionByValueSameDevicePresentationExchange": {
         "description": "Initialize a VP Token Transaction for 'same device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by value.",
         "value": {
@@ -1818,6 +1958,45 @@
           "jar_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
           "wallet_response_redirect_uri_template": "https://dev.verifier.eudiw.dev/get-wallet-code?response_code={RESPONSE_CODE}"
+        }
+      },
+      "InitVpTokenTransactionByValueSameDeviceDCQLWithIssuerChain": {
+        "description": "Initialize a VP Token Transaction for 'same device' scenario, using DCQL. JAR is passed by value. An issuer chain is also provided.",
+        "value": {
+          "type": "vp_token",
+          "dcql_query": {
+            "credentials": [
+              {
+                "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
+                "format": "mso_mdoc",
+                "meta": {
+                  "doctype_value": "eu.europa.ec.eudi.pid.1"
+                },
+                "claims": [
+                  {
+                    "namespace": "eu.europa.ec.eudi.pid.1",
+                    "claim_name": "family_name"
+                  }
+                ]
+              }
+            ],
+            "credential_sets": [
+              {
+                "options": [
+                  [
+                    "c4822b58-7fb4-454e-b827-f8758fe27f9a"
+                  ]
+                ],
+                "purpose": "We need to verify your identity"
+              }
+            ]
+          },
+          "jar_mode": "by_value",
+          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
+          "wallet_response_redirect_uri_template": "https://dev.verifier.eudiw.dev/get-wallet-code?response_code={RESPONSE_CODE}",
+          "issuer_chain": [
+            "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
+          ]
         }
       },
       "InitIdTokenAndVpTokenTransactionByValueCrossDevicePresentationExchange": {

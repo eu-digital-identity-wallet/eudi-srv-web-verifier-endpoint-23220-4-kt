@@ -46,12 +46,15 @@ internal class UtilityApi(
      * Handles a request to validate an MsoMdoc DeviceResponse.
      */
     private suspend fun handleValidateMsoMdocDeviceResponse(request: ServerRequest): ServerResponse {
-        val vpToken = request.awaitFormData()["device_response"]
+        val form = request.awaitFormData()
+        val vpToken = form["device_response"]
             ?.firstOrNull { it.isNotBlank() }
             .let {
                 requireNotNull(it) { "device_response must be provided" }
             }
-        return when (val result = validateMsoMdocDeviceResponse(vpToken)) {
+        val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
+
+        return when (val result = validateMsoMdocDeviceResponse(vpToken, issuerChain)) {
             is DeviceResponseValidationResult.Valid ->
                 ok().json()
                     .bodyValueAndAwait(result.documents)
@@ -78,8 +81,9 @@ internal class UtilityApi(
                 requireNotNull(it) { "nonce must be provided" }
                 Nonce(it)
             }
+        val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
-        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce)) {
+        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, issuerChain)) {
             is SdJwtVcValidationResult.Valid -> {
                 val reCreated = with(NimbusSdJwtOps) {
                     result.payload.sdJwt.recreateClaims(visitor = null)

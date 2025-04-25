@@ -32,7 +32,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
 import org.junit.jupiter.api.TestMethodOrder
@@ -230,7 +229,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
     private lateinit var client: WebTestClient
 
     @Test
-    fun `when wallet responds with a single deviceresponse that contains multiple documents, validations succeeds`() = runTest {
+    fun `when wallet responds with a single device response that contains multiple documents, validations succeeds`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-presentationDefinition.json")
         val transactionDetails = VerifierApiClient.initTransaction(client, initTransaction)
         val requestObject = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)

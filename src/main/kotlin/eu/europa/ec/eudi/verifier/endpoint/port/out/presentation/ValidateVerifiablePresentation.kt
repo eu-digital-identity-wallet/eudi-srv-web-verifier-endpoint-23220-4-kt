@@ -18,8 +18,11 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.presentation
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.raise.either
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.SkipRevocation
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
+import java.security.cert.X509Certificate
 
 /**
  * Validates Verifiable Presentations.
@@ -37,10 +40,29 @@ fun interface ValidateVerifiablePresentation {
         vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
+        issuerChain: X5CShouldBe.Trusted?,
     ): Either<WalletResponseValidationError, VerifiablePresentation>
+
+    suspend operator fun invoke(
+        transactionId: TransactionId?,
+        verifiablePresentation: VerifiablePresentation,
+        vpFormat: VpFormat,
+        nonce: Nonce,
+        transactionData: NonEmptyList<TransactionData>?,
+        issuerChain: NonEmptyList<X509Certificate>?,
+    ): Either<WalletResponseValidationError, VerifiablePresentation> = invoke(
+        transactionId,
+        verifiablePresentation,
+        vpFormat,
+        nonce,
+        transactionData,
+        issuerChain?.let {
+            X5CShouldBe.Trusted(it, customizePKIX = SkipRevocation)
+        },
+    )
 
     companion object {
         val NoOp: ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { _, verifiablePresentation, _, _, _ -> either { verifiablePresentation } }
+            ValidateVerifiablePresentation { _, verifiablePresentation, _, _, _, _ -> either { verifiablePresentation } }
     }
 }
