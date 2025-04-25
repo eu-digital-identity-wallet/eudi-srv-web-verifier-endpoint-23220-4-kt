@@ -38,7 +38,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryp
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificate
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -209,7 +209,7 @@ class InitTransactionLive(
     private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
-    private val parsePemEncodedX509Certificate: ParsePemEncodedX509Certificate,
+    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
 ) : InitTransaction {
 
     override suspend fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO> = either {
@@ -366,7 +366,7 @@ class InitTransactionLive(
 
     private fun issuerChain(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
         Either.catch {
-            initTransaction.issuerChain?.let { parsePemEncodedX509Certificate(it).getOrThrow() }
+            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
         }.mapLeft { ValidationError.InvalidIssuerChain }
 }
 

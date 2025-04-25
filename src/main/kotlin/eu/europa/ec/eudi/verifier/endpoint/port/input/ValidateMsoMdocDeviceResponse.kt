@@ -21,7 +21,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificate
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
@@ -123,7 +123,7 @@ internal sealed interface DeviceResponseValidationResult {
  */
 internal class ValidateMsoMdocDeviceResponse(
     private val clock: Clock,
-    private val parsePemEncodedX509Certificate: ParsePemEncodedX509Certificate,
+    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
     private val deviceResponseValidatorFactory: (X5CShouldBe?) -> DeviceResponseValidator,
 ) {
     operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult {
@@ -153,7 +153,7 @@ internal class ValidateMsoMdocDeviceResponse(
 
     private fun deviceResponseValidator(issuerChainInPem: String?): Result<DeviceResponseValidator> = runCatching {
         val x5cShouldBe = issuerChainInPem
-            ?.let { parsePemEncodedX509Certificate.x5cShouldBeTrustedOrNull(it).getOrThrow() }
+            ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         deviceResponseValidatorFactory(x5cShouldBe)
     }
 }

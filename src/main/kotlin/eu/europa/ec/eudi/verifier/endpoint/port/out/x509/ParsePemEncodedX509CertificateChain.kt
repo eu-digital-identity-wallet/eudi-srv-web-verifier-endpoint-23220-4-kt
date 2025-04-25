@@ -24,14 +24,14 @@ import java.security.cert.X509Certificate
 /**
  * Parses a PEM encoded X509 Certificate.
  */
-fun interface ParsePemEncodedX509Certificate {
-    operator fun invoke(pems: String): Result<NonEmptyList<X509Certificate>>
+fun interface ParsePemEncodedX509CertificateChain {
+    operator fun invoke(chain: String): Result<NonEmptyList<X509Certificate>>
 }
 
-fun ParsePemEncodedX509Certificate.x5cShouldBeTrustedOrNull(
-    rootCACertificates: String,
+fun ParsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(
+    chain: String,
     customizePKIX: ConfigurePKIXParameters = SkipRevocation,
 ): Result<X5CShouldBe.Trusted?> = runCatching {
-    val certs = invoke(rootCACertificates).getOrThrow()
+    val certs = invoke(chain).getOrThrow()
     X5CShouldBe.Trusted(certs, customizePKIX)
 }

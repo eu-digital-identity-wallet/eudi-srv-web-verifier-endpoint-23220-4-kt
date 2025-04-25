@@ -45,7 +45,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationI
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateWithNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -163,7 +163,7 @@ internal fun beans(clock: Clock) = beans {
     }
 
     // X509
-    bean { ParsePemEncodedX509CertificateWithNimbus }
+    bean { ParsePemEncodedX509CertificateChainWithNimbus }
 
     //
     // Use cases
