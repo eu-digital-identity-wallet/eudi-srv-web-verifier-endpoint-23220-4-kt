@@ -250,7 +250,7 @@ sealed interface Presentation {
         val responseMode: ResponseModeOption,
         val presentationDefinitionMode: EmbedOption<RequestId>,
         val getWalletResponseMethod: GetWalletResponseMethod,
-        val trustedIssuers: NonEmptyList<X509Certificate>?,
+        val issuerChain: NonEmptyList<X509Certificate>?,
     ) : Presentation
 
     /**
@@ -269,7 +269,7 @@ sealed interface Presentation {
         val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,
         val getWalletResponseMethod: GetWalletResponseMethod,
-        val trustedIssuers: NonEmptyList<X509Certificate>?,
+        val issuerChain: NonEmptyList<X509Certificate>?,
     ) : Presentation {
         init {
             require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
@@ -288,7 +288,7 @@ sealed interface Presentation {
                         requested.jarmEncryptionEphemeralKey,
                         requested.responseMode,
                         requested.getWalletResponseMethod,
-                        requested.trustedIssuers,
+                        requested.issuerChain,
                     )
                 }
         }

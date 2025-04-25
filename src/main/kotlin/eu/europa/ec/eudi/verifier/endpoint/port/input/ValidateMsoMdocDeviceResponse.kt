@@ -44,7 +44,7 @@ internal enum class ValidationFailureErrorTypeTO {
     CannotBeDecoded,
     NotOkDeviceResponseStatus,
     InvalidDocuments,
-    InvalidTrustedIssuers,
+    InvalidIssuerChain,
 }
 
 /**
@@ -72,8 +72,8 @@ internal data class ValidationErrorTO(
                 invalidDocuments = invalidDocuments,
             )
 
-        fun invalidTrustedIssuers(): ValidationErrorTO =
-            ValidationErrorTO(type = ValidationFailureErrorTypeTO.InvalidTrustedIssuers)
+        fun invalidIssuerChain(): ValidationErrorTO =
+            ValidationErrorTO(type = ValidationFailureErrorTypeTO.InvalidIssuerChain)
     }
 }
 
@@ -126,10 +126,10 @@ internal class ValidateMsoMdocDeviceResponse(
     private val parsePemEncodedX509Certificate: ParsePemEncodedX509Certificate,
     private val deviceResponseValidatorFactory: (X5CShouldBe?) -> DeviceResponseValidator,
 ) {
-    operator fun invoke(deviceResponse: String, trustedIssuers: String?): DeviceResponseValidationResult {
-        val validator = deviceResponseValidator(trustedIssuers)
+    operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult {
+        val validator = deviceResponseValidator(issuerChain)
             .getOrElse {
-                return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidTrustedIssuers())
+                return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidIssuerChain())
             }
 
         return validator.ensureValid(deviceResponse)
@@ -151,8 +151,8 @@ internal class ValidateMsoMdocDeviceResponse(
             )
     }
 
-    private fun deviceResponseValidator(trustedIssuersInPem: String?): Result<DeviceResponseValidator> = runCatching {
-        val x5cShouldBe = trustedIssuersInPem
+    private fun deviceResponseValidator(issuerChainInPem: String?): Result<DeviceResponseValidator> = runCatching {
+        val x5cShouldBe = issuerChainInPem
             ?.let { parsePemEncodedX509Certificate.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         deviceResponseValidatorFactory(x5cShouldBe)
     }

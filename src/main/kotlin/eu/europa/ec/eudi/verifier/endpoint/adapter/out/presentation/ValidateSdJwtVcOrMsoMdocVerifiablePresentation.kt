@@ -36,7 +36,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -56,12 +55,12 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         vpFormat: VpFormat,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
-        trustedIssuers: X5CShouldBe.Trusted?,
+        issuerChain: X5CShouldBe.Trusted?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
             Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
                 require(vpFormat is VpFormat.SdJwtVc)
-                val validator = sdJwtVcValidatorFactory(trustedIssuers)
+                val validator = sdJwtVcValidatorFactory(issuerChain)
                 validator.validateSdJwtVcVerifiablePresentation(
                     vpFormat,
                     verifiablePresentation,
@@ -73,7 +72,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
 
             Format.MsoMdoc -> {
                 require(vpFormat is VpFormat.MsoMdoc)
-                val validator = deviceResponseValidatorFactory(trustedIssuers)
+                val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(vpFormat, verifiablePresentation)
             }
 

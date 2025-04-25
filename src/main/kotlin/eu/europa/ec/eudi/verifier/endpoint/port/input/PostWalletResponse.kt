@@ -103,7 +103,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
                 presentation.type.transactionDataOrNull,
                 validateVerifiablePresentation,
                 vpFormats,
-                presentation.trustedIssuers,
+                presentation.issuerChain,
             )
 
         is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
@@ -114,7 +114,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
                 presentation.type.transactionDataOrNull,
                 validateVerifiablePresentation,
                 vpFormats,
-                presentation.trustedIssuers,
+                presentation.issuerChain,
             )
     }.bind()
 
@@ -141,7 +141,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
-    trustedIssuers: NonEmptyList<X509Certificate>?,
+    issuerChain: NonEmptyList<X509Certificate>?,
 ): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -187,7 +187,7 @@ private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
                 vpFormat,
                 nonce,
                 applicableTransactionData,
-                trustedIssuers,
+                issuerChain,
             ).bind()
         }.distinct()
 
@@ -201,7 +201,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
-    trustedIssuers: NonEmptyList<X509Certificate>?,
+    issuerChain: NonEmptyList<X509Certificate>?,
 ): Either<WalletResponseValidationError, VpContent.DCQL> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -238,7 +238,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                     vpFormat,
                     nonce,
                     applicableTransactionData,
-                    trustedIssuers,
+                    issuerChain,
                 ).bind()
             }
         }

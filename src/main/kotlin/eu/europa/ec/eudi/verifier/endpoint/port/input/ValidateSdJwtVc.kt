@@ -50,7 +50,7 @@ internal enum class SdJwtVcValidationErrorCodeTO {
     UnableToDetermineVerificationMethod,
     StatusCheckFailed,
     UnexpectedError,
-    InvalidTrustedIssuers,
+    InvalidIssuerChain,
 }
 
 internal data class SdJwtVcValidationErrorDetailsTO(
@@ -92,25 +92,25 @@ internal class ValidateSdJwtVc(
     suspend operator fun invoke(
         unverified: JsonObject,
         nonce: Nonce,
-        trustedIssuers: String?,
+        issuerChain: String?,
     ): SdJwtVcValidationResult =
-        validate(unverified.left(), nonce, trustedIssuers)
+        validate(unverified.left(), nonce, issuerChain)
 
     suspend operator fun invoke(
         unverified: String,
         nonce: Nonce,
-        trustedIssuers: String?,
+        issuerChain: String?,
     ): SdJwtVcValidationResult =
-        validate(unverified.right(), nonce, trustedIssuers)
+        validate(unverified.right(), nonce, issuerChain)
 
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
-        trustedIssuers: String?,
+        issuerChain: String?,
     ): SdJwtVcValidationResult {
-        val sdJwtVcValidator = sdJwtVcValidator(trustedIssuers)
+        val sdJwtVcValidator = sdJwtVcValidator(issuerChain)
             .getOrElse {
-                return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidTrustedIssuersSdJwtVcValidationError()))
+                return SdJwtVcValidationResult.Invalid(nonEmptyListOf(it.toInvalidIssuersChainSdJwtVcValidationError()))
             }
 
         return unverified.fold(
@@ -122,16 +122,16 @@ internal class ValidateSdJwtVc(
         )
     }
 
-    private fun sdJwtVcValidator(trustedIssuers: String?): Result<SdJwtVcValidator> = runCatching {
-        val x5cShouldBe = trustedIssuers
+    private fun sdJwtVcValidator(issuerChain: String?): Result<SdJwtVcValidator> = runCatching {
+        val x5cShouldBe = issuerChain
             ?.let { parsePemEncodedX509Certificate.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         sdJwtVcValidatorFactory(x5cShouldBe)
     }
 }
 
-private fun Throwable.toInvalidTrustedIssuersSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
+private fun Throwable.toInvalidIssuersChainSdJwtVcValidationError(): SdJwtVcValidationErrorDetailsTO =
     SdJwtVcValidationErrorDetailsTO(
-        reason = SdJwtVcValidationErrorCodeTO.InvalidTrustedIssuers,
+        reason = SdJwtVcValidationErrorCodeTO.InvalidIssuerChain,
         description = "unable to parse Trusted Issuers certificates",
         cause = this,
     )

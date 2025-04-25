@@ -52,9 +52,9 @@ internal class UtilityApi(
             .let {
                 requireNotNull(it) { "device_response must be provided" }
             }
-        val trustedIssuers = form["trusted_issuers"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
+        val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
-        return when (val result = validateMsoMdocDeviceResponse(vpToken, trustedIssuers)) {
+        return when (val result = validateMsoMdocDeviceResponse(vpToken, issuerChain)) {
             is DeviceResponseValidationResult.Valid ->
                 ok().json()
                     .bodyValueAndAwait(result.documents)
@@ -81,9 +81,9 @@ internal class UtilityApi(
                 requireNotNull(it) { "nonce must be provided" }
                 Nonce(it)
             }
-        val trustedIssuers = form["trusted_issuers"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
+        val issuerChain = form["issuer_chain"]?.filterNot { it.isNullOrBlank() }?.firstOrNull()
 
-        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, trustedIssuers)) {
+        return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, issuerChain)) {
             is SdJwtVcValidationResult.Valid -> {
                 val reCreated = with(NimbusSdJwtOps) {
                     result.payload.sdJwt.recreateClaims(visitor = null)

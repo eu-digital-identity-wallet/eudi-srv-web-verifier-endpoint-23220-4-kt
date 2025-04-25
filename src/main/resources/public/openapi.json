@@ -49,8 +49,8 @@
                 "InitVpTokenTransactionByValueCrossDeviceDCQL": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueCrossDeviceDCQL"
                 },
-                "InitVpTokenTransactionByValueCrossDeviceDCQLWithTrustedIssuers": {
-                  "$ref": "#/components/examples/InitVpTokenTransactionByValueCrossDeviceDCQLWithTrustedIssuers"
+                "InitVpTokenTransactionByValueCrossDeviceDCQLWithIssuerChain": {
+                  "$ref": "#/components/examples/InitVpTokenTransactionByValueCrossDeviceDCQLWithIssuerChain"
                 },
                 "InitVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDevicePresentationExchange"
@@ -64,8 +64,8 @@
                 "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost"
                 },
-                "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithTrustedIssuers": {
-                  "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithTrustedIssuers"
+                "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithIssuerChain": {
+                  "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithIssuerChain"
                 },
                 "InitVpTokenTransactionByValueSameDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDevicePresentationExchange"
@@ -73,8 +73,8 @@
                 "InitVpTokenTransactionByValueSameDeviceDCQL": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDeviceDCQL"
                 },
-                "InitVpTokenTransactionByValueSameDeviceDCQLWithTrustedIssuers": {
-                  "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDeviceDCQLWithTrustedIssuers"
+                "InitVpTokenTransactionByValueSameDeviceDCQLWithIssuerChain": {
+                  "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDeviceDCQLWithIssuerChain"
                 },
                 "InitIdTokenAndVpTokenTransactionByValueCrossDevicePresentationExchange": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByValueCrossDevicePresentationExchange"
@@ -578,15 +578,10 @@
         ],
         "additionalProperties": true
       },
-      "TrustedIssuers": {
-        "type": "array",
+      "IssuerChain": {
+        "type": "string",
         "nullable": false,
-        "items": {
-          "type": "string",
-          "nullable": false,
-          "minLength": 1
-        },
-        "minItems": 1
+        "minLength": 1
       },
       "InitVpTokenTransaction": {
         "type": "object",
@@ -689,13 +684,13 @@
             },
             "minItems": 1
           },
-          "trusted_issuers": {
+          "issuer_chain": {
             "allOf": [
               {
-                "description": "List of PEM encoded X509 Certificates (including start and end markers) of the Verifiable Credential Issuers trusted during this Transaction."
+                "description": "PEM encoded X509 Certificate chain (including start and end markers) of a Verifiable Credential Issuer trusted during this Transaction."
               },
               {
-                "$ref": "#/components/schemas/TrustedIssuers"
+                "$ref": "#/components/schemas/IssuerChain"
               }
             ]
           }
@@ -817,13 +812,13 @@
             },
             "minItems": 1
           },
-          "trusted_issuers": {
+          "issuer_chain": {
             "allOf": [
               {
-                "description": "List of PEM encoded X509 Certificates (including start and end markers) of the Verifiable Credential Issuers trusted during this Transaction."
+                "description": "PEM encoded X509 Certificate chain (including start and end markers) of a Verifiable Credential Issuer trusted during this Transaction."
               },
               {
-                "$ref": "#/components/schemas/TrustedIssuers"
+                "$ref": "#/components/schemas/IssuerChain"
               }
             ]
           }
@@ -980,7 +975,7 @@
           "InvalidWalletResponseTemplate",
           "InvalidTransactionData",
           "UnsupportedFormat",
-          "InvalidTrustedIssuers"
+          "InvalidIssuerChain"
         ]
       },
       "InitTransactionError": {
@@ -1298,8 +1293,8 @@
             "format": "base64url",
             "nullable": false
           },
-          "trusted_issuers": {
-            "$ref": "#/components/schemas/TrustedIssuers"
+          "issuer_chain": {
+            "$ref": "#/components/schemas/IssuerChain"
           }
         },
         "required": [
@@ -1446,8 +1441,8 @@
         ],
         "additionalProperties": false
       },
-      "MsoMdocDeviceResponseInvalidTrustedIssuersFailure": {
-        "description": "The list of Trusted Issuers certificates contains invalid values.",
+      "MsoMdocDeviceResponseInvalidIssuerChainFailure": {
+        "description": "The issuer chain certificates contains invalid values.",
         "type": "object",
         "nullable": false,
         "properties": {
@@ -1455,7 +1450,7 @@
             "type": "string",
             "nullable": false,
             "enum": [
-              "InvalidTrustedIssuers"
+              "InvalidIssuerChain"
             ]
           }
         },
@@ -1476,7 +1471,7 @@
             "$ref": "#/components/schemas/MsoMdocDeviceResponseValidationFailureDocumentValidationFailure"
           },
           {
-            "$ref": "#/components/schemas/MsoMdocDeviceResponseInvalidTrustedIssuersFailure"
+            "$ref": "#/components/schemas/MsoMdocDeviceResponseInvalidIssuerChainFailure"
           }
         ]
       },
@@ -1491,8 +1486,8 @@
           "nonce": {
             "$ref": "#/components/schemas/Nonce"
           },
-          "trusted_issuers": {
-            "$ref": "#/components/schemas/TrustedIssuers"
+          "issuer_chain": {
+            "$ref": "#/components/schemas/IssuerChain"
           }
         },
         "required": [
@@ -1553,7 +1548,7 @@
           "UnableToDetermineVerificationMethod",
           "StatusCheckFailed",
           "UnexpectedError",
-          "InvalidTrustedIssuers"
+          "InvalidIssuerChain"
         ]
       }
     },
@@ -1668,8 +1663,8 @@
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
-      "InitVpTokenTransactionByValueCrossDeviceDCQLWithTrustedIssuers": {
-        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by value. A set of Trusted Issuers is also provided.",
+      "InitVpTokenTransactionByValueCrossDeviceDCQLWithIssuerChain": {
+        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by value. An issuer chain is also provided.",
         "value": {
           "type": "vp_token",
           "dcql_query": {
@@ -1701,7 +1696,7 @@
           },
           "jar_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-          "trusted_issuers": [
+          "issuer_chain": [
             "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
           ]
         }
@@ -1852,8 +1847,8 @@
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
-      "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithTrustedIssuers": {
-        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by reference. A set of Trusted Issuers is also provided.",
+      "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithIssuerChain": {
+        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by reference. An issuer chain is also provided.",
         "value": {
           "type": "vp_token",
           "dcql_query": {
@@ -1886,7 +1881,7 @@
           "jar_mode": "by_reference",
           "request_uri_method": "post",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-          "trusted_issuers": [
+          "issuer_chain": [
             "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
           ]
         }
@@ -1965,8 +1960,8 @@
           "wallet_response_redirect_uri_template": "https://dev.verifier.eudiw.dev/get-wallet-code?response_code={RESPONSE_CODE}"
         }
       },
-      "InitVpTokenTransactionByValueSameDeviceDCQLWithTrustedIssuers": {
-        "description": "Initialize a VP Token Transaction for 'same device' scenario, using DCQL. JAR is passed by value. A set of Trusted Issuers is also provided.",
+      "InitVpTokenTransactionByValueSameDeviceDCQLWithIssuerChain": {
+        "description": "Initialize a VP Token Transaction for 'same device' scenario, using DCQL. JAR is passed by value. An issuer chain is also provided.",
         "value": {
           "type": "vp_token",
           "dcql_query": {
@@ -1999,7 +1994,7 @@
           "jar_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
           "wallet_response_redirect_uri_template": "https://dev.verifier.eudiw.dev/get-wallet-code?response_code={RESPONSE_CODE}",
-          "trusted_issuers": [
+          "issuer_chain": [
             "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
           ]
         }

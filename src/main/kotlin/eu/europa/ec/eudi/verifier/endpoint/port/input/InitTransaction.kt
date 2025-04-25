@@ -130,7 +130,7 @@ data class InitTransactionTO(
     @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
-    @SerialName("trusted_issuers") val trustedIssuers: String? = null,
+    @SerialName("issuer_chain") val issuerChain: String? = null,
 )
 
 /**
@@ -143,7 +143,7 @@ enum class ValidationError {
     InvalidWalletResponseTemplate,
     InvalidTransactionData,
     UnsupportedFormat,
-    InvalidTrustedIssuers,
+    InvalidIssuerChain,
 }
 
 /**
@@ -224,7 +224,7 @@ class InitTransactionLive(
         val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
 
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
-        val trustedIssuers = trustedIssuers(initTransactionTO).bind()
+        val issuerChain = issuerChain(initTransactionTO).bind()
 
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
@@ -238,7 +238,7 @@ class InitTransactionLive(
             presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
-            trustedIssuers = trustedIssuers,
+            issuerChain = issuerChain,
         )
 
         // create the request, which may update the presentation
@@ -364,10 +364,10 @@ class InitTransactionLive(
         publishPresentationEvent(event)
     }
 
-    private fun trustedIssuers(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
+    private fun issuerChain(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
         Either.catch {
-            initTransaction.trustedIssuers?.let { pems -> parsePemEncodedX509Certificate(pems).getOrThrow() }
-        }.mapLeft { ValidationError.InvalidTrustedIssuers }
+            initTransaction.issuerChain?.let { parsePemEncodedX509Certificate(it).getOrThrow() }
+        }.mapLeft { ValidationError.InvalidIssuerChain }
 }
 
 internal fun InitTransactionTO.toDomain(
