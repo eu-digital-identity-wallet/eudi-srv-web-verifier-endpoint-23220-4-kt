@@ -102,7 +102,6 @@ testing {
     }
 }
 
-
 springBoot {
     buildInfo()
 }
