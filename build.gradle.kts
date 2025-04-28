@@ -12,7 +12,6 @@ plugins {
     alias(libs.plugins.spotless)
     alias(libs.plugins.kover)
     alias(libs.plugins.dependencycheck)
-    jacoco
 }
 
 repositories {
@@ -95,10 +94,6 @@ kotlin {
     }
 }
 
-tasks.test {
-    finalizedBy(tasks.jacocoTestReport)
-}
-
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
@@ -107,9 +102,6 @@ testing {
     }
 }
 
-jacoco {
-    toolVersion = libs.versions.jacoco.get()
-}
 
 springBoot {
     buildInfo()
