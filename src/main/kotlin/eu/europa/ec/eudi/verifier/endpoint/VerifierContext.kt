@@ -136,23 +136,7 @@ internal fun beans(clock: Clock) = beans {
         log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification")
         bean<KtorHttpClientFactory> {
             {
-                HttpClient(Apache) {
-                    install(ContentNegotiation) {
-                        json(jsonSupport)
-                    }
-                    expectSuccess = true
-                    engine {
-                        followRedirects = true
-                        customizeClient {
-                            setSSLContext(
-                                SSLContextBuilder.create()
-                                    .loadTrustMaterial(TrustSelfSignedStrategy.INSTANCE)
-                                    .build(),
-                            )
-                            setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                        }
-                    }
-                }
+                createHttpClient(trustSelfSigned = true)
             }
         }
     }
@@ -213,7 +197,15 @@ internal fun beans(clock: Clock) = beans {
 
     if (env.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)) {
         log.info("Enabling Status List Token validations")
-        bean(::StatusListTokenValidator)
+        bean<StatusListTokenValidator> {
+            val selfSignedProfileActive = env.activeProfiles.contains("self-signed")
+            val httpClientFactory = if (selfSignedProfileActive) {
+                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true) }
+            } else {
+                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false) }
+            }
+            StatusListTokenValidator(httpClientFactory, clock, ref())
+        }
     }
 
     // Default DeviceResponseValidator
@@ -595,3 +587,32 @@ private fun Environment.getOptionalList(
         ?.filter { filter(it) }
         ?.map { transform(it) }
         ?.toNonEmptyListOrNull()
+
+/**
+ * Creates an HttpClient that trusts self-signed certificates and performs no hostname verification.
+ *
+ * @param withJsonContentNegotiation if true, installs ContentNegotiation with JSON support
+ * @param trustSelfSigned if true, configures the client to trust self-signed certificates and perform no hostname verification
+ */
+private fun createHttpClient(withJsonContentNegotiation: Boolean = true, trustSelfSigned: Boolean = false): HttpClient =
+    HttpClient(Apache) {
+        if (withJsonContentNegotiation) {
+            install(ContentNegotiation) {
+                json(jsonSupport)
+            }
+        }
+        expectSuccess = true
+        engine {
+            followRedirects = true
+            if (trustSelfSigned) {
+                customizeClient {
+                    setSSLContext(
+                        SSLContextBuilder.create()
+                            .loadTrustMaterial(TrustSelfSignedStrategy.INSTANCE)
+                            .build(),
+                    )
+                    setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                }
+            }
+        }
+    }
