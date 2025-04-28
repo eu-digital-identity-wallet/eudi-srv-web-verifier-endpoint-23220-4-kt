@@ -257,7 +257,6 @@ data class VerifierConfig(
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
-    val validation: Validation,
     val trustSourcesConfig: Map<Regex, TrustSourcesConfig>,
 )
 
