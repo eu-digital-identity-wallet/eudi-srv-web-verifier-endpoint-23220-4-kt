@@ -226,6 +226,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
         "verifier.clientMetadata.authorizationEncryptedResponseEnc=A256GCM",
         "verifier.jwk.embed=ByValue",
+        "verifier.trustSources[0].pattern=.*",
     ],
 )
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())

@@ -42,7 +42,7 @@ data class TrustSources(
             is X5CShouldBe.Trusted -> X5CShouldBe(certificates, existing.customizePKIX)
             else -> X5CShouldBe.Ignored
         }
-        x5CShouldBeMap.put(pattern, updatedX5ShouldBe )
+        x5CShouldBeMap.put(pattern, updatedX5ShouldBe)
 
         logger.info("TrustSources updated for pattern $pattern with ${certificates.size} certificates")
     }
