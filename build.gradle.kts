@@ -10,7 +10,7 @@ plugins {
     alias(libs.plugins.kotlin.plugin.spring)
     alias(libs.plugins.kotlin.plugin.serialization)
     alias(libs.plugins.spotless)
-    alias(libs.plugins.sonarqube)
+    alias(libs.plugins.kover)
     alias(libs.plugins.dependencycheck)
     jacoco
 }
@@ -97,16 +97,6 @@ kotlin {
 
 tasks.test {
     finalizedBy(tasks.jacocoTestReport)
-}
-
-tasks.jacocoTestReport {
-    dependsOn(tasks.test)
-
-    reports {
-        xml.required = true
-        csv.required = true
-        html.required = true
-    }
 }
 
 testing {
