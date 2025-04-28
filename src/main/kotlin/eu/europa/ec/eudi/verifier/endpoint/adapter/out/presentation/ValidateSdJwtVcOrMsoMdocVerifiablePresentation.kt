@@ -140,25 +140,23 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
         }
 
-        ensureValid(verifiablePresentation.value)
-            .fold(
-                ifLeft = { error ->
-                    log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
-                    raise(error.toWalletResponseValidationError())
-                },
-                ifRight = { documents ->
-                    documents.forEach { document ->
-                        val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
-                            WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
-                        }
-                        val algorithm = issuerAuth.algorithm.toJwsAlgorithm().bind()
-                        ensure(algorithm in vpFormat.algorithms) {
-                            WalletResponseValidationError.InvalidVpToken("MSO MDoc is not signed with a supported algorithms")
-                        }
-                    }
-                    verifiablePresentation
-                },
-            )
+        val documents = ensureValid(verifiablePresentation.value)
+            .mapLeft { error ->
+                log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
+                error.toWalletResponseValidationError()
+            }
+            .bind()
+
+        documents.forEach { document ->
+            val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
+                WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
+            }
+            val algorithm = issuerAuth.algorithm.toJwsAlgorithm().bind()
+            ensure(algorithm in vpFormat.algorithms) {
+                WalletResponseValidationError.InvalidVpToken("MSO MDoc is not signed with a supported algorithms")
+            }
+        }
+        verifiablePresentation
     }
 }
 
