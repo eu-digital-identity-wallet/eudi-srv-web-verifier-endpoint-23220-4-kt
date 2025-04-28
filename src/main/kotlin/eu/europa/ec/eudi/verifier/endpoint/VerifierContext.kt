@@ -112,8 +112,6 @@ internal fun beans(clock: Clock) = beans {
             }
     }
 
-    val verifierConfig = verifierConfig(env, ref())
-
     //
     // JOSE
     //
@@ -271,12 +269,12 @@ internal fun beans(clock: Clock) = beans {
     //
     bean(::ScheduleTimeoutPresentations)
     bean(::ScheduleDeleteOldPresentations)
-    bean { RefreshTrustSources(ref(), ref(), verifierConfig).also { it.initializeTrustSources() } }
+    bean { RefreshTrustSources(ref(), ref(), ref()).also { it.initializeTrustSources() } }
 
     //
     // Config
     //
-    bean { verifierConfig }
+    bean { verifierConfig(env, ref()) }
 
     //
     // End points
