@@ -24,7 +24,6 @@ import arrow.core.raise.ensureNotNull
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
@@ -95,29 +94,25 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         transactionData: NonEmptyList<TransactionData>?,
         transactionId: TransactionId?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
-        fun Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>>.getOrRaise(): SdJwtAndKbJwt<SignedJWT> =
-            fold(
-                ifRight = { it },
-                ifLeft = { errors ->
-                    val validationFailures = jsonSupport.encodeToString(errors.toJson())
-                    log.warn("Failed to validate SD-JWT VC: $validationFailures")
-                    raise(WalletResponseValidationError.InvalidVpToken(validationFailures))
-                },
-            )
+        fun invalidVpToken(errors: NonEmptyList<SdJwtVcValidationError>): WalletResponseValidationError {
+            val validationFailures = jsonSupport.encodeToString(errors.toJson())
+            log.warn("Failed to validate SD-JWT VC: $validationFailures")
+            return WalletResponseValidationError.InvalidVpToken(validationFailures)
+        }
 
         val (sdJwt, kbJwt) = when (verifiablePresentation) {
             is VerifiablePresentation.Str -> validate(
                 unverified = verifiablePresentation.value,
                 nonce = nonce,
                 transactionId = transactionId,
-            ).getOrRaise()
+            )
 
             is VerifiablePresentation.Json -> validate(
                 unverified = verifiablePresentation.value,
                 nonce = nonce,
                 transactionId = transactionId,
-            ).getOrRaise()
-        }
+            )
+        }.mapLeft { errors -> invalidVpToken(errors) }.bind()
 
         // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
         ensure(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
