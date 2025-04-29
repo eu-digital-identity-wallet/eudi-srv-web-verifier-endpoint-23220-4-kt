@@ -157,7 +157,8 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         // Test with single Verifiable Presentation -- single JsonObject
         test("02-presentationDefinition.json", "02-presentationSubmission.json", "02-vpToken.json") {
             val vpToken = assertNotNull(it.vpToken)
-            assertIs<JsonObject>(vpToken)
+            assertIs<JsonArray>(vpToken)
+            assertIs<JsonObject>(vpToken[0])
         }
 
         // Test with multiple Verifiable Presentation -- single JsonArray that contains one JsonPrimitive and one JsonObject
@@ -265,7 +266,8 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         val transactionResponse =
             assertNotNull(VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
         val vpToken = assertNotNull(transactionResponse.vpToken)
-        assertIs<JsonPrimitive>(vpToken)
+        assertIs<JsonArray>(vpToken)
+        assertIs<JsonPrimitive>(vpToken[0])
     }
 
     @Test

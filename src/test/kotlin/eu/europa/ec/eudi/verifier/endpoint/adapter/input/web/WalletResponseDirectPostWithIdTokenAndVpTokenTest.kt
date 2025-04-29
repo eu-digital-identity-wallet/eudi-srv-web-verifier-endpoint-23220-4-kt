@@ -140,7 +140,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         // Test with single Verifiable Presentation -- single JsonObject
         test("02-presentationDefinition.json", "02-presentationSubmission.json", "02-vpToken.json") {
             val vpToken = assertNotNull(it.vpToken)
-            assertIs<JsonObject>(vpToken)
+            assertIs<JsonArray>(vpToken)
+            assertIs<JsonObject>(vpToken[0])
         }
 
         // Test with multiple Verifiable Presentation -- single JsonArray that contains one JsonPrimitive and one JsonObject

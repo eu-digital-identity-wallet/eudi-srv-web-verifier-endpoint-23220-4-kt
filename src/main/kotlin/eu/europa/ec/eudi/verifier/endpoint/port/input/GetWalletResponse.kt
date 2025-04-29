@@ -56,8 +56,7 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
     }
 
     fun VpContent.PresentationExchange.toJsonElement(): JsonElement = when {
-        verifiablePresentations.size == 1 -> verifiablePresentations.first().toJsonElement()
-        verifiablePresentations.size > 1 -> JsonArray(verifiablePresentations.map { it.toJsonElement() })
+        verifiablePresentations.size > 0 -> JsonArray(verifiablePresentations.map { it.toJsonElement() })
         else -> throw IllegalStateException("No attestations shared from wallet")
     }
 
