@@ -41,17 +41,11 @@ class RefreshTrustSources(
 
     fun initializeTrustSources() {
         verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
-            val keystoreCertificates = trustSourceConfig.keystore?.let {
-                loadCertificatesFromKeystore(regex, it)
-            } ?: emptyList()
+            val keystoreCertificates = trustSourceConfig.keystore.loadCertificates(regex)
 
             trustSourceConfig.trustedList?.let {
                 runBlocking(Dispatchers.IO) {
-                    loadCertificatesFromLotl(
-                        regex,
-                        it,
-                        keystoreCertificates,
-                    )
+                    it.loadCertificates(regex, keystoreCertificates)
                 }
             }
         }
@@ -61,18 +55,11 @@ class RefreshTrustSources(
         // Configure LOTL refresh tasks for each trust source that has LOTL configuration
         verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
             trustSourceConfig.trustedList?.let {
+                val keystoreCertificates = trustSourceConfig.keystore.loadCertificates(regex)
                 taskRegistrar.addCronTask(
                     CronTask({
                         runBlocking(Dispatchers.IO) {
-                            val keystoreCertificates = trustSourceConfig.keystore?.let {
-                                loadCertificatesFromKeystore(regex, it)
-                            } ?: emptyList()
-
-                            loadCertificatesFromLotl(
-                                regex,
-                                it,
-                                keystoreCertificates,
-                            )
+                            it.loadCertificates(regex, keystoreCertificates)
                         }
                     }, it.refreshInterval),
                 )
@@ -80,24 +67,19 @@ class RefreshTrustSources(
         }
     }
 
-    private fun loadCertificatesFromKeystore(
-        regex: Regex,
-        keystoreConfig: TrustSourceConfig.Keystore,
-    ): List<X509Certificate> = keystoreConfig.value.let {
-        logger.info("Loading certificates from keystore for regex: $regex")
-        val x5CShouldBe = X5CShouldBe.fromKeystore(it)
+    private suspend fun TrustSourceConfig.TrustedList.loadCertificates(
+        expression: Regex,
+        keystoreCertificates: List<X509Certificate>?,
+    ) = fetchLOTLCertificates(location, serviceTypeFilter)
+        .onFailure {
+            logger.error("Failed to fetch LOTL certificates from $location", it)
+        }.onSuccess {
+            trustSources.updateWithCertificates(expression, it + keystoreCertificates.orEmpty())
+        }
+
+    private fun TrustSourceConfig.Keystore?.loadCertificates(regex: Regex) = this?.let {
+        val x5CShouldBe = X5CShouldBe.fromKeystore(it.value)
         trustSources.updateWithX5CShouldBe(regex, x5CShouldBe)
         x5CShouldBe.caCertificates()
     }
-
-    private suspend fun loadCertificatesFromLotl(
-        expression: Regex,
-        trustedListConfig: TrustSourceConfig.TrustedList,
-        keystoreCertificates: List<X509Certificate>,
-    ) = fetchLOTLCertificates(trustedListConfig.location, trustedListConfig.serviceTypeFilter)
-        .onFailure { exception ->
-            logger.error("Failed to fetch LOTL certificates from $trustedListConfig.location", exception)
-        }.onSuccess { lotlCertificates ->
-            trustSources.updateWithCertificates(expression, lotlCertificates + keystoreCertificates)
-        }
 }
