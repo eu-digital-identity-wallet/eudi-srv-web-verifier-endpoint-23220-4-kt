@@ -104,14 +104,9 @@ internal fun beans(clock: Clock) = beans {
                     ?.toCharArray()
 
                 log.info("Loading trusted issuers' certificates from '$keystorePath'")
-                DefaultResourceLoader().getResource(keystorePath)
-                    .inputStream
-                    .use {
-                        KeyStore.getInstance(keystoreType)
-                            .apply {
-                                load(it, keystorePassword)
-                            }
-                    }
+                loadKeystore(keystorePath, keystoreType, keystorePassword)
+                    .onFailure { log.warn("Failed to load trusted issuers certificates from '$keystorePath'", it) }
+                    .getOrNull()
             }
     }
 
@@ -534,56 +529,37 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
  * Handles array-like property names: verifier.trustSources[0].pattern, etc.
  */
 private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
-    val result = mutableMapOf<Regex, TrustSourcesConfig>()
+    val trustSourcesConfigMap = mutableMapOf<Regex, TrustSourcesConfig>()
     val prefix = "verifier.trustSources"
 
-    // Find all unique indices in properties
-
     var index = 0
-
     while (true) {
         val indexPrefix = "$prefix[$index]"
         val patternStr = getProperty("$indexPrefix.pattern") ?: break
         val pattern = patternStr.toRegex()
-        val trustSourceConfigs = mutableListOf<TrustSourceConfig>()
 
         // Parse LOTL configuration if present
         val lotlSourceConfig = getProperty("$indexPrefix.lotl.location")?.let { lotlLocation ->
-            try {
-                val location = URI(lotlLocation).toURL()
-                val serviceTypeFilter = getProperty("$indexPrefix.lotl.serviceTypeFilter")
-                val refreshInterval = getProperty("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
+            val location = URI(lotlLocation).toURL()
+            val serviceTypeFilter = getProperty("$indexPrefix.lotl.serviceTypeFilter")
+            val refreshInterval = getProperty("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
 
-                TrustSourceConfig.TrustedList(location, serviceTypeFilter, refreshInterval)
-            } catch (e: Exception) {
-                log.warn("Failed to parse LOTL configuration at index $index: ${e.message}")
-                null
-            }
+            TrustSourceConfig.TrustedList(location, serviceTypeFilter, refreshInterval)
         }
 
         // Parse keystore configuration if present
         val keystoreConfig = getProperty("$indexPrefix.keystore.path")?.let { keystorePath ->
-            try {
-                val keystoreType = getProperty("$indexPrefix.keystore.type") ?: "JKS"
-                val keystorePassword = getProperty("$indexPrefix.keystore.password")
-                    ?.takeIf { it.isNotBlank() }
-                    ?.toCharArray()
-                val ks = DefaultResourceLoader().getResource(keystorePath)
-                    .inputStream
-                    .use {
-                        KeyStore.getInstance(keystoreType)
-                            .apply {
-                                load(it, keystorePassword)
-                            }
-                    }
-                TrustSourceConfig.Keystore(ks)
-            } catch (e: Exception) {
-                log.warn("Failed to parse keystore configuration at index $index: ${e.message}")
-                null
-            }
+            val keystoreType = getProperty("$indexPrefix.keystore.type") ?: "JKS"
+            val keystorePassword = getProperty("$indexPrefix.keystore.password")
+                ?.takeIf { it.isNotBlank() }
+                ?.toCharArray()
+            loadKeystore(keystorePath, keystoreType, keystorePassword)
+                .onFailure { log.warn("Failed to load keystore from '$keystorePath'", it) }
+                .map { TrustSourceConfig.Keystore(it) }
+                .getOrNull()
         }
 
-        result[pattern] = TrustSourcesConfig(
+        trustSourcesConfigMap[pattern] = TrustSourcesConfig(
             trustedList = lotlSourceConfig,
             keystore = keystoreConfig,
         )
@@ -591,7 +567,17 @@ private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
         index++
     }
 
-    return result
+    return trustSourcesConfigMap
+}
+
+private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: CharArray?) = runCatching {
+    DefaultResourceLoader().getResource(keystorePath)
+        .inputStream
+        .use {
+            KeyStore.getInstance(keystoreType).apply {
+                load(it, keystorePassword)
+            }
+        }
 }
 
 private fun Environment.clientMetaData(): ClientMetaData {
