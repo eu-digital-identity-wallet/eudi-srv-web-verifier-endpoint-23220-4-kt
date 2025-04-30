@@ -17,7 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
 
 import arrow.core.Option
 import arrow.core.toOption
-import io.ktor.util.collections.ConcurrentMap
+import io.ktor.util.collections.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.security.cert.X509Certificate
@@ -38,11 +38,10 @@ data class TrustSources(
      * Updates trust sources for a specific pattern with the given certificates
      */
     fun updateWithCertificates(pattern: Regex, certificates: List<X509Certificate>) {
-        val updatedX5ShouldBe = when (val existing = x5CShouldBeMap[pattern]) {
+        x5CShouldBeMap[pattern] = when (val existing = x5CShouldBeMap[pattern]) {
             is X5CShouldBe.Trusted -> X5CShouldBe(certificates, existing.customizePKIX)
             else -> X5CShouldBe.Ignored
         }
-        x5CShouldBeMap.put(pattern, updatedX5ShouldBe)
 
         logger.info("TrustSources updated for pattern $pattern with ${certificates.size} certificates")
     }
