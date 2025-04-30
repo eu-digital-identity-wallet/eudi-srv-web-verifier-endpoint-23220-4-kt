@@ -20,7 +20,7 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
  
 ## Overview
 
-This is a Web application (Backend Restful service) that acts as a Verifier/RP trusted end-point. 
+This is a Web application (Backend Restful service) that acts as a Verifier/RP trusted end-point that implements [OpenId4VP (draft 24)](https://openid.net/specs/openid-4-verifiable-presentations-1_0-24.html) protocol. 
 This backend service is accompanied by a Web UI application implemented [here](https://github.com/eu-digital-identity-wallet/eudi-web-verifier). 
 
 See section [Run all verifier components together](#run-all-verifier-components-together) on how to boot both applications together.
