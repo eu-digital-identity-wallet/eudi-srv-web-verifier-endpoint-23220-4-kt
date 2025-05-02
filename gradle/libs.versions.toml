@@ -11,9 +11,7 @@ presentationExchange = "0.3.0"
 ktlintVersion = "0.50.0"
 bouncyCastle = "1.80"
 arrow = "2.0.1"
-sonarqube = "6.0.1.5171"
 dependencycheck = "12.1.0"
-jacoco = "0.8.11"
 swaggerUi = "5.20.1"
 waltid = "0.11.0"
 sdJwt = "0.12.0"
@@ -21,6 +19,7 @@ ktor = "3.1.1"
 jsonpathkt = "2.0.1"
 tink = "1.17.0"
 statium = "0.2.1"
+kover = "0.9.1"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -45,4 +44,4 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-plugin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
 kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "dependencycheck" }
-sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
