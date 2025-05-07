@@ -99,9 +99,7 @@ internal fun beans(clock: Clock) = beans {
             ?.takeIf { it.isNotBlank() }
             ?.let { keystorePath ->
                 val keystoreType = env.getRequiredProperty("trustedIssuers.keystore.type")
-                val keystorePassword = env.getProperty("trustedIssuers.keystore.password")
-                    ?.takeIf { it.isNotBlank() }
-                    ?.toCharArray()
+                val keystorePassword = env.getProperty("trustedIssuers.keystore.password", "").toCharArray()
 
                 log.info("Loading trusted issuers' certificates from '$keystorePath'")
                 loadKeystore(keystorePath, keystoreType, keystorePassword)
@@ -544,20 +542,13 @@ private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
             val serviceTypeFilter = getProperty("$indexPrefix.lotl.serviceTypeFilter")
             val refreshInterval = getProperty("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
 
-            TrustSourceConfig.TrustedList(location, serviceTypeFilter, refreshInterval)
+            val lotlKeystoreConfig = parseKeyStoreConfig("$indexPrefix.lotl.keystore")
+
+            TrustSourceConfig.TrustedListConfig(location, serviceTypeFilter, refreshInterval, lotlKeystoreConfig)
         }
 
         // Parse keystore configuration if present
-        val keystoreConfig = getProperty("$indexPrefix.keystore.path")?.let { keystorePath ->
-            val keystoreType = getProperty("$indexPrefix.keystore.type") ?: "JKS"
-            val keystorePassword = getProperty("$indexPrefix.keystore.password")
-                ?.takeIf { it.isNotBlank() }
-                ?.toCharArray()
-            loadKeystore(keystorePath, keystoreType, keystorePassword)
-                .onFailure { log.warn("Failed to load keystore from '$keystorePath'", it) }
-                .map { TrustSourceConfig.Keystore(it) }
-                .getOrNull()
-        }
+        val keystoreConfig = parseKeyStoreConfig("$indexPrefix.keystore")
 
         trustSourcesConfigMap[pattern] = TrustSourcesConfig(
             trustedList = lotlSourceConfig,
@@ -570,7 +561,16 @@ private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
     return trustSourcesConfigMap
 }
 
-private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: CharArray?) = runCatching {
+private fun Environment.parseKeyStoreConfig(propertyPrefix: String) = getProperty("$propertyPrefix.path")?.let { keystorePath ->
+    val keystoreType = getProperty("$propertyPrefix.type") ?: "JKS"
+    val keystorePassword = getProperty("$propertyPrefix.password", "").toCharArray()
+    loadKeystore(keystorePath, keystoreType, keystorePassword)
+        .onFailure { log.warn("Failed to load keystore from '$keystorePath'", it) }
+        .map { TrustSourceConfig.KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
+        .getOrNull()
+}
+
+private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: CharArray) = runCatching {
     DefaultResourceLoader().getResource(keystorePath)
         .inputStream
         .use {
