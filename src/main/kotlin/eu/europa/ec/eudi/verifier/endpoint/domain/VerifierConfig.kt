@@ -314,21 +314,24 @@ private fun SanType.asInt() =
     }
 
 sealed interface TrustSourceConfig {
-    data class TrustedList(
+    data class TrustedListConfig(
         val location: URL,
         val serviceTypeFilter: String?,
-        val refreshInterval: String = "0 * * * * ?",
+        val refreshInterval: String = "0 * * * * *",
+        val keystoreConfig: KeyStoreConfig?,
     ) : TrustSourceConfig
 
-    @JvmInline
-    value class Keystore(
-        val value: KeyStore,
+    data class KeyStoreConfig(
+        val keystorePath: String,
+        val keystoreType: String? = "JKS",
+        val keystorePassword: CharArray? = "".toCharArray(),
+        val keystore: KeyStore,
     ) : TrustSourceConfig
 }
 
 data class TrustSourcesConfig(
-    val keystore: TrustSourceConfig.Keystore?,
-    val trustedList: TrustSourceConfig.TrustedList?,
+    val keystore: TrustSourceConfig.KeyStoreConfig?,
+    val trustedList: TrustSourceConfig.TrustedListConfig?,
 ) {
     init {
         require(keystore != null || trustedList != null) {
