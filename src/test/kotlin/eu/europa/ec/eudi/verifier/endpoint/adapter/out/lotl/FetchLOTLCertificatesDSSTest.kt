@@ -29,6 +29,8 @@ class FetchLOTLCertificatesDSSTest {
 
         val result = fetchLOTLCertificatesDSS(
             URI("https://ec.europa.eu/tools/lotl/eu-lotl.xml").toURL(),
+            null,
+            null,
         )
 
         assertTrue(result.isSuccess)
