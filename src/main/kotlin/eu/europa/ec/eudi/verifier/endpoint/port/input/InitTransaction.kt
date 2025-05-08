@@ -222,7 +222,7 @@ fun interface InitTransaction {
 
     suspend operator fun invoke(
         initTransactionTO: InitTransactionTO,
-        responseModeBetterName: ResponseMode,
+        responseWay: ResponseMode,
     ): Either<ValidationError, InitTransactionResponse>
 }
 
@@ -244,7 +244,7 @@ class InitTransactionLive(
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
 ) : InitTransaction {
 
-    override suspend fun invoke(initTransactionTO: InitTransactionTO, responseModeBetterName: ResponseMode): Either<ValidationError, InitTransactionResponse> = either { // TODO: Find a better name
+    override suspend fun invoke(initTransactionTO: InitTransactionTO, responseWay: ResponseMode): Either<ValidationError, InitTransactionResponse> = either { // TODO: Find a better name
         // validate input
         val (nonce, type) = initTransactionTO.toDomain(
             verifierConfig.transactionDataHashAlgorithm,
@@ -279,7 +279,7 @@ class InitTransactionLive(
 //        storePresentation(updatedPresentation)
 //        logTransactionInitialized(updatedPresentation, request)
 
-        when (responseModeBetterName) {
+        when (responseWay) {
             ResponseMode.Json -> {
                 val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
