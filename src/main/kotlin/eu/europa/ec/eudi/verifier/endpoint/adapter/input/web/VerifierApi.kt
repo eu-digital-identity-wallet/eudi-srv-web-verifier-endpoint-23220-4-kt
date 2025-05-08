@@ -24,6 +24,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.http.MediaType.IMAGE_PNG
 import org.springframework.web.reactive.function.server.*
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import kotlin.jvm.optionals.getOrNull
@@ -40,7 +41,7 @@ internal class VerifierApi(
 
         POST(
             INIT_TRANSACTION_PATH,
-            contentType(APPLICATION_JSON) and accept(APPLICATION_JSON),
+            contentType(APPLICATION_JSON) and accept(APPLICATION_JSON) and accept(IMAGE_PNG), // add png
             ::handleInitTransaction,
         )
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
@@ -50,11 +51,25 @@ internal class VerifierApi(
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
         val input = req.awaitBody<InitTransactionTO>()
+        val acceptHeader = req.headers().accept()
         logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
-        initTransaction(input).fold(
+        val requestMode = when (acceptHeader) {
+            APPLICATION_JSON -> ResponseMode.Json
+            IMAGE_PNG -> ResponseMode.QrCode
+            else -> null // ??? There is no way reaching this point but compiler is whining
+        }
+        initTransaction(input, requestMode!!).fold(
             ifRight = {
-                logger.info("Initiated transaction tx ${it.transactionId}")
-                ok().json().bodyValueAndAwait(it)
+                when (it) {
+                    is InitTransactionResponse.JwtSecuredAuthorizationRequestTO -> {
+                        logger.info("Initiated transaction tx ${it.transactionId}")
+                        ok().json().bodyValueAndAwait(it)
+                    }
+                    is InitTransactionResponse.QrCodeRequest -> {
+                        logger.info("Initiated transaction with qr image")
+                        ok().contentType(IMAGE_PNG).bodyValueAndAwait(it.qrCode)
+                    }
+                }
             },
             ifLeft = { it.asBadRequest() },
         )
