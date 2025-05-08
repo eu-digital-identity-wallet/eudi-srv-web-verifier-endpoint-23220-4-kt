@@ -274,13 +274,19 @@ class InitTransactionLive(
         )
 
         // create the request, which may update the presentation
-        val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
-
-        storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, request)
+//        val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
+//
+//        storePresentation(updatedPresentation)
+//        logTransactionInitialized(updatedPresentation, request)
 
         when (responseModeBetterName) {
-            ResponseMode.Json -> request
+            ResponseMode.Json -> {
+                val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
+
+                storePresentation(updatedPresentation)
+                logTransactionInitialized(updatedPresentation, request)
+                request
+            }
             ResponseMode.QrCode -> TODO("Create the qr code byte array")
         }
     }
@@ -307,7 +313,7 @@ class InitTransactionLive(
     private fun createRequest(
         requestedPresentation: Presentation.Requested,
         requestJarOption: EmbedOption<RequestId>,
-    ): Pair<Presentation, InitTransactionResponse> =
+    ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
                 val jwt = createJar(
@@ -397,7 +403,7 @@ class InitTransactionLive(
             null -> verifierConfig.presentationDefinitionEmbedOption
         }
 
-    private suspend fun logTransactionInitialized(p: Presentation, request: InitTransactionResponse) {
+    private suspend fun logTransactionInitialized(p: Presentation, request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO) {
         val event = PresentationEvent.TransactionInitialized(p.id, p.initiatedAt, request)
         publishPresentationEvent(event)
     }
