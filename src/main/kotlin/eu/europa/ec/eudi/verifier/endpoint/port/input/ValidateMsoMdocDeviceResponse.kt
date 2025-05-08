@@ -178,7 +178,7 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         is DocumentError.X5CNotTrusted -> DocumentErrorTO.X5CNotTrusted
         DocumentError.DocumentTypeNotMatching -> DocumentErrorTO.DocumentTypeNotMatching
         DocumentError.InvalidIssuerSignedItems -> DocumentErrorTO.InvalidIssuerSignedItems
-        DocumentError.NoMatchingX5CValidator -> DocumentErrorTO.NoMatchingX5CValidator
+        DocumentError.NoMatchingX5CShouldBe -> DocumentErrorTO.NoMatchingX5CValidator
     }
 
 private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(

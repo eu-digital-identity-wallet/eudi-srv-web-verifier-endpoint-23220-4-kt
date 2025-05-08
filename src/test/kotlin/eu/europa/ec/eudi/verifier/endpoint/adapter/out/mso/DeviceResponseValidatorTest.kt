@@ -115,7 +115,7 @@ class DeviceResponseValidatorTest {
             val docV = DocumentValidator(
                 clock = clock,
                 validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
-                trustSources = trustSources,
+                trustSourceProvider = trustSources::invoke,
             )
             val vpValidator = DeviceResponseValidator(docV)
             val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
@@ -153,7 +153,7 @@ class DeviceResponseValidatorTest {
                 )
             }
 
-            val docV = DocumentValidator(trustSources = trustSources)
+            val docV = DocumentValidator(trustSourceProvider = trustSources::invoke)
             val vpValidator = DeviceResponseValidator(docV)
             val validated = vpValidator.ensureValid(Data.MdlVP)
             assertNotNull(validated.getOrNull())
@@ -178,7 +178,7 @@ private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, cloc
         clock,
         ValidityInfoShouldBe.NotExpired,
         IssuerSignedItemsShouldBe.Verified,
-        trustSources = trustSources,
+        trustSourceProvider = trustSources::invoke,
     )
     return DeviceResponseValidator(documentValidator)
 }

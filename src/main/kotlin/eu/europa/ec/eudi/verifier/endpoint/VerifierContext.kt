@@ -93,21 +93,6 @@ private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 internal fun beans(clock: Clock) = beans {
     bean { clock }
 
-    // TODO GD: remove this
-    val trustedIssuers: KeyStore? by lazy {
-        env.getProperty("trustedIssuers.keystore.path")
-            ?.takeIf { it.isNotBlank() }
-            ?.let { keystorePath ->
-                val keystoreType = env.getRequiredProperty("trustedIssuers.keystore.type")
-                val keystorePassword = env.getProperty("trustedIssuers.keystore.password", "").toCharArray()
-
-                log.info("Loading trusted issuers' certificates from '$keystorePath'")
-                loadKeystore(keystorePath, keystoreType, keystorePassword)
-                    .onFailure { log.warn("Failed to load trusted issuers certificates from '$keystorePath'", it) }
-                    .getOrNull()
-            }
-    }
-
     //
     // JOSE
     //
@@ -224,33 +209,31 @@ internal fun beans(clock: Clock) = beans {
     // Default DeviceResponseValidator
     bean { TrustSources() }
     bean<DeviceResponseValidator> {
-        val x5cShouldBe = trustedIssuers?.let { X5CShouldBe.fromKeystore(it) } ?: X5CShouldBe.Ignored
-        deviceResponseValidator(x5cShouldBe)
+        val trustSources = ref<TrustSources>()
+        deviceResponseValidator(trustSources::invoke)
     }
 
     // Default SdJwtVcValidator
     bean<SdJwtVcValidator> {
-        val x5CShouldBe = trustedIssuers?.let {
-            X5CShouldBe.fromKeystore(it) {
-                isRevocationEnabled = false
-            }
-        } ?: X5CShouldBe.Ignored
-        sdJwtVcValidator(x5CShouldBe)
+        val trustSources = ref<TrustSources>()
+        sdJwtVcValidator(trustSources::invoke)
     }
 
     bean {
         ValidateMsoMdocDeviceResponse(
             ref(),
             ref(),
-            deviceResponseValidatorFactory = { trustedIssuers ->
-                trustedIssuers?.let { deviceResponseValidator(it) } ?: ref()
+            deviceResponseValidatorFactory = { userProvided ->
+                val appDefault = ref<DeviceResponseValidator>()
+                userProvided?.let { deviceResponseValidator { userProvided } } ?: appDefault
             },
         )
     }
     bean {
         ValidateSdJwtVc(
-            sdJwtVcValidatorFactory = { trustedIssuers ->
-                trustedIssuers?.let { sdJwtVcValidator(it) } ?: ref()
+            sdJwtVcValidatorFactory = { userProvided ->
+                val appDefault = ref<SdJwtVcValidator>()
+                userProvided?.let { sdJwtVcValidator { userProvided } } ?: appDefault
             },
             ref(),
         )
@@ -259,11 +242,13 @@ internal fun beans(clock: Clock) = beans {
     bean {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             config = ref(),
-            sdJwtVcValidatorFactory = { trustedIssuers ->
-                trustedIssuers?.let { sdJwtVcValidator(it) } ?: ref()
+            sdJwtVcValidatorFactory = { userProvided ->
+                val appDefault = ref<SdJwtVcValidator>()
+                userProvided?.let { sdJwtVcValidator { userProvided } } ?: appDefault
             },
-            deviceResponseValidatorFactory = { trustedIssuers ->
-                trustedIssuers?.let { deviceResponseValidator(it) } ?: ref()
+            deviceResponseValidatorFactory = { userProvided ->
+                val appDefault = ref<DeviceResponseValidator>()
+                userProvided?.let { deviceResponseValidator { userProvided } } ?: appDefault
             },
         )
     }
@@ -355,25 +340,28 @@ internal fun beans(clock: Clock) = beans {
     }
 }
 
-private fun BeanSupplierContext.deviceResponseValidator(trustedIssuers: X5CShouldBe): DeviceResponseValidator {
+private fun BeanSupplierContext.deviceResponseValidator(
+    trustSourceProvider: (String) -> X5CShouldBe?,
+): DeviceResponseValidator {
     val docValidator = DocumentValidator(
         clock = ref(),
         issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
         validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-        trustSources = ref(),
+        trustSourceProvider = trustSourceProvider,
     )
     log.info(
         "Created DocumentValidator using: \n\t" +
             "IssuerSignedItemsShouldBe: '${IssuerSignedItemsShouldBe.Verified}', \n\t" +
-            "ValidityInfoShouldBe: '${ValidityInfoShouldBe.NotExpired}', and \n\t" +
-            "X5CShouldBe '$trustedIssuers'",
+            "ValidityInfoShouldBe: '${ValidityInfoShouldBe.NotExpired}'",
     )
     return DeviceResponseValidator(docValidator)
 }
 
-private fun BeanSupplierContext.sdJwtVcValidator(trustedIssuers: X5CShouldBe): SdJwtVcValidator =
+private fun BeanSupplierContext.sdJwtVcValidator(
+    trustSourceProvider: (String) -> X5CShouldBe?,
+): SdJwtVcValidator =
     SdJwtVcValidator(
-        trustedIssuers = trustedIssuers,
+        trustSourceProvider = trustSourceProvider,
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
     )

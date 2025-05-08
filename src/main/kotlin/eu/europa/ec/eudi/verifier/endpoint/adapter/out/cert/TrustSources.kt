@@ -15,40 +15,41 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
 
-import arrow.core.Option
-import arrow.core.toOption
 import io.ktor.util.collections.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.security.cert.X509Certificate
+
+/**
+ * Functional interface for providing appropriate X5CShouldBe trust source based on document type.
+ */
+fun interface TrustSourceProvider {
+    /**
+     * Returns the appropriate X5CShouldBe for the given doctype/vct.
+     *
+     * @param type The doctype/vct
+     * @return The X5CShouldBe configuration for the doctype/vct
+     */
+    fun invoke(type: String): X5CShouldBe?
+}
 
 data class TrustSources(
     private val x5CShouldBeMap: ConcurrentMap<Regex, X5CShouldBe> = ConcurrentMap(),
-) {
+) : TrustSourceProvider {
     private val logger: Logger = LoggerFactory.getLogger(TrustSources::class.java)
-
-    fun forType(docType: String): Option<X5CShouldBe> {
-        return x5CShouldBeMap.entries
-            .firstOrNull { (pattern, _) -> pattern.matches(docType) }
-            ?.value
-            .toOption()
-    }
-
-    /**
-     * Updates trust sources for a specific pattern with the given certificates
-     */
-    fun updateWithCertificates(pattern: Regex, certificates: List<X509Certificate>) {
-        x5CShouldBeMap[pattern] = when (val existing = x5CShouldBeMap[pattern]) {
-            is X5CShouldBe.Trusted -> X5CShouldBe(certificates, existing.customizePKIX)
-            else -> X5CShouldBe.Ignored
-        }
-
-        logger.info("TrustSources updated for pattern $pattern with ${certificates.size} certificates")
-    }
 
     fun updateWithX5CShouldBe(pattern: Regex, x5CShouldBe: X5CShouldBe) {
         x5CShouldBeMap[pattern] = x5CShouldBe
 
         logger.info("TrustSources updated for pattern $pattern with ${x5CShouldBe.caCertificates().size} certificates")
+    }
+
+    /**
+     * Implementation of TrustSourceProvider.invoke
+     * Retrieves the X5CShouldBe for the given document type.
+     */
+    override fun invoke(type: String): X5CShouldBe? {
+        return x5CShouldBeMap.entries
+            .firstOrNull { (pattern, _) -> pattern.matches(type) }
+            ?.value
     }
 }
