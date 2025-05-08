@@ -20,30 +20,17 @@ import arrow.core.toOption
 import io.ktor.util.collections.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.security.cert.X509Certificate
 
 data class TrustSources(
     private val x5CShouldBeMap: ConcurrentMap<Regex, X5CShouldBe> = ConcurrentMap(),
 ) {
     private val logger: Logger = LoggerFactory.getLogger(TrustSources::class.java)
 
-    fun forType(docType: String): Option<X5CShouldBe> {
+    fun forType(type: String): Option<X5CShouldBe> {
         return x5CShouldBeMap.entries
-            .firstOrNull { (pattern, _) -> pattern.matches(docType) }
+            .firstOrNull { (pattern, _) -> pattern.matches(type) }
             ?.value
             .toOption()
-    }
-
-    /**
-     * Updates trust sources for a specific pattern with the given certificates
-     */
-    fun updateWithCertificates(pattern: Regex, certificates: List<X509Certificate>) {
-        x5CShouldBeMap[pattern] = when (val existing = x5CShouldBeMap[pattern]) {
-            is X5CShouldBe.Trusted -> X5CShouldBe(certificates, existing.customizePKIX)
-            else -> X5CShouldBe.Ignored
-        }
-
-        logger.info("TrustSources updated for pattern $pattern with ${certificates.size} certificates")
     }
 
     fun updateWithX5CShouldBe(pattern: Regex, x5CShouldBe: X5CShouldBe) {

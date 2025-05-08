@@ -24,8 +24,8 @@ import eu.europa.esig.dss.spi.client.http.IgnoreDataLoader
 import eu.europa.esig.dss.spi.tsl.TrustedListsCertificateSource
 import eu.europa.esig.dss.spi.x509.KeyStoreCertificateSource
 import eu.europa.esig.dss.tsl.cache.CacheCleaner
+import eu.europa.esig.dss.tsl.function.GrantedOrRecognizedAtNationalLevelTrustAnchorPeriodPredicate
 import eu.europa.esig.dss.tsl.job.TLValidationJob
-import eu.europa.esig.dss.tsl.sha2.Sha2FileCacheDataLoader
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.ExpirationAndSignatureCheckStrategy
 import eu.europa.esig.trustedlist.jaxb.tsl.TSPServiceType
@@ -51,17 +51,15 @@ class FetchLOTLCertificatesDSS() : FetchLOTLCertificates {
         val tlCacheDirectory = File(System.getProperty("java.io.tmpdir")) // TODO GD: make configurable
 
         val offlineLoader: DSSCacheFileLoader = FileCacheDataLoader().apply {
-            setCacheExpirationTime(24 * 60 * 60 * 1000) // TODO GD: make configurable
+            setCacheExpirationTime(24 * 60 * 60 * 1000)
             setFileCacheDirectory(tlCacheDirectory)
             dataLoader = IgnoreDataLoader()
         }
 
         val onlineLoader: DSSCacheFileLoader = FileCacheDataLoader().apply {
-            setCacheExpirationTime(-1) // control cache by Sha2FileCacheDataLoader
+            setCacheExpirationTime(24 * 60 * 60 * 1000)
             setFileCacheDirectory(tlCacheDirectory)
             dataLoader = CommonsDataLoader()
-        }.also {
-            Sha2FileCacheDataLoader.initSha2DailyUpdateDataLoader(it)
         }
 
         val cacheCleaner = CacheCleaner().apply {
@@ -75,9 +73,7 @@ class FetchLOTLCertificatesDSS() : FetchLOTLCertificates {
             setOfflineDataLoader(offlineLoader)
             setOnlineDataLoader(onlineLoader)
             setTrustedListCertificateSource(trustedListsCertificateSource)
-            setSynchronizationStrategy(
-                ExpirationAndSignatureCheckStrategy(),
-            )
+            setSynchronizationStrategy(ExpirationAndSignatureCheckStrategy())
             setCacheCleaner(cacheCleaner)
         }
 
@@ -97,6 +93,7 @@ private fun lotlSource(url: URL, serviceTypeFilter: String?, keystoreConfig: Tru
         lotlSource.certificateSource = lotlCertificateSource(it).getOrNull()
     }
     lotlSource.isPivotSupport = true
+    lotlSource.trustAnchorValidityPredicate = GrantedOrRecognizedAtNationalLevelTrustAnchorPeriodPredicate()
     lotlSource.tlVersions = listOf(5, 6)
     serviceTypeFilter?.let {
         lotlSource.trustServicePredicate = trustServicePredicate(it)
