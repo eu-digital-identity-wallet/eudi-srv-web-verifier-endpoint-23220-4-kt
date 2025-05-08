@@ -82,7 +82,6 @@ internal data class MsoMdocFormatTO(
  */
 internal fun VpFormats.toJsonObject(): JsonObject = buildJsonObject {
     val sdJwtVcFormatTO = jsonSupport.encodeToJsonElement(SdJwtVcFormatTO(sdJwtVc.sdJwtAlgorithms, sdJwtVc.kbJwtAlgorithms))
-    put(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, sdJwtVcFormatTO)
     put(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, sdJwtVcFormatTO)
 
     val msoMdocFormatTO = jsonSupport.encodeToJsonElement(MsoMdocFormatTO(msoMdoc.algorithms))
