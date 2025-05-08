@@ -146,33 +146,18 @@ enum class ValidationError {
     InvalidIssuerChain,
 }
 
-enum class ResponseMode {
+enum class FormatMode {
     Json,
     QrCode,
 }
 
 sealed interface InitTransactionResponse {
-    // validation err
-    // qr   ByteArray
-    // json JwtSecuredAuthorizationRequestTO
     /**
      * The return value of successfully [initializing][InitTransaction] a [Presentation] as a QR Code
      *
      */
-    data class QrCodeRequest(val qrCode: ByteArray) : InitTransactionResponse {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as QrCodeRequest
-
-            return qrCode.contentEquals(other.qrCode)
-        }
-
-        override fun hashCode(): Int {
-            return qrCode.contentHashCode()
-        }
-    }
+    @JvmInline
+    value class QrCodeRequest(val qrCode: ByteArray) : InitTransactionResponse
 
     /**
      * The return value of successfully [initializing][InitTransaction] a [Presentation] as a JSON
@@ -222,7 +207,7 @@ fun interface InitTransaction {
 
     suspend operator fun invoke(
         initTransactionTO: InitTransactionTO,
-        responseWay: ResponseMode,
+        format: FormatMode,
     ): Either<ValidationError, InitTransactionResponse>
 }
 
@@ -244,7 +229,10 @@ class InitTransactionLive(
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
 ) : InitTransaction {
 
-    override suspend fun invoke(initTransactionTO: InitTransactionTO, responseWay: ResponseMode): Either<ValidationError, InitTransactionResponse> = either { // TODO: Find a better name
+    override suspend fun invoke(
+        initTransactionTO: InitTransactionTO,
+        format: FormatMode,
+    ): Either<ValidationError, InitTransactionResponse> = either {
         // validate input
         val (nonce, type) = initTransactionTO.toDomain(
             verifierConfig.transactionDataHashAlgorithm,
@@ -274,20 +262,13 @@ class InitTransactionLive(
         )
 
         // create the request, which may update the presentation
-//        val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
-//
-//        storePresentation(updatedPresentation)
-//        logTransactionInitialized(updatedPresentation, request)
+        val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
-        when (responseWay) {
-            ResponseMode.Json -> {
-                val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
-
-                storePresentation(updatedPresentation)
-                logTransactionInitialized(updatedPresentation, request)
-                request
-            }
-            ResponseMode.QrCode -> TODO("Create the qr code byte array")
+        storePresentation(updatedPresentation)
+        logTransactionInitialized(updatedPresentation, request)
+        when (format) {
+            FormatMode.Json -> request
+            FormatMode.QrCode -> TODO("Create the qr code byte array")
         }
     }
 

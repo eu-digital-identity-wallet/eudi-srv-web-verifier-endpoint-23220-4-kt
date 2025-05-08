@@ -41,7 +41,7 @@ internal class VerifierApi(
 
         POST(
             INIT_TRANSACTION_PATH,
-            contentType(APPLICATION_JSON) and accept(APPLICATION_JSON) and accept(IMAGE_PNG), // add png
+            contentType(APPLICATION_JSON) and accept(APPLICATION_JSON, IMAGE_PNG),
             ::handleInitTransaction,
         )
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
@@ -51,14 +51,13 @@ internal class VerifierApi(
 
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
         val input = req.awaitBody<InitTransactionTO>()
-        val acceptHeader = req.headers().accept()
+        val accept = req.headers().accept()
         logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
-        val requestMode = when (acceptHeader) {
-            APPLICATION_JSON -> ResponseMode.Json
-            IMAGE_PNG -> ResponseMode.QrCode
-            else -> null // ??? There is no way reaching this point but compiler is whining
+        val requestMode = when {
+            IMAGE_PNG in accept -> FormatMode.QrCode
+            else -> FormatMode.Json
         }
-        initTransaction(input, requestMode!!).fold(
+        initTransaction(input, requestMode).fold(
             ifRight = {
                 when (it) {
                     is InitTransactionResponse.JwtSecuredAuthorizationRequestTO -> {
