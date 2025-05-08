@@ -20,7 +20,6 @@ import arrow.core.*
 import arrow.core.raise.*
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import id.walt.mdoc.COSECryptoProviderKeyInfo
@@ -52,21 +51,21 @@ sealed interface DocumentError {
     data class X5CNotTrusted(val cause: String?) : DocumentError
     data object DocumentTypeNotMatching : DocumentError
     data object InvalidIssuerSignedItems : DocumentError
-    data object NoMatchingX5CValidator : DocumentError
+    data object NoMatchingX5CShouldBe : DocumentError
 }
 
 class DocumentValidator(
     private val clock: Clock = Clock.systemDefaultZone(),
     private val validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
     private val issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
-    private val trustSources: TrustSources,
+    private val trustSourceProvider: (String) -> X5CShouldBe?,
 ) {
 
     fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> =
         either {
             document.decodeMso()
 
-            val x5CShouldBe = ensureMatchingX5CShouldBe(document, trustSources)
+            val x5CShouldBe = ensureMatchingX5CShouldBe(document, trustSourceProvider)
 
             val issuerChain = ensureTrustedChain(document, x5CShouldBe)
             zipOrAccumulate(
@@ -200,13 +199,7 @@ private fun Raise<DocumentError.X5CNotTrusted>.ensureValidChain(
     return validChain.bind()
 }
 
-private fun Raise<Nel<DocumentError.NoMatchingX5CValidator>>.ensureMatchingX5CShouldBe(
+private fun Raise<Nel<DocumentError.NoMatchingX5CShouldBe>>.ensureMatchingX5CShouldBe(
     document: MDoc,
-    trustSources: TrustSources,
-): X5CShouldBe {
-    val docType = document.docType.value
-
-    val x5CShouldBe = trustSources.forType(docType).getOrNull()
-        ?: raise(DocumentError.NoMatchingX5CValidator.nel())
-    return x5CShouldBe
-}
+    trustSourceProvider: (String) -> X5CShouldBe?,
+): X5CShouldBe = trustSourceProvider(document.docType.value) ?: raise(DocumentError.NoMatchingX5CShouldBe.nel())
