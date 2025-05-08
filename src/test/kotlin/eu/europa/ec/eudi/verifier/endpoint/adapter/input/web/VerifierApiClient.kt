@@ -15,11 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
-import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
-import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -39,16 +38,28 @@ object VerifierApiClient {
         Json.decodeFromString(TestUtils.loadResource(testResource))
 
     @OptIn(ExperimentalSerializationApi::class)
-    fun initTransaction(client: WebTestClient, initTransactionTO: InitTransactionTO): JwtSecuredAuthorizationRequestTO {
-        return client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
+    fun initTransaction(
+        client: WebTestClient,
+        initTransactionTO: InitTransactionTO,
+        format: FormatMode = FormatMode.Json,
+    ): InitTransactionResponse {
+        val accept = when (format) {
+            FormatMode.Json -> MediaType.APPLICATION_JSON
+            FormatMode.QrCode -> MediaType.IMAGE_PNG
+        }
+        val request = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
             .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(accept)
             .bodyValue(initTransactionTO)
             .exchange()
             .expectStatus().isOk()
-            .expectBody<JwtSecuredAuthorizationRequestTO>()
+            .expectBody<String>()
             .returnResult()
             .responseBody!!
+        return when (format) {
+            FormatMode.Json -> jsonSupport.decodeFromString<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(request)
+            FormatMode.QrCode -> jsonSupport.decodeFromString<InitTransactionResponse.QrCodeRequest>(request)
+        }
     }
 
     /**
