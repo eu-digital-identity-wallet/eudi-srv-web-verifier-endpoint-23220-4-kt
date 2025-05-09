@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.test.runTest
@@ -78,7 +79,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     fun `post wallet response (only idToken) - confirm returns 200`() = runTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val presentationId = transactionInitialized.transactionId
@@ -115,7 +117,10 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         ) {
             // given
             val initTransaction = VerifierApiClient.loadInitTransactionTO(presentationDefinition)
-            val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+            val transactionInitialized =
+                assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
+                    VerifierApiClient.initTransaction(client, initTransaction),
+                )
             val presentationId = TransactionId(transactionInitialized.transactionId)
             val requestId =
                 RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
@@ -162,7 +167,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     fun `with response_mode direct_post, direct_post_jwt wallet responses are rejected`() = runTest {
         // given
         val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
@@ -186,7 +192,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 4)
     fun `presentation with dcql query accepts dcql response`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("04-dcql.json")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val presentationId = TransactionId(transactionInitialized.transactionId)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
@@ -211,7 +218,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 5)
     fun `presentation with presentation exchange query rejects dcql response`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("03-presentationDefinition.json")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
@@ -232,7 +240,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 6)
     fun `presentation with dcql query rejects presentation exchange response`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("04-dcql.json")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
@@ -254,7 +263,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 7)
     fun `presentation with dcql query rejects dcql response when credential sets are not satisfied`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("05-dcql.json")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
@@ -275,7 +285,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 8)
     fun `presentation with dcql query accepts dcql response when all required credential sets are satisfied`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("05-dcql.json")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val presentationId = TransactionId(transactionInitialized.transactionId)
         val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)

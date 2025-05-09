@@ -146,38 +146,52 @@ enum class ValidationError {
     InvalidIssuerChain,
 }
 
-/**
- * The return value of successfully [initializing][InitTransaction] a [Presentation]
- *
- */
-@Serializable
-data class JwtSecuredAuthorizationRequestTO(
-    @Required @SerialName("transaction_id") val transactionId: String,
-    @Required @SerialName("client_id") val clientId: ClientId,
-    @SerialName("request") val request: String?,
-    @SerialName("request_uri") val requestUri: String?,
-    @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO?,
-) {
-    companion object {
+enum class Output {
+    Json,
+    QrCode,
+}
 
-        fun byValue(
-            transactionId: String,
-            clientId: ClientId,
-            request: String,
-        ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(transactionId, clientId, request, null, null)
+sealed interface InitTransactionResponse {
+    /**
+     * The return value of successfully [initializing][InitTransaction] a [Presentation] as a QR Code
+     *
+     */
+    @JvmInline
+    value class QrCode(val qrCode: ByteArray) : InitTransactionResponse
 
-        fun byReference(
-            transactionId: String,
-            clientId: ClientId,
-            requestUri: URL,
-            requestUriMethod: RequestUriMethodTO,
-        ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(
-            transactionId,
-            clientId,
-            null,
-            requestUri.toExternalForm(),
-            requestUriMethod,
-        )
+    /**
+     * The return value of successfully [initializing][InitTransaction] a [Presentation] as a JSON
+     *
+     */
+    @Serializable
+    data class JwtSecuredAuthorizationRequestTO(
+        @Required @SerialName("transaction_id") val transactionId: String,
+        @Required @SerialName("client_id") val clientId: ClientId,
+        @SerialName("request") val request: String?,
+        @SerialName("request_uri") val requestUri: String?,
+        @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO?,
+    ) : InitTransactionResponse {
+        companion object {
+
+            fun byValue(
+                transactionId: String,
+                clientId: ClientId,
+                request: String,
+            ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(transactionId, clientId, request, null, null)
+
+            fun byReference(
+                transactionId: String,
+                clientId: ClientId,
+                requestUri: URL,
+                requestUriMethod: RequestUriMethodTO,
+            ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(
+                transactionId,
+                clientId,
+                null,
+                requestUri.toExternalForm(),
+                requestUriMethod,
+            )
+        }
     }
 }
 
@@ -191,7 +205,10 @@ data class JwtSecuredAuthorizationRequestTO(
  */
 fun interface InitTransaction {
 
-    suspend operator fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO>
+    suspend operator fun invoke(
+        initTransactionTO: InitTransactionTO,
+        output: Output,
+    ): Either<ValidationError, InitTransactionResponse>
 }
 
 /**
@@ -212,7 +229,10 @@ class InitTransactionLive(
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
 ) : InitTransaction {
 
-    override suspend fun invoke(initTransactionTO: InitTransactionTO): Either<ValidationError, JwtSecuredAuthorizationRequestTO> = either {
+    override suspend fun invoke(
+        initTransactionTO: InitTransactionTO,
+        output: Output,
+    ): Either<ValidationError, InitTransactionResponse> = either {
         // validate input
         val (nonce, type) = initTransactionTO.toDomain(
             verifierConfig.transactionDataHashAlgorithm,
@@ -246,7 +266,10 @@ class InitTransactionLive(
 
         storePresentation(updatedPresentation)
         logTransactionInitialized(updatedPresentation, request)
-        request
+        when (output) {
+            Output.Json -> request
+            Output.QrCode -> TODO("Create the qr code byte array")
+        }
     }
 
     private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
@@ -271,7 +294,7 @@ class InitTransactionLive(
     private fun createRequest(
         requestedPresentation: Presentation.Requested,
         requestJarOption: EmbedOption<RequestId>,
-    ): Pair<Presentation, JwtSecuredAuthorizationRequestTO> =
+    ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
                 val jwt = createJar(
@@ -283,7 +306,7 @@ class InitTransactionLive(
                 ).getOrThrow()
 
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
-                requestObjectRetrieved to JwtSecuredAuthorizationRequestTO.byValue(
+                requestObjectRetrieved to InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
                     jwt,
@@ -296,7 +319,7 @@ class InitTransactionLive(
                     RequestUriMethod.Get -> RequestUriMethodTO.Get
                     RequestUriMethod.Post -> RequestUriMethodTO.Post
                 }
-                requestedPresentation to JwtSecuredAuthorizationRequestTO.byReference(
+                requestedPresentation to InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
                     requestUri,
@@ -359,7 +382,7 @@ class InitTransactionLive(
             null -> verifierConfig.presentationDefinitionEmbedOption
         }
 
-    private suspend fun logTransactionInitialized(p: Presentation, request: JwtSecuredAuthorizationRequestTO) {
+    private suspend fun logTransactionInitialized(p: Presentation, request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO) {
         val event = PresentationEvent.TransactionInitialized(p.id, p.initiatedAt, request)
         publishPresentationEvent(event)
     }
