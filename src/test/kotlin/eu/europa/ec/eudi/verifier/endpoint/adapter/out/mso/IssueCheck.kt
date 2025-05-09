@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.jwk.JWKSet
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import kotlinx.serialization.json.Json
@@ -81,6 +82,12 @@ val presentation =
 val trusted: X5CShouldBe.Trusted by lazy {
     X5CShouldBe.Trusted(Data.caCerts)
 }
+val trustSources = TrustSources().apply {
+    updateWithX5CShouldBe(
+        Regex(".*"),
+        trusted,
+    )
+}
 
 fun checkIssuerJwkSet() {
     val chain = run {
@@ -103,7 +110,7 @@ fun main() {
     val devRespValidator = DeviceResponseValidator(
         DocumentValidator(
             validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-            x5CShouldBe = trusted,
+            trustSources = trustSources,
             issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
         ),
     )

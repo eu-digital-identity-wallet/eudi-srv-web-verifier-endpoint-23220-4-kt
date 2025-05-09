@@ -20,6 +20,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
 import java.net.URL
+import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.Duration
 
@@ -256,6 +257,7 @@ data class VerifierConfig(
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
+    val trustSourcesConfig: Map<Regex, TrustSourcesConfig>,
 )
 
 /**
@@ -308,3 +310,30 @@ private fun SanType.asInt() =
         SanType.URI -> 6
         SanType.DNS -> 2
     }
+
+sealed interface TrustSourceConfig {
+    data class TrustedListConfig(
+        val location: URL,
+        val serviceTypeFilter: String?,
+        val refreshInterval: String = "0 * * * * *",
+        val keystoreConfig: KeyStoreConfig?,
+    ) : TrustSourceConfig
+
+    data class KeyStoreConfig(
+        val keystorePath: String,
+        val keystoreType: String? = "JKS",
+        val keystorePassword: CharArray? = "".toCharArray(),
+        val keystore: KeyStore,
+    ) : TrustSourceConfig
+}
+
+data class TrustSourcesConfig(
+    val keystore: TrustSourceConfig.KeyStoreConfig?,
+    val trustedList: TrustSourceConfig.TrustedListConfig?,
+) {
+    init {
+        require(keystore != null || trustedList != null) {
+            "At least one of keystore or trustedList must be provided"
+        }
+    }
+}

@@ -48,6 +48,7 @@ class InitTransactionTest {
         clientMetaData = TestContext.clientMetaData,
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
         requestUriMethod = RequestUriMethod.Get,
+        trustSourcesConfig = mapOf(),
     )
 
     @Test
@@ -89,6 +90,7 @@ class InitTransactionTest {
                 clientMetaData = TestContext.clientMetaData,
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                 requestUriMethod = RequestUriMethod.Get,
+                trustSourcesConfig = mapOf(),
             )
 
             val input = InitTransactionTO(
