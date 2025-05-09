@@ -29,10 +29,10 @@ value class Pixels(val size: UInt) {
 
 data class Dimensions(val width: Pixels, val height: Pixels)
 
-/**
- * Using [String] provided along with the [Dimensions] of img
- * Producing a square [PNGImage]
- */
-fun interface QrCodeGeneration {
+fun interface GenerateQrCode {
+
+    /**
+     * Generates a [PNGImage] that contains a QR Code with the provided [data].
+     */
     suspend operator fun invoke(data: String, size: Dimensions): Result<PNGImage>
 }
