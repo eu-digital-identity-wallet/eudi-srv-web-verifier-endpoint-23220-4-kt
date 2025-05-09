@@ -146,7 +146,7 @@ enum class ValidationError {
     InvalidIssuerChain,
 }
 
-enum class FormatMode {
+enum class Output {
     Json,
     QrCode,
 }
@@ -157,7 +157,7 @@ sealed interface InitTransactionResponse {
      *
      */
     @JvmInline
-    value class QrCodeRequest(val qrCode: ByteArray) : InitTransactionResponse
+    value class QrCode(val qrCode: ByteArray) : InitTransactionResponse
 
     /**
      * The return value of successfully [initializing][InitTransaction] a [Presentation] as a JSON
@@ -207,7 +207,7 @@ fun interface InitTransaction {
 
     suspend operator fun invoke(
         initTransactionTO: InitTransactionTO,
-        format: FormatMode,
+        output: Output,
     ): Either<ValidationError, InitTransactionResponse>
 }
 
@@ -231,7 +231,7 @@ class InitTransactionLive(
 
     override suspend fun invoke(
         initTransactionTO: InitTransactionTO,
-        format: FormatMode,
+        output: Output,
     ): Either<ValidationError, InitTransactionResponse> = either {
         // validate input
         val (nonce, type) = initTransactionTO.toDomain(
@@ -266,9 +266,9 @@ class InitTransactionLive(
 
         storePresentation(updatedPresentation)
         logTransactionInitialized(updatedPresentation, request)
-        when (format) {
-            FormatMode.Json -> request
-            FormatMode.QrCode -> TODO("Create the qr code byte array")
+        when (output) {
+            Output.Json -> request
+            Output.QrCode -> TODO("Create the qr code byte array")
         }
     }
 
@@ -306,7 +306,6 @@ class InitTransactionLive(
                 ).getOrThrow()
 
                 val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
-                // TODO: Is this actually ok ?
                 requestObjectRetrieved to InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
@@ -320,7 +319,6 @@ class InitTransactionLive(
                     RequestUriMethod.Get -> RequestUriMethodTO.Get
                     RequestUriMethod.Post -> RequestUriMethodTO.Post
                 }
-                // TODO: Is this actually ok ?
                 requestedPresentation to InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,

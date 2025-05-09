@@ -17,9 +17,9 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import eu.europa.ec.eudi.verifier.endpoint.port.input.FormatMode
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.Output
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -41,11 +41,11 @@ object VerifierApiClient {
     fun initTransaction(
         client: WebTestClient,
         initTransactionTO: InitTransactionTO,
-        format: FormatMode = FormatMode.Json,
+        output: Output = Output.Json,
     ): InitTransactionResponse {
-        val accept = when (format) {
-            FormatMode.Json -> MediaType.APPLICATION_JSON
-            FormatMode.QrCode -> MediaType.IMAGE_PNG
+        val accept = when (output) {
+            Output.Json -> MediaType.APPLICATION_JSON
+            Output.QrCode -> MediaType.IMAGE_PNG
         }
 
         val responseSpec = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
@@ -54,18 +54,18 @@ object VerifierApiClient {
             .bodyValue(initTransactionTO)
             .exchange()
 
-        return when (format) {
-            FormatMode.Json ->
+        return when (output) {
+            Output.Json ->
                 responseSpec.expectStatus().isOk()
                     .expectBody<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>()
                     .returnResult()
                     .responseBody!!
-            FormatMode.QrCode -> {
+            Output.QrCode -> {
                 val qrCode = responseSpec.expectStatus().isOk()
                     .expectBody<ByteArray>()
                     .returnResult()
                     .responseBody!!
-                InitTransactionResponse.QrCodeRequest(qrCode)
+                InitTransactionResponse.QrCode(qrCode)
             }
         }
     }

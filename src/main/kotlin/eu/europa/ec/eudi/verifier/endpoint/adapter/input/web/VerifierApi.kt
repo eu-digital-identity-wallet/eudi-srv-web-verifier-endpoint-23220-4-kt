@@ -52,19 +52,20 @@ internal class VerifierApi(
     private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
         val input = req.awaitBody<InitTransactionTO>()
         val accept = req.headers().accept()
-        logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
-        val requestMode = when {
-            IMAGE_PNG in accept -> FormatMode.QrCode
-            else -> FormatMode.Json
+        val output = when {
+            IMAGE_PNG in accept -> Output.QrCode
+            else -> Output.Json
         }
-        initTransaction(input, requestMode).fold(
+
+        logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
+        initTransaction(input, output).fold(
             ifRight = {
                 when (it) {
                     is InitTransactionResponse.JwtSecuredAuthorizationRequestTO -> {
                         logger.info("Initiated transaction tx ${it.transactionId}")
                         ok().json().bodyValueAndAwait(it)
                     }
-                    is InitTransactionResponse.QrCodeRequest -> {
+                    is InitTransactionResponse.QrCode -> {
                         logger.info("Initiated transaction with qr image")
                         ok().contentType(IMAGE_PNG).bodyValueAndAwait(it.qrCode)
                     }
