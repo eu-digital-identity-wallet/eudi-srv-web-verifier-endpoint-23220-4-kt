@@ -22,8 +22,13 @@ value class Pixels(val size: UInt) {
     init {
         require(size > 0u)
     }
+
     companion object {
-        fun Int.toPixels(): Pixels = Pixels(toUInt())
+        val Int.pixels: Pixels
+            get() = Pixels(toUInt())
+
+        val UInt.pixels: Pixels
+            get() = Pixels(this)
     }
 }
 
