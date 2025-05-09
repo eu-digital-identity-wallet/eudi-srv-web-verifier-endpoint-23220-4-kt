@@ -15,14 +15,24 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode
 
-typealias Data = String
-typealias Pixel = Int
-typealias QRCode = ByteArray
+typealias PNGImage = ByteArray
+
+@JvmInline
+value class Pixels(val size: UInt) {
+    init {
+        require(size > 0u)
+    }
+    companion object {
+        fun Int.toPixels(): Pixels = Pixels(toUInt())
+    }
+}
+
+data class Dimensions(val width: Pixels, val height: Pixels)
 
 /**
- * Using [Data] provided along with the [Pixel] of img side size
- * Producing a square [QRCode]
+ * Using [String] provided along with the [Dimensions] of img
+ * Producing a square [PNGImage]
  */
 fun interface QrCodeGeneration {
-    suspend fun createQrCode(data: Data, sideSize: Pixel): Result<QRCode>
+    suspend operator fun invoke(data: String, size: Dimensions): Result<PNGImage>
 }
