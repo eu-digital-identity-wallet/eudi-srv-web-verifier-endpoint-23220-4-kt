@@ -18,6 +18,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.getOrElse
+import arrow.core.left
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApiClient
@@ -363,7 +364,7 @@ class InitTransactionTest {
             ).copy(transactionData = listOf(transactionData))
 
             val result = useCase(input, FormatMode.Json)
-//            assertEquals(left(), result) //TODO
+            assertEquals(ValidationError.InvalidTransactionData.left(), result)
         }
 
         val withoutType = JsonObject(emptyMap())
@@ -396,7 +397,7 @@ class InitTransactionTest {
             ).copy(transactionData = listOf(transactionData))
 
             val result = useCase(input, FormatMode.Json)
-//            assertEquals(left(), result)TODO
+            assertEquals(ValidationError.InvalidTransactionData.left(), result)
         }
 
         test("00-presentationDefinition.json", "_foo_wa_driver_license")

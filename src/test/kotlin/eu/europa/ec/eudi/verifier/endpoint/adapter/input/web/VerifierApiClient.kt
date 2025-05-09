@@ -15,11 +15,12 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import eu.europa.ec.eudi.verifier.endpoint.port.input.*
-import kotlinx.serialization.ExperimentalSerializationApi
+import eu.europa.ec.eudi.verifier.endpoint.port.input.FormatMode
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.slf4j.Logger
@@ -37,7 +38,6 @@ object VerifierApiClient {
     fun loadInitTransactionTO(testResource: String): InitTransactionTO =
         Json.decodeFromString(TestUtils.loadResource(testResource))
 
-    @OptIn(ExperimentalSerializationApi::class)
     fun initTransaction(
         client: WebTestClient,
         initTransactionTO: InitTransactionTO,
@@ -47,18 +47,26 @@ object VerifierApiClient {
             FormatMode.Json -> MediaType.APPLICATION_JSON
             FormatMode.QrCode -> MediaType.IMAGE_PNG
         }
-        val request = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
+
+        val responseSpec = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(accept)
             .bodyValue(initTransactionTO)
             .exchange()
-            .expectStatus().isOk()
-            .expectBody<String>()
-            .returnResult()
-            .responseBody!!
+
         return when (format) {
-            FormatMode.Json -> jsonSupport.decodeFromString<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(request)
-            FormatMode.QrCode -> jsonSupport.decodeFromString<InitTransactionResponse.QrCodeRequest>(request)
+            FormatMode.Json ->
+                responseSpec.expectStatus().isOk()
+                    .expectBody<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>()
+                    .returnResult()
+                    .responseBody!!
+            FormatMode.QrCode -> {
+                val qrCode = responseSpec.expectStatus().isOk()
+                    .expectBody<ByteArray>()
+                    .returnResult()
+                    .responseBody!!
+                InitTransactionResponse.QrCodeRequest(qrCode)
+            }
         }
     }
 
