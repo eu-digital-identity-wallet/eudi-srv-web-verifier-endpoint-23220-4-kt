@@ -469,9 +469,7 @@
         "format": "uri"
       },
       "AuthorizationRequestScheme": {
-        "type": "string",
-        "nullable": true,
-        "format": "uri"
+        "type": "string"
       },
       "InitIdTokenTransaction": {
         "type": "object",
