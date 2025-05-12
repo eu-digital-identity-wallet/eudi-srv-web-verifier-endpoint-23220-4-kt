@@ -487,7 +487,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             }
         }
 
-    val authorizationRequestSchema = environment.getRequiredProperty("verifier.authorizationRequestSchema")
+    val authorizationRequestSchema = environment.getProperty("verifier.authorizationRequestScheme", "eudi-openid4vp")
 
     return VerifierConfig(
         verifierId = verifierId,
@@ -499,7 +499,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
-        authorizationRequestSchema = authorizationRequestSchema,
+        authorizationRequestScheme = authorizationRequestSchema,
     )
 }
 

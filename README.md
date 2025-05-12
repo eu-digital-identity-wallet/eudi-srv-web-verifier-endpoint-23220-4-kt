@@ -652,6 +652,11 @@ Notes: Provide a value using Java Duration syntax
 Example: `P10D`  
 Default value: `P10D`
 
+Variable: `VERIFIER_AUTHORIZATIONREQUESTSCHEME`  
+Description: The Authorization Request Scheme to be used for the QR code generation process.      
+Example: `eudi-openid4vp`  
+Default value: `eudi-openid4vp`
+
 Variable: `VERIFIER_CLIENTMETADATA_AUTHORIZATIONSIGNEDRESPONSEALG`  
 Description: Accept only Authorization Responses that are _signed_ using this algorithm  
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):

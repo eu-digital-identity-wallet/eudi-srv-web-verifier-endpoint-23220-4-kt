@@ -256,7 +256,7 @@ data class VerifierConfig(
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
-    val authorizationRequestSchema: String,
+    val authorizationRequestScheme: String,
 )
 
 /**

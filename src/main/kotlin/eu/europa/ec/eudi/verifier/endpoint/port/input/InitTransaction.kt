@@ -134,7 +134,7 @@ data class InitTransactionTO(
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
-    @SerialName("request_schema") val requestSchema: String? = null,
+    @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
 )
 
 /**
@@ -251,8 +251,6 @@ class InitTransactionLive(
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
         val issuerChain = issuerChain(initTransactionTO).bind()
 
-        val requestSchema = requestSchema(initTransactionTO)
-
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
             id = generateTransactionId(),
@@ -274,9 +272,10 @@ class InitTransactionLive(
         val response = when (output) {
             Output.Json -> request
             Output.QrCode -> {
+                val requestScheme = authorizationRequestScheme(initTransactionTO)
                 val authorizationRequest = UriComponentsBuilder.newInstance()
                     .apply {
-                        scheme(requestSchema)
+                        scheme(requestScheme)
                         queryParam(OpenId4VPSpec.CLIENT_ID, request.clientId)
                         request.request?.let { queryParam(OpenId4VPSpec.REQUEST, it) }
                         request.requestUri?.let { queryParam(OpenId4VPSpec.REQUEST_URI, it) }
@@ -423,10 +422,12 @@ class InitTransactionLive(
 
     /**
      * Gets a [String] containing the authorization Request Schema for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.authorizationRequestSchema].
+     * If none has been provided, falls back to [VerifierConfig.authorizationRequestScheme].
      */
-    private fun requestSchema(initTransaction: InitTransactionTO): String {
-        return initTransaction.requestSchema ?: verifierConfig.authorizationRequestSchema
+    private fun authorizationRequestScheme(initTransaction: InitTransactionTO): String {
+        return if (initTransaction.authorizationRequestScheme.isNullOrBlank())
+            verifierConfig.authorizationRequestScheme
+        else initTransaction.authorizationRequestScheme
     }
 }
 
