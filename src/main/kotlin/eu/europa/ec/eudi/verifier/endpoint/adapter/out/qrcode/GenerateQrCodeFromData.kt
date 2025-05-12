@@ -15,15 +15,15 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode
 
-import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Dimensions
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.PNGImage
+import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels
 import qrcode.QRCode
 import qrcode.color.Colors
 import qrcode.raw.ErrorCorrectionLevel
 
 object GenerateQrCodeFromData : GenerateQrCode {
-    override suspend operator fun invoke(data: String, size: Dimensions): Result<PNGImage> {
+    override suspend operator fun invoke(data: String, size: Pixels): Result<PNGImage> {
         return kotlin.runCatching {
             QRCode
                 .ofSquares()
