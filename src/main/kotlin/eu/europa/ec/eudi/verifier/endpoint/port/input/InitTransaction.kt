@@ -40,6 +40,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentat
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels.Companion.pixels
+import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.by
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
@@ -272,10 +273,10 @@ class InitTransactionLive(
         val response = when (output) {
             Output.Json -> request
             Output.QrCode -> {
-                val requestScheme = authorizationRequestScheme(initTransactionTO)
+                val scheme = authorizationRequestScheme(initTransactionTO)
                 val authorizationRequest = UriComponentsBuilder.newInstance()
                     .apply {
-                        scheme(requestScheme)
+                        scheme(scheme)
                         queryParam(OpenId4VPSpec.CLIENT_ID, request.clientId)
                         request.request?.let { queryParam(OpenId4VPSpec.REQUEST, it) }
                         request.requestUri?.let { queryParam(OpenId4VPSpec.REQUEST_URI, it) }
@@ -289,7 +290,7 @@ class InitTransactionLive(
                     }.build().toUri()
 
                 InitTransactionResponse.QrCode(
-                    generateQrCode(authorizationRequest.toString(), size = 250.pixels).getOrThrow(),
+                    generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrThrow(),
                 )
             }
         }
