@@ -24,7 +24,7 @@ import qrcode.raw.ErrorCorrectionLevel
 
 object GenerateQrCodeFromData : GenerateQrCode {
     override suspend operator fun invoke(data: String, size: Pixels): Result<PNGImage> {
-        return kotlin.runCatching {
+        return runCatching {
             QRCode
                 .ofSquares()
                 .withColor(Colors.BLACK)

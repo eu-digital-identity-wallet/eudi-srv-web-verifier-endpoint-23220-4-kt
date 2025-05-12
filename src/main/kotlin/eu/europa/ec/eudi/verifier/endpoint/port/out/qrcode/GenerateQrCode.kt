@@ -29,8 +29,6 @@ value class Pixels(val size: UInt) {
 
         val UInt.pixels: Pixels
             get() = Pixels(this)
-
-        fun Pixels.toInt(): Int = size.toInt()
     }
 }
 

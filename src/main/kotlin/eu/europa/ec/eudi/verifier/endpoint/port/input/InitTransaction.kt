@@ -26,7 +26,6 @@ import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
@@ -51,7 +50,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import org.springframework.web.util.UriComponentsBuilder
-import java.net.URI
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -91,10 +89,10 @@ enum class IdTokenTypeTO {
  */
 @Serializable
 enum class RequestUriMethodTO {
-    @SerialName(OpenId4VPSpec.RESPONSE_URI_METHOD_GET)
+    @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD_GET)
     Get,
 
-    @SerialName(OpenId4VPSpec.RESPONSE_URI_METHOD_POST)
+    @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD_POST)
     Post,
 }
 
@@ -232,7 +230,7 @@ class InitTransactionLive(
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
-    private val qrCodeGenerate: GenerateQrCode,
+    private val generateQrCode: GenerateQrCode,
 ) : InitTransaction {
 
     override suspend fun invoke(
@@ -270,42 +268,34 @@ class InitTransactionLive(
         // create the request, which may update the presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
-        storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, request)
-        when (output) {
-            Output.Json -> {
-                request
-            }
+        val response = when (output) {
+            Output.Json -> request
             Output.QrCode -> {
-                val uri = buildUriForQRCode(request, responseMode).toString()
+                val authorizationRequest = UriComponentsBuilder.newInstance()
+                    .apply {
+                        scheme("https")
+                        queryParam(OpenId4VPSpec.CLIENT_ID, request.clientId)
+                        request.request?.let { queryParam(OpenId4VPSpec.REQUEST, it) }
+                        request.requestUri?.let { queryParam(OpenId4VPSpec.REQUEST_URI, it) }
+                        request.requestUriMethod?.let {
+                            val requestUriMethod = when (it) {
+                                RequestUriMethodTO.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
+                                RequestUriMethodTO.Post -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
+                            }
+                            queryParam(OpenId4VPSpec.REQUEST_URI_METHOD, requestUriMethod)
+                        }
+                    }.build().toUri()
+
                 InitTransactionResponse.QrCode(
-                    qrCodeGenerate(jsonSupport.encodeToString(uri), size = 250.pixels).getOrThrow(),
+                    generateQrCode(authorizationRequest.toString(), size = 250.pixels).getOrThrow(),
                 )
             }
         }
-    }
 
-    private fun buildUriForQRCode(
-        request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
-        responseMode: ResponseModeOption,
-    ): URI {
-        println(responseMode)
-        val uriBuilder = UriComponentsBuilder.newInstance()
-            .scheme("https")
-            .host("whathost.eu")
-            .queryParam("clientId", request.clientId)
-            .queryParam("transactionId", request.transactionId)
-        // TODO: Check if this correct(??)
-        when (responseMode) {
-            ResponseModeOption.DirectPostJwt ->
-                uriBuilder
-                    .queryParam("request_uri", request.requestUri)
-                    .queryParam("request_uri_method", request.requestUriMethod.toString())
-            ResponseModeOption.DirectPost ->
-                uriBuilder
-                    .queryParam("request", request.request)
-        }
-        return uriBuilder.build().toUri()
+        storePresentation(updatedPresentation)
+        logTransactionInitialized(updatedPresentation, request)
+
+        response
     }
 
     private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
