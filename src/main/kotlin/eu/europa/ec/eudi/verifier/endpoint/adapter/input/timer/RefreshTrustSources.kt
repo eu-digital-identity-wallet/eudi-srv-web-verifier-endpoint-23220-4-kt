@@ -21,8 +21,9 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourceConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourcesConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.SchedulingConfigurer
 import org.springframework.scheduling.config.CronTask
@@ -35,9 +36,13 @@ class RefreshTrustSources(
     private val verifierConfig: VerifierConfig,
 ) : SchedulingConfigurer {
 
+    val coroutineScope = CoroutineScope(Dispatchers.IO.limitedParallelism(3))
+
     fun initializeTrustSources() {
-        verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
-            trustSourceConfig.refreshTrustSources(regex)
+        coroutineScope.launch {
+            verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
+                trustSourceConfig.refreshTrustSources(regex)
+            }
         }
     }
 
@@ -46,15 +51,20 @@ class RefreshTrustSources(
         verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
             trustSourceConfig.trustedList?.let {
                 taskRegistrar.addCronTask(
-                    CronTask({
-                        trustSourceConfig.refreshTrustSources(regex)
-                    }, it.refreshInterval),
+                    CronTask(
+                        {
+                            coroutineScope.launch {
+                                trustSourceConfig.refreshTrustSources(regex)
+                            }
+                        },
+                        it.refreshInterval,
+                    ),
                 )
             }
         }
     }
 
-    private fun TrustSourcesConfig.refreshTrustSources(regex: Regex) = runCatching {
+    private suspend fun TrustSourcesConfig.refreshTrustSources(regex: Regex) = runCatching {
         val keystoreCertificates = keystore.certificates()
         val lotlCertificates = trustedList.certificates()?.getOrThrow()
         trustSources.updateWithX5CShouldBe(
@@ -66,10 +76,8 @@ class RefreshTrustSources(
         )
     }
 
-    private fun TrustSourceConfig.TrustedListConfig?.certificates() = this?.let {
-        runBlocking(Dispatchers.IO) {
-            fetchLOTLCertificates(location, serviceTypeFilter, keystoreConfig)
-        }
+    private suspend fun TrustSourceConfig.TrustedListConfig?.certificates() = this?.let {
+        fetchLOTLCertificates(location, serviceTypeFilter, keystoreConfig)
     }
 
     private fun TrustSourceConfig.KeyStoreConfig?.certificates() = this?.let {
