@@ -36,8 +36,7 @@ ktor-client-apache = { module = "io.ktor:ktor-client-apache", version.ref = "kto
 jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "statium" }
-zxing = { module = "com.google.zxing:core", version.ref = "zxing" }
-zxing-se = { module = "com.google.zxing:javase", version.ref = "zxing" }
+zxing = { module = "com.google.zxing:javase", version.ref = "zxing" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
