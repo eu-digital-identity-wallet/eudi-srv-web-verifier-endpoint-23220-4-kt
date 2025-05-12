@@ -66,7 +66,8 @@ dependencies {
     implementation(libs.statium) {
         because("Get value in a position of a status list token")
     }
-    implementation(libs.qrcode.kotlin)
+    implementation(libs.zxing)
+    implementation(libs.zxing.se)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)

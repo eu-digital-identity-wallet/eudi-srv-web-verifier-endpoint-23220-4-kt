@@ -20,7 +20,7 @@ jsonpathkt = "2.0.1"
 tink = "1.17.0"
 statium = "0.2.1"
 kover = "0.9.1"
-qrcode-kotlin = "4.4.1"
+zxing = "3.5.3"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -36,7 +36,8 @@ ktor-client-apache = { module = "io.ktor:ktor-client-apache", version.ref = "kto
 jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "statium" }
-qrcode-kotlin = { module = "io.github.g0dkar:qrcode-kotlin", version.ref = "qrcode-kotlin" }
+zxing = { module = "com.google.zxing:core", version.ref = "zxing" }
+zxing-se = { module = "com.google.zxing:javase", version.ref = "zxing" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
