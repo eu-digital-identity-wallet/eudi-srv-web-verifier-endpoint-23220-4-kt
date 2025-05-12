@@ -18,7 +18,6 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Dimensions
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.PNGImage
-import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels.Companion.toInt
 import qrcode.QRCode
 import qrcode.color.Colors
 import qrcode.raw.ErrorCorrectionLevel
@@ -29,8 +28,7 @@ object GenerateQrCodeFromData : GenerateQrCode {
             QRCode
                 .ofSquares()
                 .withColor(Colors.BLACK)
-                .withSize(size.width.toInt())
-                .withErrorCorrectionLevel(ErrorCorrectionLevel.MEDIUM)
+                .withErrorCorrectionLevel(ErrorCorrectionLevel.LOW)
                 .build(data)
                 .renderToBytes()
         }
