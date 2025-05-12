@@ -26,6 +26,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
@@ -38,6 +39,8 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryp
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
+import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
+import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels.Companion.pixels
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
@@ -47,6 +50,8 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
+import org.springframework.web.util.UriComponentsBuilder
+import java.net.URI
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -227,6 +232,7 @@ class InitTransactionLive(
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
+    private val qrCodeGenerate: GenerateQrCode,
 ) : InitTransaction {
 
     override suspend fun invoke(
@@ -267,9 +273,39 @@ class InitTransactionLive(
         storePresentation(updatedPresentation)
         logTransactionInitialized(updatedPresentation, request)
         when (output) {
-            Output.Json -> request
-            Output.QrCode -> TODO("Create the qr code byte array")
+            Output.Json -> {
+                request
+            }
+            Output.QrCode -> {
+                val uri = buildUriForQRCode(request, responseMode).toString()
+                InitTransactionResponse.QrCode(
+                    qrCodeGenerate(jsonSupport.encodeToString(uri), size = 250.pixels).getOrThrow(),
+                )
+            }
         }
+    }
+
+    private fun buildUriForQRCode(
+        request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
+        responseMode: ResponseModeOption,
+    ): URI {
+        println(responseMode)
+        val uriBuilder = UriComponentsBuilder.newInstance()
+            .scheme("https")
+            .host("whathost.eu")
+            .queryParam("clientId", request.clientId)
+            .queryParam("transactionId", request.transactionId)
+        // TODO: Check if this correct(??)
+        when (responseMode) {
+            ResponseModeOption.DirectPostJwt ->
+                uriBuilder
+                    .queryParam("request_uri", request.requestUri)
+                    .queryParam("request_uri_method", request.requestUriMethod.toString())
+            ResponseModeOption.DirectPost ->
+                uriBuilder
+                    .queryParam("request", request.request)
+        }
+        return uriBuilder.build().toUri()
     }
 
     private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
