@@ -29,6 +29,7 @@ import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.ExpirationAndSignatureCheckStrategy
 import eu.europa.esig.trustedlist.jaxb.tsl.TSPServiceType
+import kotlinx.coroutines.Dispatchers
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.DefaultResourceLoader
@@ -37,56 +38,63 @@ import java.net.URL
 import java.security.cert.X509Certificate
 import java.util.function.Predicate
 
-class FetchLOTLCertificatesDSS() : FetchLOTLCertificates {
+private val logger: Logger = LoggerFactory.getLogger(FetchLOTLCertificatesDSS::class.java)
 
-    private val logger: Logger = LoggerFactory.getLogger(FetchLOTLCertificatesDSS::class.java)
+class FetchLOTLCertificatesDSS() : FetchLOTLCertificates {
 
     override suspend fun invoke(
         url: URL,
         serviceTypeFilter: String?,
         keystoreConfig: TrustSourceConfig.KeyStoreConfig?,
-    ): Result<List<X509Certificate>> = runCatching {
-        val trustedListsCertificateSource = TrustedListsCertificateSource()
+    ): Result<List<X509Certificate>> =
+        with(Dispatchers.IO.limitedParallelism(1)) {
+            runCatching {
+                val trustedListsCertificateSource = TrustedListsCertificateSource()
 
-        val tlCacheDirectory = File(System.getProperty("java.io.tmpdir")) // TODO GD: make configurable
+                val tlCacheDirectory = File(System.getProperty("java.io.tmpdir")) // TODO GD: make configurable
 
-        val offlineLoader: DSSCacheFileLoader = FileCacheDataLoader().apply {
-            setCacheExpirationTime(24 * 60 * 60 * 1000)
-            setFileCacheDirectory(tlCacheDirectory)
-            dataLoader = IgnoreDataLoader()
+                val offlineLoader: DSSCacheFileLoader = FileCacheDataLoader().apply {
+                    setCacheExpirationTime(24 * 60 * 60 * 1000)
+                    setFileCacheDirectory(tlCacheDirectory)
+                    dataLoader = IgnoreDataLoader()
+                }
+
+                val onlineLoader: DSSCacheFileLoader = FileCacheDataLoader().apply {
+                    setCacheExpirationTime(24 * 60 * 60 * 1000)
+                    setFileCacheDirectory(tlCacheDirectory)
+                    dataLoader = CommonsDataLoader()
+                }
+
+                val cacheCleaner = CacheCleaner().apply {
+                    setCleanMemory(true)
+                    setCleanFileSystem(true)
+                    setDSSFileLoader(offlineLoader)
+                }
+
+                val validationJob = TLValidationJob().apply {
+                    setListOfTrustedListSources(lotlSource(url, serviceTypeFilter, keystoreConfig))
+                    setOfflineDataLoader(offlineLoader)
+                    setOnlineDataLoader(onlineLoader)
+                    setTrustedListCertificateSource(trustedListsCertificateSource)
+                    setSynchronizationStrategy(ExpirationAndSignatureCheckStrategy())
+                    setCacheCleaner(cacheCleaner)
+                }
+
+                logger.info("Starting validation job")
+                validationJob.onlineRefresh()
+
+                trustedListsCertificateSource.certificates.map {
+                    it.certificate
+                }
+            }
         }
-
-        val onlineLoader: DSSCacheFileLoader = FileCacheDataLoader().apply {
-            setCacheExpirationTime(24 * 60 * 60 * 1000)
-            setFileCacheDirectory(tlCacheDirectory)
-            dataLoader = CommonsDataLoader()
-        }
-
-        val cacheCleaner = CacheCleaner().apply {
-            setCleanMemory(true)
-            setCleanFileSystem(true)
-            setDSSFileLoader(offlineLoader)
-        }
-
-        val validationJob = TLValidationJob().apply {
-            setListOfTrustedListSources(lotlSource(url, serviceTypeFilter, keystoreConfig))
-            setOfflineDataLoader(offlineLoader)
-            setOnlineDataLoader(onlineLoader)
-            setTrustedListCertificateSource(trustedListsCertificateSource)
-            setSynchronizationStrategy(ExpirationAndSignatureCheckStrategy())
-            setCacheCleaner(cacheCleaner)
-        }
-
-        logger.info("Starting validation job")
-        validationJob.onlineRefresh()
-
-        trustedListsCertificateSource.certificates.map {
-            it.certificate
-        }
-    }
 }
 
-private fun lotlSource(url: URL, serviceTypeFilter: String?, keystoreConfig: TrustSourceConfig.KeyStoreConfig?): LOTLSource {
+private fun lotlSource(
+    url: URL,
+    serviceTypeFilter: String?,
+    keystoreConfig: TrustSourceConfig.KeyStoreConfig?,
+): LOTLSource {
     val lotlSource = LOTLSource()
     lotlSource.url = url.toString()
     keystoreConfig?.let {
@@ -110,7 +118,7 @@ fun lotlCertificateSource(keystoreConfig: TrustSourceConfig.KeyStoreConfig) = ru
     )
 }
 
-private fun trustServicePredicate(serviceTypeFilter: String): Predicate<TSPServiceType> = Predicate<TSPServiceType> {
-        tspServiceType ->
-    tspServiceType.serviceInformation.serviceTypeIdentifier == serviceTypeFilter
-}
+private fun trustServicePredicate(serviceTypeFilter: String): Predicate<TSPServiceType> =
+    Predicate<TSPServiceType> { tspServiceType ->
+        tspServiceType.serviceInformation.serviceTypeIdentifier == serviceTypeFilter
+    }

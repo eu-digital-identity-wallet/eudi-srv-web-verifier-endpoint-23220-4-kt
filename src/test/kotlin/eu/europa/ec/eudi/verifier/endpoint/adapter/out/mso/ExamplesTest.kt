@@ -69,7 +69,7 @@ class ExamplesTest {
 
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant(), issuedAt.zone),
-            trustSourceProvider = trustSources::invoke,
+            provideTrustSource = trustSources::invoke,
         )
         val document = MDoc.fromCBORHex(waltIdExample)
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
@@ -92,7 +92,7 @@ class ExamplesTest {
         }
         val document = issuerSigned().asMDocWithDocType("org.iso.18013.5.1.mDL")
         val documentValidator = DocumentValidator(
-            trustSourceProvider = trustSources::invoke,
+            provideTrustSource = trustSources::invoke,
         )
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
     }

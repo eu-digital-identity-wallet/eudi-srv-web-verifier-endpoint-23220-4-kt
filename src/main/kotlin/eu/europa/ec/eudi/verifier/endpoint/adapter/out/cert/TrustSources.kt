@@ -22,19 +22,19 @@ import org.slf4j.LoggerFactory
 /**
  * Functional interface for providing appropriate X5CShouldBe trust source based on document type.
  */
-fun interface TrustSourceProvider {
+fun interface ProvideTrustSource {
     /**
      * Returns the appropriate X5CShouldBe for the given doctype/vct.
      *
      * @param type The doctype/vct
      * @return The X5CShouldBe configuration for the doctype/vct
      */
-    fun invoke(type: String): X5CShouldBe?
+    operator fun invoke(type: String): X5CShouldBe?
 }
 
 data class TrustSources(
     private val x5CShouldBeMap: ConcurrentMap<Regex, X5CShouldBe> = ConcurrentMap(),
-) : TrustSourceProvider {
+) : ProvideTrustSource {
     private val logger: Logger = LoggerFactory.getLogger(TrustSources::class.java)
 
     fun updateWithX5CShouldBe(pattern: Regex, x5CShouldBe: X5CShouldBe) {
@@ -44,7 +44,7 @@ data class TrustSources(
     }
 
     /**
-     * Implementation of TrustSourceProvider.invoke
+     * Implementation of TrustSourceProvider
      * Retrieves the X5CShouldBe for the given document type.
      */
     override fun invoke(type: String): X5CShouldBe? {
