@@ -120,6 +120,11 @@
                     "$ref": "#/components/examples/TransactionByReference"
                   }
                 }
+              },
+              "image/png": {
+                "schema": {
+                  "type" : "object"
+                }
               }
             }
           },
@@ -463,6 +468,11 @@
         "nullable": false,
         "format": "uri"
       },
+      "AuthorizationRequestScheme": {
+        "type": "string",
+        "nullable": true,
+        "format": "uri"
+      },
       "InitIdTokenTransaction": {
         "type": "object",
         "nullable": false,
@@ -532,6 +542,16 @@
               },
               {
                 "$ref": "#/components/schemas/UriTemplate"
+              }
+            ]
+          },
+          "authorization_request_scheme" : {
+            "allOf": [
+              {
+                "description": "The Authorization Request Scheme to be used for the QR code generation process"
+              },
+              {
+                "$ref": "#/components/schemas/AuthorizationRequestScheme"
               }
             ]
           }
@@ -699,6 +719,16 @@
                 "$ref": "#/components/schemas/IssuerChain"
               }
             ]
+          },
+          "authorization_request_scheme" : {
+            "allOf": [
+              {
+                "description": "The Authorization Request Scheme to be used for the QR code generation process"
+              },
+              {
+                "$ref": "#/components/schemas/AuthorizationRequestScheme"
+              }
+            ]
           }
         },
         "required": [
@@ -825,6 +855,16 @@
               },
               {
                 "$ref": "#/components/schemas/IssuerChain"
+              }
+            ]
+          },
+          "authorization_request_scheme" : {
+            "allOf": [
+              {
+                "description": "The Authorization Request Scheme to be used for the QR code generation process."
+              },
+              {
+                "$ref": "#/components/schemas/AuthorizationRequestScheme"
               }
             ]
           }
