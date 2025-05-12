@@ -167,7 +167,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref(),
             ref(),
-            ref()
+            ref(),
         )
     }
 
