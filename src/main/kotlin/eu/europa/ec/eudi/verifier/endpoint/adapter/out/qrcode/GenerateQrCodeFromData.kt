@@ -15,22 +15,35 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode
 
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.client.j2se.MatrixToImageConfig
+import com.google.zxing.client.j2se.MatrixToImageWriter
+import com.google.zxing.qrcode.QRCodeWriter
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.PNGImage
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels
-import qrcode.QRCode
-import qrcode.color.Colors
-import qrcode.raw.ErrorCorrectionLevel
+import java.io.ByteArrayOutputStream
 
 object GenerateQrCodeFromData : GenerateQrCode {
-    override suspend operator fun invoke(data: String, size: Pixels): Result<PNGImage> {
+    override suspend fun invoke(data: String, size: Pixels): Result<PNGImage> {
         return runCatching {
-            QRCode
-                .ofSquares()
-                .withColor(Colors.BLACK)
-                .withErrorCorrectionLevel(ErrorCorrectionLevel.LOW)
-                .build(data)
-                .renderToBytes()
+            val writer = QRCodeWriter()
+            val matrix = writer.encode(
+                data,
+                BarcodeFormat.QR_CODE,
+                size.size.toInt(),
+                size.size.toInt(),
+                mapOf(
+                    EncodeHintType.CHARACTER_SET to Charsets.UTF_8.name(),
+                    EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
+                ),
+            )
+            ByteArrayOutputStream().use {
+                MatrixToImageWriter.writeToStream(matrix, "PNG", it, MatrixToImageConfig())
+                it.toByteArray()
+            }
         }
     }
 }
