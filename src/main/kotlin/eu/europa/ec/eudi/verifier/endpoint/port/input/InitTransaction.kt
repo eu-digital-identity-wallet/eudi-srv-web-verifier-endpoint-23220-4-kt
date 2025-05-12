@@ -134,6 +134,7 @@ data class InitTransactionTO(
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
+    @SerialName("request_schema") val requestSchema: String? = null,
 )
 
 /**
@@ -250,6 +251,8 @@ class InitTransactionLive(
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
         val issuerChain = issuerChain(initTransactionTO).bind()
 
+        val requestSchema = requestSchema(initTransactionTO)
+
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
             id = generateTransactionId(),
@@ -273,7 +276,7 @@ class InitTransactionLive(
             Output.QrCode -> {
                 val authorizationRequest = UriComponentsBuilder.newInstance()
                     .apply {
-                        scheme("https")
+                        scheme(requestSchema)
                         queryParam(OpenId4VPSpec.CLIENT_ID, request.clientId)
                         request.request?.let { queryParam(OpenId4VPSpec.REQUEST, it) }
                         request.requestUri?.let { queryParam(OpenId4VPSpec.REQUEST_URI, it) }
@@ -417,6 +420,14 @@ class InitTransactionLive(
         Either.catch {
             initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
         }.mapLeft { ValidationError.InvalidIssuerChain }
+
+    /**
+     * Gets a [String] containing the authorization Request Schema for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.authorizationRequestSchema].
+     */
+    private fun requestSchema(initTransaction: InitTransactionTO): String {
+        return initTransaction.requestSchema ?: verifierConfig.authorizationRequestSchema
+    }
 }
 
 internal fun InitTransactionTO.toDomain(

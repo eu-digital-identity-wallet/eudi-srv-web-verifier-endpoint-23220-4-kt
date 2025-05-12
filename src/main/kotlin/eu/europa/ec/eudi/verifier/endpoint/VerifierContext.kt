@@ -487,6 +487,8 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             }
         }
 
+    val authorizationRequestSchema = environment.getRequiredProperty("verifier.authorizationRequestSchema")
+
     return VerifierConfig(
         verifierId = verifierId,
         requestJarOption = requestJarOption,
@@ -497,6 +499,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
+        authorizationRequestSchema = authorizationRequestSchema,
     )
 }
 
