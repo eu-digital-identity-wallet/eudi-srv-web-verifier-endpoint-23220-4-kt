@@ -32,10 +32,14 @@ value class Pixels(val size: UInt) {
     }
 }
 
+data class Dimensions(val width: Pixels, val height: Pixels)
+
+infix fun Pixels.by(height: Pixels): Dimensions = Dimensions(this, height)
+
 fun interface GenerateQrCode {
 
     /**
      * Generates a [PNGImage] that contains a QR Code with the provided [data].
      */
-    suspend operator fun invoke(data: String, size: Pixels): Result<PNGImage>
+    suspend operator fun invoke(data: String, size: Dimensions): Result<PNGImage>
 }
