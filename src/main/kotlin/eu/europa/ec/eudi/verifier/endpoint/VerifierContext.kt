@@ -29,8 +29,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSourc
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
@@ -341,13 +341,13 @@ internal fun beans(clock: Clock) = beans {
 }
 
 private fun BeanSupplierContext.deviceResponseValidator(
-    trustSourceProvider: (String) -> X5CShouldBe?,
+    provideTrustSource: ProvideTrustSource,
 ): DeviceResponseValidator {
     val docValidator = DocumentValidator(
         clock = ref(),
         issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
         validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-        trustSourceProvider = trustSourceProvider,
+        provideTrustSource = provideTrustSource,
     )
     log.info(
         "Created DocumentValidator using: \n\t" +
@@ -358,10 +358,10 @@ private fun BeanSupplierContext.deviceResponseValidator(
 }
 
 private fun BeanSupplierContext.sdJwtVcValidator(
-    trustSourceProvider: (String) -> X5CShouldBe?,
+    provideTrustSource: ProvideTrustSource,
 ): SdJwtVcValidator =
     SdJwtVcValidator(
-        trustSourceProvider = trustSourceProvider,
+        provideTrustSource = provideTrustSource,
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
     )
