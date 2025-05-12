@@ -258,6 +258,7 @@ An endpoint to control the content of the authorization request that will be pre
 - `presentation_definition_mode`: Controls how the presentation definition will be embedded in the request. If 'by_value' it will be embedded inline, if `by_reference` a `presentation_definition_uri` url will be embedded in the request.
 - `wallet_response_redirect_uri_template`: If provided will be used to construct the response to wallet, when it posts its response to the authorization request.   
 - `issuer_chain`: If provided, a PEM encoded X509 Certificate chain (including start and end markers) of a Verifiable Credential Issuer trusted during this Transaction.
+- `authorization_request_scheme`: If provided, it will be used as the schema part of the URI contained inside the QR code
 
 **Usage:**
 
