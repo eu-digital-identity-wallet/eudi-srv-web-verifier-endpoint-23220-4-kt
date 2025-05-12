@@ -43,6 +43,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShou
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
@@ -166,6 +167,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref(),
             ref(),
+            ref()
         )
     }
 
@@ -290,6 +292,11 @@ internal fun beans(clock: Clock) = beans {
             .and(swaggerUi.route)
             .and(utilityApi.route)
     }
+
+    //
+    // QRCode
+    //
+    bean { GenerateQrCodeFromData }
 
     //
     // Other
