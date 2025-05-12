@@ -82,6 +82,7 @@ object TestContext {
     val loadPresentationById = repo.loadPresentationById
     private val storePresentation = repo.storePresentation
     private val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus
+    private val qrCodeGenerator = GenerateQrCodeFromData
 
     fun initTransaction(
         verifierConfig: VerifierConfig,
@@ -101,7 +102,7 @@ object TestContext {
             CreateQueryWalletResponseRedirectUri.Simple,
             repo.publishPresentationEvent,
             ParsePemEncodedX509CertificateChainWithNimbus,
-            GenerateQrCodeFromData,
+            qrCodeGenerator,
         )
 }
 
