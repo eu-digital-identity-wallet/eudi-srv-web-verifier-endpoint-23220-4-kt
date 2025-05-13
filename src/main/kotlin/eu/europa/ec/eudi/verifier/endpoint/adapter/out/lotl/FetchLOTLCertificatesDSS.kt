@@ -15,7 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourceConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.KeyStoreConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
 import eu.europa.esig.dss.service.http.commons.CommonsDataLoader
 import eu.europa.esig.dss.service.http.commons.FileCacheDataLoader
@@ -57,7 +57,7 @@ class FetchLOTLCertificatesDSS(
     override suspend fun invoke(
         url: URL,
         serviceTypeFilter: String?,
-        keystoreConfig: TrustSourceConfig.KeyStoreConfig?,
+        keystoreConfig: KeyStoreConfig?,
     ): Result<List<X509Certificate>> = runCatching {
         val trustedListsCertificateSource = TrustedListsCertificateSource()
 
@@ -108,7 +108,7 @@ class FetchLOTLCertificatesDSS(
     private suspend fun lotlSource(
         url: URL,
         serviceTypeFilter: String?,
-        keystoreConfig: TrustSourceConfig.KeyStoreConfig?,
+        keystoreConfig: KeyStoreConfig?,
     ): LOTLSource = LOTLSource().apply {
         this.url = url.toString()
         keystoreConfig
@@ -124,7 +124,7 @@ class FetchLOTLCertificatesDSS(
         }
     }
 
-    private suspend fun lotlCertificateSource(keystoreConfig: TrustSourceConfig.KeyStoreConfig): Result<KeyStoreCertificateSource> =
+    private suspend fun lotlCertificateSource(keystoreConfig: KeyStoreConfig): Result<KeyStoreCertificateSource> =
         withContext(dispatcher + CoroutineName("LotlCertificateSource-${keystoreConfig.keystorePath}")) {
             runCatching {
                 val resource = DefaultResourceLoader().getResource(keystoreConfig.keystorePath)

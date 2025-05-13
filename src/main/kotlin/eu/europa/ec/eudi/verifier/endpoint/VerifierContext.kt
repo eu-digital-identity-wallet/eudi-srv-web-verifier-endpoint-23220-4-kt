@@ -515,8 +515,8 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
  * Parses the trust sources configuration from the environment.
  * Handles array-like property names: verifier.trustSources[0].pattern, etc.
  */
-private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
-    val trustSourcesConfigMap = mutableMapOf<Regex, TrustSourcesConfig>()
+private fun Environment.trustSources(): Map<Regex, TrustSourceConfig> {
+    val trustSourcesConfigMap = mutableMapOf<Regex, TrustSourceConfig>()
     val prefix = "verifier.trustSources"
 
     var index = 0
@@ -533,16 +533,13 @@ private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
 
             val lotlKeystoreConfig = parseKeyStoreConfig("$indexPrefix.lotl.keystore")
 
-            TrustSourceConfig.TrustedListConfig(location, serviceTypeFilter, refreshInterval, lotlKeystoreConfig)
+            TrustedListConfig(location, serviceTypeFilter, refreshInterval, lotlKeystoreConfig)
         }
 
         // Parse keystore configuration if present
         val keystoreConfig = parseKeyStoreConfig("$indexPrefix.keystore")
 
-        trustSourcesConfigMap[pattern] = TrustSourcesConfig(
-            trustedList = lotlSourceConfig,
-            keystore = keystoreConfig,
-        )
+        trustSourcesConfigMap[pattern] = TrustSourcesConfig(lotlSourceConfig, keystoreConfig)
 
         index++
     }
@@ -580,7 +577,7 @@ private fun Environment.parseKeyStoreConfig(propertyPrefix: String) = getPropert
     val keystorePassword = getProperty("$propertyPrefix.password", "").toCharArray()
     loadKeystore(keystorePath, keystoreType, keystorePassword)
         .onFailure { log.warn("Failed to load keystore from '$keystorePath'", it) }
-        .map { TrustSourceConfig.KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
+        .map { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
         .getOrNull()
 }
 

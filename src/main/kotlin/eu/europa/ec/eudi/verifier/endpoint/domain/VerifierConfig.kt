@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.Ior
 import arrow.core.NonEmptyList
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
@@ -259,7 +260,7 @@ data class VerifierConfig(
     val transactionDataHashAlgorithm: HashAlgorithm,
     val authorizationRequestScheme: String,
     val validation: Validation,
-    val trustSourcesConfig: Map<Regex, TrustSourcesConfig>,
+    val trustSourcesConfig: Map<Regex, TrustSourceConfig>,
 )
 
 /**
@@ -313,29 +314,21 @@ private fun SanType.asInt() =
         SanType.DNS -> 2
     }
 
-sealed interface TrustSourceConfig {
-    data class TrustedListConfig(
-        val location: URL,
-        val serviceTypeFilter: String?,
-        val refreshInterval: String = "0 * * * * *",
-        val keystoreConfig: KeyStoreConfig?,
-    ) : TrustSourceConfig
+typealias TrustSourceConfig = Ior<TrustedListConfig, KeyStoreConfig>
 
-    data class KeyStoreConfig(
-        val keystorePath: String,
-        val keystoreType: String? = "JKS",
-        val keystorePassword: CharArray? = "".toCharArray(),
-        val keystore: KeyStore,
-    ) : TrustSourceConfig
-}
+data class TrustedListConfig(
+    val location: URL,
+    val serviceTypeFilter: String?,
+    val refreshInterval: String = "0 * * * * *",
+    val keystoreConfig: KeyStoreConfig?,
+)
 
-data class TrustSourcesConfig(
-    val keystore: TrustSourceConfig.KeyStoreConfig?,
-    val trustedList: TrustSourceConfig.TrustedListConfig?,
-) {
-    init {
-        require(keystore != null || trustedList != null) {
-            "At least one of keystore or trustedList must be provided"
-        }
-    }
-}
+data class KeyStoreConfig(
+    val keystorePath: String,
+    val keystoreType: String? = "JKS",
+    val keystorePassword: CharArray? = "".toCharArray(),
+    val keystore: KeyStore,
+)
+
+fun TrustSourcesConfig(trustedList: TrustedListConfig?, keystore: KeyStoreConfig?): Ior<TrustedListConfig, KeyStoreConfig> =
+    Ior.fromNullables(trustedList, keystore) ?: error("Either trustedList or keystore must be provided")

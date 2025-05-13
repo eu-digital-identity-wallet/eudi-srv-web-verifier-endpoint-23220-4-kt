@@ -17,8 +17,9 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer
 
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.domain.KeyStoreConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourceConfig
-import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourcesConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
 import kotlinx.coroutines.*
@@ -44,13 +45,12 @@ class RefreshTrustSources(
     override fun configureTasks(taskRegistrar: ScheduledTaskRegistrar) {
         // Configure LOTL refresh tasks for each trust source that has LOTL configuration
         verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
-            trustSourceConfig.trustedList?.let {
+            trustSourceConfig.leftOrNull()?.let {
                 taskRegistrar.addCronTask(
                     CronTask(
                         {
                             CoroutineScope(ioDispatcher + CoroutineName("$regex")).launch {
-                                val certs = trustSourceConfig.fetchCerts()
-                                trustSources.updateWithX5CShouldBe(regex, certs)
+                                updateLotl(regex, trustSourceConfig)
                             }
                         },
                         it.refreshInterval,
@@ -62,24 +62,36 @@ class RefreshTrustSources(
 
     private suspend fun updateLOTLs() =
         withContext(ioDispatcher + CoroutineName("initializing LOTL(s)")) {
-            verifierConfig.trustSourcesConfig.map { (regex, trustSourceConfig) ->
-                launch { trustSources.updateWithX5CShouldBe(regex, trustSourceConfig.fetchCerts()) }
-            }.joinAll()
+            verifierConfig.trustSourcesConfig
+                .map { (regex, trustSourceConfig) ->
+                    launch { updateLotl(regex, trustSourceConfig) }
+                }.joinAll()
         }
 
-    private suspend fun TrustSourcesConfig.fetchCerts(): List<X509Certificate> =
+    private suspend fun updateLotl(regex: Regex, trustSourceConfig: TrustSourceConfig) {
+        val certs = trustSourceConfig.fetchCerts()
+        trustSources.updateWithX5CShouldBe(regex, certs)
+    }
+
+    private suspend fun TrustSourceConfig.fetchCerts(): List<X509Certificate> =
         coroutineScope {
-            suspend fun TrustSourceConfig.TrustedListConfig.lotlCerts(): List<X509Certificate> =
+            suspend fun TrustedListConfig.lotlCerts(): List<X509Certificate> =
                 fetchLOTLCertificates(location, serviceTypeFilter, keystoreConfig).getOrThrow()
 
-            suspend fun TrustSourceConfig.KeyStoreConfig.keyCerts(): List<X509Certificate> =
+            suspend fun KeyStoreConfig.keyCerts(): List<X509Certificate> =
                 withContext(ioDispatcher) {
                     val x5CShouldBe = X5CShouldBe.fromKeystore(keystore)
                     x5CShouldBe.caCertificates()
                 }
 
-            val keystoreCertificates = async { keystore?.keyCerts().orEmpty() }
-            val lotlCertificates = async { trustedList?.lotlCerts().orEmpty() }
-            lotlCertificates.await() + keystoreCertificates.await()
+            fold(
+                fa = { trustedList -> trustedList.lotlCerts() },
+                fb = { keyStore -> keyStore.keyCerts() },
+                fab = { trustedList, keyStore ->
+                    val lotlCerts = async { trustedList.lotlCerts() }
+                    val ksCerts = async { keyStore.keyCerts() }
+                    ksCerts.await() + lotlCerts.await()
+                },
+            )
         }
 }
