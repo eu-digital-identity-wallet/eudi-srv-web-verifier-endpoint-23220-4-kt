@@ -20,12 +20,7 @@ repositories {
     maven {
         url = uri("https://maven.waltid.dev/releases")
         mavenContent {
-        }
-    }
-    maven {
-        url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-        mavenContent {
-            snapshotsOnly()
+            releasesOnly()
         }
     }
 }
