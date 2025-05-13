@@ -67,6 +67,7 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
 import org.slf4j.LoggerFactory
+import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.web.codec.CodecCustomizer
 import org.springframework.context.support.BeanDefinitionDsl.BeanSupplierContext
 import org.springframework.context.support.beans
@@ -547,6 +548,31 @@ private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
     }
 
     return trustSourcesConfigMap
+}
+
+@ConfigurationProperties(prefix = "verifier")
+data class TrustSourcesConfigurationProperties(
+    val trustSources: List<TrustSourceConfigurationProperties> = emptyList(),
+) {
+    data class TrustSourceConfigurationProperties(
+        val pattern: String? = null,
+        val lotl: LotlSourceConfigurationProperties? = null,
+        val keystore: KeystoreProperties? = null,
+    ) {
+
+        data class LotlSourceConfigurationProperties(
+            val location: String? = null,
+            val refreshInterval: String? = null,
+            val serviceTypeFilter: String? = null,
+            val keystore: KeystoreProperties? = null,
+        )
+    }
+
+    data class KeystoreProperties(
+        val path: String? = null,
+        val type: String? = null,
+        val password: String? = null,
+    )
 }
 
 private fun Environment.parseKeyStoreConfig(propertyPrefix: String) = getProperty("$propertyPrefix.path")?.let { keystorePath ->
