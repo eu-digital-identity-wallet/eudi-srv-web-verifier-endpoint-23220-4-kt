@@ -525,7 +525,7 @@ private fun Environment.trustSources(): Map<Regex, TrustSourcesConfig> {
         val pattern = patternStr.toRegex()
 
         // Parse LOTL configuration if present
-        val lotlSourceConfig = getProperty("$indexPrefix.lotl.location")?.let { lotlLocation ->
+        val lotlSourceConfig = getProperty("$indexPrefix.lotl.location")?.takeIf { it.isNotBlank() }?.let { lotlLocation ->
             val location = URI(lotlLocation).toURL()
             val serviceTypeFilter = getProperty("$indexPrefix.lotl.serviceTypeFilter")
             val refreshInterval = getProperty("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
