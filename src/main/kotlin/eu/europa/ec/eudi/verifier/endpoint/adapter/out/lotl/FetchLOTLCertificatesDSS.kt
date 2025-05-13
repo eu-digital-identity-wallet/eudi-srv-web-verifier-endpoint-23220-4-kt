@@ -30,6 +30,7 @@ import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.ExpirationAndSignatureCheckStrategy
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -47,6 +48,7 @@ private val logger: Logger = LoggerFactory.getLogger(FetchLOTLCertificatesDSS::c
 class FetchLOTLCertificatesDSS(
     private val executorService: ExecutorService = Executors.newFixedThreadPool(2),
 ) : FetchLOTLCertificates {
+    private val dispatcher = executorService.asCoroutineDispatcher()
 
     override suspend fun invoke(
         url: URL,
@@ -89,7 +91,9 @@ class FetchLOTLCertificatesDSS(
 
         logger.info("Starting validation job")
         val (certs, duration) = measureTimedValue {
-            validationJob.onlineRefresh()
+            withContext(dispatcher) {
+                validationJob.onlineRefresh()
+            }
 
             trustedListsCertificateSource.certificates.map {
                 it.certificate

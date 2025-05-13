@@ -22,6 +22,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourcesConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
 import kotlinx.coroutines.*
+import org.springframework.beans.factory.InitializingBean
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.SchedulingConfigurer
 import org.springframework.scheduling.config.CronTask
@@ -33,12 +34,11 @@ class RefreshTrustSources(
     private val fetchLOTLCertificates: FetchLOTLCertificates,
     private var trustSources: TrustSources,
     private val verifierConfig: VerifierConfig,
-) : SchedulingConfigurer {
+) : InitializingBean, SchedulingConfigurer {
+    private val ioDispatcher = Dispatchers.IO.limitedParallelism(2)
 
-    val coroutineScope = CoroutineScope(Dispatchers.IO.limitedParallelism(3))
-
-    fun initializeTrustSources() {
-        coroutineScope.launch {
+    override fun afterPropertiesSet() {
+        runBlocking {
             verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
                 trustSourceConfig.refreshTrustSources(regex)
             }
@@ -52,7 +52,7 @@ class RefreshTrustSources(
                 taskRegistrar.addCronTask(
                     CronTask(
                         {
-                            coroutineScope.launch {
+                            runBlocking {
                                 trustSourceConfig.refreshTrustSources(regex)
                             }
                         },
@@ -68,10 +68,11 @@ class RefreshTrustSources(
             suspend fun TrustSourceConfig.TrustedListConfig.lotlCerts(): List<X509Certificate> =
                 fetchLOTLCertificates(location, serviceTypeFilter, keystoreConfig).getOrThrow()
 
-            fun TrustSourceConfig.KeyStoreConfig.keyCerts(): List<X509Certificate> {
-                val x5CShouldBe = X5CShouldBe.fromKeystore(keystore)
-                return x5CShouldBe.caCertificates()
-            }
+            suspend fun TrustSourceConfig.KeyStoreConfig.keyCerts(): List<X509Certificate> =
+                withContext(ioDispatcher) {
+                    val x5CShouldBe = X5CShouldBe.fromKeystore(keystore)
+                    x5CShouldBe.caCertificates()
+                }
 
             val keystoreCertificates = async { keystore?.keyCerts().orEmpty() }
             val lotlCertificates = async { trustedList?.lotlCerts().orEmpty() }
