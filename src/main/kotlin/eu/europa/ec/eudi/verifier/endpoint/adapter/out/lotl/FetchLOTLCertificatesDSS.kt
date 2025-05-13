@@ -28,9 +28,9 @@ import eu.europa.esig.dss.tsl.function.GrantedOrRecognizedAtNationalLevelTrustAn
 import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.ExpirationAndSignatureCheckStrategy
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -38,18 +38,14 @@ import org.springframework.core.io.DefaultResourceLoader
 import java.net.URL
 import java.nio.file.Files
 import java.security.cert.X509Certificate
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.function.Predicate
 import kotlin.time.measureTimedValue
 
 private val logger: Logger = LoggerFactory.getLogger(FetchLOTLCertificatesDSS::class.java)
 
 class FetchLOTLCertificatesDSS(
-    private val executorService: ExecutorService = Executors.newFixedThreadPool(2),
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(2)
 ) : FetchLOTLCertificates {
-    private val dispatcher = executorService.asCoroutineDispatcher()
-
     override suspend fun invoke(
         url: URL,
         serviceTypeFilter: String?,
@@ -57,9 +53,7 @@ class FetchLOTLCertificatesDSS(
     ): Result<List<X509Certificate>> = runCatching {
         val trustedListsCertificateSource = TrustedListsCertificateSource()
 
-        val tlCacheDirectory =
-            Files.createTempDirectory("lotl-cache").toFile()
-        // File(System.getProperty("java.io.tmpdir")) // TODO GD: make configurable
+        val tlCacheDirectory = Files.createTempDirectory("lotl-cache").toFile()
 
         val offlineLoader: DSSCacheFileLoader = FileCacheDataLoader().apply {
             setCacheExpirationTime(24 * 60 * 60 * 1000)
@@ -86,7 +80,6 @@ class FetchLOTLCertificatesDSS(
             setTrustedListCertificateSource(trustedListsCertificateSource)
             setSynchronizationStrategy(ExpirationAndSignatureCheckStrategy())
             setCacheCleaner(cacheCleaner)
-            setExecutorService(executorService)
         }
 
         logger.info("Starting validation job")
@@ -102,37 +95,35 @@ class FetchLOTLCertificatesDSS(
         logger.info("Finished validation job in $duration")
         certs
     }
-}
 
-private suspend fun lotlSource(
-    url: URL,
-    serviceTypeFilter: String?,
-    keystoreConfig: TrustSourceConfig.KeyStoreConfig?,
-): LOTLSource = LOTLSource().apply {
-    this.url = url.toString()
-    keystoreConfig
-        ?.let { lotlCertificateSource(it).getOrNull() }
-        ?.let { certificateSource = it }
-    isPivotSupport = true
-    trustAnchorValidityPredicate = GrantedOrRecognizedAtNationalLevelTrustAnchorPeriodPredicate()
-    tlVersions = tl_versions
-    serviceTypeFilter?.let {
-        trustServicePredicate = Predicate { tspServiceType ->
-            tspServiceType.serviceInformation.serviceTypeIdentifier == it
+    private suspend fun lotlSource(
+        url: URL,
+        serviceTypeFilter: String?,
+        keystoreConfig: TrustSourceConfig.KeyStoreConfig?,
+    ): LOTLSource = LOTLSource().apply {
+        this.url = url.toString()
+        keystoreConfig
+            ?.let { lotlCertificateSource(it).getOrNull() }
+            ?.let { certificateSource = it }
+        isPivotSupport = true
+        trustAnchorValidityPredicate = GrantedOrRecognizedAtNationalLevelTrustAnchorPeriodPredicate()
+        tlVersions = listOf(5, 6)
+        serviceTypeFilter?.let {
+            trustServicePredicate = Predicate { tspServiceType ->
+                tspServiceType.serviceInformation.serviceTypeIdentifier == it
+            }
         }
     }
-}
 
-private val tl_versions = listOf(5, 6)
-
-suspend fun lotlCertificateSource(keystoreConfig: TrustSourceConfig.KeyStoreConfig): Result<KeyStoreCertificateSource> =
-    withContext(Dispatchers.IO + CoroutineName("LotlCertificateSource-${keystoreConfig.keystorePath}")) {
-        runCatching {
-            val resource = DefaultResourceLoader().getResource(keystoreConfig.keystorePath)
-            KeyStoreCertificateSource(
-                resource.inputStream,
-                keystoreConfig.keystoreType,
-                keystoreConfig.keystorePassword,
-            )
+    private suspend fun lotlCertificateSource(keystoreConfig: TrustSourceConfig.KeyStoreConfig): Result<KeyStoreCertificateSource> =
+        withContext(dispatcher + CoroutineName("LotlCertificateSource-${keystoreConfig.keystorePath}")) {
+            runCatching {
+                val resource = DefaultResourceLoader().getResource(keystoreConfig.keystorePath)
+                KeyStoreCertificateSource(
+                    resource.inputStream,
+                    keystoreConfig.keystoreType,
+                    keystoreConfig.keystorePassword,
+                )
+            }
         }
-    }
+}
