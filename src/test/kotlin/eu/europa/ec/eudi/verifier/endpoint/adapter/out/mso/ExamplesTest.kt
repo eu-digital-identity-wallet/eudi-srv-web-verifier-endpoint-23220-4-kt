@@ -22,6 +22,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import id.walt.mdoc.dataelement.toDataElement
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.issuersigned.IssuerSigned
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import java.time.Clock
@@ -57,7 +58,7 @@ val authleteExample =
 class ExamplesTest {
 
     @Test
-    fun `waltId example is valid, skipping x5c checks`() {
+    fun `waltId example is valid, skipping x5c checks`() = runTest {
         val issuedAt = ZonedDateTime.parse("2023-08-02T16:22:19.252519705Z")
 
         val trustSources = TrustSources().apply {
@@ -77,7 +78,7 @@ class ExamplesTest {
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalSerializationApi::class)
     @Test
-    fun `athlete example is valid, skipping x5c checks`() {
+    fun `athlete example is valid, skipping x5c checks`() = runTest {
         fun issuerSigned(): IssuerSigned {
             val base64Dec = Base64.UrlSafe.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
             val cbor = base64Dec.decode(authleteExample)

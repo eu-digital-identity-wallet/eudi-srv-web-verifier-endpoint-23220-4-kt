@@ -28,24 +28,32 @@ import eu.europa.esig.dss.tsl.function.GrantedOrRecognizedAtNationalLevelTrustAn
 import eu.europa.esig.dss.tsl.job.TLValidationJob
 import eu.europa.esig.dss.tsl.source.LOTLSource
 import eu.europa.esig.dss.tsl.sync.ExpirationAndSignatureCheckStrategy
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.DisposableBean
 import org.springframework.core.io.DefaultResourceLoader
 import java.net.URL
 import java.nio.file.Files
 import java.security.cert.X509Certificate
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.function.Predicate
 import kotlin.time.measureTimedValue
 
 private val logger: Logger = LoggerFactory.getLogger(FetchLOTLCertificatesDSS::class.java)
 
 class FetchLOTLCertificatesDSS(
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(2)
-) : FetchLOTLCertificates {
+    private val executorService: ExecutorService = Executors.newFixedThreadPool(4),
+) : FetchLOTLCertificates, DisposableBean {
+    private val dispatcher = executorService.asCoroutineDispatcher()
+
+    override fun destroy() {
+        dispatcher.close()
+    }
+
     override suspend fun invoke(
         url: URL,
         serviceTypeFilter: String?,
@@ -80,6 +88,7 @@ class FetchLOTLCertificatesDSS(
             setTrustedListCertificateSource(trustedListsCertificateSource)
             setSynchronizationStrategy(ExpirationAndSignatureCheckStrategy())
             setCacheCleaner(cacheCleaner)
+            setExecutorService(executorService)
         }
 
         logger.info("Starting validation job")

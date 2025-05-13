@@ -15,7 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
 
-import io.ktor.util.collections.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -29,27 +30,29 @@ fun interface ProvideTrustSource {
      * @param type The doctype/vct
      * @return The X5CShouldBe configuration for the doctype/vct
      */
-    operator fun invoke(type: String): X5CShouldBe?
+    suspend operator fun invoke(type: String): X5CShouldBe?
 }
 
-data class TrustSources(
-    private val x5CShouldBeMap: ConcurrentMap<Regex, X5CShouldBe> = ConcurrentMap(),
-) : ProvideTrustSource {
+class TrustSources : ProvideTrustSource {
     private val logger: Logger = LoggerFactory.getLogger(TrustSources::class.java)
+    private val x5CShouldBeMap = mutableMapOf<Regex, X5CShouldBe>()
+    private val mutex = Mutex()
 
-    fun updateWithX5CShouldBe(pattern: Regex, x5CShouldBe: X5CShouldBe) {
-        x5CShouldBeMap[pattern] = x5CShouldBe
-
-        logger.info("TrustSources updated for pattern $pattern with ${x5CShouldBe.caCertificates().size} certificates")
+    suspend fun updateWithX5CShouldBe(pattern: Regex, x5CShouldBe: X5CShouldBe) {
+        mutex.withLock {
+            x5CShouldBeMap[pattern] = x5CShouldBe
+            logger.info("TrustSources updated for pattern $pattern with ${x5CShouldBe.caCertificates().size} certificates")
+        }
     }
 
     /**
      * Implementation of TrustSourceProvider
      * Retrieves the X5CShouldBe for the given document type.
      */
-    override fun invoke(type: String): X5CShouldBe? {
-        return x5CShouldBeMap.entries
-            .firstOrNull { (pattern, _) -> pattern.matches(type) }
-            ?.value
-    }
+    override suspend fun invoke(type: String): X5CShouldBe? =
+        mutex.withLock {
+            x5CShouldBeMap.entries
+                .firstOrNull { (pattern, _) -> pattern.matches(type) }
+                ?.value
+        }
 }
