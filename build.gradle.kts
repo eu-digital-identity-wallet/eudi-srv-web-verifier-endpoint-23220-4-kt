@@ -67,6 +67,7 @@ dependencies {
         because("Get value in a position of a status list token")
     }
     implementation(libs.zxing)
+    implementation(libs.uri)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)

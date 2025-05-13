@@ -21,6 +21,7 @@ tink = "1.17.0"
 statium = "0.2.1"
 kover = "0.9.1"
 zxing = "3.5.3"
+uri = "0.0.19"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -37,6 +38,7 @@ jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpa
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "statium" }
 zxing = { module = "com.google.zxing:javase", version.ref = "zxing" }
+uri = { module = "com.eygraber:uri-kmp", version.ref = "uri" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }
