@@ -1019,7 +1019,8 @@
           "InvalidWalletResponseTemplate",
           "InvalidTransactionData",
           "UnsupportedFormat",
-          "InvalidIssuerChain"
+          "InvalidIssuerChain",
+          "InvalidAuthorizationScheme"
         ]
       },
       "InitTransactionError": {
