@@ -53,6 +53,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
+import java.net.URI
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -276,22 +277,9 @@ class InitTransactionLive(
             Output.Json -> request
             Output.QrCode -> {
                 val scheme = authorizationRequestScheme(initTransactionTO).bind()
-                val authorizationRequest = Uri.Builder().apply {
-                    scheme(scheme)
-                    authority("")
-                    appendQueryParameter(OpenId4VPSpec.CLIENT_ID, request.clientId)
-                    request.request?.let { appendQueryParameter(OpenId4VPSpec.REQUEST, it) }
-                    request.requestUri?.let { appendQueryParameter(OpenId4VPSpec.REQUEST_URI, it) }
-                    request.requestUriMethod?.let {
-                        val requestUriMethod = when (it) {
-                            RequestUriMethodTO.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
-                            RequestUriMethodTO.Post -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
-                        }
-                        appendQueryParameter(OpenId4VPSpec.REQUEST_URI_METHOD, requestUriMethod)
-                    }
-                }.build().toURI()
+                val authorizationRequest = createAuthorizationRequestUri(scheme, request)
                 InitTransactionResponse.QrCode(
-                    generateQrCode(authorizationRequest.toString(), size = (500.pixels by 500.pixels)).getOrThrow(),
+                    generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrThrow(),
                 )
             }
         }
@@ -552,3 +540,22 @@ private fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwt
 
 private fun VpFormat.MsoMdoc.supports(algorithms: List<JWSAlgorithm>): Boolean =
     this.algorithms.intersect(algorithms.toSet()).isNotEmpty()
+
+private fun createAuthorizationRequestUri(
+    scheme: String,
+    authorizationRequest: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
+): URI =
+    Uri.Builder().apply {
+        scheme(scheme)
+        authority("")
+        appendQueryParameter(OpenId4VPSpec.CLIENT_ID, authorizationRequest.clientId)
+        authorizationRequest.request?.let { appendQueryParameter(OpenId4VPSpec.REQUEST, it) }
+        authorizationRequest.requestUri?.let { appendQueryParameter(OpenId4VPSpec.REQUEST_URI, it) }
+        authorizationRequest.requestUriMethod?.let {
+            val requestUriMethod = when (it) {
+                RequestUriMethodTO.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
+                RequestUriMethodTO.Post -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
+            }
+            appendQueryParameter(OpenId4VPSpec.REQUEST_URI_METHOD, requestUriMethod)
+        }
+    }.build().toURI()
