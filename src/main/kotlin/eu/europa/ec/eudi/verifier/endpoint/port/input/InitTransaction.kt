@@ -150,7 +150,7 @@ enum class ValidationError {
     InvalidTransactionData,
     UnsupportedFormat,
     InvalidIssuerChain,
-    InvalidAuthorizationScheme,
+    InvalidAuthorizationRequestScheme,
 }
 
 enum class Output {
@@ -291,7 +291,7 @@ class InitTransactionLive(
                     }
                 }.build().toURI()
                 InitTransactionResponse.QrCode(
-                    generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrThrow(),
+                    generateQrCode(authorizationRequest.toString(), size = (500.pixels by 500.pixels)).getOrThrow(),
                 )
             }
         }
@@ -423,13 +423,13 @@ class InitTransactionLive(
         }.mapLeft { ValidationError.InvalidIssuerChain }
 
     /**
-     * Gets a [String] containing the authorization Request Schema for the provided [InitTransactionTO].
+     * Gets a [String] containing the authorization Request Scheme for the provided [InitTransactionTO].
      * If none has been provided, falls back to [VerifierConfig.authorizationRequestScheme].
      */
     private fun authorizationRequestScheme(initTransaction: InitTransactionTO): Either<ValidationError, String> = either {
         val scheme = initTransaction.authorizationRequestScheme
             .takeUnless { it.isNullOrBlank() } ?: verifierConfig.authorizationRequestScheme
-        ensure(!scheme.endsWith("://")) { raise(ValidationError.InvalidAuthorizationScheme) }
+        ensure(!scheme.endsWith("://")) { raise(ValidationError.InvalidAuthorizationRequestScheme) }
         scheme
     }
 }
