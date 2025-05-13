@@ -487,9 +487,8 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             }
         }
 
-    val authorizationRequestSchema = environment.getProperty("verifier.authorizationRequestScheme", "eudi-openid4vp").let {
-        require(!it.endsWith("://")) { "'verifier.authorizationRequestScheme' must not contain '://'" }
-        it
+    val authorizationRequestSchema = environment.getProperty("verifier.authorizationRequestScheme", "eudi-openid4vp").also {
+        require(it.endsWith("://")) { "'verifier.authorizationRequestScheme' must not contain '://'" }
     }
 
     return VerifierConfig(
