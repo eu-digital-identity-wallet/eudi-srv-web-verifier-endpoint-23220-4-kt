@@ -19,6 +19,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.security.cert.X509Certificate
 
 /**
  * Functional interface for providing appropriate X5CShouldBe trust source based on document type.
@@ -31,15 +32,31 @@ fun interface ProvideTrustSource {
      * @return The X5CShouldBe configuration for the doctype/vct
      */
     suspend operator fun invoke(type: String): X5CShouldBe?
+
+    companion object {
+        val Ignored: ProvideTrustSource = forAll(X5CShouldBe.Ignored)
+        fun forAll(x5CShouldBe: X5CShouldBe): ProvideTrustSource = ProvideTrustSource { _ -> x5CShouldBe }
+    }
 }
 
-class TrustSources : ProvideTrustSource {
+class TrustSources(
+    private val revocationEnabled: Boolean = false,
+    private val x5CShouldBeMap: MutableMap<Regex, X5CShouldBe> = mutableMapOf(),
+) : ProvideTrustSource {
+    constructor(
+        revocationEnabled: Boolean = false,
+        vararg initial: Pair<Regex, X5CShouldBe>,
+    ) : this(revocationEnabled, initial.toMap(mutableMapOf()))
+
     private val logger: Logger = LoggerFactory.getLogger(TrustSources::class.java)
-    private val x5CShouldBeMap = mutableMapOf<Regex, X5CShouldBe>()
     private val mutex = Mutex()
 
-    suspend fun updateWithX5CShouldBe(pattern: Regex, x5CShouldBe: X5CShouldBe) {
+    suspend fun updateWithX5CShouldBe(pattern: Regex, certs: List<X509Certificate>) {
         mutex.withLock {
+            val x5CShouldBe = X5CShouldBe(
+                rootCACertificates = certs,
+                customizePKIX = { isRevocationEnabled = revocationEnabled },
+            )
             x5CShouldBeMap[pattern] = x5CShouldBe
             logger.info("TrustSources updated for pattern $pattern with ${x5CShouldBe.caCertificates().size} certificates")
         }

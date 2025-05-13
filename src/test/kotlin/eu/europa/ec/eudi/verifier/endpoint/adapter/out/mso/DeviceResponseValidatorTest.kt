@@ -17,7 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import kotlinx.coroutines.test.runTest
 import org.springframework.core.io.DefaultResourceLoader
@@ -103,20 +103,17 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token where the 3d document has an invalid validity info should not fail when skip`() = runTest {
         val validDocuments = run {
-            val trustSources = TrustSources().apply {
-                updateWithX5CShouldBe(
-                    Regex(".*"),
-                    X5CShouldBe.Trusted(Data.caCerts) {
-                        isRevocationEnabled = false
-                        date = Date.from(clock.instant())
-                    },
-                )
-            }
+            val trustSources = ProvideTrustSource.forAll(
+                X5CShouldBe.Trusted(Data.caCerts) {
+                    isRevocationEnabled = false
+                    date = Date.from(clock.instant())
+                },
+            )
 
             val docV = DocumentValidator(
                 clock = clock,
                 validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
-                provideTrustSource = trustSources::invoke,
+                provideTrustSource = trustSources,
             )
             val vpValidator = DeviceResponseValidator(docV)
             val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
@@ -147,14 +144,7 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token having a single document skipping chain validation should be valid`() = runTest {
         val validDocuments = run {
-            val trustSources = TrustSources().apply {
-                updateWithX5CShouldBe(
-                    Regex(".*"),
-                    X5CShouldBe.Ignored,
-                )
-            }
-
-            val docV = DocumentValidator(provideTrustSource = trustSources::invoke)
+            val docV = DocumentValidator(provideTrustSource = ProvideTrustSource.Ignored)
             val vpValidator = DeviceResponseValidator(docV)
             val validated = vpValidator.ensureValid(Data.MdlVP)
             assertNotNull(validated.getOrNull())
@@ -164,22 +154,16 @@ class DeviceResponseValidatorTest {
     }
 }
 
-private suspend fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, clock: Clock): DeviceResponseValidator {
-    val trustSources = TrustSources().apply {
-        updateWithX5CShouldBe(
-            Regex(".*"),
-            X5CShouldBe.Trusted(Data.caCerts) {
-                isRevocationEnabled = false
-                date = Date.from(clock.instant())
-            },
-        )
+private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, clock: Clock): DeviceResponseValidator {
+    val x5CShouldBe = X5CShouldBe.Trusted(Data.caCerts) {
+        isRevocationEnabled = false
+        date = Date.from(clock.instant())
     }
-
     val documentValidator = DocumentValidator(
         clock,
         ValidityInfoShouldBe.NotExpired,
         IssuerSignedItemsShouldBe.Verified,
-        provideTrustSource = trustSources::invoke,
+        provideTrustSource = ProvideTrustSource.forAll(x5CShouldBe),
     )
     return DeviceResponseValidator(documentValidator)
 }

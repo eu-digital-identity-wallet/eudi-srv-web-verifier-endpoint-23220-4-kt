@@ -195,7 +195,7 @@ internal fun beans(clock: Clock) = beans {
     }
 
     // Default DeviceResponseValidator
-    bean { TrustSources() }
+    bean { TrustSources(revocationEnabled = false) }
     bean<DeviceResponseValidator> {
         val trustSources = ref<TrustSources>()
         deviceResponseValidator(trustSources::invoke)
