@@ -260,7 +260,7 @@ internal fun beans(clock: Clock) = beans {
     //
     bean(::ScheduleTimeoutPresentations)
     bean(::ScheduleDeleteOldPresentations)
-    bean { RefreshTrustSources(ref(), ref(), ref()).also { it.initializeTrustSources() } }
+    bean { RefreshTrustSources(ref(), ref(), ref()) }
 
     //
     // Config
