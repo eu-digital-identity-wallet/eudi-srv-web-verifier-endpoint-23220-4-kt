@@ -47,5 +47,6 @@ object GenerateQrCodeFromData : GenerateQrCode {
             }
         }
     }
-    private fun Pixels.toInt(): Int = this.toInt()
 }
+
+private fun Pixels.toInt(): Int = size.toInt()
