@@ -15,7 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.lotl
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourceConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.KeyStoreConfig
 import java.net.URL
 import java.security.cert.X509Certificate
 
@@ -32,6 +32,6 @@ interface FetchLOTLCertificates {
     suspend operator fun invoke(
         url: URL,
         serviceTypeFilter: String? = null,
-        keystoreConfig: TrustSourceConfig.KeyStoreConfig?,
+        keystoreConfig: KeyStoreConfig?,
     ): Result<List<X509Certificate>>
 }
