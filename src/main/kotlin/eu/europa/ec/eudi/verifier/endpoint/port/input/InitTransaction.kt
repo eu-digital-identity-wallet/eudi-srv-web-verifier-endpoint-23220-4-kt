@@ -48,6 +48,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -137,6 +138,7 @@ data class InitTransactionTO(
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
     @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
+    @Transient val output: Output = Output.Json,
 )
 
 /**
@@ -214,7 +216,6 @@ fun interface InitTransaction {
 
     suspend operator fun invoke(
         initTransactionTO: InitTransactionTO,
-        output: Output,
     ): Either<ValidationError, InitTransactionResponse>
 }
 
@@ -239,7 +240,6 @@ class InitTransactionLive(
 
     override suspend fun invoke(
         initTransactionTO: InitTransactionTO,
-        output: Output,
     ): Either<ValidationError, InitTransactionResponse> = either {
         // validate input
         val (nonce, type) = initTransactionTO.toDomain(
@@ -272,7 +272,7 @@ class InitTransactionLive(
         // create the request, which may update the presentation
         val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
 
-        val response = when (output) {
+        val response = when (initTransactionTO.output) {
             Output.Json -> request
             Output.QrCode -> {
                 val scheme = authorizationRequestScheme(initTransactionTO).bind()
