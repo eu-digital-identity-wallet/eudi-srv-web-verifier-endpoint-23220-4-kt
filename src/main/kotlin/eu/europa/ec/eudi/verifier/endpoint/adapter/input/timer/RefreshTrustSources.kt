@@ -38,11 +38,7 @@ class RefreshTrustSources(
     private val ioDispatcher = Dispatchers.IO.limitedParallelism(2)
 
     override fun afterPropertiesSet() {
-        runBlocking {
-            verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
-                trustSourceConfig.refreshTrustSources(regex)
-            }
-        }
+        runBlocking { updateLOTLs() }
     }
 
     override fun configureTasks(taskRegistrar: ScheduledTaskRegistrar) {
@@ -52,8 +48,9 @@ class RefreshTrustSources(
                 taskRegistrar.addCronTask(
                     CronTask(
                         {
-                            runBlocking {
-                                trustSourceConfig.refreshTrustSources(regex)
+                            CoroutineScope(ioDispatcher + CoroutineName("$regex")).launch {
+                                val certs = trustSourceConfig.fetchCerts()
+                                trustSources.updateWithX5CShouldBe(regex, certs)
                             }
                         },
                         it.refreshInterval,
@@ -63,7 +60,14 @@ class RefreshTrustSources(
         }
     }
 
-    private suspend fun TrustSourcesConfig.refreshTrustSources(regex: Regex) =
+    private suspend fun updateLOTLs() =
+        withContext(ioDispatcher + CoroutineName("initializing LOTL(s)")) {
+            verifierConfig.trustSourcesConfig.map { (regex, trustSourceConfig) ->
+                launch { trustSources.updateWithX5CShouldBe(regex, trustSourceConfig.fetchCerts()) }
+            }.joinAll()
+        }
+
+    private suspend fun TrustSourcesConfig.fetchCerts(): List<X509Certificate> =
         coroutineScope {
             suspend fun TrustSourceConfig.TrustedListConfig.lotlCerts(): List<X509Certificate> =
                 fetchLOTLCertificates(location, serviceTypeFilter, keystoreConfig).getOrThrow()
@@ -76,13 +80,6 @@ class RefreshTrustSources(
 
             val keystoreCertificates = async { keystore?.keyCerts().orEmpty() }
             val lotlCertificates = async { trustedList?.lotlCerts().orEmpty() }
-
-            trustSources.updateWithX5CShouldBe(
-                regex,
-                X5CShouldBe(
-                    rootCACertificates = lotlCertificates.await() + keystoreCertificates.await(),
-                    customizePKIX = { isRevocationEnabled = false },
-                ),
-            )
+            lotlCertificates.await() + keystoreCertificates.await()
         }
 }
