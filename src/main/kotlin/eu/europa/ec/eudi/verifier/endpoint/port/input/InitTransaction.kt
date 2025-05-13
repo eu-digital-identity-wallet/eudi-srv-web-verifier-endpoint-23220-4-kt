@@ -429,7 +429,7 @@ class InitTransactionLive(
     private fun authorizationRequestScheme(initTransaction: InitTransactionTO): Either<ValidationError, String> = either {
         val scheme = initTransaction.authorizationRequestScheme
             .takeUnless { it.isNullOrBlank() } ?: verifierConfig.authorizationRequestScheme
-        ensure(!scheme.endsWith("://")) { raise(ValidationError.InvalidAuthorizationRequestScheme) }
+        ensure(!scheme.endsWith("://")) { ValidationError.InvalidAuthorizationRequestScheme }
         scheme
     }
 }
