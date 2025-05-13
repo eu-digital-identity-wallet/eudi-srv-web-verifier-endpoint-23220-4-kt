@@ -62,7 +62,7 @@ class DocumentValidator(
     private val provideTrustSource: ProvideTrustSource,
 ) {
 
-    fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> =
+    suspend fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> =
         either {
             document.decodeMso()
 
@@ -200,7 +200,7 @@ private fun Raise<DocumentError.X5CNotTrusted>.ensureValidChain(
     return validChain.bind()
 }
 
-private fun Raise<Nel<DocumentError.NoMatchingX5CShouldBe>>.ensureMatchingX5CShouldBe(
+private suspend fun Raise<Nel<DocumentError.NoMatchingX5CShouldBe>>.ensureMatchingX5CShouldBe(
     document: MDoc,
     trustSourceProvider: ProvideTrustSource,
 ): X5CShouldBe = trustSourceProvider(document.docType.value) ?: raise(DocumentError.NoMatchingX5CShouldBe.nel())

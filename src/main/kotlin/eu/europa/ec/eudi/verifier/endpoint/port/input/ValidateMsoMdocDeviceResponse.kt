@@ -127,7 +127,7 @@ internal class ValidateMsoMdocDeviceResponse(
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
     private val deviceResponseValidatorFactory: (X5CShouldBe?) -> DeviceResponseValidator,
 ) {
-    operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult {
+    suspend operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult {
         val validator = deviceResponseValidator(issuerChain)
             .getOrElse {
                 return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidIssuerChain())
