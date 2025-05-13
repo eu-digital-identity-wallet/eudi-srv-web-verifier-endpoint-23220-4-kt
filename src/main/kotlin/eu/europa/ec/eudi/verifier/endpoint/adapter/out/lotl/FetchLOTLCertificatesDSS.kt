@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.KeyStoreConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
 import eu.europa.esig.dss.service.http.commons.CommonsDataLoader
 import eu.europa.esig.dss.service.http.commons.FileCacheDataLoader
@@ -35,7 +36,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.core.io.DefaultResourceLoader
-import java.net.URL
 import java.nio.file.Files
 import java.security.cert.X509Certificate
 import java.util.concurrent.ExecutorService
@@ -55,9 +55,7 @@ class FetchLOTLCertificatesDSS(
     }
 
     override suspend fun invoke(
-        url: URL,
-        serviceTypeFilter: String?,
-        keystoreConfig: KeyStoreConfig?,
+        trustedListConfig: TrustedListConfig,
     ): Result<List<X509Certificate>> = runCatching {
         val trustedListsCertificateSource = TrustedListsCertificateSource()
 
@@ -82,7 +80,7 @@ class FetchLOTLCertificatesDSS(
         }
 
         val validationJob = TLValidationJob().apply {
-            setListOfTrustedListSources(lotlSource(url, serviceTypeFilter, keystoreConfig))
+            setListOfTrustedListSources(lotlSource(trustedListConfig))
             setOfflineDataLoader(offlineLoader)
             setOnlineDataLoader(onlineLoader)
             setTrustedListCertificateSource(trustedListsCertificateSource)
@@ -106,18 +104,16 @@ class FetchLOTLCertificatesDSS(
     }
 
     private suspend fun lotlSource(
-        url: URL,
-        serviceTypeFilter: String?,
-        keystoreConfig: KeyStoreConfig?,
+        trustedListConfig: TrustedListConfig,
     ): LOTLSource = LOTLSource().apply {
-        this.url = url.toString()
-        keystoreConfig
+        url = trustedListConfig.location.toExternalForm()
+        trustedListConfig.keystoreConfig
             ?.let { lotlCertificateSource(it).getOrNull() }
             ?.let { certificateSource = it }
         isPivotSupport = true
         trustAnchorValidityPredicate = GrantedOrRecognizedAtNationalLevelTrustAnchorPeriodPredicate()
         tlVersions = listOf(5, 6)
-        serviceTypeFilter?.let {
+        trustedListConfig.serviceTypeFilter?.let {
             trustServicePredicate = Predicate { tspServiceType ->
                 tspServiceType.serviceInformation.serviceTypeIdentifier == it
             }

@@ -76,7 +76,7 @@ class RefreshTrustSources(
     private suspend fun TrustSourceConfig.fetchCerts(): List<X509Certificate> =
         coroutineScope {
             suspend fun TrustedListConfig.lotlCerts(): List<X509Certificate> =
-                fetchLOTLCertificates(location, serviceTypeFilter, keystoreConfig).getOrThrow()
+                fetchLOTLCertificates(this).getOrThrow()
 
             suspend fun KeyStoreConfig.keyCerts(): List<X509Certificate> =
                 withContext(ioDispatcher) {

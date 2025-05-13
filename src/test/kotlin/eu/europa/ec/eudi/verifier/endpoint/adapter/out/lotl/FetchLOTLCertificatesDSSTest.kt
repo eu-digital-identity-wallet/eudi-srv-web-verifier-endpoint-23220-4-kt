@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl
 
+import arrow.core.raise.result
+import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -28,9 +30,12 @@ class FetchLOTLCertificatesDSSTest {
         val fetchLOTLCertificatesDSS = FetchLOTLCertificatesDSS()
 
         val result = fetchLOTLCertificatesDSS(
-            URI("https://ec.europa.eu/tools/lotl/eu-lotl.xml").toURL(),
-            null,
-            null,
+            TrustedListConfig(
+                URI("https://ec.europa.eu/tools/lotl/eu-lotl.xml").toURL(),
+                null,
+                "0 *",
+                keystoreConfig = null,
+            ),
         )
 
         assertTrue(result.isSuccess)
