@@ -22,6 +22,8 @@ import arrow.core.NonEmptyList
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.toNonEmptyListOrNull
+import com.eygraber.uri.Uri
+import com.eygraber.uri.toURI
 import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
@@ -50,7 +52,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
-import org.springframework.web.util.UriComponentsBuilder
 import java.net.URL
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -275,21 +276,20 @@ class InitTransactionLive(
             Output.Json -> request
             Output.QrCode -> {
                 val scheme = authorizationRequestScheme(initTransactionTO).bind()
-                val authorizationRequest = UriComponentsBuilder.newInstance()
-                    .apply {
-                        scheme(scheme)
-                        queryParam(OpenId4VPSpec.CLIENT_ID, request.clientId)
-                        request.request?.let { queryParam(OpenId4VPSpec.REQUEST, it) }
-                        request.requestUri?.let { queryParam(OpenId4VPSpec.REQUEST_URI, it) }
-                        request.requestUriMethod?.let {
-                            val requestUriMethod = when (it) {
-                                RequestUriMethodTO.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
-                                RequestUriMethodTO.Post -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
-                            }
-                            queryParam(OpenId4VPSpec.REQUEST_URI_METHOD, requestUriMethod)
+                val authorizationRequest = Uri.Builder().apply {
+                    scheme(scheme)
+                    authority("")
+                    appendQueryParameter(OpenId4VPSpec.CLIENT_ID, request.clientId)
+                    request.request?.let { appendQueryParameter(OpenId4VPSpec.REQUEST, it) }
+                    request.requestUri?.let { appendQueryParameter(OpenId4VPSpec.REQUEST_URI, it) }
+                    request.requestUriMethod?.let {
+                        val requestUriMethod = when (it) {
+                            RequestUriMethodTO.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
+                            RequestUriMethodTO.Post -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
                         }
-                    }.build().toUri()
-
+                        appendQueryParameter(OpenId4VPSpec.REQUEST_URI_METHOD, requestUriMethod)
+                    }
+                }.build().toURI()
                 InitTransactionResponse.QrCode(
                     generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrThrow(),
                 )
