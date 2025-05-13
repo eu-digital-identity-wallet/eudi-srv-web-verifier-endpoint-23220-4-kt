@@ -426,9 +426,7 @@ class InitTransactionLive(
      * If none has been provided, falls back to [VerifierConfig.authorizationRequestScheme].
      */
     private fun authorizationRequestScheme(initTransaction: InitTransactionTO): String {
-        return if (initTransaction.authorizationRequestScheme.isNullOrBlank())
-            verifierConfig.authorizationRequestScheme
-        else initTransaction.authorizationRequestScheme
+        return initTransaction.authorizationRequestScheme.takeUnless { it.isNullOrBlank() } ?: verifierConfig.authorizationRequestScheme
     }
 }
 
