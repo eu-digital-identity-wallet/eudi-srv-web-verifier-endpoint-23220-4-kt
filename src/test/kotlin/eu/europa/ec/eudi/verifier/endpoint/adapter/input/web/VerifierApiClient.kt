@@ -17,10 +17,10 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
-import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.Output
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.slf4j.Logger
@@ -38,17 +38,36 @@ object VerifierApiClient {
     fun loadInitTransactionTO(testResource: String): InitTransactionTO =
         Json.decodeFromString(TestUtils.loadResource(testResource))
 
-    @OptIn(ExperimentalSerializationApi::class)
-    fun initTransaction(client: WebTestClient, initTransactionTO: InitTransactionTO): JwtSecuredAuthorizationRequestTO {
-        return client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
+    fun initTransaction(
+        client: WebTestClient,
+        initTransactionTO: InitTransactionTO,
+        output: Output = Output.Json,
+    ): InitTransactionResponse {
+        val accept = when (output) {
+            Output.Json -> MediaType.APPLICATION_JSON
+            Output.QrCode -> MediaType.IMAGE_PNG
+        }
+
+        val responseSpec = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
             .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(accept)
             .bodyValue(initTransactionTO)
             .exchange()
-            .expectStatus().isOk()
-            .expectBody<JwtSecuredAuthorizationRequestTO>()
-            .returnResult()
-            .responseBody!!
+
+        return when (output) {
+            Output.Json ->
+                responseSpec.expectStatus().isOk()
+                    .expectBody<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>()
+                    .returnResult()
+                    .responseBody!!
+            Output.QrCode -> {
+                val qrCode = responseSpec.expectStatus().isOk()
+                    .expectBody<ByteArray>()
+                    .returnResult()
+                    .responseBody!!
+                InitTransactionResponse.QrCode(qrCode)
+            }
+        }
     }
 
     /**

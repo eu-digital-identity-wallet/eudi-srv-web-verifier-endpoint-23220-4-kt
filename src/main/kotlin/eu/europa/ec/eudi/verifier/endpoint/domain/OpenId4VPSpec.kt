@@ -27,8 +27,12 @@ object OpenId4VPSpec {
     const val DCQL_QUERY: String = "dcql_query"
     const val TRANSACTION_DATA: String = "transaction_data"
 
-    const val RESPONSE_URI_METHOD_GET: String = "get"
-    const val RESPONSE_URI_METHOD_POST: String = "post"
+    const val CLIENT_ID: String = "client_id"
+    const val REQUEST: String = "request"
+    const val REQUEST_URI: String = "request_uri"
+    const val REQUEST_URI_METHOD: String = "request_uri_method"
+    const val REQUEST_URI_METHOD_GET: String = "get"
+    const val REQUEST_URI_METHOD_POST: String = "post"
 
     const val DIRECT_POST: String = "direct_post"
     const val DIRECT_POST_JWT: String = "direct_post.jwt"

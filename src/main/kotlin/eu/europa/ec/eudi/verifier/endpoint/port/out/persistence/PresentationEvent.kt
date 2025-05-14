@@ -19,7 +19,7 @@ import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.statium.StatusReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import eu.europa.ec.eudi.verifier.endpoint.port.input.JwtSecuredAuthorizationRequestTO
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseAcceptedTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
@@ -33,7 +33,7 @@ sealed interface PresentationEvent {
     data class TransactionInitialized(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
-        val response: JwtSecuredAuthorizationRequestTO,
+        val response: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
     ) : PresentationEvent
 
     data class RequestObjectRetrieved(

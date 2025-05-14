@@ -19,6 +19,7 @@ import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
 import eu.europa.ec.eudi.verifier.endpoint.domain.RFC9101
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -26,6 +27,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 @VerifierApplicationTest
 internal class PresentationDefinitionTest {
@@ -39,7 +41,8 @@ internal class PresentationDefinitionTest {
     fun `post presentation definition returns 200`() {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("00-presentationDefinition.json")
         log.info("initTransaction: $initTransaction")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         log.info("transactionInitialized: $transactionInitialized")
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
@@ -50,7 +53,8 @@ internal class PresentationDefinitionTest {
     fun `get presentation definition returns 200`() {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("00-presentationDefinition.json")
         log.info("initTransaction: $initTransaction")
-        val transactionInitialized = VerifierApiClient.initTransaction(client, initTransaction)
+        val transactionInitialized =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         log.info("transactionInitialized: $transactionInitialized")
         val requestId =
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
