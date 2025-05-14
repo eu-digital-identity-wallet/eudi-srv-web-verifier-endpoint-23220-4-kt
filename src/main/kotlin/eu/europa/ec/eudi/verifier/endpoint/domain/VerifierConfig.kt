@@ -316,9 +316,15 @@ private fun SanType.asInt() =
 
 typealias TrustSourceConfig = Ior<TrustedListConfig, KeyStoreConfig>
 
+enum class ProviderKind(val value: String) {
+    PIDProvider("http://uri.etsi.org/TrstSvc/Svctype/CA/PKC/CertsforOtherTypesOfTS"),
+    QEEAProvider("http://uri.etsi.org/TrstSvc/Svctype/EAA/Q"),
+    PubEAAProvider("http://uri.etsi.org/TrstSvc/Svctype/EAA/Pub-EAA"),
+}
+
 data class TrustedListConfig(
     val location: URL,
-    val serviceTypeFilter: String?,
+    val serviceTypeFilter: ProviderKind?,
     val refreshInterval: String = "0 * * * * *",
     val keystoreConfig: KeyStoreConfig?,
 )

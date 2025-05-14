@@ -115,7 +115,7 @@ class FetchLOTLCertificatesDSS(
         tlVersions = listOf(5, 6)
         trustedListConfig.serviceTypeFilter?.let {
             trustServicePredicate = Predicate { tspServiceType ->
-                tspServiceType.serviceInformation.serviceTypeIdentifier == it
+                tspServiceType.serviceInformation.serviceTypeIdentifier == it.value
             }
         }
     }
