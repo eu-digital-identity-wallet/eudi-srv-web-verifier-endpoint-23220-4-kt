@@ -544,7 +544,14 @@ private fun Environment.trustSources(): Map<Regex, TrustSourceConfig> {
         index++
     }
 
-    return trustSourcesConfigMap
+    return trustSourcesConfigMap.ifEmpty {
+        fallbackTrustSources()
+    }
+}
+
+private fun Environment.fallbackTrustSources(): Map<Regex, TrustSourceConfig> {
+    val keystoreConfig = parseKeyStoreConfig("trustedIssuers.keystore")
+    return mapOf(".*".toRegex() to TrustSourcesConfig(null, keystoreConfig))
 }
 
 @ConfigurationProperties(prefix = "verifier")
