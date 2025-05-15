@@ -87,7 +87,7 @@ private fun SdJwtVerificationException.toSdJwtVcValidationErrorCode(): SdJwtVcVa
         is VerificationError.KeyBindingFailed -> reason.details.toSdJwtVcValidationErrorCode()
         is VerificationError.InvalidDisclosures -> SdJwtVcValidationErrorCode.ContainsInvalidDisclosures
         is VerificationError.UnsupportedHashingAlgorithm -> SdJwtVcValidationErrorCode.ContainsUnsupportedHashingAlgorithm
-        is VerificationError.NonUniqueDisclosures -> SdJwtVcValidationErrorCode.ContainsNonUniqueDisclosures // list of
+        is VerificationError.NonUniqueDisclosures -> SdJwtVcValidationErrorCode.ContainsNonUniqueDisclosures
         VerificationError.NonUniqueDisclosureDigests -> SdJwtVcValidationErrorCode.ContainsNonUniqueDigests
         is VerificationError.MissingDigests -> SdJwtVcValidationErrorCode.ContainsDisclosuresWithNoDigests
         is VerificationError.SdJwtVcError -> reason.error.toSdJwtVcValidationErrorCode()
