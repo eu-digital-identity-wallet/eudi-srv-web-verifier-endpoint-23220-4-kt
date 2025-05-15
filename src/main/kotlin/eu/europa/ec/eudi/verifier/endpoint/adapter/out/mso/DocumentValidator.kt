@@ -20,6 +20,7 @@ import arrow.core.*
 import arrow.core.raise.*
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import id.walt.mdoc.COSECryptoProviderKeyInfo
@@ -51,18 +52,21 @@ sealed interface DocumentError {
     data class X5CNotTrusted(val cause: String?) : DocumentError
     data object DocumentTypeNotMatching : DocumentError
     data object InvalidIssuerSignedItems : DocumentError
+    data object NoMatchingX5CShouldBe : DocumentError
 }
 
 class DocumentValidator(
     private val clock: Clock = Clock.systemDefaultZone(),
     private val validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
     private val issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
-    private val x5CShouldBe: X5CShouldBe,
+    private val provideTrustSource: ProvideTrustSource,
 ) {
 
-    fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> =
+    suspend fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> =
         either {
             document.decodeMso()
+
+            val x5CShouldBe = ensureMatchingX5CShouldBe(document, provideTrustSource)
 
             val issuerChain = ensureTrustedChain(document, x5CShouldBe)
             zipOrAccumulate(
@@ -195,3 +199,8 @@ private fun Raise<DocumentError.X5CNotTrusted>.ensureValidChain(
     }
     return validChain.bind()
 }
+
+private suspend fun Raise<Nel<DocumentError.NoMatchingX5CShouldBe>>.ensureMatchingX5CShouldBe(
+    document: MDoc,
+    trustSourceProvider: ProvideTrustSource,
+): X5CShouldBe = trustSourceProvider(document.docType.value) ?: raise(DocumentError.NoMatchingX5CShouldBe.nel())

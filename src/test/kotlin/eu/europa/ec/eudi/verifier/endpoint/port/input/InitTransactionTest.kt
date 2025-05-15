@@ -49,6 +49,7 @@ class InitTransactionTest {
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
         requestUriMethod = RequestUriMethod.Get,
         authorizationRequestScheme = "eudi-openid4vp",
+        trustSourcesConfig = mapOf(),
     )
 
     @Test
@@ -93,6 +94,7 @@ class InitTransactionTest {
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                 requestUriMethod = RequestUriMethod.Get,
                 authorizationRequestScheme = "eudi-openid4vp",
+                trustSourcesConfig = mapOf(),
             )
 
             val input = InitTransactionTO(
