@@ -324,7 +324,7 @@ enum class ProviderKind(val value: String) {
 data class TrustedListConfig(
     val location: URL,
     val serviceTypeFilter: ProviderKind?,
-    val refreshInterval: String = "0 * * * * *",
+    val refreshInterval: String = "0 0 * * * *",
     val keystoreConfig: KeyStoreConfig?,
 )
 
