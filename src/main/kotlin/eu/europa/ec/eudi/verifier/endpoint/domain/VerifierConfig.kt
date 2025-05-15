@@ -259,8 +259,7 @@ data class VerifierConfig(
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
     val authorizationRequestScheme: String,
-    val validation: Validation,
-    val trustSourcesConfig: Map<Regex, TrustSourceConfig>,
+    val trustSourcesConfig: Map<Regex, TrustSourceConfig>?,
 )
 
 /**

@@ -49,9 +49,6 @@ class InitTransactionTest {
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
         requestUriMethod = RequestUriMethod.Get,
         authorizationRequestScheme = "eudi-openid4vp",
-        validation = Validation(
-            sdJwtVc = Validation.SdJwtVc(false),
-        ),
         trustSourcesConfig = mapOf(),
     )
 
@@ -97,9 +94,6 @@ class InitTransactionTest {
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                 requestUriMethod = RequestUriMethod.Get,
                 authorizationRequestScheme = "eudi-openid4vp",
-                validation = Validation(
-                    sdJwtVc = Validation.SdJwtVc(false),
-                ),
                 trustSourcesConfig = mapOf(),
             )
 

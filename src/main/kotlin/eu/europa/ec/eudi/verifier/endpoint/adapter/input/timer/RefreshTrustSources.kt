@@ -44,7 +44,7 @@ class RefreshTrustSources(
 
     override fun configureTasks(taskRegistrar: ScheduledTaskRegistrar) {
         // Configure LOTL refresh tasks for each trust source that has LOTL configuration
-        verifierConfig.trustSourcesConfig.forEach { (regex, trustSourceConfig) ->
+        verifierConfig.trustSourcesConfig?.forEach { (regex, trustSourceConfig) ->
             trustSourceConfig.leftOrNull()?.let {
                 taskRegistrar.addCronTask(
                     CronTask(
@@ -62,10 +62,14 @@ class RefreshTrustSources(
 
     private suspend fun updateLOTLs() =
         withContext(ioDispatcher + CoroutineName("initializing LOTL(s)")) {
-            verifierConfig.trustSourcesConfig
-                .map { (regex, trustSourceConfig) ->
-                    launch { updateLotl(regex, trustSourceConfig) }
-                }.joinAll()
+            when (verifierConfig.trustSourcesConfig) {
+                null -> trustSources.ignoreAll()
+                else ->
+                    verifierConfig.trustSourcesConfig
+                        .map { (regex, trustSourceConfig) ->
+                            launch { updateLotl(regex, trustSourceConfig) }
+                        }.joinAll()
+            }
         }
 
     private suspend fun updateLotl(regex: Regex, trustSourceConfig: TrustSourceConfig) {
