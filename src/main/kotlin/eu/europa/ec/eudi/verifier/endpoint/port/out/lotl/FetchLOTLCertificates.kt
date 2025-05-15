@@ -24,8 +24,7 @@ import java.security.cert.X509Certificate
 interface FetchLOTLCertificates {
     /**
      * Fetch certificates from a LOTL URL
-     * @param url The LOTL URL
-     * @param serviceTypeFilter Optional filter for service types
+     * @param trustedListConfig Configuration for the trusted list
      * @return Result containing a list of X509 certificates or an exception
      */
     suspend operator fun invoke(

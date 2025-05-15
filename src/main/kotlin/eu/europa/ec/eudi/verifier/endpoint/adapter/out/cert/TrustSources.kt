@@ -43,10 +43,6 @@ class TrustSources(
     private val revocationEnabled: Boolean = false,
     private val x5CShouldBeMap: MutableMap<Regex, X5CShouldBe> = mutableMapOf(),
 ) : ProvideTrustSource {
-    constructor(
-        revocationEnabled: Boolean = false,
-        vararg initial: Pair<Regex, X5CShouldBe>,
-    ) : this(revocationEnabled, initial.toMap(mutableMapOf()))
 
     private val logger: Logger = LoggerFactory.getLogger(TrustSources::class.java)
     private val mutex = Mutex()
@@ -59,6 +55,13 @@ class TrustSources(
             )
             x5CShouldBeMap[pattern] = x5CShouldBe
             logger.info("TrustSources updated for pattern $pattern with ${x5CShouldBe.caCertificates().size} certificates")
+        }
+    }
+
+    suspend fun ignoreAll() {
+        mutex.withLock {
+            x5CShouldBeMap[Regex(".*")] = X5CShouldBe.Ignored
+            logger.info("No trust sources configured. X5CShouldBe is set to Ignored")
         }
     }
 
