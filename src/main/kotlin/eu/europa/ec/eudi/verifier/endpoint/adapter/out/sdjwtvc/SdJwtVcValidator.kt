@@ -38,6 +38,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
+import java.security.cert.X509Certificate
 
 internal enum class SdJwtVcValidationErrorCode {
     IsUnparsable,
@@ -86,7 +87,7 @@ private fun SdJwtVerificationException.toSdJwtVcValidationErrorCode(): SdJwtVcVa
         is VerificationError.KeyBindingFailed -> reason.details.toSdJwtVcValidationErrorCode()
         is VerificationError.InvalidDisclosures -> SdJwtVcValidationErrorCode.ContainsInvalidDisclosures
         is VerificationError.UnsupportedHashingAlgorithm -> SdJwtVcValidationErrorCode.ContainsUnsupportedHashingAlgorithm
-        VerificationError.NonUniqueDisclosures -> SdJwtVcValidationErrorCode.ContainsNonUniqueDisclosures
+        is VerificationError.NonUniqueDisclosures -> SdJwtVcValidationErrorCode.ContainsNonUniqueDisclosures
         VerificationError.NonUniqueDisclosureDigests -> SdJwtVcValidationErrorCode.ContainsNonUniqueDigests
         is VerificationError.MissingDigests -> SdJwtVcValidationErrorCode.ContainsDisclosuresWithNoDigests
         is VerificationError.SdJwtVcError -> reason.error.toSdJwtVcValidationErrorCode()
@@ -119,7 +120,7 @@ internal class SdJwtVcValidator(
 ) {
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
         val x5cValidator = X5CValidator(trustedIssuers)
-        val x509CertificateTrust = X509CertificateTrust { chain ->
+        val x509CertificateTrust = X509CertificateTrust { chain: List<X509Certificate>, _ ->
             chain.toNonEmptyListOrNull()?.let {
                 x5cValidator.ensureTrusted(it).fold(
                     ifLeft = { _ -> false },
