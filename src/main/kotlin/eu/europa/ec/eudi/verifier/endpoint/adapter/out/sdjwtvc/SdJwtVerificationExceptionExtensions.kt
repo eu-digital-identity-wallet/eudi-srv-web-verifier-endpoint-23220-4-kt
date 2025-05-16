@@ -43,9 +43,14 @@ internal val SdJwtVerificationException.description: String
                     KeyBindingError.UnexpectedKeyBindingJwt -> "keybinding jwt was not expected"
                     KeyBindingError.MissingKeyBindingJwt -> "missing keybinding jwt"
                 }
-                is VerificationError.InvalidDisclosures -> "sd-jwt contains invalid disclosures: ${sdJwtError.invalidDisclosures}"
+                is VerificationError.InvalidDisclosures ->
+                    "sd-jwt contains invalid disclosures: ${sdJwtError.invalidDisclosures.map {
+                        "${it.key} : ${it.value.joinToString()}"
+                    }.joinToString()}"
                 is VerificationError.UnsupportedHashingAlgorithm -> "sd-jwt contains an unsupported hash algorithm: ${sdJwtError.algorithm}"
-                is VerificationError.NonUniqueDisclosures -> "sd-jwt contains non-unique disclosures: ${sdJwtError.nonUniqueDisclosures}"
+                is VerificationError.NonUniqueDisclosures ->
+                    "sd-jwt contains non-unique disclosures: " +
+                        sdJwtError.nonUniqueDisclosures.joinToString()
                 VerificationError.NonUniqueDisclosureDigests -> "sd-jwt contains non-unique digests"
                 is VerificationError.MissingDigests -> "sd-jwt contains disclosures for non-existing digests"
                 is VerificationError.SdJwtVcError -> when (val sdJwtVcError = sdJwtError.error) {
