@@ -316,7 +316,7 @@ private fun SanType.asInt() =
 typealias TrustSourceConfig = Ior<TrustedListConfig, KeyStoreConfig>
 
 enum class ProviderKind(val value: String) {
-    PIDProvider("http://uri.etsi.org/TrstSvc/Svctype/CA/PKC/CertsforOtherTypesOfTS"),
+    PIDProvider("http://uri.etsi.org/TrstSvc/Svctype/Provider/PID"),
     QEEAProvider("http://uri.etsi.org/TrstSvc/Svctype/EAA/Q"),
     PubEAAProvider("http://uri.etsi.org/TrstSvc/Svctype/EAA/Pub-EAA"),
 }
