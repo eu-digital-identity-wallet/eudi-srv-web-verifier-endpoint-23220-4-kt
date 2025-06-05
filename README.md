@@ -806,6 +806,20 @@ Description: Alias of the Key to use for JAR signing, in the configured Keystore
 Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
 Description: Password of the Key to use for JAR signing, in the configured Keystore
 
+### Proxy configuration  
+
+Variable: `VERIFIER_HTTP_PROXY_URL`  
+Description: Optional HTTP proxy server to use  
+Example: `http://exmaple.com`
+
+Variable: `VERIFIER_HTTP_PROXY_USERNAME`  
+Description: Username to authenticate against the proxy  
+Example: `username`
+
+Variable: `VERIFIER_HTTP_PROXY_PASSWORD`  
+Description: Password to authenticate against the proxy  
+Example: `passwd`
+
 ## How to contribute
 
 We welcome contributions to this project. To ensure that the process is smooth for everyone

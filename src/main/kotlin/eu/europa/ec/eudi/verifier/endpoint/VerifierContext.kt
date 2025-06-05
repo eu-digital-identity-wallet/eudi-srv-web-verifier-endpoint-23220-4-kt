@@ -22,7 +22,6 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
-import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
@@ -52,8 +51,12 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import io.ktor.client.*
+import io.ktor.client.engine.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -133,17 +136,27 @@ internal fun beans(clock: Clock) = beans {
     //
     // Ktor
     //
+
+    val proxy = env.getProperty("verifier.http.proxy.url")?.let {
+        val url = Url(it)
+        val username = env.getProperty("verifier.http.proxy.username")
+        val password = env.getProperty("verifier.http.proxy.password")
+        HttpProxy(url, username, password)
+    }
+
     profile("self-signed") {
-        log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification")
+        log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification with proxy")
         bean<KtorHttpClientFactory> {
             {
-                createHttpClient(trustSelfSigned = true)
+                createHttpClient(trustSelfSigned = true, httpProxy = proxy)
             }
         }
     }
     profile("!self-signed") {
         bean<KtorHttpClientFactory> {
-            DefaultHttpClientFactory
+            {
+                createHttpClient(httpProxy = proxy)
+            }
         }
     }
 
@@ -202,9 +215,9 @@ internal fun beans(clock: Clock) = beans {
         bean<StatusListTokenValidator> {
             val selfSignedProfileActive = env.activeProfiles.contains("self-signed")
             val httpClientFactory = if (selfSignedProfileActive) {
-                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true) }
+                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true, httpProxy = proxy) }
             } else {
-                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false) }
+                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy) }
             }
             StatusListTokenValidator(httpClientFactory, clock, ref())
         }
@@ -605,8 +618,13 @@ private fun Environment.getOptionalList(
  *
  * @param withJsonContentNegotiation if true, installs ContentNegotiation with JSON support
  * @param trustSelfSigned if true, configures the client to trust self-signed certificates and perform no hostname verification
+ * @param httpProxy If not null, configures the client to use the provided proxy. If authentication provided, append it to the header
  */
-private fun createHttpClient(withJsonContentNegotiation: Boolean = true, trustSelfSigned: Boolean = false): HttpClient =
+private fun createHttpClient(
+    withJsonContentNegotiation: Boolean = true,
+    trustSelfSigned: Boolean = false,
+    httpProxy: HttpProxy? = null,
+): HttpClient =
     HttpClient(Apache) {
         if (withJsonContentNegotiation) {
             install(ContentNegotiation) {
@@ -615,6 +633,9 @@ private fun createHttpClient(withJsonContentNegotiation: Boolean = true, trustSe
         }
         expectSuccess = true
         engine {
+            if (httpProxy != null) {
+                proxy = ProxyBuilder.http(httpProxy.url)
+            }
             followRedirects = true
             if (trustSelfSigned) {
                 customizeClient {
@@ -627,4 +648,22 @@ private fun createHttpClient(withJsonContentNegotiation: Boolean = true, trustSe
                 }
             }
         }
+        if (httpProxy?.username != null) {
+            defaultRequest {
+                val password = httpProxy.password ?: ""
+                val credentials = Base64.encode("${httpProxy.username}:$password")
+                header(HttpHeaders.ProxyAuthorization, "Basic $credentials")
+            }
+        }
     }
+data class HttpProxy(
+    val url: Url,
+    val username: String? = null,
+    val password: String? = null,
+) {
+    init {
+        require(password == null || username != null) {
+            "Password cannot be set if username is null"
+        }
+    }
+}
