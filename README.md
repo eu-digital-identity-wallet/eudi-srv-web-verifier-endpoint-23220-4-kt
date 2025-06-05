@@ -806,16 +806,18 @@ Description: Alias of the Key to use for JAR signing, in the configured Keystore
 Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
 Description: Password of the Key to use for JAR signing, in the configured Keystore
 
+### Proxy configuration  
+
 Variable: `VERIFIER_HTTP_PROXY_URL`  
 Description: Set verifier proxy URL to use  
 Example: `http://exmaple.com`
 
 Variable: `VERIFIER_HTTP_PROXY_USERNAME`  
-Description: Set proxy username for Ktor to use  
+Description: Set proxy username for proxy to use  
 Example: `username`
 
 Variable: `VERIFIER_HTTP_PROXY_PASSWORD`  
-Description: Set proxy password for Ktor to use  
+Description: Set proxy password for proxy to use  
 Example: `passwd`
 
 ## How to contribute

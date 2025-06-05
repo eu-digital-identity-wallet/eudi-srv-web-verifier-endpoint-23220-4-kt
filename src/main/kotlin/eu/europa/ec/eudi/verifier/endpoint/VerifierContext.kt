@@ -145,7 +145,7 @@ internal fun beans(clock: Clock) = beans {
     }
 
     profile("self-signed") {
-        log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification with proxy $proxy")
+        log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification with proxy")
         bean<KtorHttpClientFactory> {
             {
                 createHttpClient(trustSelfSigned = true, httpProxy = proxy)
@@ -153,9 +153,6 @@ internal fun beans(clock: Clock) = beans {
         }
     }
     profile("!self-signed") {
-        log.warn(
-            "Using Ktor HttpClients that does not trust self-signed certificates and perform no hostname verification with proxy $proxy",
-        )
         bean<KtorHttpClientFactory> {
             {
                 createHttpClient(httpProxy = proxy)
@@ -621,6 +618,7 @@ private fun Environment.getOptionalList(
  *
  * @param withJsonContentNegotiation if true, installs ContentNegotiation with JSON support
  * @param trustSelfSigned if true, configures the client to trust self-signed certificates and perform no hostname verification
+ * @param httpProxy If not null, configures the client to use the provided proxy. If authentication provided, append it to the header
  */
 private fun createHttpClient(
     withJsonContentNegotiation: Boolean = true,
@@ -652,7 +650,8 @@ private fun createHttpClient(
         }
         if (httpProxy?.username != null) {
             defaultRequest {
-                val credentials = Base64.encode("${httpProxy.username}:${httpProxy.password}")
+                val password = httpProxy.password ?: ""
+                val credentials = Base64.encode("${httpProxy.username}:$password")
                 header(HttpHeaders.ProxyAuthorization, "Basic $credentials")
             }
         }
