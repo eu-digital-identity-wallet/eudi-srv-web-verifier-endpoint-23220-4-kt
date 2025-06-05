@@ -55,6 +55,8 @@ import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.engine.apache.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -137,14 +139,19 @@ internal fun beans(clock: Clock) = beans {
     //
 
     val trustSelfSigned = env.activeProfiles.contains("self-signed")
-    val proxyUrl = env.getProperty("ktor.proxy.url")?.let { Url(it) }
+    val proxy = env.getProperty("ktor.proxy.url")?.let {
+        val url = Url(it)
+        val username = env.getProperty("ktor.proxy.username")
+        val password = env.getProperty("ktor.proxy.password")
+        AppProxy(url, username, password)
+    }
 
     when {
-        trustSelfSigned && proxyUrl != null -> {
+        trustSelfSigned && proxy != null -> {
             log.warn("Using Ktor HttpClients that trust self-signed certificates, perform no hostname verification, and use proxy")
             bean<KtorHttpClientFactory> {
                 {
-                    createHttpClient(trustSelfSigned = true, httpProxy = proxyUrl)
+                    createHttpClient(trustSelfSigned = true, appProxy = proxy)
                 }
             }
         }
@@ -156,11 +163,11 @@ internal fun beans(clock: Clock) = beans {
                 }
             }
         }
-        proxyUrl != null -> {
+        proxy != null -> {
             log.warn("Using Ktor HttpClients with proxy")
             bean<KtorHttpClientFactory> {
                 {
-                    createHttpClient(httpProxy = proxyUrl)
+                    createHttpClient(appProxy = proxy)
                 }
             }
         }
@@ -633,7 +640,7 @@ private fun Environment.getOptionalList(
 private fun createHttpClient(
     withJsonContentNegotiation: Boolean = true,
     trustSelfSigned: Boolean = false,
-    httpProxy: Url? = null,
+    appProxy: AppProxy? = null,
 ): HttpClient =
     HttpClient(Apache) {
         if (withJsonContentNegotiation) {
@@ -643,8 +650,8 @@ private fun createHttpClient(
         }
         expectSuccess = true
         engine {
-            if (httpProxy != null) {
-                proxy = ProxyBuilder.http(httpProxy)
+            if (appProxy != null) {
+                proxy = ProxyBuilder.http(appProxy.httpProxy)
             }
             followRedirects = true
             if (trustSelfSigned) {
@@ -658,4 +665,21 @@ private fun createHttpClient(
                 }
             }
         }
+        if (appProxy?.username != null) {
+            defaultRequest {
+                val credentials = kotlin.io.encoding.Base64.encode("${appProxy.username}:${appProxy.password}".toByteArray())
+                header(HttpHeaders.ProxyAuthorization, "Basic $credentials")
+            }
+        }
     }
+data class AppProxy(
+    val httpProxy: Url,
+    val username: String? = null,
+    val password: String? = null,
+) {
+    init {
+        require(password == null || username != null) {
+            "Password cannot be set if username is null"
+        }
+    }
+}
