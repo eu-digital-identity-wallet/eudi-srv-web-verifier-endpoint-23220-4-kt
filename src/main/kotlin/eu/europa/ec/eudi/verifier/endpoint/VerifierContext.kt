@@ -136,40 +136,38 @@ internal fun beans(clock: Clock) = beans {
     // Ktor
     //
 
-    profile("self-signed & http-proxy") {
-        log.warn("Using Ktor HttpClients that trust self-signed certificates, perform no hostname verification and uses proxy")
-        val proxyEnabled = env.getProperty("ktor.proxy.url")
-        val proxyUrl = Url(proxyEnabled!!)
-        bean<KtorHttpClientFactory> {
-            {
-                createHttpClient(trustSelfSigned = true, httpProxy = proxyUrl)
+    val trustSelfSigned = env.activeProfiles.contains("self-signed")
+    val proxyUrl = env.getProperty("ktor.proxy.url")?.let { Url(it) }
+
+    when {
+        trustSelfSigned && proxyUrl != null -> {
+            log.warn("Using Ktor HttpClients that trust self-signed certificates, perform no hostname verification, and use proxy")
+            bean<KtorHttpClientFactory> {
+                {
+                    createHttpClient(trustSelfSigned = true, httpProxy = proxyUrl)
+                }
             }
         }
-    }
-
-    profile("self-signed & !http-proxy") {
-        log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification")
-        bean<KtorHttpClientFactory> {
-            {
-                createHttpClient(trustSelfSigned = true)
+        trustSelfSigned -> {
+            log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification")
+            bean<KtorHttpClientFactory> {
+                {
+                    createHttpClient(trustSelfSigned = true)
+                }
             }
         }
-    }
-
-    profile("!self-signed & http-proxy") {
-        log.warn("Using Ktor HttpClients with proxy")
-        val proxyEnabled = env.getProperty("ktor.proxy.url")
-        val proxyUrl = Url(proxyEnabled!!)
-        bean<KtorHttpClientFactory> {
-            {
-                createHttpClient(httpProxy = proxyUrl)
+        proxyUrl != null -> {
+            log.warn("Using Ktor HttpClients with proxy")
+            bean<KtorHttpClientFactory> {
+                {
+                    createHttpClient(httpProxy = proxyUrl)
+                }
             }
         }
-    }
-
-    profile("!self-signed & !http-proxy") {
-        bean<KtorHttpClientFactory> {
-            DefaultHttpClientFactory
+        else -> {
+            bean<KtorHttpClientFactory> {
+                DefaultHttpClientFactory
+            }
         }
     }
 
@@ -661,22 +659,3 @@ private fun createHttpClient(
             }
         }
     }
-
-// private fun abjustHttpClient(){
-//    profile("self-signed") {
-//        log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification")
-//        bean<KtorHttpClientFactory> {
-//            {
-//                val proxyEnabled = env.getProperty("ktor.proxy.url")
-//                if(proxyEnabled.isNullOrEmpty()){
-//                    createHttpClient(trustSelfSigned = true)}
-//                else{
-//                    log.warn("Using Ktor HttpClients with proxy")
-//
-//                    val proxyUrl = Url(proxyEnabled)
-//                    createHttpClient(trustSelfSigned = true, httpProxy = proxyUrl)
-//                }
-//            }
-//        }
-//    }
-// }

@@ -635,7 +635,6 @@ Variable: `SPRING_PROFILES_ACTIVE`
 Description: Comma separated list of Spring Profiles to activate  
 Available profiles:
 * `self-signed`: Configures a Ktor HttpClient that trusts self-signed certificates and performs no hostname verification
-* `http-proxy`: Configures a Ktor HttpClient to use a proxy. It should be used with `ktor.proxy.url`
 
 Variable: `SPRING_WEBFLUX_BASEPATH`  
 Description: Context path for the Verifier Endpoint application.  
@@ -806,6 +805,18 @@ Description: Alias of the Key to use for JAR signing, in the configured Keystore
 
 Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
 Description: Password of the Key to use for JAR signing, in the configured Keystore
+
+Variable: `KTOR_PROXY_URL`  
+Description: Set proxy URL for Ktor to use  
+Example: `http://exmaple.com`
+
+Variable: `KTOR_PROXYL_USERNAME`  
+Description: Set proxy username for Ktor to use  
+Example: TODO
+
+Variable: `KTOR_PROXY_PASSWORD`  
+Description: Set proxy password for Ktor to use  
+Example: TODO
 
 ## How to contribute
 
