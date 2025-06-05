@@ -635,6 +635,7 @@ Variable: `SPRING_PROFILES_ACTIVE`
 Description: Comma separated list of Spring Profiles to activate  
 Available profiles:
 * `self-signed`: Configures a Ktor HttpClient that trusts self-signed certificates and performs no hostname verification
+* `http-proxy`: Configures a Ktor HttpClient to use a proxy. It should be used with `ktor.proxy.url`
 
 Variable: `SPRING_WEBFLUX_BASEPATH`  
 Description: Context path for the Verifier Endpoint application.  
