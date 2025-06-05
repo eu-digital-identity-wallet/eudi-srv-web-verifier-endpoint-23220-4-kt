@@ -75,9 +75,11 @@ class ExamplesTest {
             return Cbor.decodeFromByteArray<IssuerSigned>(cbor)
         }
 
+        val issuedAt = ZonedDateTime.parse("2024-08-02T16:22:19.252519705Z")
         val document = issuerSigned().asMDocWithDocType("org.iso.18013.5.1.mDL")
         val documentValidator = DocumentValidator(
             x5CShouldBe = X5CShouldBe.Ignored,
+            clock = Clock.fixed(issuedAt.toInstant(), issuedAt.zone),
         )
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
     }
