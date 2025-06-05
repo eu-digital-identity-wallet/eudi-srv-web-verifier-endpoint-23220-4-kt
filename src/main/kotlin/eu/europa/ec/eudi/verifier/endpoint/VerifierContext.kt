@@ -22,7 +22,6 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
-import eu.europa.ec.eudi.sdjwt.vc.DefaultHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
@@ -138,42 +137,28 @@ internal fun beans(clock: Clock) = beans {
     // Ktor
     //
 
-    val trustSelfSigned = env.activeProfiles.contains("self-signed")
-    val proxy = env.getProperty("ktor.proxy.url")?.let {
+    val proxy = env.getProperty("verifier.http.proxy.url")?.let {
         val url = Url(it)
-        val username = env.getProperty("ktor.proxy.username")
-        val password = env.getProperty("ktor.proxy.password")
-        AppProxy(url, username, password)
+        val username = env.getProperty("verifier.http.proxy.username")
+        val password = env.getProperty("verifier.http.proxy.password")
+        HttpProxy(url, username, password)
     }
 
-    when {
-        trustSelfSigned && proxy != null -> {
-            log.warn("Using Ktor HttpClients that trust self-signed certificates, perform no hostname verification, and use proxy")
-            bean<KtorHttpClientFactory> {
-                {
-                    createHttpClient(trustSelfSigned = true, appProxy = proxy)
-                }
+    profile("self-signed") {
+        log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification with proxy $proxy")
+        bean<KtorHttpClientFactory> {
+            {
+                createHttpClient(trustSelfSigned = true, httpProxy = proxy)
             }
         }
-        trustSelfSigned -> {
-            log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification")
-            bean<KtorHttpClientFactory> {
-                {
-                    createHttpClient(trustSelfSigned = true)
-                }
-            }
-        }
-        proxy != null -> {
-            log.warn("Using Ktor HttpClients with proxy")
-            bean<KtorHttpClientFactory> {
-                {
-                    createHttpClient(appProxy = proxy)
-                }
-            }
-        }
-        else -> {
-            bean<KtorHttpClientFactory> {
-                DefaultHttpClientFactory
+    }
+    profile("!self-signed") {
+        log.warn(
+            "Using Ktor HttpClients that does not trust self-signed certificates and perform no hostname verification with proxy $proxy",
+        )
+        bean<KtorHttpClientFactory> {
+            {
+                createHttpClient(httpProxy = proxy)
             }
         }
     }
@@ -233,9 +218,9 @@ internal fun beans(clock: Clock) = beans {
         bean<StatusListTokenValidator> {
             val selfSignedProfileActive = env.activeProfiles.contains("self-signed")
             val httpClientFactory = if (selfSignedProfileActive) {
-                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true) }
+                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true, httpProxy = proxy) }
             } else {
-                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false) }
+                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy) }
             }
             StatusListTokenValidator(httpClientFactory, clock, ref())
         }
@@ -640,7 +625,7 @@ private fun Environment.getOptionalList(
 private fun createHttpClient(
     withJsonContentNegotiation: Boolean = true,
     trustSelfSigned: Boolean = false,
-    appProxy: AppProxy? = null,
+    httpProxy: HttpProxy? = null,
 ): HttpClient =
     HttpClient(Apache) {
         if (withJsonContentNegotiation) {
@@ -650,8 +635,8 @@ private fun createHttpClient(
         }
         expectSuccess = true
         engine {
-            if (appProxy != null) {
-                proxy = ProxyBuilder.http(appProxy.httpProxy)
+            if (httpProxy != null) {
+                proxy = ProxyBuilder.http(httpProxy.url)
             }
             followRedirects = true
             if (trustSelfSigned) {
@@ -665,15 +650,15 @@ private fun createHttpClient(
                 }
             }
         }
-        if (appProxy?.username != null) {
+        if (httpProxy?.username != null) {
             defaultRequest {
-                val credentials = kotlin.io.encoding.Base64.encode("${appProxy.username}:${appProxy.password}".toByteArray())
+                val credentials = Base64.encode("${httpProxy.username}:${httpProxy.password}")
                 header(HttpHeaders.ProxyAuthorization, "Basic $credentials")
             }
         }
     }
-data class AppProxy(
-    val httpProxy: Url,
+data class HttpProxy(
+    val url: Url,
     val username: String? = null,
     val password: String? = null,
 ) {
