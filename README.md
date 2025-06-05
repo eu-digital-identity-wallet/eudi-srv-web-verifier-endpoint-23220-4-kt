@@ -809,15 +809,15 @@ Description: Password of the Key to use for JAR signing, in the configured Keyst
 ### Proxy configuration  
 
 Variable: `VERIFIER_HTTP_PROXY_URL`  
-Description: Set verifier proxy URL to use  
+Description: Optional HTTP proxy server to use  
 Example: `http://exmaple.com`
 
 Variable: `VERIFIER_HTTP_PROXY_USERNAME`  
-Description: Set proxy username for proxy to use  
+Description: Username to authenticate against the proxy  
 Example: `username`
 
 Variable: `VERIFIER_HTTP_PROXY_PASSWORD`  
-Description: Set proxy password for proxy to use  
+Description: Password to authenticate against the proxy  
 Example: `passwd`
 
 ## How to contribute
