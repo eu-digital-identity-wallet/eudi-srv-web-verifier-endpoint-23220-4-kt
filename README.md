@@ -825,7 +825,7 @@ Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_TYPE`
 Description: Type of the Keystore which contains the public key that was used to sign the List of Trusted Lists
 Examples: `jks`, `pkcs12`
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_PASSWRD`
+Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_PASSWORD`
 Description: If present and non-blank, the password of the Keystore which contains the public key that was used to sign the List of Trusted Lists
 
 Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_PATH`
@@ -836,7 +836,7 @@ Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_TYPE`
 Description: Type of the Keystore from which to load the X509 Certificates for this trust source
 Examples: `jks`, `pkcs12`
 
-Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_PASSWRD`
+Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_PASSWORD`
 Description: If present and non-blank, the password of the Keystore from which to load the X509 Certificates for this trust source
 
 ### Proxy configuration  
