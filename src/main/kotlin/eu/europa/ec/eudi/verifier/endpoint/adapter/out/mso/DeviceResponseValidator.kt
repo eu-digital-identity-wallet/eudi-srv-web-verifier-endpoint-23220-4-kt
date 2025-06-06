@@ -62,14 +62,14 @@ class DeviceResponseValidator(
      * Validates the given verifier presentation
      * It could a vp_token or an element of an array vp_token
      */
-    fun ensureValid(vp: String): Either<DeviceResponseError, List<MDoc>> =
+    suspend fun ensureValid(vp: String): Either<DeviceResponseError, List<MDoc>> =
         either {
             val deviceResponse = ensureCanBeDecoded(vp)
             val validDocuments = ensureValid(deviceResponse).bind()
             validDocuments
         }
 
-    fun ensureValid(deviceResponse: DeviceResponse): Either<DeviceResponseError, List<MDoc>> =
+    suspend fun ensureValid(deviceResponse: DeviceResponse): Either<DeviceResponseError, List<MDoc>> =
         either {
             ensureStatusIsOk(deviceResponse)
             ensureValidDocuments(deviceResponse, documentValidator)
@@ -90,7 +90,7 @@ private fun Raise<DeviceResponseError.NotOkDeviceResponseStatus>.ensureStatusIsO
     }
 }
 
-private fun Raise<DeviceResponseError.InvalidDocuments>.ensureValidDocuments(
+private suspend fun Raise<DeviceResponseError.InvalidDocuments>.ensureValidDocuments(
     deviceResponse: DeviceResponse,
     documentValidator: DocumentValidator,
 ): List<MDoc> =

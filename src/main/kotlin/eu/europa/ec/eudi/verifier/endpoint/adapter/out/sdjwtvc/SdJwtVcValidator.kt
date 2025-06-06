@@ -28,7 +28,7 @@ import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
@@ -114,19 +114,20 @@ private fun SdJwtVcVerificationError.toSdJwtVcValidationErrorCode(): SdJwtVcVali
 private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)
 
 internal class SdJwtVcValidator(
-    trustedIssuers: X5CShouldBe,
+    provideTrustSource: ProvideTrustSource,
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
 ) {
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
-        val x5cValidator = X5CValidator(trustedIssuers)
-        val x509CertificateTrust = X509CertificateTrust { chain: List<X509Certificate>, _ ->
-            chain.toNonEmptyListOrNull()?.let {
-                x5cValidator.ensureTrusted(it).fold(
-                    ifLeft = { _ -> false },
-                    ifRight = { _ -> true },
-                )
-            } ?: false
+        val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
+            val x5CShouldBe = provideTrustSource(vct)
+            if (x5CShouldBe != null) {
+                val x5cValidator = X5CValidator(x5CShouldBe)
+                val x5c = checkNotNull(chain.toNonEmptyListOrNull())
+                x5cValidator.ensureTrusted(x5c).fold(ifLeft = { false }, ifRight = { true })
+            } else {
+                false
+            }
         }
         NimbusSdJwtOps.SdJwtVcVerifier.usingX5c(x509CertificateTrust)
     }

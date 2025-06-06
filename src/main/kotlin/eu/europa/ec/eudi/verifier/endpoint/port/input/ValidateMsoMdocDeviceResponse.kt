@@ -89,6 +89,7 @@ internal enum class DocumentErrorTO {
     X5CNotTrusted,
     DocumentTypeNotMatching,
     InvalidIssuerSignedItems,
+    NoMatchingX5CValidator,
 }
 
 /**
@@ -126,7 +127,7 @@ internal class ValidateMsoMdocDeviceResponse(
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
     private val deviceResponseValidatorFactory: (X5CShouldBe?) -> DeviceResponseValidator,
 ) {
-    operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult {
+    suspend operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult {
         val validator = deviceResponseValidator(issuerChain)
             .getOrElse {
                 return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidIssuerChain())
@@ -177,6 +178,7 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         is DocumentError.X5CNotTrusted -> DocumentErrorTO.X5CNotTrusted
         DocumentError.DocumentTypeNotMatching -> DocumentErrorTO.DocumentTypeNotMatching
         DocumentError.InvalidIssuerSignedItems -> DocumentErrorTO.InvalidIssuerSignedItems
+        DocumentError.NoMatchingX5CShouldBe -> DocumentErrorTO.NoMatchingX5CValidator
     }
 
 private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(

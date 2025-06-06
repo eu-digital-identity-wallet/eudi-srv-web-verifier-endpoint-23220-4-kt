@@ -15,11 +15,13 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.Ior
 import arrow.core.NonEmptyList
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
 import java.net.URL
+import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.Duration
 
@@ -257,6 +259,7 @@ data class VerifierConfig(
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
     val authorizationRequestScheme: String,
+    val trustSourcesConfig: Map<Regex, TrustSourceConfig>?,
 )
 
 /**
@@ -309,3 +312,28 @@ private fun SanType.asInt() =
         SanType.URI -> 6
         SanType.DNS -> 2
     }
+
+typealias TrustSourceConfig = Ior<TrustedListConfig, KeyStoreConfig>
+
+enum class ProviderKind(val value: String) {
+    PIDProvider("http://uri.etsi.org/Svc/Svctype/Provider/PID"),
+    QEEAProvider("http://uri.etsi.org/TrstSvc/Svctype/EAA/Q"),
+    PubEAAProvider("http://uri.etsi.org/TrstSvc/Svctype/EAA/Pub-EAA"),
+}
+
+data class TrustedListConfig(
+    val location: URL,
+    val serviceTypeFilter: ProviderKind?,
+    val refreshInterval: String = "0 0 * * * *",
+    val keystoreConfig: KeyStoreConfig?,
+)
+
+data class KeyStoreConfig(
+    val keystorePath: String,
+    val keystoreType: String? = "JKS",
+    val keystorePassword: CharArray? = "".toCharArray(),
+    val keystore: KeyStore,
+)
+
+fun TrustSourcesConfig(trustedList: TrustedListConfig?, keystore: KeyStoreConfig?): Ior<TrustedListConfig, KeyStoreConfig> =
+    Ior.fromNullables(trustedList, keystore) ?: error("Either trustedList or keystore must be provided")

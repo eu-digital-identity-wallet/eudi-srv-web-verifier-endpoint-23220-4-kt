@@ -132,7 +132,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         verifiablePresentation
     }
 
-    private fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
+    private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
         vpFormat: VpFormat.MsoMdoc,
         verifiablePresentation: VerifiablePresentation,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {

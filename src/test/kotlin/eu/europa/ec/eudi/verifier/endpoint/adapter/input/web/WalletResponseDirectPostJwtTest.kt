@@ -245,7 +245,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
         val ecKey = assertNotNull(requestObject.ecKey())
 
-        val requestId = RequestId(transactionDetails.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
+        val requestId = RequestId(transactionDetails.requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val encryptedJwt = run {
             val presentationSubmission: JsonElement = Json.decodeFromString(
                 TestUtils.loadResource("06-pidPlusMdl-presentationSubmission.json"),
