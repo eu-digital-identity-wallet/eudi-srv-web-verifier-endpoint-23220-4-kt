@@ -134,7 +134,6 @@ internal class SdJwtVcValidator(
     private val sdJwtVcVerifierNoSignatureVerification: SdJwtVcVerifier<SignedJWT> by lazy {
         val noSignatureVerifier = run {
             val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
-                JOSEObjectType(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT),
                 JOSEObjectType(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT),
             )
             val claimSetVerifier = DefaultJWTClaimsVerifier<SecurityContext>(

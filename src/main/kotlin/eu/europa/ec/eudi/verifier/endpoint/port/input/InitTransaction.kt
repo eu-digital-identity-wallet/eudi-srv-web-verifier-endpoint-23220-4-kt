@@ -438,7 +438,6 @@ internal fun InitTransactionTO.toDomain(
             presentationDefinition == null && dcqlQuery != null -> {
                 ensure(
                     dcqlQuery.formatsAre(
-                        SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT,
                         SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
                         OpenId4VPSpec.FORMAT_MSO_MDOC,
                     ),
@@ -511,7 +510,7 @@ private fun VpFormats.supportsFormats(presentationDefinition: PresentationDefini
         format?.let {
             it.jsonObject().all { (identifier, serializedProperties) ->
                 when (identifier) {
-                    SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
+                    SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
                         serializedProperties.decodeAs<SdJwtVcFormatTO>()
                             .map { properties -> sdJwtVc.supports(properties.sdJwtAlgorithms, properties.kbJwtAlgorithms) }
                             .getOrElse { false }

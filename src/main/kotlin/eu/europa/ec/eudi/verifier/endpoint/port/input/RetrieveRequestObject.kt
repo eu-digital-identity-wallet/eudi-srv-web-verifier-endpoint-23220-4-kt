@@ -43,7 +43,6 @@ import io.ktor.client.statement.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import java.time.Clock
 import kotlin.reflect.KClass
@@ -360,7 +359,7 @@ private fun JsonObject.toVpFormats(): Result<List<VpFormat>> =
     runCatching {
         mapNotNull { (identifier, serializedProperties) ->
             when (identifier) {
-                SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
+                SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
                     serializedProperties.decodeAs<SdJwtVcFormatTO>()
                         .getOrThrow()
                         .let { properties ->
@@ -389,7 +388,7 @@ private fun PresentationDefinition.vpFormats(supported: VpFormats): List<VpForma
 private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =
     credentials.mapNotNull {
         when (it.format.value) {
-            SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> supported.sdJwtVc
+            SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> supported.sdJwtVc
             OpenId4VPSpec.FORMAT_MSO_MDOC -> supported.msoMdoc
             else -> null
         }
