@@ -520,14 +520,14 @@ private fun Environment.trustSources(): Map<Regex, TrustSourceConfig>? {
     var index = 0
     while (true) {
         val indexPrefix = "$prefix[$index]"
-        val patternStr = getProperty("$indexPrefix.pattern") ?: break
+        val patternStr = getPropertyOrEnvVariable("$indexPrefix.pattern") ?: break
         val pattern = patternStr.toRegex()
 
         // Parse LOTL configuration if present
-        val lotlSourceConfig = getProperty("$indexPrefix.lotl.location")?.takeIf { it.isNotBlank() }?.let { lotlLocation ->
+        val lotlSourceConfig = getPropertyOrEnvVariable("$indexPrefix.lotl.location")?.takeIf { it.isNotBlank() }?.let { lotlLocation ->
             val location = URI(lotlLocation).toURL()
-            val serviceTypeFilter = getProperty("$indexPrefix.lotl.serviceTypeFilter", ProviderKind::class.java)
-            val refreshInterval = getProperty("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
+            val serviceTypeFilter = getPropertyOrEnvVariable("$indexPrefix.lotl.serviceTypeFilter", ProviderKind::class.java)
+            val refreshInterval = getPropertyOrEnvVariable("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
 
             val lotlKeystoreConfig = parseKeyStoreConfig("$indexPrefix.lotl.keystore")
 
@@ -547,14 +547,35 @@ private fun Environment.trustSources(): Map<Regex, TrustSourceConfig>? {
     }
 }
 
+private fun Environment.getPropertyOrEnvVariable(property: String): String? {
+    return getProperty(property) ?: getProperty(toEnvironmentVariable(property))
+}
+
+private fun Environment.getPropertyOrEnvVariable(property: String, defaultValue: String): String {
+    return getProperty(property) ?: getProperty(toEnvironmentVariable(property)) ?: defaultValue
+}
+
+private fun <T> Environment.getPropertyOrEnvVariable(property: String, targetType: Class<T>): T? {
+    return getProperty(property, targetType) ?: getProperty(toEnvironmentVariable(property), targetType)
+}
+
+private fun toEnvironmentVariable(property: String): String {
+    return property.replace(".", "_")
+        .replace("[", "_")
+        .replace("]", "")
+        .uppercase()
+}
+
 private fun Environment.fallbackTrustSources(): Map<Regex, TrustSourceConfig>? =
     parseKeyStoreConfig("trustedIssuers.keystore")?.let {
         mapOf(".*".toRegex() to TrustSourcesConfig(null, it))
     }
 
-private fun Environment.parseKeyStoreConfig(propertyPrefix: String) = getProperty("$propertyPrefix.path")?.let { keystorePath ->
-    val keystoreType = getProperty("$propertyPrefix.type") ?: "JKS"
-    val keystorePassword = getProperty("$propertyPrefix.password", "").toCharArray()
+private fun Environment.parseKeyStoreConfig(propertyPrefix: String) = getPropertyOrEnvVariable(
+    "$propertyPrefix.path",
+)?.let { keystorePath ->
+    val keystoreType = getPropertyOrEnvVariable("$propertyPrefix.type") ?: "JKS"
+    val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "").toCharArray()
     loadKeystore(keystorePath, keystoreType, keystorePassword)
         .onFailure { log.warn("Failed to load keystore from '$keystorePath'", it) }
         .map { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
