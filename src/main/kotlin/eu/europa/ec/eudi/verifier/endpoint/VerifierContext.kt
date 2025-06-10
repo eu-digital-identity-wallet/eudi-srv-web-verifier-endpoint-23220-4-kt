@@ -563,6 +563,7 @@ private fun toEnvironmentVariable(property: String): String {
     return property.replace(".", "_")
         .replace("[", "_")
         .replace("]", "")
+        .replace("-", "")
         .uppercase()
 }
 
