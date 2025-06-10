@@ -526,7 +526,7 @@ private fun Environment.trustSources(): Map<Regex, TrustSourceConfig>? {
         // Parse LOTL configuration if present
         val lotlSourceConfig = getPropertyOrEnvVariable("$indexPrefix.lotl.location")?.takeIf { it.isNotBlank() }?.let { lotlLocation ->
             val location = URI(lotlLocation).toURL()
-            val serviceTypeFilter = getPropertyOrEnvVariable("$indexPrefix.lotl.serviceTypeFilter", ProviderKind::class.java)
+            val serviceTypeFilter = getPropertyOrEnvVariable<ProviderKind>("$indexPrefix.lotl.serviceTypeFilter")
             val refreshInterval = getPropertyOrEnvVariable("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
 
             val lotlKeystoreConfig = parseKeyStoreConfig("$indexPrefix.lotl.keystore")
@@ -555,8 +555,8 @@ private fun Environment.getPropertyOrEnvVariable(property: String, defaultValue:
     return getProperty(property) ?: getProperty(toEnvironmentVariable(property)) ?: defaultValue
 }
 
-private fun <T> Environment.getPropertyOrEnvVariable(property: String, targetType: Class<T>): T? {
-    return getProperty(property, targetType) ?: getProperty(toEnvironmentVariable(property), targetType)
+private inline fun <reified T> Environment.getPropertyOrEnvVariable(property: String): T? {
+    return getProperty(property, T::class.java) ?: getProperty(toEnvironmentVariable(property), T::class.java)
 }
 
 private fun toEnvironmentVariable(property: String): String {
