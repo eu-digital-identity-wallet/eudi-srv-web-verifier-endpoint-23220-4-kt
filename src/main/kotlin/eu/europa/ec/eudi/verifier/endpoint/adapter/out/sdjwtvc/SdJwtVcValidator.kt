@@ -117,6 +117,7 @@ internal class SdJwtVcValidator(
     provideTrustSource: ProvideTrustSource,
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
+    private val httpClientFactory: KtorHttpClientFactory,
 ) {
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
@@ -129,7 +130,7 @@ internal class SdJwtVcValidator(
                 false
             }
         }
-        NimbusSdJwtOps.SdJwtVcVerifier.usingX5c(x509CertificateTrust)
+        NimbusSdJwtOps.SdJwtVcVerifier.usingX5cOrIssuerMetadata(x509CertificateTrust, httpClientFactory)
     }
     private val sdJwtVcVerifierNoSignatureVerification: SdJwtVcVerifier<SignedJWT> by lazy {
         val noSignatureVerifier = run {
