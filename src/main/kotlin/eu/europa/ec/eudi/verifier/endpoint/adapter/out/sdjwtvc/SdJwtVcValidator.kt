@@ -39,6 +39,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 import java.security.cert.X509Certificate
+import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 
 internal enum class SdJwtVcValidationErrorCode {
     IsUnparsable,
