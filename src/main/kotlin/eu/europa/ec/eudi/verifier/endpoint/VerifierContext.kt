@@ -364,6 +364,7 @@ private fun BeanSupplierContext.sdJwtVcValidator(
         provideTrustSource = provideTrustSource,
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
+        httpClientFactory = ref<KtorHttpClientFactory>(),
     )
 
 private enum class EmbedOptionEnum {
