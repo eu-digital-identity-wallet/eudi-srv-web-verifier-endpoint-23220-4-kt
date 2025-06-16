@@ -24,8 +24,9 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
+import eu.europa.ec.eudi.sdjwt.vc.IssuerVerificationMethod
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
-import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.IssuerKeyVerificationError
+import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
 import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
@@ -61,6 +62,11 @@ internal enum class SdJwtVcValidationErrorCode {
     IssuerCertificateIsNotTrusted,
     UnableToLookupDID,
     UnableToDetermineVerificationMethod,
+
+    TypeMetadataValidationFailure,
+    TypeMetadataResolutionFailure,
+
+    JsonSchemaValidationFailure,
 
     StatusCheckFailed,
 
@@ -109,6 +115,9 @@ private fun SdJwtVcVerificationError.toSdJwtVcValidationErrorCode(): SdJwtVcVali
         is IssuerKeyVerificationError.UntrustedIssuerCertificate -> SdJwtVcValidationErrorCode.IssuerCertificateIsNotTrusted
         is IssuerKeyVerificationError.DIDLookupFailure -> SdJwtVcValidationErrorCode.UnableToLookupDID
         IssuerKeyVerificationError.CannotDetermineIssuerVerificationMethod -> SdJwtVcValidationErrorCode.UnableToDetermineVerificationMethod
+        is TypeMetadataVerificationError.TypeMetadataResolutionFailure -> SdJwtVcValidationErrorCode.TypeMetadataResolutionFailure
+        is TypeMetadataVerificationError.TypeMetadataValidationFailure -> SdJwtVcValidationErrorCode.TypeMetadataValidationFailure
+        is JsonSchemaVerificationError.JsonSchemaValidationFailure -> SdJwtVcValidationErrorCode.JsonSchemaValidationFailure
     }
 
 private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)
@@ -129,8 +138,13 @@ internal class SdJwtVcValidator(
                 false
             }
         }
-        NimbusSdJwtOps.SdJwtVcVerifier.usingX5c(x509CertificateTrust)
+        NimbusSdJwtOps.SdJwtVcVerifier(
+            issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
+            resolveTypeMetadata = null,
+            jsonSchemaValidator = null,
+        )
     }
+
     private val sdJwtVcVerifierNoSignatureVerification: SdJwtVcVerifier<SignedJWT> by lazy {
         val noSignatureVerifier = run {
             val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
@@ -152,26 +166,11 @@ internal class SdJwtVcValidator(
             }
         }
 
-        val keyBindingVerifierFactory: (JsonObject?) -> KeyBindingVerifier.MustBePresentAndValid<SignedJWT> =
-            with(NimbusSdJwtOps) {
-                {
-                    KeyBindingVerifier.mustBePresentAndValid(HolderPubKeyInConfirmationClaim, it)
-                }
-            }
-
-        object : SdJwtVcVerifier<SignedJWT> {
-            override suspend fun verify(unverifiedSdJwt: String): Result<SdJwt<SignedJWT>> =
-                NimbusSdJwtOps.verify(noSignatureVerifier, unverifiedSdJwt)
-
-            override suspend fun verify(unverifiedSdJwt: JsonObject): Result<SdJwt<SignedJWT>> =
-                NimbusSdJwtOps.verify(noSignatureVerifier, unverifiedSdJwt)
-
-            override suspend fun verify(unverifiedSdJwt: String, challenge: JsonObject?): Result<SdJwtAndKbJwt<SignedJWT>> =
-                NimbusSdJwtOps.verify(noSignatureVerifier, keyBindingVerifierFactory(challenge), unverifiedSdJwt)
-
-            override suspend fun verify(unverifiedSdJwt: JsonObject, challenge: JsonObject?): Result<SdJwtAndKbJwt<SignedJWT>> =
-                NimbusSdJwtOps.verify(noSignatureVerifier, keyBindingVerifierFactory(challenge), unverifiedSdJwt)
-        }
+        NimbusSdJwtOps.SdJwtVcVerifier(
+            issuerVerificationMethod = IssuerVerificationMethod.usingCustom(noSignatureVerifier),
+            resolveTypeMetadata = null,
+            jsonSchemaValidator = null,
+        )
     }
 
     suspend fun validate(
