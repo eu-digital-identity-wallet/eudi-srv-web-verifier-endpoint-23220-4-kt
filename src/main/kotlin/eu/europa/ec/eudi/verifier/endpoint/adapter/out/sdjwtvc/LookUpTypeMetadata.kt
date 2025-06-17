@@ -27,7 +27,7 @@ import kotlinx.io.IOException
 
 class LookUpTypeMetadata(private val httpClient: KtorHttpClientFactory) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
-        //TODO Move this to variable that can be set from application.properties
+        // TODO Move this to variable that can be set from application.properties
         val response = httpClient().request("http://localhost:8080") {
             url {
                 expectSuccess = false

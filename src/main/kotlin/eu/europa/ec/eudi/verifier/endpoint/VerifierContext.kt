@@ -261,7 +261,7 @@ internal fun beans(clock: Clock) = beans {
 
     bean { LookUpTypeMetadata(ref()) }
     bean { LookupJsonSchemaUsingKtor(ref()) }
-    if(env.getProperty<Boolean>("verifier.metadata.resolution", false))
+    if (env.getProperty<Boolean>("verifier.metadata.resolution", false))
         bean { ResolveTypeMetadata(ref(), ref()) }
 
     //
@@ -753,9 +753,11 @@ data class HttpProxy(
         }
     }
 }
+
 @ConfigurationProperties("verifier.metadata.known")
 data class MetadataKnownByVerifier(
-    val metadataKnown: List<MetadataKnown>
+    val metadataKnown: List<MetadataKnown>,
 )
+
 @JvmInline
-value class MetadataKnown(val type:String)
+value class MetadataKnown(val type: String)

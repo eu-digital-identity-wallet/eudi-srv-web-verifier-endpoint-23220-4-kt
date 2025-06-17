@@ -129,7 +129,7 @@ internal class SdJwtVcValidator(
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     private val resolveTypeMetadata: ResolveTypeMetadata?,
-    private val knownMetadata: List<String>
+    private val knownMetadata: List<String>,
 ) {
     // This to fun -> enable or not
     private fun sdJwtVcVerifier(unverified: String? = null): SdJwtVcVerifier<SignedJWT> = run {
@@ -146,7 +146,7 @@ internal class SdJwtVcValidator(
         println(unverified)
         val decodedUnverified: Result<SdJwt<JwtAndClaims>> = DefaultSdJwtOps.unverifiedIssuanceFrom(unverified!!)
         val z: Pair<JsonObject, DisclosuresPerClaimPath> = decodedUnverified.getOrNull()!!.recreateClaimsAndDisclosuresPerClaim()
-        //Add here the check if the metadata is known or not
+        // Add here the check if the metadata is known or not
         // Check here
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
