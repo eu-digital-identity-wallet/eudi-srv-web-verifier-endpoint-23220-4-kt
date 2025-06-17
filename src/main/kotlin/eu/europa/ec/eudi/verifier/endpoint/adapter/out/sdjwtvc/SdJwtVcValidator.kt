@@ -24,7 +24,9 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
+import eu.europa.ec.eudi.sdjwt.DefaultSdJwtOps.recreateClaimsAndDisclosuresPerClaim
 import eu.europa.ec.eudi.sdjwt.vc.IssuerVerificationMethod
+import eu.europa.ec.eudi.sdjwt.vc.ResolveTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
@@ -123,11 +125,14 @@ private fun SdJwtVcVerificationError.toSdJwtVcValidationErrorCode(): SdJwtVcVali
 private val log = LoggerFactory.getLogger(SdJwtVcValidator::class.java)
 
 internal class SdJwtVcValidator(
-    provideTrustSource: ProvideTrustSource,
+    private val provideTrustSource: ProvideTrustSource,
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
+    private val resolveTypeMetadata: ResolveTypeMetadata?,
+    private val knownMetadata: List<String>
 ) {
-    private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
+    // This to fun -> enable or not
+    private fun sdJwtVcVerifier(unverified: String? = null): SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
             val x5CShouldBe = provideTrustSource(vct)
             if (x5CShouldBe != null) {
@@ -138,12 +143,18 @@ internal class SdJwtVcValidator(
                 false
             }
         }
+        println(unverified)
+        val decodedUnverified: Result<SdJwt<JwtAndClaims>> = DefaultSdJwtOps.unverifiedIssuanceFrom(unverified!!)
+        val z: Pair<JsonObject, DisclosuresPerClaimPath> = decodedUnverified.getOrNull()!!.recreateClaimsAndDisclosuresPerClaim()
+        //Add here the check if the metadata is known or not
+        // Check here
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
-            resolveTypeMetadata = null,
+            resolveTypeMetadata = resolveTypeMetadata,
             jsonSchemaValidator = null,
         )
     }
+    // This to fun -> enable or not
 
     private val sdJwtVcVerifierNoSignatureVerification: SdJwtVcVerifier<SignedJWT> by lazy {
         val noSignatureVerifier = run {
@@ -198,7 +209,7 @@ internal class SdJwtVcValidator(
         }
 
         return Either.catch {
-            sdJwtVcVerifier.verify(unverified, challenge, transactionId).getOrThrow()
+            sdJwtVcVerifier(unverified = unverified.getOrNull()).verify(unverified, challenge, transactionId).getOrThrow()
         }.fold(
             ifRight = { it.right() },
             ifLeft = { sdJwtVcError ->

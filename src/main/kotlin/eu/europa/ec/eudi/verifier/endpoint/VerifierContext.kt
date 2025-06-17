@@ -23,6 +23,8 @@ import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
+import eu.europa.ec.eudi.sdjwt.vc.LookupJsonSchemaUsingKtor
+import eu.europa.ec.eudi.sdjwt.vc.ResolveTypeMetadata
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSources
@@ -46,6 +48,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookUpTypeMetadata
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
@@ -67,6 +70,7 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
 import org.slf4j.LoggerFactory
+import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.web.codec.CodecCustomizer
 import org.springframework.context.support.BeanDefinitionDsl.BeanSupplierContext
 import org.springframework.context.support.beans
@@ -255,6 +259,11 @@ internal fun beans(clock: Clock) = beans {
 
     bean { FetchLOTLCertificatesDSS() }
 
+    bean { LookUpTypeMetadata(ref()) }
+    bean { LookupJsonSchemaUsingKtor(ref()) }
+    if(env.getProperty<Boolean>("verifier.metadata.resolution", false))
+        bean { ResolveTypeMetadata(ref(), ref()) }
+
     //
     // Scheduled
     //
@@ -364,6 +373,8 @@ private fun BeanSupplierContext.sdJwtVcValidator(
         provideTrustSource = provideTrustSource,
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
+        resolveTypeMetadata = provider<ResolveTypeMetadata>().ifAvailable,
+        knownMetadata = listOf("test"),
     )
 
 private enum class EmbedOptionEnum {
@@ -742,3 +753,9 @@ data class HttpProxy(
         }
     }
 }
+@ConfigurationProperties("verifier.metadata.known")
+data class MetadataKnownByVerifier(
+    val metadataKnown: List<MetadataKnown>
+)
+@JvmInline
+value class MetadataKnown(val type:String)
