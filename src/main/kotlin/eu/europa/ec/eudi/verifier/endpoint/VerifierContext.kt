@@ -71,7 +71,6 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
 import org.slf4j.LoggerFactory
-import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.web.codec.CodecCustomizer
 import org.springframework.context.support.BeanDefinitionDsl.BeanSupplierContext
 import org.springframework.context.support.beans
@@ -372,17 +371,21 @@ private fun BeanSupplierContext.deviceResponseValidator(
 
 private fun BeanSupplierContext.sdJwtVcValidator(
     provideTrustSource: ProvideTrustSource,
-): SdJwtVcValidator =
-    SdJwtVcValidator(
+): SdJwtVcValidator {
+    val env = ref<Environment>()
+    var vctKnownByVerifier = env.getOptionalList("verifier.type-metadata.known.vct", filter = { it.isNotBlank() })?.map {
+            vct ->
+        Vct(vct)
+    }?.toSet()
+
+    return SdJwtVcValidator(
         provideTrustSource = provideTrustSource,
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
         resolveTypeMetadata = provider<ResolveTypeMetadata>().ifAvailable,
-        knownVctMetadata = ref<VctKnownByVerifier>().known?.map { vct ->
-            Vct(vct.vct)
-        }?.toSet() ?: emptySet(),
+        enableTypeMetadataResolutionFor = vctKnownByVerifier ?: emptySet(),
     )
-
+}
 private enum class EmbedOptionEnum {
     ByValue,
     ByReference,
@@ -758,11 +761,4 @@ data class HttpProxy(
             "Password cannot be set if username is null"
         }
     }
-}
-
-@ConfigurationProperties("verifier.type-metadata")
-data class VctKnownByVerifier(
-    val known: List<KnownVct>?,
-) {
-    data class KnownVct(val vct: String)
 }
