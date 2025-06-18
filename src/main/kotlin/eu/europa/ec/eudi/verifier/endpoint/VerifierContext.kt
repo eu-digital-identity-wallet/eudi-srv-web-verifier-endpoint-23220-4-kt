@@ -25,6 +25,7 @@ import com.nimbusds.jose.util.Base64
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.LookupJsonSchemaUsingKtor
 import eu.europa.ec.eudi.sdjwt.vc.ResolveTypeMetadata
+import eu.europa.ec.eudi.sdjwt.vc.Vct
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSources
@@ -261,7 +262,7 @@ internal fun beans(clock: Clock) = beans {
 
     bean { LookUpTypeMetadata(ref()) }
     bean { LookupJsonSchemaUsingKtor(ref()) }
-    if (env.getProperty<Boolean>("verifier.metadata.resolution", false))
+    if (env.getProperty<Boolean>("verifier.type-metadata.resolution", false))
         bean { ResolveTypeMetadata(ref(), ref()) }
 
     //
@@ -374,7 +375,7 @@ private fun BeanSupplierContext.sdJwtVcValidator(
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
         resolveTypeMetadata = provider<ResolveTypeMetadata>().ifAvailable,
-        knownMetadata = listOf("test"),
+        knownMetadata = ref<VctKnownByVerifier>().known.map { it -> Vct(it.vct) }.toSet(),
     )
 
 private enum class EmbedOptionEnum {
@@ -754,10 +755,9 @@ data class HttpProxy(
     }
 }
 
-@ConfigurationProperties("verifier.metadata.known")
-data class MetadataKnownByVerifier(
-    val metadataKnown: List<MetadataKnown>,
-)
-
-@JvmInline
-value class MetadataKnown(val type: String)
+@ConfigurationProperties("verifier.type-metadata")
+data class VctKnownByVerifier(
+    val known: List<KnownVct>,
+) {
+    data class KnownVct(val vct: String)
+}

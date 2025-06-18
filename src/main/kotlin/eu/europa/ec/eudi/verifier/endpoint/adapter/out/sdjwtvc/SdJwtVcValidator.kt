@@ -24,7 +24,6 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
-import eu.europa.ec.eudi.sdjwt.DefaultSdJwtOps.recreateClaimsAndDisclosuresPerClaim
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
@@ -125,10 +124,9 @@ internal class SdJwtVcValidator(
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     private val resolveTypeMetadata: ResolveTypeMetadata?,
-    private val knownMetadata: List<String>,
+    private val knownMetadata: Set<Vct>,
 ) {
-    // This to fun -> enable or not
-    private fun sdJwtVcVerifier(unverified: String? = null): SdJwtVcVerifier<SignedJWT> = run {
+    private fun sdJwtVcVerifier(enableTypeMetadata: Boolean = false): SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
             val x5CShouldBe = provideTrustSource(vct)
             if (x5CShouldBe != null) {
@@ -139,20 +137,14 @@ internal class SdJwtVcValidator(
                 false
             }
         }
-        println(unverified)
-        val decodedUnverified: Result<SdJwt<JwtAndClaims>> = DefaultSdJwtOps.unverifiedIssuanceFrom(unverified!!)
-        val z: Pair<JsonObject, DisclosuresPerClaimPath> = decodedUnverified.getOrNull()!!.recreateClaimsAndDisclosuresPerClaim()
-        // Add here the check if the metadata is known or not
-        // Check here
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
-            resolveTypeMetadata = resolveTypeMetadata,
+            resolveTypeMetadata = if (enableTypeMetadata) resolveTypeMetadata else null,
             jsonSchemaValidator = null,
         )
     }
-    // This to fun -> enable or not
 
-    private val sdJwtVcVerifierNoSignatureVerification: SdJwtVcVerifier<SignedJWT> by lazy {
+    private fun sdJwtVcVerifierNoSignatureVerification(enableTypeMetadata: Boolean = false): SdJwtVcVerifier<SignedJWT> = run {
         val noSignatureVerifier = run {
             val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
                 JOSEObjectType(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT),
@@ -193,21 +185,20 @@ internal class SdJwtVcValidator(
         transactionId: TransactionId? = null,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> =
         validate(unverified.left(), nonce, transactionId)
-
     private suspend fun validate(
         unverified: Either<JsonObject, String>,
         nonce: Nonce,
         transactionId: TransactionId?,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> {
         val vct = vctOf(unverified)
-
+        val typeMetadataResolution = knownMetadata.contains(vct)
         val challenge = buildJsonObject {
             put(RFC7519.AUDIENCE, audience.clientId)
             put("nonce", nonce.value)
         }
 
         return Either.catch {
-            sdJwtVcVerifier(unverified = unverified.getOrNull()).verify(unverified, challenge, transactionId).getOrThrow()
+            sdJwtVcVerifier(typeMetadataResolution).verify(unverified, challenge, transactionId).getOrThrow()
         }.fold(
             ifRight = { it.right() },
             ifLeft = { sdJwtVcError ->
@@ -215,7 +206,9 @@ internal class SdJwtVcValidator(
                 val errors =
                     if (!sdJwtVcError.isSignatureVerificationFailure()) nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError))
                     else Either.catch {
-                        sdJwtVcVerifierNoSignatureVerification.verify(unverified, challenge, transactionId).getOrThrow()
+                        sdJwtVcVerifierNoSignatureVerification(
+                            typeMetadataResolution,
+                        ).verify(unverified, challenge, transactionId).getOrThrow()
                     }.fold(
                         ifRight = { nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError)) },
                         ifLeft = { sdJwtError ->

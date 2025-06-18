@@ -24,7 +24,7 @@ import org.springframework.context.support.GenericApplicationContext
 import java.time.Clock
 
 @SpringBootApplication
-@EnableConfigurationProperties(MetadataKnownByVerifier::class)
+@EnableConfigurationProperties(VctKnownByVerifier::class)
 class VerifierApplication
 
 internal fun BeanDefinitionDsl.initializer(): ApplicationContextInitializer<GenericApplicationContext> =
