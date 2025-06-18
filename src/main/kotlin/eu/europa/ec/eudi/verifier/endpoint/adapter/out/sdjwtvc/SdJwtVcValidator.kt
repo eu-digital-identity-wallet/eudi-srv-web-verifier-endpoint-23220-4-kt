@@ -124,9 +124,9 @@ internal class SdJwtVcValidator(
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     private val resolveTypeMetadata: ResolveTypeMetadata?,
-    private val knownVctMetadata: Set<Vct>,
+    private val enableTypeMetadataResolutionFor: Set<Vct>,
 ) {
-    private fun sdJwtVcVerifier(enableTypeMetadata: Boolean = false): SdJwtVcVerifier<SignedJWT> = run {
+    private fun sdJwtVcVerifier(enableTypeMetadataResolution: Boolean): SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
             val x5CShouldBe = provideTrustSource(vct)
             if (x5CShouldBe != null) {
@@ -139,12 +139,12 @@ internal class SdJwtVcValidator(
         }
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
-            resolveTypeMetadata = if (enableTypeMetadata) resolveTypeMetadata else null,
+            resolveTypeMetadata = if (enableTypeMetadataResolution) resolveTypeMetadata else null,
             jsonSchemaValidator = null,
         )
     }
 
-    private fun sdJwtVcVerifierNoSignatureVerification(enableTypeMetadata: Boolean = false): SdJwtVcVerifier<SignedJWT> = run {
+    private fun sdJwtVcVerifierNoSignatureVerification(enableTypeMetadataResolution: Boolean): SdJwtVcVerifier<SignedJWT> = run {
         val noSignatureVerifier = run {
             val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
                 JOSEObjectType(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT),
@@ -167,7 +167,7 @@ internal class SdJwtVcValidator(
 
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingCustom(noSignatureVerifier),
-            resolveTypeMetadata = null,
+            resolveTypeMetadata = if (enableTypeMetadataResolution) resolveTypeMetadata else null,
             jsonSchemaValidator = null,
         )
     }
@@ -191,14 +191,14 @@ internal class SdJwtVcValidator(
         transactionId: TransactionId?,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> {
         val vct = vctOf(unverified)
-        val typeMetadataResolution = knownVctMetadata.contains(vct)
+        val typeMetadataResolutionEnabled = enableTypeMetadataResolutionFor.contains(vct)
         val challenge = buildJsonObject {
             put(RFC7519.AUDIENCE, audience.clientId)
             put("nonce", nonce.value)
         }
 
         return Either.catch {
-            sdJwtVcVerifier(typeMetadataResolution).verify(unverified, challenge, transactionId).getOrThrow()
+            sdJwtVcVerifier(typeMetadataResolutionEnabled).verify(unverified, challenge, transactionId).getOrThrow()
         }.fold(
             ifRight = { it.right() },
             ifLeft = { sdJwtVcError ->
@@ -207,7 +207,7 @@ internal class SdJwtVcValidator(
                     if (!sdJwtVcError.isSignatureVerificationFailure()) nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError))
                     else Either.catch {
                         sdJwtVcVerifierNoSignatureVerification(
-                            typeMetadataResolution,
+                            typeMetadataResolutionEnabled,
                         ).verify(unverified, challenge, transactionId).getOrThrow()
                     }.fold(
                         ifRight = { nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError)) },
