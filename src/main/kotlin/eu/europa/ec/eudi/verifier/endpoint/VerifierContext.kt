@@ -260,10 +260,16 @@ internal fun beans(clock: Clock) = beans {
 
     bean { FetchLOTLCertificatesDSS() }
 
-    bean { LookUpTypeMetadata(ref()) }
+    //
+    // Type metadata resolve
+    //
     bean { LookupJsonSchemaUsingKtor(ref()) }
-    if (env.getProperty<Boolean>("verifier.type-metadata.resolution", false))
+    if (env.getProperty<Boolean>("verifier.type-metadata.resolution", false)) {
+        val pidUrl =
+            env.getRequiredProperty("verifier.type-metadata.url")
+        bean { LookUpTypeMetadata(ref(), Url(pidUrl)) }
         bean { ResolveTypeMetadata(ref(), ref()) }
+    }
 
     //
     // Scheduled
@@ -375,7 +381,9 @@ private fun BeanSupplierContext.sdJwtVcValidator(
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
         resolveTypeMetadata = provider<ResolveTypeMetadata>().ifAvailable,
-        knownMetadata = ref<VctKnownByVerifier>().known.map { it -> Vct(it.vct) }.toSet(),
+        knownVctMetadata = ref<VctKnownByVerifier>().known?.map { vct ->
+            Vct(vct.vct)
+        }?.toSet() ?: emptySet(),
     )
 
 private enum class EmbedOptionEnum {
@@ -757,7 +765,7 @@ data class HttpProxy(
 
 @ConfigurationProperties("verifier.type-metadata")
 data class VctKnownByVerifier(
-    val known: List<KnownVct>,
+    val known: List<KnownVct>?,
 ) {
     data class KnownVct(val vct: String)
 }

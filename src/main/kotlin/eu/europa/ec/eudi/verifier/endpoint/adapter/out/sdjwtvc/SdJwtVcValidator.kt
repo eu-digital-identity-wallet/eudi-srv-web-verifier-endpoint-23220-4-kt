@@ -124,7 +124,7 @@ internal class SdJwtVcValidator(
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     private val resolveTypeMetadata: ResolveTypeMetadata?,
-    private val knownMetadata: Set<Vct>,
+    private val knownVctMetadata: Set<Vct>,
 ) {
     private fun sdJwtVcVerifier(enableTypeMetadata: Boolean = false): SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
@@ -191,7 +191,7 @@ internal class SdJwtVcValidator(
         transactionId: TransactionId?,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> {
         val vct = vctOf(unverified)
-        val typeMetadataResolution = knownMetadata.contains(vct)
+        val typeMetadataResolution = knownVctMetadata.contains(vct)
         val challenge = buildJsonObject {
             put(RFC7519.AUDIENCE, audience.clientId)
             put("nonce", nonce.value)

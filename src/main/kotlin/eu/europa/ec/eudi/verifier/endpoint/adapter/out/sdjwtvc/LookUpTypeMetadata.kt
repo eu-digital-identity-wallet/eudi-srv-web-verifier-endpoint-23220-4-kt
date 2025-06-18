@@ -25,10 +25,9 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.io.IOException
 
-class LookUpTypeMetadata(private val httpClient: KtorHttpClientFactory) : LookupTypeMetadata {
+class LookUpTypeMetadata(private val httpClient: KtorHttpClientFactory, private val pidIssuer: Url) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
-        // TODO Move this to variable that can be set from application.properties
-        val response = httpClient().request("http://localhost:8080") {
+        val response = httpClient().request(pidIssuer) {
             url {
                 expectSuccess = false
                 appendPathSegments("type-metadata", vct.value)
