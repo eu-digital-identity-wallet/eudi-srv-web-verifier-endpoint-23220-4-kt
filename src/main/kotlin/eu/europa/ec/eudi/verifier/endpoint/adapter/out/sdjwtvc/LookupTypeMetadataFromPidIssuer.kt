@@ -15,19 +15,22 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
+import arrow.core.raise.result
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.LookupTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.Vct
 import io.ktor.client.call.*
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.request.*
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.*
 import kotlinx.io.IOException
 
-class LookUpTypeMetadata(private val httpClient: KtorHttpClientFactory, private val pidIssuer: Url) : LookupTypeMetadata {
+class LookupTypeMetadataFromPidIssuer(private val httpClient: KtorHttpClientFactory, private val pidIssuerBaseUrl: Url) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
-        val response = httpClient().request(pidIssuer) {
+        val response = httpClient().request(pidIssuerBaseUrl) {
             url {
                 expectSuccess = false
                 appendPathSegments("type-metadata", vct.value)
@@ -36,7 +39,8 @@ class LookUpTypeMetadata(private val httpClient: KtorHttpClientFactory, private 
         }
         return when (response.status) {
             HttpStatusCode.OK -> response.body()
-            else -> throw IOException("Unexpected code ${response.status}")
+            HttpStatusCode.NotFound -> result { null }
+            else -> throw ResponseException(response,"Failed to retrieve type metadata")
         }
     }
 }

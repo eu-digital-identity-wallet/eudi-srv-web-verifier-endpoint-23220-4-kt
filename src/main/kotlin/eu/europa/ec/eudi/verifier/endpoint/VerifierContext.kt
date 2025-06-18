@@ -49,7 +49,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookUpTypeMetadata
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromPidIssuer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
@@ -265,7 +265,7 @@ internal fun beans(clock: Clock) = beans {
     //
     if (env.getProperty<Boolean>("verifier.type-metadata.resolution", false)) {
         val pidUrl = env.getRequiredProperty("verifier.type-metadata.url")
-        bean { ResolveTypeMetadata(LookUpTypeMetadata(ref(), Url(pidUrl)), LookupJsonSchemaUsingKtor(ref())) }
+        bean { ResolveTypeMetadata(LookupTypeMetadataFromPidIssuer(ref(), Url(pidUrl)), LookupJsonSchemaUsingKtor(ref())) }
     }
 
     //
