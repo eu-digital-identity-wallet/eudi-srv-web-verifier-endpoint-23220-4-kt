@@ -25,12 +25,8 @@ import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier
 import eu.europa.ec.eudi.sdjwt.*
 import eu.europa.ec.eudi.sdjwt.DefaultSdJwtOps.recreateClaimsAndDisclosuresPerClaim
-import eu.europa.ec.eudi.sdjwt.vc.IssuerVerificationMethod
-import eu.europa.ec.eudi.sdjwt.vc.ResolveTypeMetadata
-import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError
+import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
-import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerifier
-import eu.europa.ec.eudi.sdjwt.vc.X509CertificateTrust
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
@@ -203,6 +199,8 @@ internal class SdJwtVcValidator(
         nonce: Nonce,
         transactionId: TransactionId?,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> {
+        val vct = vctOf(unverified)
+
         val challenge = buildJsonObject {
             put(RFC7519.AUDIENCE, audience.clientId)
             put("nonce", nonce.value)
@@ -264,3 +262,19 @@ private fun Throwable.isSignatureVerificationFailure(): Boolean =
 
         else -> false
     }
+
+private suspend fun vctOf(unverified: Either<JsonObject, String>): Vct? =
+    runCatching {
+        val noSignatureVerifier = JwtSignatureVerifier {
+            runCatching {
+                SignedJWT.parse(it)
+            }.getOrNull()
+        }
+
+        val unverifiedSdJwt: SdJwtAndKbJwt<SignedJWT> = unverified.fold(
+            ifLeft = { NimbusSdJwtOps.verify(noSignatureVerifier, KeyBindingVerifier.mustBePresent(noSignatureVerifier), it) },
+            ifRight = { NimbusSdJwtOps.verify(noSignatureVerifier, KeyBindingVerifier.mustBePresent(noSignatureVerifier), it) },
+        ).getOrThrow()
+
+        Vct(unverifiedSdJwt.sdJwt.jwt.jwtClaimsSet.getStringClaim(SdJwtVcSpec.VCT))
+    }.getOrNull()
