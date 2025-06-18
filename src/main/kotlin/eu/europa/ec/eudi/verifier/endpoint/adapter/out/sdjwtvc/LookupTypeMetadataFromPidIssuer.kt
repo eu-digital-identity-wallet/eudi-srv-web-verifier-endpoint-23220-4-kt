@@ -21,14 +21,14 @@ import eu.europa.ec.eudi.sdjwt.vc.LookupTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.Vct
 import io.ktor.client.call.*
-import io.ktor.client.plugins.ResponseException
-import io.ktor.client.plugins.expectSuccess
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.*
-import kotlinx.io.IOException
 
-class LookupTypeMetadataFromPidIssuer(private val httpClient: KtorHttpClientFactory, private val pidIssuerBaseUrl: Url) : LookupTypeMetadata {
+class LookupTypeMetadataFromPidIssuer(
+    private val httpClient: KtorHttpClientFactory,
+    private val pidIssuerBaseUrl: Url,
+) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
         val response = httpClient().request(pidIssuerBaseUrl) {
             url {
@@ -40,7 +40,7 @@ class LookupTypeMetadataFromPidIssuer(private val httpClient: KtorHttpClientFact
         return when (response.status) {
             HttpStatusCode.OK -> response.body()
             HttpStatusCode.NotFound -> result { null }
-            else -> throw ResponseException(response,"Failed to retrieve type metadata")
+            else -> throw ResponseException(response, "Failed to retrieve type metadata")
         }
     }
 }
