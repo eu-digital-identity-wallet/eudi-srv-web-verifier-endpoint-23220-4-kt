@@ -263,12 +263,9 @@ internal fun beans(clock: Clock) = beans {
     //
     // Type metadata resolve
     //
-    bean { LookupJsonSchemaUsingKtor(ref()) }
     if (env.getProperty<Boolean>("verifier.type-metadata.resolution", false)) {
-        val pidUrl =
-            env.getRequiredProperty("verifier.type-metadata.url")
-        bean { LookUpTypeMetadata(ref(), Url(pidUrl)) }
-        bean { ResolveTypeMetadata(ref(), ref()) }
+        val pidUrl = env.getRequiredProperty("verifier.type-metadata.url")
+        bean { ResolveTypeMetadata(LookUpTypeMetadata(ref(), Url(pidUrl)), LookupJsonSchemaUsingKtor(ref())) }
     }
 
     //
