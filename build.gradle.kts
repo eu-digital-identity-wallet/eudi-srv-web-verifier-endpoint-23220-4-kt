@@ -74,7 +74,9 @@ dependencies {
     implementation(libs.dss.tsl.validation)
     implementation(libs.dss.utils.apache.commons)
     implementation(libs.json.schema.validator)
-    implementation(libs.json.schema.validator.joni)
+    implementation(libs.joni) {
+        because("required by json-schema-validator")
+    }
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)

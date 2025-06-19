@@ -856,12 +856,12 @@ Example: `passwd`
 ### Type Metadata resolution
 
 Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_ENABLED`  
-Description: Enable Type Metadata resolution for known VCT  
-Example: `true`/ `false`
+Description: Enable SD-JWT VC Type Metadata resolution  
+Default value: `false`
 
 Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_VCTS`  
-Description: Contains a comma seperated list of known VCTs for Metadata Resolution  
-Example: `example1,example2`
+Description: Comma separated list of VCTs for which Type Metadata resolution is enabled  
+Example: `urn:eudi:pid:1`
 
 Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_SERVICEURL`  
 Description: Contains the URL where the verifier is retrieving the Type Metadata from  

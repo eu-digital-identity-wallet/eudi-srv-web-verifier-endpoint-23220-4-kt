@@ -25,21 +25,23 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 
 class LookupTypeMetadataFromPidIssuer(
-    private val httpClient: KtorHttpClientFactory,
+    private val httpClientFactory: KtorHttpClientFactory,
     private val serviceUrl: Url,
 ) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
-        val response = httpClient().request(serviceUrl) {
-            url {
+        httpClientFactory().use{ httpClient ->
+            val response = httpClient.request(serviceUrl){
+                url {
+                    appendPathSegments(vct.value)
+                }
                 expectSuccess = false
-                appendPathSegments("type-metadata", vct.value)
+                method = HttpMethod.Get
             }
-            method = HttpMethod.Get
-        }
-        when (response.status) {
-            HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
-            HttpStatusCode.NotFound -> null
-            else -> throw ResponseException(response, "Failed to retrieve type metadata")
+            when (response.status) {
+                HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
+                HttpStatusCode.NotFound -> null
+                else -> throw ResponseException(response, "Failed to retrieve type metadata")
+            }
         }
     }
 }
