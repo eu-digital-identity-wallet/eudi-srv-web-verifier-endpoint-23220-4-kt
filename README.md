@@ -865,7 +865,7 @@ Example: `urn:eudi:pid:1`
 
 Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_SERVICEURL`  
 Description: Contains the URL where the verifier is retrieving the Type Metadata from. This is implemented using SD-JWT VC Type Metadata endpoint of the [pid-issuer](https://github.com/niscy-eudiw/eudi-srv-pid-issuer/blob/main/README.md#retrieve-type-metadata)  
-Example: `localhost:8080`
+Example: `http://localhost:8080/type-metadata`
 
 ## How to contribute
 
