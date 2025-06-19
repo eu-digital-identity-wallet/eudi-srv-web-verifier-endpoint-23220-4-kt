@@ -265,10 +265,10 @@ internal fun beans(clock: Clock) = beans {
     // Type metadata resolve
     //
     if (env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.resolution.enabled", false)) {
-        val pidUrl = env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl")
-        bean { ResolveTypeMetadata(LookupTypeMetadataFromPidIssuer(ref(), Url(pidUrl)), LookupJsonSchemaUsingKtor(ref())) }
-        bean { ValidateJsonSchema() }
+        val serviceUrl = env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl")
+        bean { ResolveTypeMetadata(LookupTypeMetadataFromPidIssuer(ref(), Url(serviceUrl)), LookupJsonSchemaUsingKtor(ref())) }
     }
+    bean { ValidateJsonSchema }
 
     //
     // Scheduled
@@ -376,20 +376,18 @@ private fun BeanSupplierContext.sdJwtVcValidator(
     provideTrustSource: ProvideTrustSource,
 ): SdJwtVcValidator {
     val env = ref<Environment>()
-    var vctKnownByVerifier = env.getOptionalList("verifier.validation.sdJwtVc.typeMetadata.resolution.vcts", filter = {
-        it.isNotBlank()
-    })?.map {
-            vct ->
-        Vct(vct)
-    }?.toSet()
+    val vctKnownByVerifier = env.getOptionalList(
+        "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts",
+        filter = { it.isNotBlank() },
+    ).orEmpty().map { Vct(it) }.toSet()
 
     return SdJwtVcValidator(
         provideTrustSource = provideTrustSource,
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
         resolveTypeMetadata = provider<ResolveTypeMetadata>().ifAvailable,
-        jsonSchemaValidator = provider<JsonSchemaValidator>().ifAvailable,
-        enableTypeMetadataResolutionFor = vctKnownByVerifier ?: emptySet(),
+        jsonSchemaValidator = ref<JsonSchemaValidator>(),
+        enableTypeMetadataResolutionFor = vctKnownByVerifier,
     )
 }
 private enum class EmbedOptionEnum {

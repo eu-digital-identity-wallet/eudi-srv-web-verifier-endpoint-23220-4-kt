@@ -24,6 +24,7 @@ zxing = "3.5.3"
 uri = "0.0.19"
 dss = "6.2"
 jsonValidator="1.5.7"
+joni="2.2.6"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -46,6 +47,7 @@ dss-validation = { module = "eu.europa.ec.joinup.sd-dss:dss-validation", version
 dss-tsl-validation = { module = "eu.europa.ec.joinup.sd-dss:dss-tsl-validation", version.ref = "dss" }
 dss-utils-apache-commons = { module = "eu.europa.ec.joinup.sd-dss:dss-utils-apache-commons", version.ref = "dss" }
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "jsonValidator" }
+json-schema-validator-joni = { module = "org.jruby.joni:joni", version.ref = "joni" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }

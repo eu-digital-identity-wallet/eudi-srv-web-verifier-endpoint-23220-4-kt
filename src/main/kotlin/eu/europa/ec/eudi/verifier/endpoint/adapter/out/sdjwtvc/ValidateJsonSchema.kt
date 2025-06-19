@@ -29,7 +29,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import com.networknt.schema.JsonSchema as ExternalJsonSchema
 
-class ValidateJsonSchema : JsonSchemaValidator {
+object ValidateJsonSchema : JsonSchemaValidator {
     override suspend fun validate(
         unvalidated: JsonObject,
         schema: JsonSchema,
@@ -46,6 +46,11 @@ private object JsonSchemaConverter {
     }
     private val factory: JsonSchemaFactory by lazy {
         JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012) { factoryBuilder ->
+            factoryBuilder.schemaLoaders { schemaLoadersBuilder ->
+                schemaLoadersBuilder.add {
+                    error("SchemaLoader should not have been invoked. Schema URI: $it")
+                }
+            }
             factoryBuilder.enableSchemaCache(true)
         }
     }
@@ -53,6 +58,7 @@ private object JsonSchemaConverter {
     suspend fun convert(schema: JsonSchema): ExternalJsonSchema =
         withContext(Dispatchers.IO) {
             val externalJsonSchema = factory.getSchema(Json.encodeToString(schema), InputFormat.JSON, config)
+            check(SpecVersion.VersionFlag.V202012.id == externalJsonSchema.getRefSchemaNode("/\$schema").textValue())
             externalJsonSchema
         }
 }

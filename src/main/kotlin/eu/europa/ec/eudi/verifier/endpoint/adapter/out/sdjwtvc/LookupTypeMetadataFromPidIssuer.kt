@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
-import arrow.core.raise.result
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.LookupTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcTypeMetadata
@@ -37,9 +36,9 @@ class LookupTypeMetadataFromPidIssuer(
             }
             method = HttpMethod.Get
         }
-        return when (response.status) {
-            HttpStatusCode.OK -> response.body()
-            HttpStatusCode.NotFound -> result { null }
+        when (response.status) {
+            HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
+            HttpStatusCode.NotFound -> null
             else -> throw ResponseException(response, "Failed to retrieve type metadata")
         }
     }
