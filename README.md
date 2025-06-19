@@ -853,6 +853,20 @@ Variable: `VERIFIER_HTTP_PROXY_PASSWORD`
 Description: Password to authenticate against the proxy  
 Example: `passwd`
 
+### Type Metadata resolution
+
+Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_ENABLED`  
+Description: Enable Type Metadata resolution for known VCT  
+Example: `true`/ `false`
+
+Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_VCTS`  
+Description: Contains a comma seperated list of known VCTs for Metadata Resolution  
+Example: `example1,example2`
+
+Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_SERVICEURL`  
+Description: Contains the URL where the verifier is retrieving the Type Metadata from  
+Example: `localhost:8080`
+
 ## How to contribute
 
 We welcome contributions to this project. To ensure that the process is smooth for everyone
