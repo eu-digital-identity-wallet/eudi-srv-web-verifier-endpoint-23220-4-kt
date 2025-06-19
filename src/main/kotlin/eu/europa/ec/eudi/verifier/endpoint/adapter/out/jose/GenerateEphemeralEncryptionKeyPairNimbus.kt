@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.Either
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
@@ -33,12 +34,12 @@ object GenerateEphemeralEncryptionKeyPairNimbus : GenerateEphemeralEncryptionKey
 
     override fun invoke(
         encryptedResponse: JarmOption.Encrypted,
-    ): Result<EphemeralEncryptionKeyPairJWK> {
+    ): Either<Throwable, EphemeralEncryptionKeyPairJWK> {
         val alg = encryptedResponse.nimbusJWSAlgorithm()
         return createEphemeralEncryptionKey(alg).map { EphemeralEncryptionKeyPairJWK.from(keyPair = it) }
     }
 
-    private fun createEphemeralEncryptionKey(alg: JWEAlgorithm): Result<ECKey> = runCatching {
+    private fun createEphemeralEncryptionKey(alg: JWEAlgorithm): Either<Throwable, ECKey> = Either.catch {
         val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
             .keyUse(KeyUse.ENCRYPTION)
             .algorithm(alg)

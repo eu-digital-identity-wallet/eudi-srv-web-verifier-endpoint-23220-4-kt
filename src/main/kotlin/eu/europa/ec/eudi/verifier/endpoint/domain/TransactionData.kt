@@ -15,7 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
@@ -71,7 +73,7 @@ value class TransactionData private constructor(val value: JsonObject) {
 
     companion object {
 
-        private fun validate(value: JsonObject): Result<TransactionData> = runCatching {
+        private fun validate(value: JsonObject): Either<Throwable, TransactionData> = Either.catch {
             val type = value["type"]
             require(type.isNonEmptyString()) {
                 "'type' is required and must not be a non-empty string"
@@ -96,7 +98,7 @@ value class TransactionData private constructor(val value: JsonObject) {
             credentialIds: NonEmptyList<String>,
             hashAlgorithms: NonEmptyList<String>? = null,
             builder: JsonObjectBuilder.() -> Unit = {},
-        ): Result<TransactionData> {
+        ): Either<Throwable, TransactionData> {
             val value = buildJsonObject {
                 builder()
 
@@ -116,8 +118,8 @@ value class TransactionData private constructor(val value: JsonObject) {
         fun validate(
             unvalidated: JsonObject,
             validCredentialIds: List<String>,
-        ): Result<TransactionData> = runCatching {
-            val transactionData = validate(unvalidated).getOrThrow()
+        ): Either<Throwable, TransactionData> = Either.catch {
+            val transactionData = validate(unvalidated).getOrElse { throw it }
             require(validCredentialIds.containsAll(transactionData.credentialIds)) {
                 "invalid 'credential_ids'"
             }
@@ -126,11 +128,11 @@ value class TransactionData private constructor(val value: JsonObject) {
 
         fun fromBase64Url(
             base64Url: String,
-        ): Result<TransactionData> = runCatching {
+        ): Either<Throwable, TransactionData> = Either.catch {
             val decoded = base64UrlNoPadding.decodeToByteString(base64Url)
             val serialized = decoded.decodeToString()
             val json = jsonSupport.decodeFromString<JsonObject>(serialized)
-            validate(json).getOrThrow()
+            validate(json).getOrElse { throw it }
         }
     }
 }

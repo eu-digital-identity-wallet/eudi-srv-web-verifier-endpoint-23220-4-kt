@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.lotl
 
+import arrow.core.Either
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
 import java.security.cert.X509Certificate
 
@@ -29,5 +30,5 @@ interface FetchLOTLCertificates {
      */
     suspend operator fun invoke(
         trustedListConfig: TrustedListConfig,
-    ): Result<List<X509Certificate>>
+    ): Either<Throwable, List<X509Certificate>>
 }

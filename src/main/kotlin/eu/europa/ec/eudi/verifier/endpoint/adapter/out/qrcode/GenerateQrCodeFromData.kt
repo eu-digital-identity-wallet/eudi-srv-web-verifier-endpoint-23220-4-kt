@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode
 
+import arrow.core.Either
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.client.j2se.MatrixToImageConfig
@@ -28,8 +29,8 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels
 import java.io.ByteArrayOutputStream
 
 object GenerateQrCodeFromData : GenerateQrCode {
-    override suspend fun invoke(data: String, size: Dimensions): Result<PNGImage> {
-        return runCatching {
+    override suspend fun invoke(data: String, size: Dimensions): Either<Throwable, PNGImage> {
+        return Either.catch {
             val writer = QRCodeWriter()
             val matrix = writer.encode(
                 data,

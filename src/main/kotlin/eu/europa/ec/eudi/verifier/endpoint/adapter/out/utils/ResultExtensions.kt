@@ -15,13 +15,16 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils
 
-internal inline fun <reified T> Result<T>.applyCatching(block: T.() -> Unit): Result<T> =
-    if (isFailure) {
+import arrow.core.Either
+import arrow.core.getOrElse
+
+internal inline fun <reified T> Either<Throwable, T>.applyCatching(block: T.() -> Unit): Either<Throwable, T> =
+    if (isLeft()) {
         this
     } else {
-        runCatching {
-            val value = getOrThrow()
-            value.block()
+        Either.catch {
+            val value = getOrElse { throw it }
+            value!!.block()
             value
         }
     }

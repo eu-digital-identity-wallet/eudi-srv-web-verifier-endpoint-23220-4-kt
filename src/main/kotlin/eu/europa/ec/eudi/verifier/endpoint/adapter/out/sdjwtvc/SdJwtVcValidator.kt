@@ -143,7 +143,7 @@ internal class SdJwtVcValidator(
             )
 
             JwtSignatureVerifier {
-                runCatching {
+                Either.catch {
                     val signedJwt = SignedJWT.parse(it)
                     typeVerifier.verify(signedJwt.header.type, null)
                     claimSetVerifier.verify(signedJwt.jwtClaimsSet, null)
@@ -199,7 +199,7 @@ internal class SdJwtVcValidator(
         }
 
         return Either.catch {
-            sdJwtVcVerifier.verify(unverified, challenge, transactionId).getOrThrow()
+            sdJwtVcVerifier.verify(unverified, challenge, transactionId).getOrElse { throw it }
         }.fold(
             ifRight = { it.right() },
             ifLeft = { sdJwtVcError ->
@@ -207,7 +207,7 @@ internal class SdJwtVcValidator(
                 val errors =
                     if (!sdJwtVcError.isSignatureVerificationFailure()) nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError))
                     else Either.catch {
-                        sdJwtVcVerifierNoSignatureVerification.verify(unverified, challenge, transactionId).getOrThrow()
+                        sdJwtVcVerifierNoSignatureVerification.verify(unverified, challenge, transactionId).getOrElse { throw it }
                     }.fold(
                         ifRight = { nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError)) },
                         ifLeft = { sdJwtError ->
@@ -224,7 +224,7 @@ internal class SdJwtVcValidator(
         unverified: Either<JsonObject, String>,
         challenge: JsonObject,
         transactionId: TransactionId?,
-    ): Result<SdJwtAndKbJwt<SignedJWT>> =
+    ): Either<Throwable, SdJwtAndKbJwt<SignedJWT>> =
         unverified.fold(
             ifLeft = { verify(it, challenge) },
             ifRight = { verify(it, challenge) },

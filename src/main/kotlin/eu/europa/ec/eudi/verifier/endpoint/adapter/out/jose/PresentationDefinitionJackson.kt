@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.Either
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import eu.europa.ec.eudi.prex.PresentationDefinition
@@ -38,7 +39,7 @@ object PresentationDefinitionJackson {
         return objectMapper.readValue<Any>(jsonStr)
     }
 
-    fun fromJsonObject(o: Map<String, Any?>): Result<PresentationDefinition> = runCatching {
+    fun fromJsonObject(o: Map<String, Any?>): Either<Throwable, PresentationDefinition> = Either.catch {
         val jsonStr = objectMapper.writeValueAsString(o)
         PresentationExchange.jsonParser.decodePresentationDefinition(jsonStr).getOrThrow()
     }

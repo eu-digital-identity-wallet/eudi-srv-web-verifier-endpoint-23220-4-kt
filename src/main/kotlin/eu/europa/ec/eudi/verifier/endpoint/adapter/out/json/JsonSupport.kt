@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.json
 
+import arrow.core.Either
 import com.nimbusds.jose.util.JSONObjectUtils
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.json.Json
@@ -27,8 +28,8 @@ internal val jsonSupport = Json {
     ignoreUnknownKeys = true
 }
 
-internal inline fun <reified T> JsonElement.decodeAs(deserializer: DeserializationStrategy<T> = serializer()): Result<T> =
-    runCatching {
+internal inline fun <reified T> JsonElement.decodeAs(deserializer: DeserializationStrategy<T> = serializer()): Either<Throwable, T> =
+    Either.catch {
         jsonSupport.decodeFromJsonElement(deserializer, this)
     }
 
