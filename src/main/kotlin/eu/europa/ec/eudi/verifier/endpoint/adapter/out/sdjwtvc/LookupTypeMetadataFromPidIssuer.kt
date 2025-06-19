@@ -30,12 +30,12 @@ class LookupTypeMetadataFromPidIssuer(
 ) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
         httpClientFactory().use { httpClient ->
-            val response = httpClient.request(serviceUrl) {
+            val response = httpClient.get {
                 url {
+                    takeFrom(serviceUrl)
                     appendPathSegments(vct.value)
                 }
                 expectSuccess = false
-                method = HttpMethod.Get
             }
             when (response.status) {
                 HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
