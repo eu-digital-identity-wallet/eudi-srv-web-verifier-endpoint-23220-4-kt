@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.json
 
+import arrow.core.Either
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -34,7 +35,7 @@ internal class JsonPathReader(val element: JsonElement) {
     /**
      * Reads the value at [path].
      */
-    fun readPath(path: String): Result<JsonElement?> = runCatching {
+    fun readPath(path: String): Either<Throwable, JsonElement?> = Either.catch {
         com.nfeld.jsonpathkt.JsonPath(path)
             .readFromJson<JsonNode>(json)
             ?.let { objectMapper.writeValueAsString(it) }

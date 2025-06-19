@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
+import arrow.core.Either
+import arrow.core.getOrElse
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
@@ -39,19 +41,19 @@ internal class StatusListTokenValidator(
 
     suspend fun validate(sdJwtVc: SdJwtAndKbJwt<SignedJWT>, transactionId: TransactionId? = null) {
         sdJwtVc.sdJwt.jwt.statusReference()?.let { statusReference ->
-            runCatching {
+            Either.catch {
                 with(getStatus()) {
                     statusReference.currentStatus().getOrThrow()
                 }.also {
                     require(it == Status.Valid) { "Attestation status expected to be VALID but is $it" }
                 }
             }.fold(
-                onSuccess = {
-                    transactionId?.let { logStatusCheckSuccess(transactionId, statusReference) }
-                },
-                onFailure = { error ->
+                ifLeft = { error ->
                     transactionId?.let { logStatusCheckFailed(transactionId, statusReference, error) }
                     throw StatusCheckException("Attestation status check failed, ${error.message}", error)
+                },
+                ifRight = {
+                    transactionId?.let { logStatusCheckSuccess(transactionId, statusReference) }
                 },
             )
         }
@@ -91,8 +93,8 @@ private fun SignedJWT.statusReference(): StatusReference? {
         "Malformed status_list element"
     }
 
-    val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX]?.decodeAs<Int>()?.getOrThrow()!!)
-    val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()?.getOrThrow()!!
+    val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX]?.decodeAs<Int>()?.getOrElse { throw it }!!)
+    val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()!!.getOrElse { throw it }!!
 
     return StatusReference(index, uri)
 }

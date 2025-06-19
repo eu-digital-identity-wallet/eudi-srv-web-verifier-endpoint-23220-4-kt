@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
@@ -117,8 +118,14 @@ class RetrieveRequestObjectLive(
             suspend fun updatePresentationAndCreateJar(
                 encryptionRequirement: EncryptionRequirement,
             ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-                val jar = createJar(verifierConfig, clock, presentation, method.walletNonceOrNull, encryptionRequirement).getOrThrow()
-                val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
+                val jar = createJar(
+                    verifierConfig,
+                    clock,
+                    presentation,
+                    method.walletNonceOrNull,
+                    encryptionRequirement,
+                ).getOrElse { throw it }
+                val updatedPresentation = presentation.retrieveRequestObject(clock).getOrElse { throw it }
                 storePresentation(updatedPresentation)
                 return updatedPresentation to jar
             }
@@ -356,13 +363,13 @@ private fun ResponseModeOption.name(): String =
         ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.DIRECT_POST_JWT
     }
 
-private fun JsonObject.toVpFormats(): Result<List<VpFormat>> =
-    runCatching {
+private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
+    Either.catch {
         mapNotNull { (identifier, serializedProperties) ->
             when (identifier) {
                 SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
                     serializedProperties.decodeAs<SdJwtVcFormatTO>()
-                        .getOrThrow()
+                        .getOrElse { throw it }
                         .let { properties ->
                             VpFormat.SdJwtVc(
                                 sdJwtAlgorithms = properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
@@ -372,7 +379,7 @@ private fun JsonObject.toVpFormats(): Result<List<VpFormat>> =
 
                 OpenId4VPSpec.FORMAT_MSO_MDOC ->
                     serializedProperties.decodeAs<MsoMdocFormatTO>()
-                        .getOrThrow()
+                        .getOrElse { throw it }
                         .let { properties -> VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!) }
 
                 else -> null
@@ -383,7 +390,7 @@ private fun JsonObject.toVpFormats(): Result<List<VpFormat>> =
 private fun PresentationDefinition.vpFormats(supported: VpFormats): List<VpFormat> =
     inputDescriptors.flatMap { inputDescriptor ->
         val format = inputDescriptor.format ?: format
-        format?.jsonObject()?.toVpFormats()?.getOrThrow() ?: listOf(supported.sdJwtVc, supported.msoMdoc)
+        format?.jsonObject()?.toVpFormats()?.getOrElse { throw it } ?: listOf(supported.sdJwtVc, supported.msoMdoc)
     }.distinct()
 
 private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =

@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode
 
+import arrow.core.Either
+
 typealias PNGImage = ByteArray
 
 @JvmInline
@@ -41,5 +43,5 @@ fun interface GenerateQrCode {
     /**
      * Generates a [PNGImage] that contains a QR Code with the provided [data].
      */
-    suspend operator fun invoke(data: String, size: Dimensions): Result<PNGImage>
+    suspend operator fun invoke(data: String, size: Dimensions): Either<Throwable, PNGImage>
 }

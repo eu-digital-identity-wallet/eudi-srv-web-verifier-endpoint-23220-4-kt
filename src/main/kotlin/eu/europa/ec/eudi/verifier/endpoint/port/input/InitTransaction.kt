@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.toNonEmptyListOrNull
@@ -279,7 +280,7 @@ class InitTransactionLive(
                 val scheme = authorizationRequestScheme(initTransactionTO).bind()
                 val authorizationRequest = createAuthorizationRequestUri(scheme, request)
                 InitTransactionResponse.QrCode(
-                    generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrThrow(),
+                    generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrElse { throw it },
                 )
             }
         }
@@ -298,7 +299,7 @@ class InitTransactionLive(
                     is JarmOption.Signed -> error("Misconfiguration")
                     is JarmOption.Encrypted -> jarmOption
                     is JarmOption.SignedAndEncrypted -> jarmOption.encrypted
-                }.run { generateEphemeralEncryptionKeyPair(this).getOrThrow() }
+                }.run { generateEphemeralEncryptionKeyPair(this).getOrElse { throw it } }
         }
 
     /**
@@ -321,9 +322,9 @@ class InitTransactionLive(
                     requestedPresentation,
                     null,
                     EncryptionRequirement.NotRequired,
-                ).getOrThrow()
+                ).getOrElse { throw it }
 
-                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
+                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrElse { throw it }
                 requestObjectRetrieved to InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
@@ -407,7 +408,7 @@ class InitTransactionLive(
 
     private fun issuerChain(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
         Either.catch {
-            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
+            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrElse { throw it } }
         }.mapLeft { ValidationError.InvalidIssuerChain }
 
     /**

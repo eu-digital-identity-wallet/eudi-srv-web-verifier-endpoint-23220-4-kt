@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import arrow.core.Either
+import arrow.core.getOrElse
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.prex.PresentationDefinition
@@ -188,7 +190,7 @@ class WalletApi(
         private fun MultiValueMap<String, String>.walletResponse(): AuthorisationResponse {
             fun directPost(): AuthorisationResponse.DirectPost {
                 fun String.toJsonElement(): JsonElement =
-                    runCatching {
+                    Either.catch {
                         Json.decodeFromString<JsonElement>(this)
                     }.getOrElse { JsonPrimitive(this) }
 

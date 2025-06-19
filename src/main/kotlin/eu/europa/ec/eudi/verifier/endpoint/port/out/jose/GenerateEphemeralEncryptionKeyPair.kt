@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
+import arrow.core.Either
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 
@@ -24,5 +25,5 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 fun interface GenerateEphemeralEncryptionKeyPair {
     operator fun invoke(
         encryptedResponse: JarmOption.Encrypted,
-    ): Result<EphemeralEncryptionKeyPairJWK>
+    ): Either<Throwable, EphemeralEncryptionKeyPairJWK>
 }
