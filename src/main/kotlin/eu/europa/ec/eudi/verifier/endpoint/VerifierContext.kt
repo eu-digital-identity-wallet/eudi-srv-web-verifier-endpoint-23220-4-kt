@@ -22,6 +22,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
+import eu.europa.ec.eudi.sdjwt.vc.JsonSchemaValidator
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.LookupJsonSchemaUsingKtor
 import eu.europa.ec.eudi.sdjwt.vc.ResolveTypeMetadata
@@ -52,6 +53,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFrom
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromPidIssuer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -262,9 +264,10 @@ internal fun beans(clock: Clock) = beans {
     //
     // Type metadata resolve
     //
-    if (env.getProperty<Boolean>("verifier.type-metadata.resolution", false)) {
-        val pidUrl = env.getRequiredProperty("verifier.type-metadata.url")
+    if (env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.resolution.enabled", false)) {
+        val pidUrl = env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl")
         bean { ResolveTypeMetadata(LookupTypeMetadataFromPidIssuer(ref(), Url(pidUrl)), LookupJsonSchemaUsingKtor(ref())) }
+        bean { ValidateJsonSchema() }
     }
 
     //
@@ -373,7 +376,9 @@ private fun BeanSupplierContext.sdJwtVcValidator(
     provideTrustSource: ProvideTrustSource,
 ): SdJwtVcValidator {
     val env = ref<Environment>()
-    var vctKnownByVerifier = env.getOptionalList("verifier.type-metadata.known.vct", filter = { it.isNotBlank() })?.map {
+    var vctKnownByVerifier = env.getOptionalList("verifier.validation.sdJwtVc.typeMetadata.resolution.vcts", filter = {
+        it.isNotBlank()
+    })?.map {
             vct ->
         Vct(vct)
     }?.toSet()
@@ -383,6 +388,7 @@ private fun BeanSupplierContext.sdJwtVcValidator(
         audience = ref<VerifierConfig>().verifierId,
         provider<StatusListTokenValidator>().ifAvailable,
         resolveTypeMetadata = provider<ResolveTypeMetadata>().ifAvailable,
+        jsonSchemaValidator = provider<JsonSchemaValidator>().ifAvailable,
         enableTypeMetadataResolutionFor = vctKnownByVerifier ?: emptySet(),
     )
 }

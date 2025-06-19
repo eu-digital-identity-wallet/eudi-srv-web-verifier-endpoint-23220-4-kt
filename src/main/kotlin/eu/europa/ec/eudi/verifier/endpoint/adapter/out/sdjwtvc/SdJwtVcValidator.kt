@@ -124,6 +124,7 @@ internal class SdJwtVcValidator(
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
     private val resolveTypeMetadata: ResolveTypeMetadata?,
+    private val jsonSchemaValidator: JsonSchemaValidator?,
     private val enableTypeMetadataResolutionFor: Set<Vct>,
 ) {
     private fun sdJwtVcVerifier(enableTypeMetadataResolution: Boolean): SdJwtVcVerifier<SignedJWT> = run {
@@ -140,7 +141,7 @@ internal class SdJwtVcValidator(
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
             resolveTypeMetadata = if (enableTypeMetadataResolution) resolveTypeMetadata else null,
-            jsonSchemaValidator = null,
+            jsonSchemaValidator = jsonSchemaValidator,
         )
     }
 
@@ -168,7 +169,7 @@ internal class SdJwtVcValidator(
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingCustom(noSignatureVerifier),
             resolveTypeMetadata = if (enableTypeMetadataResolution) resolveTypeMetadata else null,
-            jsonSchemaValidator = null,
+            jsonSchemaValidator = jsonSchemaValidator,
         )
     }
 

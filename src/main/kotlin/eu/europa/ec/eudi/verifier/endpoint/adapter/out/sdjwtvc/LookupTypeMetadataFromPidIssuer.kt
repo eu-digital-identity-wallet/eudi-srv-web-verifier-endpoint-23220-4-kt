@@ -27,10 +27,10 @@ import io.ktor.http.*
 
 class LookupTypeMetadataFromPidIssuer(
     private val httpClient: KtorHttpClientFactory,
-    private val pidIssuerBaseUrl: Url,
+    private val serviceUrl: Url,
 ) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
-        val response = httpClient().request(pidIssuerBaseUrl) {
+        val response = httpClient().request(serviceUrl) {
             url {
                 expectSuccess = false
                 appendPathSegments("type-metadata", vct.value)
