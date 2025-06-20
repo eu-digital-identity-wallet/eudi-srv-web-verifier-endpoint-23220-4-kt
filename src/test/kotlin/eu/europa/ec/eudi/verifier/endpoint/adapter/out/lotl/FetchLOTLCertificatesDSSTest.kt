@@ -38,7 +38,7 @@ class FetchLOTLCertificatesDSSTest {
             ),
         )
 
-        assertTrue(result.isSuccess)
+        assertTrue(result.isRight())
         assertTrue(result.getOrNull()?.isNotEmpty() == true)
 
         val keyStore = KeyStore.getInstance("JKS")

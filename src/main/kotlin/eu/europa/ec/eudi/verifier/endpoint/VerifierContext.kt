@@ -649,14 +649,17 @@ private fun Environment.fallbackTrustSources(): Map<Regex, TrustSourceConfig>? =
         mapOf(".*".toRegex() to TrustSourcesConfig(null, it))
     }
 
-private fun Environment.parseKeyStoreConfig(propertyPrefix: String) = getPropertyOrEnvVariable(
+private fun Environment.parseKeyStoreConfig(propertyPrefix: String): KeyStoreConfig? = getPropertyOrEnvVariable(
     "$propertyPrefix.path",
 )?.let { keystorePath ->
     val keystoreType = getPropertyOrEnvVariable("$propertyPrefix.type") ?: "JKS"
     val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "").toCharArray()
     loadKeystore(keystorePath, keystoreType, keystorePassword)
         .fold(
-            ifLeft = { log.warn("Failed to load keystore from '$keystorePath'", it) },
+            ifLeft = {
+                log.warn("Failed to load keystore from '$keystorePath'", it)
+                null //TODO: Ask here whats going
+            },
             ifRight = { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) },
         )
 }
