@@ -572,18 +572,22 @@ private fun Environment.fallbackTrustSources(): Map<Regex, TrustSourceConfig>? =
         mapOf(".*".toRegex() to TrustSourcesConfig(null, it))
     }
 
-private fun Environment.parseKeyStoreConfig(propertyPrefix: String) = getPropertyOrEnvVariable(
+private fun Environment.parseKeyStoreConfig(propertyPrefix: String): KeyStoreConfig? = getPropertyOrEnvVariable(
     "$propertyPrefix.path",
 )?.let { keystorePath ->
     val keystoreType = getPropertyOrEnvVariable("$propertyPrefix.type") ?: "JKS"
     val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "").toCharArray()
     loadKeystore(keystorePath, keystoreType, keystorePassword)
-        .onFailure { log.warn("Failed to load keystore from '$keystorePath'", it) }
-        .map { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
-        .getOrNull()
+        .fold(
+            ifLeft = {
+                log.warn("Failed to load keystore from '$keystorePath'", it)
+                null // TODO: Ask here whats going
+            },
+            ifRight = { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) },
+        )
 }
 
-private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: CharArray) = runCatching {
+private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: CharArray) = Either.catch {
     DefaultResourceLoader().getResource(keystorePath)
         .inputStream
         .use {

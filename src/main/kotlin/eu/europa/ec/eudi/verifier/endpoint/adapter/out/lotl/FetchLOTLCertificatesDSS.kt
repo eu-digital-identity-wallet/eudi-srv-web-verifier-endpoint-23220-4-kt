@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl
 
+import arrow.core.Either
 import eu.europa.ec.eudi.verifier.endpoint.domain.KeyStoreConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.out.lotl.FetchLOTLCertificates
@@ -56,7 +57,7 @@ class FetchLOTLCertificatesDSS(
 
     override suspend fun invoke(
         trustedListConfig: TrustedListConfig,
-    ): Result<List<X509Certificate>> = runCatching {
+    ): Either<Throwable, List<X509Certificate>> = Either.catch {
         val trustedListsCertificateSource = TrustedListsCertificateSource()
 
         val tlCacheDirectory = Files.createTempDirectory("lotl-cache").toFile()
@@ -120,9 +121,9 @@ class FetchLOTLCertificatesDSS(
         }
     }
 
-    private suspend fun lotlCertificateSource(keystoreConfig: KeyStoreConfig): Result<KeyStoreCertificateSource> =
+    private suspend fun lotlCertificateSource(keystoreConfig: KeyStoreConfig): Either<Throwable, KeyStoreCertificateSource> =
         withContext(dispatcher + CoroutineName("LotlCertificateSource-${keystoreConfig.keystorePath}")) {
-            runCatching {
+            Either.catch {
                 val resource = DefaultResourceLoader().getResource(keystoreConfig.keystorePath)
                 KeyStoreCertificateSource(
                     resource.inputStream,

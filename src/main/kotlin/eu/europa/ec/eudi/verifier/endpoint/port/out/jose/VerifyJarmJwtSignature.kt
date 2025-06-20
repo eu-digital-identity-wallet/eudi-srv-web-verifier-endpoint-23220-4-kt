@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
+import arrow.core.Either
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
@@ -28,5 +29,5 @@ fun interface VerifyJarmJwtSignature {
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         jarmJwt: Jwt,
         apv: Nonce,
-    ): Result<AuthorisationResponseTO>
+    ): Either<Throwable, AuthorisationResponseTO>
 }

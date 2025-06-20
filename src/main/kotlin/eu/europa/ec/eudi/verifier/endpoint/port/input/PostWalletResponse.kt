@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
@@ -208,7 +209,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
         ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
 
         suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
-            val vpToken = runCatching {
+            val vpToken = Either.catch {
                 Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
             }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 
@@ -298,7 +299,7 @@ private fun eu.europa.ec.eudi.prex.Format.vpFormat(
 
         when (format.value) {
             SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
-                val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrThrow()
+                val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrElse { throw it }
                 VpFormat.SdJwtVc(
                     properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
                     properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
@@ -306,7 +307,7 @@ private fun eu.europa.ec.eudi.prex.Format.vpFormat(
             }
 
             OpenId4VPSpec.FORMAT_MSO_MDOC -> {
-                val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrThrow()
+                val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrElse { throw it }
                 VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!)
             }
 
@@ -454,7 +455,7 @@ class PostWalletResponseLive(
             GetWalletResponseMethod.Poll -> null
             is GetWalletResponseMethod.Redirect -> generateResponseCode()
         }
-        presentation.submit(clock, walletResponse, responseCode).getOrThrow()
+        presentation.submit(clock, walletResponse, responseCode).getOrElse { throw it }
     }
 
     private suspend fun logWalletResponsePosted(p: Submitted, accepted: WalletResponseAcceptedTO?) {

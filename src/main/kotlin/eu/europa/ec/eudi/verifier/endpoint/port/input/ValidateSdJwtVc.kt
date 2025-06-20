@@ -122,9 +122,9 @@ internal class ValidateSdJwtVc(
         )
     }
 
-    private fun sdJwtVcValidator(issuerChain: String?): Result<SdJwtVcValidator> = runCatching {
+    private fun sdJwtVcValidator(issuerChain: String?): Either<Throwable, SdJwtVcValidator> = Either.catch {
         val x5cShouldBe = issuerChain
-            ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrThrow() }
+            ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrElse { throwable -> throw throwable } }
         sdJwtVcValidatorFactory(x5cShouldBe)
     }
 }
