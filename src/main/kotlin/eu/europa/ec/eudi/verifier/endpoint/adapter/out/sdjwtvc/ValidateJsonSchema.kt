@@ -37,6 +37,7 @@ object ValidateJsonSchema : JsonSchemaValidator {
         return JsonSchemaConverter.convert(schema = schema).validate(unvalidated)
     }
 }
+
 private object JsonSchemaConverter {
     private val config: SchemaValidatorsConfig by lazy {
         SchemaValidatorsConfig.Builder()
@@ -44,6 +45,7 @@ private object JsonSchemaConverter {
             .formatAssertionsEnabled(true)
             .build()
     }
+
     private val factory: JsonSchemaFactory by lazy {
         JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012) { factoryBuilder ->
             factoryBuilder.schemaLoaders { schemaLoadersBuilder ->

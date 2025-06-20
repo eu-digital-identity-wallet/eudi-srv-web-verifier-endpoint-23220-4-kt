@@ -123,7 +123,7 @@ internal class SdJwtVcValidator(
     private val provideTrustSource: ProvideTrustSource,
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
-    private val typeMetadataPolicy: TypeMetadataPolicy,
+    typeMetadataPolicy: TypeMetadataPolicy,
 ) {
     private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->

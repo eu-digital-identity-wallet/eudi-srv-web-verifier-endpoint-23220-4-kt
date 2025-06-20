@@ -49,6 +49,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFrom
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromPidIssuer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -257,38 +258,27 @@ internal fun beans(clock: Clock) = beans {
     bean { FetchLOTLCertificatesDSS() }
 
     //
-    // Type metadata resolve
+    // Type metadata policy
     //
-    val vctKnownByVerifier = env.getOptionalList(
-        "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts",
-        filter = { it.isNotBlank() },
-    ).orEmpty().map { Vct(it) }.toSet()
+    bean<TypeMetadataPolicy> {
+        val typeMetadataResolutionEnabled = env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.resolution.enabled", false)
+        if (!typeMetadataResolutionEnabled) {
+            return@bean TypeMetadataPolicy.NotUsed
+        }
 
-    val serviceUrl: String? = env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl")
-    val typeMetadataResolution = env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.resolution.enabled", false)
-    if (typeMetadataResolution && vctKnownByVerifier.isNotEmpty()) {
-        bean {
-            TypeMetadataPolicy.RequiredFor(
-                vcts = vctKnownByVerifier,
-                resolveTypeMetadata = ResolveTypeMetadata(
-                    LookupTypeMetadataFromPidIssuer(ref(), Url(serviceUrl!!)),
-                    LookupJsonSchemaUsingKtor(ref()),
-                ),
-                jsonSchemaValidator = ref<JsonSchemaValidator>(),
-            )
-        }
-    } else if (typeMetadataResolution) {
-        bean {
-            TypeMetadataPolicy.Optional(
-                resolveTypeMetadata = ResolveTypeMetadata(
-                    LookupTypeMetadataFromPidIssuer(ref(), Url(serviceUrl!!)),
-                    LookupJsonSchemaUsingKtor(ref()),
-                ),
-                jsonSchemaValidator = ref<JsonSchemaValidator>(),
-            )
-        }
-    } else {
-        bean { TypeMetadataPolicy.NotUsed }
+        val serviceUrl = Url(env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl"))
+        val resolveTypeMetadata = ResolveTypeMetadata(
+            LookupTypeMetadataFromPidIssuer(ref(), serviceUrl),
+            LookupJsonSchemaUsingKtor(ref()),
+        )
+
+        val resolveTypeMetadataFor = env.getOptionalList(
+            name = "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts",
+            filter = { it.isNotBlank() },
+        ).orEmpty().map { Vct(it) }.toSet()
+
+        if (resolveTypeMetadataFor.isEmpty()) TypeMetadataPolicy.Optional(resolveTypeMetadata, ValidateJsonSchema)
+        else TypeMetadataPolicy.RequiredFor(resolveTypeMetadataFor, resolveTypeMetadata, ValidateJsonSchema)
     }
 
     //
