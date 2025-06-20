@@ -658,7 +658,7 @@ private fun Environment.parseKeyStoreConfig(propertyPrefix: String): KeyStoreCon
         .fold(
             ifLeft = {
                 log.warn("Failed to load keystore from '$keystorePath'", it)
-                null //TODO: Ask here whats going
+                null // TODO: Ask here whats going
             },
             ifRight = { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) },
         )
