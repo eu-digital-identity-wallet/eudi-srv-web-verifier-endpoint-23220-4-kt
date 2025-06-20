@@ -17,6 +17,7 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSHeader
@@ -70,7 +71,7 @@ class CreateJarNimbusTest {
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
         val jwt = createJar.sign(clientMetaData, ecPublicKey, requestObject, null)
-            .getOrThrow()
+            .getOrElse { throw it }
             .serialize()
             .also { println(it) }
         val signedJwt = decode(jwt).getOrThrow().also { println(it) }
@@ -117,7 +118,7 @@ class CreateJarNimbusTest {
     }
 
     private fun assertEquals(pd: PresentationDefinition?, c: MutableMap<String, Any?>?) {
-        val pd2 = c?.let { PresentationDefinitionJackson.fromJsonObject(c).getOrThrow() }
+        val pd2 = c?.let { PresentationDefinitionJackson.fromJsonObject(c).getOrElse { throw it } }
         assertEquals(pd, pd2)
     }
 
