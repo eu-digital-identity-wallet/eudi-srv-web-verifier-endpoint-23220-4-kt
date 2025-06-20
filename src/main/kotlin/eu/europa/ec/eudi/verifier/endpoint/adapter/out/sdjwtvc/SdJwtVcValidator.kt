@@ -123,11 +123,9 @@ internal class SdJwtVcValidator(
     private val provideTrustSource: ProvideTrustSource,
     private val audience: VerifierId,
     private val statusListTokenValidator: StatusListTokenValidator?,
-    private val resolveTypeMetadata: ResolveTypeMetadata?,
-    private val jsonSchemaValidator: JsonSchemaValidator?,
-    private val enableTypeMetadataResolutionFor: Set<Vct>,
+    private val typeMetadataPolicy: TypeMetadataPolicy,
 ) {
-    private fun sdJwtVcVerifier(enableTypeMetadataResolution: Boolean): SdJwtVcVerifier<SignedJWT> = run {
+    private val sdJwtVcVerifier: SdJwtVcVerifier<SignedJWT> = run {
         val x509CertificateTrust = X509CertificateTrust.usingVct { chain: List<X509Certificate>, vct ->
             val x5CShouldBe = provideTrustSource(vct)
             if (x5CShouldBe != null) {
@@ -140,12 +138,11 @@ internal class SdJwtVcValidator(
         }
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingX5c(x509CertificateTrust),
-            resolveTypeMetadata = if (enableTypeMetadataResolution) resolveTypeMetadata else null,
-            jsonSchemaValidator = jsonSchemaValidator,
+            typeMetadataPolicy = typeMetadataPolicy,
         )
     }
 
-    private fun sdJwtVcVerifierNoSignatureVerification(enableTypeMetadataResolution: Boolean): SdJwtVcVerifier<SignedJWT> = run {
+    private val sdJwtVcVerifierNoSignatureVerification: SdJwtVcVerifier<SignedJWT> = run {
         val noSignatureVerifier = run {
             val typeVerifier = DefaultJOSEObjectTypeVerifier<SecurityContext>(
                 JOSEObjectType(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT),
@@ -168,8 +165,7 @@ internal class SdJwtVcValidator(
 
         NimbusSdJwtOps.SdJwtVcVerifier(
             issuerVerificationMethod = IssuerVerificationMethod.usingCustom(noSignatureVerifier),
-            resolveTypeMetadata = if (enableTypeMetadataResolution) resolveTypeMetadata else null,
-            jsonSchemaValidator = jsonSchemaValidator,
+            typeMetadataPolicy = typeMetadataPolicy,
         )
     }
 
@@ -191,15 +187,13 @@ internal class SdJwtVcValidator(
         nonce: Nonce,
         transactionId: TransactionId?,
     ): Either<NonEmptyList<SdJwtVcValidationError>, SdJwtAndKbJwt<SignedJWT>> {
-        val vct = vctOf(unverified)
-        val typeMetadataResolutionEnabled = enableTypeMetadataResolutionFor.contains(vct)
         val challenge = buildJsonObject {
             put(RFC7519.AUDIENCE, audience.clientId)
             put("nonce", nonce.value)
         }
 
         return Either.catch {
-            sdJwtVcVerifier(typeMetadataResolutionEnabled).verify(unverified, challenge, transactionId).getOrThrow()
+            sdJwtVcVerifier.verify(unverified, challenge, transactionId).getOrThrow()
         }.fold(
             ifRight = { it.right() },
             ifLeft = { sdJwtVcError ->
@@ -207,9 +201,7 @@ internal class SdJwtVcValidator(
                 val errors =
                     if (!sdJwtVcError.isSignatureVerificationFailure()) nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError))
                     else Either.catch {
-                        sdJwtVcVerifierNoSignatureVerification(
-                            typeMetadataResolutionEnabled,
-                        ).verify(unverified, challenge, transactionId).getOrThrow()
+                        sdJwtVcVerifierNoSignatureVerification.verify(unverified, challenge, transactionId).getOrThrow()
                     }.fold(
                         ifRight = { nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError)) },
                         ifLeft = { sdJwtError ->
@@ -256,19 +248,3 @@ private fun Throwable.isSignatureVerificationFailure(): Boolean =
 
         else -> false
     }
-
-private suspend fun vctOf(unverified: Either<JsonObject, String>): Vct? =
-    runCatching {
-        val noSignatureVerifier = JwtSignatureVerifier {
-            runCatching {
-                SignedJWT.parse(it)
-            }.getOrNull()
-        }
-
-        val unverifiedSdJwt: SdJwtAndKbJwt<SignedJWT> = unverified.fold(
-            ifLeft = { NimbusSdJwtOps.verify(noSignatureVerifier, KeyBindingVerifier.mustBePresent(noSignatureVerifier), it) },
-            ifRight = { NimbusSdJwtOps.verify(noSignatureVerifier, KeyBindingVerifier.mustBePresent(noSignatureVerifier), it) },
-        ).getOrThrow()
-
-        Vct(unverifiedSdJwt.sdJwt.jwt.jwtClaimsSet.getStringClaim(SdJwtVcSpec.VCT))
-    }.getOrNull()

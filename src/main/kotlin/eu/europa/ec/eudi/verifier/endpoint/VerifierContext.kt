@@ -22,11 +22,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
-import eu.europa.ec.eudi.sdjwt.vc.JsonSchemaValidator
-import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
-import eu.europa.ec.eudi.sdjwt.vc.LookupJsonSchemaUsingKtor
-import eu.europa.ec.eudi.sdjwt.vc.ResolveTypeMetadata
-import eu.europa.ec.eudi.sdjwt.vc.Vct
+import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSources
@@ -53,7 +49,6 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFrom
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromPidIssuer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -62,9 +57,9 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.engine.apache.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.request.header
+import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -264,11 +259,37 @@ internal fun beans(clock: Clock) = beans {
     //
     // Type metadata resolve
     //
-    if (env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.resolution.enabled", false)) {
-        val serviceUrl = env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl")
-        bean { ResolveTypeMetadata(LookupTypeMetadataFromPidIssuer(ref(), Url(serviceUrl)), LookupJsonSchemaUsingKtor(ref())) }
+    val vctKnownByVerifier = env.getOptionalList(
+        "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts",
+        filter = { it.isNotBlank() },
+    ).orEmpty().map { Vct(it) }.toSet()
+
+    val serviceUrl: String? = env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl")
+    val typeMetadataResolution = env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.resolution.enabled", false)
+    if (typeMetadataResolution && vctKnownByVerifier.isNotEmpty()) {
+        bean {
+            TypeMetadataPolicy.RequiredFor(
+                vcts = vctKnownByVerifier,
+                resolveTypeMetadata = ResolveTypeMetadata(
+                    LookupTypeMetadataFromPidIssuer(ref(), Url(serviceUrl!!)),
+                    LookupJsonSchemaUsingKtor(ref()),
+                ),
+                jsonSchemaValidator = ref<JsonSchemaValidator>(),
+            )
+        }
+    } else if (typeMetadataResolution) {
+        bean {
+            TypeMetadataPolicy.Optional(
+                resolveTypeMetadata = ResolveTypeMetadata(
+                    LookupTypeMetadataFromPidIssuer(ref(), Url(serviceUrl!!)),
+                    LookupJsonSchemaUsingKtor(ref()),
+                ),
+                jsonSchemaValidator = ref<JsonSchemaValidator>(),
+            )
+        }
+    } else {
+        bean { TypeMetadataPolicy.NotUsed }
     }
-    bean { ValidateJsonSchema }
 
     //
     // Scheduled
@@ -374,22 +395,13 @@ private fun BeanSupplierContext.deviceResponseValidator(
 
 private fun BeanSupplierContext.sdJwtVcValidator(
     provideTrustSource: ProvideTrustSource,
-): SdJwtVcValidator {
-    val env = ref<Environment>()
-    val vctKnownByVerifier = env.getOptionalList(
-        "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts",
-        filter = { it.isNotBlank() },
-    ).orEmpty().map { Vct(it) }.toSet()
+): SdJwtVcValidator = SdJwtVcValidator(
+    provideTrustSource = provideTrustSource,
+    audience = ref<VerifierConfig>().verifierId,
+    provider<StatusListTokenValidator>().ifAvailable,
+    typeMetadataPolicy = ref<TypeMetadataPolicy>(),
+)
 
-    return SdJwtVcValidator(
-        provideTrustSource = provideTrustSource,
-        audience = ref<VerifierConfig>().verifierId,
-        provider<StatusListTokenValidator>().ifAvailable,
-        resolveTypeMetadata = provider<ResolveTypeMetadata>().ifAvailable,
-        jsonSchemaValidator = ref<JsonSchemaValidator>(),
-        enableTypeMetadataResolutionFor = vctKnownByVerifier,
-    )
-}
 private enum class EmbedOptionEnum {
     ByValue,
     ByReference,
