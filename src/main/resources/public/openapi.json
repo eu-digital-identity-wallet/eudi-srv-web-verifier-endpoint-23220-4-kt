@@ -1650,6 +1650,9 @@
           "IssuerCertificateIsNotTrusted",
           "UnableToLookupDID",
           "UnableToDetermineVerificationMethod",
+          "TypeMetadataResolutionFailure",
+          "TypeMetadataValidationFailure",
+          "JsonSchemaValidationFailure",
           "StatusCheckFailed",
           "UnexpectedError",
           "InvalidIssuerChain"

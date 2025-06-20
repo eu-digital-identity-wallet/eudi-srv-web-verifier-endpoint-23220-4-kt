@@ -14,7 +14,7 @@ arrow = "2.0.1"
 dependencycheck = "12.1.1"
 swaggerUi = "5.20.1"
 waltid = "0.11.0"
-sdJwt = "0.13.1"
+sdJwt = "0.14.1"
 ktor = "3.1.1"
 jsonpathkt = "2.0.1"
 tink = "1.17.0"
@@ -23,6 +23,8 @@ kover = "0.9.1"
 zxing = "3.5.3"
 uri = "0.0.19"
 dss = "6.2"
+jsonValidator="1.5.7"
+joni="2.2.6"
 
 [libraries]
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -44,6 +46,8 @@ dss-service = { module = "eu.europa.ec.joinup.sd-dss:dss-service", version.ref =
 dss-validation = { module = "eu.europa.ec.joinup.sd-dss:dss-validation", version.ref = "dss" }
 dss-tsl-validation = { module = "eu.europa.ec.joinup.sd-dss:dss-tsl-validation", version.ref = "dss" }
 dss-utils-apache-commons = { module = "eu.europa.ec.joinup.sd-dss:dss-utils-apache-commons", version.ref = "dss" }
+json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "jsonValidator" }
+joni = { module = "org.jruby.joni:joni", version.ref = "joni" }
 
 [plugins]
 foojay-resolver-convention = { id = "org.gradle.toolchains.foojay-resolver-convention", version.ref = "foojay" }

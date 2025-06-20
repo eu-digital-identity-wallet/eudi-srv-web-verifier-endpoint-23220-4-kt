@@ -22,7 +22,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
-import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
+import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSources
@@ -46,8 +46,10 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromPidIssuer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -56,9 +58,9 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
 import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.engine.apache.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.request.header
+import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -256,6 +258,30 @@ internal fun beans(clock: Clock) = beans {
     bean { FetchLOTLCertificatesDSS() }
 
     //
+    // Type metadata policy
+    //
+    bean<TypeMetadataPolicy> {
+        val typeMetadataResolutionEnabled = env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.resolution.enabled", false)
+        if (!typeMetadataResolutionEnabled) {
+            return@bean TypeMetadataPolicy.NotUsed
+        }
+
+        val serviceUrl = Url(env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl"))
+        val resolveTypeMetadata = ResolveTypeMetadata(
+            LookupTypeMetadataFromPidIssuer(ref(), serviceUrl),
+            LookupJsonSchemaUsingKtor(ref()),
+        )
+
+        val resolveTypeMetadataFor = env.getOptionalList(
+            name = "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts",
+            filter = { it.isNotBlank() },
+        ).orEmpty().map { Vct(it) }.toSet()
+
+        if (resolveTypeMetadataFor.isEmpty()) TypeMetadataPolicy.Optional(resolveTypeMetadata, ValidateJsonSchema)
+        else TypeMetadataPolicy.RequiredFor(resolveTypeMetadataFor, resolveTypeMetadata, ValidateJsonSchema)
+    }
+
+    //
     // Scheduled
     //
     bean(::ScheduleTimeoutPresentations)
@@ -359,12 +385,12 @@ private fun BeanSupplierContext.deviceResponseValidator(
 
 private fun BeanSupplierContext.sdJwtVcValidator(
     provideTrustSource: ProvideTrustSource,
-): SdJwtVcValidator =
-    SdJwtVcValidator(
-        provideTrustSource = provideTrustSource,
-        audience = ref<VerifierConfig>().verifierId,
-        provider<StatusListTokenValidator>().ifAvailable,
-    )
+): SdJwtVcValidator = SdJwtVcValidator(
+    provideTrustSource = provideTrustSource,
+    audience = ref<VerifierConfig>().verifierId,
+    provider<StatusListTokenValidator>().ifAvailable,
+    typeMetadataPolicy = ref<TypeMetadataPolicy>(),
+)
 
 private enum class EmbedOptionEnum {
     ByValue,
