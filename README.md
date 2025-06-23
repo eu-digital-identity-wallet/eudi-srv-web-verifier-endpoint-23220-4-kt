@@ -853,24 +853,28 @@ Variable: `VERIFIER_HTTP_PROXY_PASSWORD`
 Description: Password to authenticate against the proxy  
 Example: `passwd`
 
-### Type Metadata resolution
+### SD-JWT-VC Type metadata policy
 
-Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_POLICY`  
-Description: Choose SD-JWT VC Type Metadata resolution policy  
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY`  
+Description: Choose SD-JWT VC Type Metadata resolution policy, information about the available policies can be found [here](https://github.com/eu-digital-identity-wallet/eudi-lib-jvm-sdjwt-kt?tab=readme-ov-file#type-metadata-resolution)  
 Accepted values: `not_used`,`optional`,`always_required`,`required_for`
+default value: `not_used`
+
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY_REQUIREDFOR`
+Description: Comma separated list of VCTs for which Type Metadata resolution is enabled, required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY` is set to `required_for`
+Example: `urn:eudi:pid:1`
+
+#### SD-JWT-VC Type metadata resolution
+
+Required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_POLICY` is not set to `not_used`
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_XX_VCT` (e.g. `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_0_VCT`)  
-Description: The VCT of the type metadata resolution property, required when `POLICY` is not set to `not_used`
+Description: VCT for which TypeMetadata resolution is enabled 
 Example: `urn:eudi:pid:1`
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_XX_URL` (e.g. `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_0_URL`)  
-Description: Contains the URL where the verifier is retrieving the Type Metadata from. This is implemented using SD-JWT VC Type Metadata endpoint of the [pid-issuer](https://github.com/niscy-eudiw/eudi-srv-pid-issuer/blob/main/README.md#retrieve-type-metadata) , required when `POLICY` is not set to `not_used`
-Example: `http://localhost:8080/type-metadata`
-
-Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_REQUIRED_FOR` 
-Description: Comma separated list of VCTs for which Type Metadata resolution is enabled, required when `POLICY` is set to `required_for`
-Example: `urn:eudi:pid:1`
-
+Description: URL for which TypeMetadata can be resolved from
+Example: `http://localhost:8080/type-metadata/urn:eudi:pid:1`
 
 ## How to contribute
 
