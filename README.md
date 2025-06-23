@@ -856,25 +856,25 @@ Example: `passwd`
 ### SD-JWT-VC Type metadata policy
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY`  
-Description: Choose SD-JWT VC Type Metadata resolution policy, information about the available policies can be found [here](https://github.com/eu-digital-identity-wallet/eudi-lib-jvm-sdjwt-kt?tab=readme-ov-file#type-metadata-resolution)  
-Accepted values: `not_used`,`optional`,`always_required`,`required_for`
-default value: `not_used`
+Description: Choose SD-JWT VC Type Metadata policy, information about the available policies can be found [here](https://github.com/eu-digital-identity-wallet/eudi-lib-jvm-sdjwt-kt?tab=readme-ov-file#type-metadata-resolution)  
+Accepted values: `not_used`,`optional`,`always_required`,`required_for`  
+Default value: `not_used`  
 
-Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY_REQUIREDFOR`
-Description: Comma separated list of VCTs for which Type Metadata resolution is enabled, required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY` is set to `required_for`
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY_REQUIREDFOR`  
+Description: Comma separated list of VCTs for which Type Metadata resolution is required for, required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY` is set to `required_for`  
 Example: `urn:eudi:pid:1`
 
 #### SD-JWT-VC Type metadata resolution
 
-Required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_POLICY` is not set to `not_used`
+Required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_POLICY` is not set to `not_used`  
 
-Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_XX_VCT` (e.g. `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_0_VCT`)  
-Description: VCT for which TypeMetadata resolution is enabled 
-Example: `urn:eudi:pid:1`
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_XX_VCT` (e.g. `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_0_VCT`)   
+Description: VCT for which Type Metadata resolution is enabled  
+Example: `urn:eudi:pid:1`  
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_XX_URL` (e.g. `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_0_URL`)  
-Description: URL for which TypeMetadata can be resolved from
-Example: `http://localhost:8080/type-metadata/urn:eudi:pid:1`
+Description: Url from which Type Metadata can be fetched from for `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_XX_VCT`  
+Example: `http://localhost:8080/type-metadata/urn:eudi:pid:1`  
 
 ## How to contribute
 
