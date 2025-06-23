@@ -262,34 +262,44 @@ internal fun beans(clock: Clock) = beans {
     // Type metadata policy
     //
     bean<TypeMetadataPolicy> {
-        val policy = env.getRequiredProperty(
-            "verifier.validation.sdJwtVc.typeMetadata.resolution.policy",
-            TypeMetadataPolicyEnabled::class.java,
-        )
         fun resolveTypeMetadata(): ResolveTypeMetadata {
-            val registeredTypeMetadata = ref<TypeMetadataRegisteredVct>().known
-            require(registeredTypeMetadata.isNotEmpty()) {
-                "verifier.validation.sdJwtVc.typeMetadata.resolution.known must be set"
+            val vcts = ref<TypeMetadataResolutionProperties>()
+                .vcts
+                .associateBy { Vct(it.vct) }.mapValues { Url(it.value.url) }
+            require(vcts.isNotEmpty()) {
+                "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts must be set"
             }
-            val typeMetadata = registeredTypeMetadata.associateBy { Vct(it.vct) }.mapValues { Url(it.value.url) }
+
             return ResolveTypeMetadata(
-                LookupTypeMetadataFromUrl(ref(), typeMetadata),
+                LookupTypeMetadataFromUrl(ref(), vcts),
                 LookupJsonSchemaUsingKtor(ref()),
             )
         }
 
+        val policy = env.getRequiredProperty(
+            "verifier.validation.sdJwtVc.typeMetadata.policy",
+            TypeMetadataPolicyEnum::class.java,
+        )
         when (policy) {
-            TypeMetadataPolicyEnabled.NotUsed -> TypeMetadataPolicy.NotUsed
-            TypeMetadataPolicyEnabled.Optional -> TypeMetadataPolicy.Optional(resolveTypeMetadata(), ValidateJsonSchema)
-            TypeMetadataPolicyEnabled.AlwaysRequired -> TypeMetadataPolicy.AlwaysRequired(resolveTypeMetadata(), ValidateJsonSchema)
-            TypeMetadataPolicyEnabled.RequiredFor -> TypeMetadataPolicy.RequiredFor(
-                env.getOptionalList(
-                    name = "verifier.validation.sdJwtVc.typeMetadata.resolution.required.for",
+            TypeMetadataPolicyEnum.NotUsed -> TypeMetadataPolicy.NotUsed
+            TypeMetadataPolicyEnum.Optional -> TypeMetadataPolicy.Optional(resolveTypeMetadata(), ValidateJsonSchema)
+            TypeMetadataPolicyEnum.AlwaysRequired -> TypeMetadataPolicy.AlwaysRequired(resolveTypeMetadata(), ValidateJsonSchema)
+            TypeMetadataPolicyEnum.RequiredFor -> {
+                val vcts = env.getOptionalList(
+                    name = "verifier.validation.sdJwtVc.typeMetadata.policy.requiredFor",
                     filter = { it.isNotBlank() },
-                ).orEmpty().map { Vct(it) }.toSet(),
-                resolveTypeMetadata(),
-                ValidateJsonSchema,
-            )
+                )?.map { Vct(it) }?.toSet()
+                requireNotNull(vcts) {
+                    "verifier.validation.sdJwtVc.typeMetadata.policy.requiredFor is required when " +
+                        "verifier.validation.sdJwtVc.typeMetadata.policy is 'requiredFor'"
+                }
+
+                TypeMetadataPolicy.RequiredFor(
+                    vcts,
+                    resolveTypeMetadata(),
+                    ValidateJsonSchema,
+                )
+            }
         }
     }
 
@@ -780,18 +790,19 @@ data class HttpProxy(
         }
     }
 }
-private enum class TypeMetadataPolicyEnabled {
+
+private enum class TypeMetadataPolicyEnum {
     NotUsed,
     Optional,
     AlwaysRequired,
     RequiredFor,
 }
 
-@ConfigurationProperties("verifier.validation.sdjwtvc.typemetadata.resolution")
-data class TypeMetadataRegisteredVct(
-    val known: List<TypeMetadataProperties> = emptyList(),
+@ConfigurationProperties("verifier.validation.sd-jwt-vc.type-metadata.resolution")
+internal data class TypeMetadataResolutionProperties(
+    val vcts: List<VctProperties> = emptyList(),
 ) {
-    data class TypeMetadataProperties(
+    data class VctProperties(
         val vct: String,
         val url: String,
     )
