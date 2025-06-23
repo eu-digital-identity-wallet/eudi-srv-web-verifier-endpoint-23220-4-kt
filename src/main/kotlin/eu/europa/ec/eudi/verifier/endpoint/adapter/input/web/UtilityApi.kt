@@ -86,7 +86,7 @@ internal class UtilityApi(
         return when (val result = validateSdJwtVc(unverifiedSdJwtVc, nonce, issuerChain)) {
             is SdJwtVcValidationResult.Valid -> {
                 val reCreated = with(NimbusSdJwtOps) {
-                    result.payload.sdJwt.recreateClaims(visitor = null)
+                    result.payload.sdJwt.recreateClaimsAndDisclosuresPerClaim().first
                 }
                 ok().json().bodyValueAndAwait(reCreated)
             }
