@@ -24,11 +24,12 @@ import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 
-class LookupTypeMetadataFromPidIssuer(
+class LookupTypeMetadataFromUrl(
     private val httpClientFactory: KtorHttpClientFactory,
-    private val serviceUrl: Url,
+    private val knownTypeMetadata: Map<Vct, Url>,
 ) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
+        val serviceUrl = knownTypeMetadata[vct]!!
         httpClientFactory().use { httpClient ->
             val response = httpClient.get {
                 url {

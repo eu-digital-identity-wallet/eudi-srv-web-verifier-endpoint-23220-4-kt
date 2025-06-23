@@ -46,7 +46,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromPidIssuer
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromUrl
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
@@ -69,6 +69,7 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
 import org.slf4j.LoggerFactory
+import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.web.codec.CodecCustomizer
 import org.springframework.context.support.BeanDefinitionDsl.BeanSupplierContext
 import org.springframework.context.support.beans
@@ -261,24 +262,35 @@ internal fun beans(clock: Clock) = beans {
     // Type metadata policy
     //
     bean<TypeMetadataPolicy> {
-        val typeMetadataResolutionEnabled = env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.resolution.enabled", false)
-        if (!typeMetadataResolutionEnabled) {
-            return@bean TypeMetadataPolicy.NotUsed
+        val policy = env.getRequiredProperty(
+            "verifier.validation.sdJwtVc.typeMetadata.resolution.policy",
+            TypeMetadataPolicyEnabled::class.java,
+        )
+        fun resolveTypeMetadata(): ResolveTypeMetadata {
+            val registeredTypeMetadata = ref<TypeMetadataRegisteredVct>().known
+            require(registeredTypeMetadata.isNotEmpty()) {
+                "verifier.validation.sdJwtVc.typeMetadata.resolution.known must be set"
+            }
+            val typeMetadata = registeredTypeMetadata.associateBy { Vct(it.vct) }.mapValues { Url(it.value.url) }
+            return ResolveTypeMetadata(
+                LookupTypeMetadataFromUrl(ref(), typeMetadata),
+                LookupJsonSchemaUsingKtor(ref()),
+            )
         }
 
-        val serviceUrl = Url(env.getRequiredProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.serviceUrl"))
-        val resolveTypeMetadata = ResolveTypeMetadata(
-            LookupTypeMetadataFromPidIssuer(ref(), serviceUrl),
-            LookupJsonSchemaUsingKtor(ref()),
-        )
-
-        val resolveTypeMetadataFor = env.getOptionalList(
-            name = "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts",
-            filter = { it.isNotBlank() },
-        ).orEmpty().map { Vct(it) }.toSet()
-
-        if (resolveTypeMetadataFor.isEmpty()) TypeMetadataPolicy.Optional(resolveTypeMetadata, ValidateJsonSchema)
-        else TypeMetadataPolicy.RequiredFor(resolveTypeMetadataFor, resolveTypeMetadata, ValidateJsonSchema)
+        when (policy) {
+            TypeMetadataPolicyEnabled.NotUsed -> TypeMetadataPolicy.NotUsed
+            TypeMetadataPolicyEnabled.Optional -> TypeMetadataPolicy.Optional(resolveTypeMetadata(), ValidateJsonSchema)
+            TypeMetadataPolicyEnabled.AlwaysRequired -> TypeMetadataPolicy.AlwaysRequired(resolveTypeMetadata(), ValidateJsonSchema)
+            TypeMetadataPolicyEnabled.RequiredFor -> TypeMetadataPolicy.RequiredFor(
+                env.getOptionalList(
+                    name = "verifier.validation.sdJwtVc.typeMetadata.resolution.required.for",
+                    filter = { it.isNotBlank() },
+                ).orEmpty().map { Vct(it) }.toSet(),
+                resolveTypeMetadata(),
+                ValidateJsonSchema,
+            )
+        }
     }
 
     //
@@ -767,4 +779,20 @@ data class HttpProxy(
             "Password cannot be set if username is null"
         }
     }
+}
+private enum class TypeMetadataPolicyEnabled {
+    NotUsed,
+    Optional,
+    AlwaysRequired,
+    RequiredFor,
+}
+
+@ConfigurationProperties("verifier.validation.sdjwtvc.typemetadata.resolution")
+data class TypeMetadataRegisteredVct(
+    val known: List<TypeMetadataProperties> = emptyList(),
+) {
+    data class TypeMetadataProperties(
+        val vct: String,
+        val url: String,
+    )
 }

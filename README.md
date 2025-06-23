@@ -855,17 +855,22 @@ Example: `passwd`
 
 ### Type Metadata resolution
 
-Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_ENABLED`  
-Description: Enable SD-JWT VC Type Metadata resolution  
-Default value: `false`
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_POLICY`  
+Description: Choose SD-JWT VC Type Metadata resolution policy  
+Accepted values: `not_used`,`optional`,`always_required`,`required_for`
 
-Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_VCTS`  
-Description: Comma separated list of VCTs for which Type Metadata resolution is enabled  
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_XX_VCT` (e.g. `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_0_VCT`)  
+Description: The VCT of the type metadata resolution property, required when `POLICY` is not set to `not_used`
 Example: `urn:eudi:pid:1`
 
-Variable: `VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_SERVICEURL`  
-Description: Contains the URL where the verifier is retrieving the Type Metadata from. This is implemented using SD-JWT VC Type Metadata endpoint of the [pid-issuer](https://github.com/niscy-eudiw/eudi-srv-pid-issuer/blob/main/README.md#retrieve-type-metadata)  
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_XX_URL` (e.g. `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_KNOWN_0_URL`)  
+Description: Contains the URL where the verifier is retrieving the Type Metadata from. This is implemented using SD-JWT VC Type Metadata endpoint of the [pid-issuer](https://github.com/niscy-eudiw/eudi-srv-pid-issuer/blob/main/README.md#retrieve-type-metadata) , required when `POLICY` is not set to `not_used`
 Example: `http://localhost:8080/type-metadata`
+
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_REQUIRED_FOR` 
+Description: Comma separated list of VCTs for which Type Metadata resolution is enabled, required when `POLICY` is set to `required_for`
+Example: `urn:eudi:pid:1`
+
 
 ## How to contribute
 
