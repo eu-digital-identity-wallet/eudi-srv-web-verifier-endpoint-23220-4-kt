@@ -876,6 +876,15 @@ Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_VCTS_XX_URL` (e.g
 Description: Url from which Type Metadata can be fetched from for `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_VCTS_XX_VCT`  
 Example: `http://localhost:8080/type-metadata/urn:eudi:pid:1`  
 
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_CACHE_TTL`  
+Description: Cache TTL for resolved Type Metadata  
+Notes: Provide a value using Java Duration syntax
+Default value: `PT1H`  
+
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_CACHE_MAXENTRIES`  
+Description: Cache maximum entries for resolved Type Metadata  
+Default value: `10`  
+
 ## How to contribute
 
 We welcome contributions to this project. To ensure that the process is smooth for everyone

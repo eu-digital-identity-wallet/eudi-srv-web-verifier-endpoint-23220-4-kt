@@ -16,12 +16,15 @@
 package eu.europa.ec.eudi.verifier.endpoint
 
 import arrow.core.*
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
+import com.sksamuel.aedile.core.asCache
+import com.sksamuel.aedile.core.expireAfterWrite
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
@@ -89,6 +92,7 @@ import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.util.*
+import kotlin.time.toKotlinDuration
 
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
@@ -270,10 +274,35 @@ internal fun beans(clock: Clock) = beans {
                 "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts must be set"
             }
 
-            return ResolveTypeMetadata(
-                LookupTypeMetadataFromUrl(ref(), vcts),
+            val cacheTtl = Duration.parse(
+                env.getProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.cache.ttl", "PT1H"),
+            ).toKotlinDuration()
+            val cacheSize = env.getProperty(
+                "verifier.validation.sdJwtVc.typeMetadata.resolution.cache.maxEntries",
+                10,
+            ).toLong()
+
+            val cache = Caffeine.newBuilder()
+                .expireAfterWrite(cacheTtl)
+                .maximumSize(cacheSize)
+                .asCache<Vct, ResolvedTypeMetadata>()
+
+            val delegate = ResolveTypeMetadata(
+                LookupTypeMetadataFromUrl(
+                    ref(),
+                    vcts,
+                ),
                 LookupJsonSchemaUsingKtor(ref()),
             )
+
+            return object : ResolveTypeMetadata by delegate {
+                override suspend fun invoke(vct: Vct): Result<ResolvedTypeMetadata> =
+                    runCatching {
+                        cache.get(vct) {
+                            super.invoke(vct).getOrThrow()
+                        }
+                    }
+            }
         }
 
         val policy = env.getRequiredProperty(
