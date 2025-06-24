@@ -16,12 +16,15 @@
 package eu.europa.ec.eudi.verifier.endpoint
 
 import arrow.core.*
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
+import com.sksamuel.aedile.core.asCache
+import com.sksamuel.aedile.core.expireAfterWrite
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
@@ -89,6 +92,7 @@ import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.util.*
+import kotlin.time.Duration.Companion.hours
 
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
@@ -271,7 +275,12 @@ internal fun beans(clock: Clock) = beans {
             }
 
             return ResolveTypeMetadata(
-                LookupTypeMetadataFromUrl(ref(), vcts),
+                LookupTypeMetadataFromUrl(ref(),
+                    vcts,
+                    Caffeine.newBuilder()
+                        .expireAfterWrite(1.hours)
+                        .asCache()
+                ),
                 LookupJsonSchemaUsingKtor(ref()),
             )
         }

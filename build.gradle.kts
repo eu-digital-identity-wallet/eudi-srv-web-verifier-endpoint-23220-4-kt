@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.joni) {
         because("required by json-schema-validator")
     }
+    implementation(libs.aedile)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.kotlinx.coroutines.test)

@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
+import com.sksamuel.aedile.core.Cache
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.LookupTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcTypeMetadata
@@ -27,18 +28,21 @@ import io.ktor.http.*
 class LookupTypeMetadataFromUrl(
     private val httpClientFactory: KtorHttpClientFactory,
     private val vcts: Map<Vct, Url>,
+    private val cache: Cache<Vct, SdJwtVcTypeMetadata?>
 ) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
-        vcts[vct]?.let { url ->
-            httpClientFactory().use { httpClient ->
-                val response = httpClient.get(url) {
-                    expectSuccess = false
-                }
+        cache.get(vct){
+            vcts[vct]?.let { url ->
+                httpClientFactory().use { httpClient ->
+                    val response = httpClient.get(url) {
+                        expectSuccess = false
+                    }
 
-                when (response.status) {
-                    HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
-                    HttpStatusCode.NotFound -> null
-                    else -> throw ResponseException(response, "Failed to retrieve type metadata")
+                    when (response.status) {
+                        HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
+                        HttpStatusCode.NotFound -> null
+                        else -> throw ResponseException(response, "Failed to retrieve type metadata")
+                    }
                 }
             }
         }
