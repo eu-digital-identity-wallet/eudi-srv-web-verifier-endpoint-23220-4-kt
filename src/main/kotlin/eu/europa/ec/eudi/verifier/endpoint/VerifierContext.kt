@@ -273,13 +273,14 @@ internal fun beans(clock: Clock) = beans {
             require(vcts.isNotEmpty()) {
                 "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts must be set"
             }
-            val cacheDuration = env.getProperty("verifier.validation.sdJwtVc.typeMetadata.cache.duration.hours",1)
+            val cacheDuration = env.getProperty("verifier.validation.sdJwtVc.typeMetadata.cache.duration.hours", 1)
             return ResolveTypeMetadata(
-                LookupTypeMetadataFromUrl(ref(),
+                LookupTypeMetadataFromUrl(
+                    ref(),
                     vcts,
                     Caffeine.newBuilder()
                         .expireAfterWrite(cacheDuration.hours)
-                        .asCache()
+                        .asCache(),
                 ),
                 LookupJsonSchemaUsingKtor(ref()),
             )

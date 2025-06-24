@@ -28,10 +28,10 @@ import io.ktor.http.*
 class LookupTypeMetadataFromUrl(
     private val httpClientFactory: KtorHttpClientFactory,
     private val vcts: Map<Vct, Url>,
-    private val cache: Cache<Vct, SdJwtVcTypeMetadata?>
+    private val cache: Cache<Vct, SdJwtVcTypeMetadata?>,
 ) : LookupTypeMetadata {
     override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
-        cache.get(vct){
+        cache.get(vct) {
             vcts[vct]?.let { url ->
                 httpClientFactory().use { httpClient ->
                     val response = httpClient.get(url) {
