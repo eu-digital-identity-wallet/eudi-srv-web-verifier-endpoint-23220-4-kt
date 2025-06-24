@@ -876,6 +876,11 @@ Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_VCTS_XX_URL` (e.g
 Description: Url from which Type Metadata can be fetched from for `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_VCTS_XX_VCT`  
 Example: `http://localhost:8080/type-metadata/urn:eudi:pid:1`  
 
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_CACHE_DURATION_HOURS`  
+Description: Cache duration in hours of which Type Metadata are going to be saved locally for  
+Example: `1`  
+Default value: `1`  
+
 ## How to contribute
 
 We welcome contributions to this project. To ensure that the process is smooth for everyone
