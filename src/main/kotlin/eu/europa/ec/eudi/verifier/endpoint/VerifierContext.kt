@@ -277,9 +277,16 @@ internal fun beans(clock: Clock) = beans {
             val cacheTtl = Duration.parse(
                 env.getProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.cache.ttl", "PT1H"),
             ).toKotlinDuration()
+            val cacheSize = env.getProperty(
+                "verifier.validation.sdJwtVc.typeMetadata.resolution.cache.max-entries",
+                10,
+            ).toLong()
+
             val cache = Caffeine.newBuilder()
                 .expireAfterWrite(cacheTtl)
+                .maximumSize(cacheSize)
                 .asCache<Vct, ResolvedTypeMetadata>()
+
             val delegate = ResolveTypeMetadata(
                 LookupTypeMetadataFromUrl(
                     ref(),
