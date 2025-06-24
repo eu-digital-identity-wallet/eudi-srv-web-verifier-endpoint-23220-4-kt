@@ -92,7 +92,7 @@ import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
 import java.util.*
-import kotlin.time.Duration.Companion.hours
+import kotlin.time.toKotlinDuration
 
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
@@ -273,17 +273,29 @@ internal fun beans(clock: Clock) = beans {
             require(vcts.isNotEmpty()) {
                 "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts must be set"
             }
-            val cacheDuration = env.getProperty("verifier.validation.sdJwtVc.typeMetadata.cache.duration.hours", 1)
-            return ResolveTypeMetadata(
+
+            val cacheTtl = Duration.parse(
+                env.getProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.cache.ttl", "PT1H"),
+            ).toKotlinDuration()
+            val cache = Caffeine.newBuilder()
+                .expireAfterWrite(cacheTtl)
+                .asCache<Vct, ResolvedTypeMetadata>()
+            val delegate = ResolveTypeMetadata(
                 LookupTypeMetadataFromUrl(
                     ref(),
                     vcts,
-                    Caffeine.newBuilder()
-                        .expireAfterWrite(cacheDuration.hours)
-                        .asCache(),
                 ),
                 LookupJsonSchemaUsingKtor(ref()),
             )
+
+            return object : ResolveTypeMetadata by delegate {
+                override suspend fun invoke(vct: Vct): Result<ResolvedTypeMetadata> =
+                    runCatching {
+                        cache.get(vct) {
+                            super.invoke(vct).getOrThrow()
+                        }
+                    }
+            }
         }
 
         val policy = env.getRequiredProperty(
