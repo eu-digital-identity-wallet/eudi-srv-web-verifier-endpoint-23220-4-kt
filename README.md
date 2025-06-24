@@ -881,7 +881,7 @@ Description: Cache TTL for resolved Type Metadata
 Notes: Provide a value using Java Duration syntax
 Default value: `PT1H`  
 
-Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_CACHE_MAX_ENTRIES`  
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_CACHE_MAXENTRIES`  
 Description: Cache maximum entries for resolved Type Metadata  
 Default value: `10`  
 

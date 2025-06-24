@@ -278,7 +278,7 @@ internal fun beans(clock: Clock) = beans {
                 env.getProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.cache.ttl", "PT1H"),
             ).toKotlinDuration()
             val cacheSize = env.getProperty(
-                "verifier.validation.sdJwtVc.typeMetadata.resolution.cache.max-entries",
+                "verifier.validation.sdJwtVc.typeMetadata.resolution.cache.maxEntries",
                 10,
             ).toLong()
 
