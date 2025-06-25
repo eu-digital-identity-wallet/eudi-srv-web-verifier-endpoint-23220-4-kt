@@ -16,6 +16,8 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
 import arrow.core.*
+import arrow.core.Either
+import arrow.core.flatMap
 import com.nimbusds.jose.JOSEObjectType
 import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier
@@ -28,7 +30,6 @@ import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
@@ -223,8 +224,11 @@ internal class SdJwtVcValidator(
         unverified.fold(
             ifLeft = { Either.catch { verify(it, challenge).getOrThrow() } },
             ifRight = { Either.catch { verify(it, challenge).getOrThrow() } },
-        ).applyCatching {
-            statusListTokenValidator?.validate(this, transactionId)
+        ).flatMap {
+            Either.catch {
+                statusListTokenValidator?.validate(it, transactionId)
+                it
+            }
         }
 }
 

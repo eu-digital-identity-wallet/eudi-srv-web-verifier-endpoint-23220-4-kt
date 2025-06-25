@@ -16,17 +16,8 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils
 
 import arrow.core.Either
-import arrow.core.flatMap
 import arrow.core.getOrElse
 
 internal fun <T> Either<Throwable, T>.getOrThrow(): T {
     return this.getOrElse { throw it }
 }
-
-internal inline fun <reified T> Either<Throwable, T>.applyCatching(block: T.() -> Unit): Either<Throwable, T> =
-    flatMap {
-        Either.catch {
-            it.block()
-            it
-        }
-    }
