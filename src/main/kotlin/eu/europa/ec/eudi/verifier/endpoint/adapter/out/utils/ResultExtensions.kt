@@ -16,15 +16,12 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils
 
 import arrow.core.Either
-import arrow.core.getOrElse
+import arrow.core.flatMap
 
 internal inline fun <reified T> Either<Throwable, T>.applyCatching(block: T.() -> Unit): Either<Throwable, T> =
-    if (isLeft()) {
-        this
-    } else {
+    flatMap {
         Either.catch {
-            val value = getOrElse { throw it }
-            value!!.block()
-            value
+            it.block()
+            it
         }
     }
