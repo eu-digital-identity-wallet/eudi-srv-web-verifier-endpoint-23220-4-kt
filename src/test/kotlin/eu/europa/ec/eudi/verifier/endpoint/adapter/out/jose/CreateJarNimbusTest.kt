@@ -17,7 +17,6 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSHeader
@@ -32,6 +31,7 @@ import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import net.minidev.json.JSONObject
@@ -71,7 +71,7 @@ class CreateJarNimbusTest {
         val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
 
         val jwt = createJar.sign(clientMetaData, ecPublicKey, requestObject, null)
-            .getOrElse { throw it }
+            .getOrThrow()
             .serialize()
             .also { println(it) }
         val signedJwt = decode(jwt).getOrThrow().also { println(it) }
@@ -118,7 +118,7 @@ class CreateJarNimbusTest {
     }
 
     private fun assertEquals(pd: PresentationDefinition?, c: MutableMap<String, Any?>?) {
-        val pd2 = c?.let { PresentationDefinitionJackson.fromJsonObject(c).getOrElse { throw it } }
+        val pd2 = c?.let { PresentationDefinitionJackson.fromJsonObject(c).getOrThrow() }
         assertEquals(pd, pd2)
     }
 

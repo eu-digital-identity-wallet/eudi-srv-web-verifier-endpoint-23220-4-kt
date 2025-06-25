@@ -17,10 +17,10 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.x509
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
-import arrow.core.getOrElse
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ConfigurePKIXParameters
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.SkipRevocation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import java.security.cert.X509Certificate
 
 /**
@@ -34,6 +34,6 @@ fun ParsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(
     chain: String,
     customizePKIX: ConfigurePKIXParameters = SkipRevocation,
 ): Either<Throwable, X5CShouldBe.Trusted?> = Either.catch {
-    val certs = invoke(chain).getOrElse { throw it }
+    val certs = invoke(chain).getOrThrow()
     X5CShouldBe.Trusted(certs, customizePKIX)
 }

@@ -16,7 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.cfg
 
 import arrow.core.Either
-import arrow.core.getOrElse
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.GetWalletResponseMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import java.net.URL
@@ -24,7 +24,7 @@ import java.net.URL
 interface CreateQueryWalletResponseRedirectUri {
 
     fun GetWalletResponseMethod.Redirect.redirectUri(responseCode: ResponseCode): URL =
-        redirectUri(redirectUriTemplate, responseCode).getOrElse { throw it }
+        redirectUri(redirectUriTemplate, responseCode).getOrThrow()
 
     fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URL>
 

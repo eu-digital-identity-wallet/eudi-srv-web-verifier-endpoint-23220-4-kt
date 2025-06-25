@@ -29,6 +29,7 @@ import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcVerificationError.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
@@ -193,7 +194,7 @@ internal class SdJwtVcValidator(
         }
 
         return Either.catch {
-            sdJwtVcVerifier.verify(unverified, challenge, transactionId).getOrElse { throw it }
+            sdJwtVcVerifier.verify(unverified, challenge, transactionId).getOrThrow()
         }.fold(
             ifRight = { it.right() },
             ifLeft = { sdJwtVcError ->
@@ -201,7 +202,7 @@ internal class SdJwtVcValidator(
                 val errors =
                     if (!sdJwtVcError.isSignatureVerificationFailure()) nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError))
                     else Either.catch {
-                        sdJwtVcVerifierNoSignatureVerification.verify(unverified, challenge, transactionId).getOrElse { throw it }
+                        sdJwtVcVerifierNoSignatureVerification.verify(unverified, challenge, transactionId).getOrThrow()
                     }.fold(
                         ifRight = { nonEmptyListOf(SdJwtVcValidationError(sdJwtVcError)) },
                         ifLeft = { sdJwtError ->

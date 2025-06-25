@@ -156,7 +156,7 @@ internal class ValidateMsoMdocDeviceResponse(
 
     private fun deviceResponseValidator(issuerChainInPem: String?): Either<Throwable, DeviceResponseValidator> = Either.catch {
         val x5cShouldBe = issuerChainInPem
-            ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrElse { throw it } }
+            ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         deviceResponseValidatorFactory(x5cShouldBe)
     }
 }

@@ -15,9 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer
 
-import arrow.core.getOrElse
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.KeyStoreConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourceConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
@@ -81,7 +81,7 @@ class RefreshTrustSources(
     private suspend fun TrustSourceConfig.fetchCerts(): List<X509Certificate> =
         coroutineScope {
             suspend fun TrustedListConfig.lotlCerts(): List<X509Certificate> =
-                fetchLOTLCertificates(this).getOrElse { throw it }
+                fetchLOTLCertificates(this).getOrThrow()
 
             suspend fun KeyStoreConfig.keyCerts(): List<X509Certificate> =
                 withContext(ioDispatcher) {

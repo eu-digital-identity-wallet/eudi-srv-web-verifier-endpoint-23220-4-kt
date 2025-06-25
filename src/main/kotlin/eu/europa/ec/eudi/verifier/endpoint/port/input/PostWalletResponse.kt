@@ -30,6 +30,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.JsonPathReader
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
@@ -299,7 +300,7 @@ private fun eu.europa.ec.eudi.prex.Format.vpFormat(
 
         when (format.value) {
             SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
-                val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrElse { throw it }
+                val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrThrow()
                 VpFormat.SdJwtVc(
                     properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
                     properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
@@ -307,7 +308,7 @@ private fun eu.europa.ec.eudi.prex.Format.vpFormat(
             }
 
             OpenId4VPSpec.FORMAT_MSO_MDOC -> {
-                val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrElse { throw it }
+                val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrThrow()
                 VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!)
             }
 
@@ -455,7 +456,7 @@ class PostWalletResponseLive(
             GetWalletResponseMethod.Poll -> null
             is GetWalletResponseMethod.Redirect -> generateResponseCode()
         }
-        presentation.submit(clock, walletResponse, responseCode).getOrElse { throw it }
+        presentation.submit(clock, walletResponse, responseCode).getOrThrow()
     }
 
     private suspend fun logWalletResponsePosted(p: Submitted, accepted: WalletResponseAcceptedTO?) {

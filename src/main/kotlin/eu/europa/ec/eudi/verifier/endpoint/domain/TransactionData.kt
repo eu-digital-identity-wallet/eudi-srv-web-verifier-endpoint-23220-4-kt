@@ -17,10 +17,10 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
-import arrow.core.getOrElse
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import kotlinx.io.bytestring.decodeToByteString
 import kotlinx.io.bytestring.decodeToString
 import kotlinx.io.bytestring.encode
@@ -119,7 +119,7 @@ value class TransactionData private constructor(val value: JsonObject) {
             unvalidated: JsonObject,
             validCredentialIds: List<String>,
         ): Either<Throwable, TransactionData> = Either.catch {
-            val transactionData = validate(unvalidated).getOrElse { throw it }
+            val transactionData = validate(unvalidated).getOrThrow()
             require(validCredentialIds.containsAll(transactionData.credentialIds)) {
                 "invalid 'credential_ids'"
             }
@@ -132,7 +132,7 @@ value class TransactionData private constructor(val value: JsonObject) {
             val decoded = base64UrlNoPadding.decodeToByteString(base64Url)
             val serialized = decoded.decodeToString()
             val json = jsonSupport.decodeFromString<JsonObject>(serialized)
-            validate(json).getOrElse { throw it }
+            validate(json).getOrThrow()
         }
     }
 }

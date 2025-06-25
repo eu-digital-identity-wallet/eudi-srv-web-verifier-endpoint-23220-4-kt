@@ -32,6 +32,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
@@ -124,8 +125,8 @@ class RetrieveRequestObjectLive(
                     presentation,
                     method.walletNonceOrNull,
                     encryptionRequirement,
-                ).getOrElse { throw it }
-                val updatedPresentation = presentation.retrieveRequestObject(clock).getOrElse { throw it }
+                ).getOrThrow()
+                val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
                 storePresentation(updatedPresentation)
                 return updatedPresentation to jar
             }
@@ -369,7 +370,7 @@ private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
             when (identifier) {
                 SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
                     serializedProperties.decodeAs<SdJwtVcFormatTO>()
-                        .getOrElse { throw it }
+                        .getOrThrow()
                         .let { properties ->
                             VpFormat.SdJwtVc(
                                 sdJwtAlgorithms = properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
@@ -379,7 +380,7 @@ private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
 
                 OpenId4VPSpec.FORMAT_MSO_MDOC ->
                     serializedProperties.decodeAs<MsoMdocFormatTO>()
-                        .getOrElse { throw it }
+                        .getOrThrow()
                         .let { properties -> VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!) }
 
                 else -> null
@@ -390,7 +391,7 @@ private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
 private fun PresentationDefinition.vpFormats(supported: VpFormats): List<VpFormat> =
     inputDescriptors.flatMap { inputDescriptor ->
         val format = inputDescriptor.format ?: format
-        format?.jsonObject()?.toVpFormats()?.getOrElse { throw it } ?: listOf(supported.sdJwtVc, supported.msoMdoc)
+        format?.jsonObject()?.toVpFormats()?.getOrThrow() ?: listOf(supported.sdJwtVc, supported.msoMdoc)
     }.distinct()
 
 private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =

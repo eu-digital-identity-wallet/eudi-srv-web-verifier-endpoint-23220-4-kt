@@ -32,6 +32,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
@@ -280,7 +281,7 @@ class InitTransactionLive(
                 val scheme = authorizationRequestScheme(initTransactionTO).bind()
                 val authorizationRequest = createAuthorizationRequestUri(scheme, request)
                 InitTransactionResponse.QrCode(
-                    generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrElse { throw it },
+                    generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrThrow(),
                 )
             }
         }
@@ -299,7 +300,7 @@ class InitTransactionLive(
                     is JarmOption.Signed -> error("Misconfiguration")
                     is JarmOption.Encrypted -> jarmOption
                     is JarmOption.SignedAndEncrypted -> jarmOption.encrypted
-                }.run { generateEphemeralEncryptionKeyPair(this).getOrElse { throw it } }
+                }.run { generateEphemeralEncryptionKeyPair(this).getOrThrow() }
         }
 
     /**
@@ -322,9 +323,9 @@ class InitTransactionLive(
                     requestedPresentation,
                     null,
                     EncryptionRequirement.NotRequired,
-                ).getOrElse { throw it }
+                ).getOrThrow()
 
-                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrElse { throw it }
+                val requestObjectRetrieved = requestedPresentation.retrieveRequestObject(clock).getOrThrow()
                 requestObjectRetrieved to InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byValue(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
@@ -408,7 +409,7 @@ class InitTransactionLive(
 
     private fun issuerChain(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
         Either.catch {
-            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrElse { throw it } }
+            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
         }.mapLeft { ValidationError.InvalidIssuerChain }
 
     /**
