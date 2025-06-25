@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
+import arrow.core.Either
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.LookupTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcTypeMetadata
@@ -28,7 +29,7 @@ class LookupTypeMetadataFromUrl(
     private val httpClientFactory: KtorHttpClientFactory,
     private val vcts: Map<Vct, Url>,
 ) : LookupTypeMetadata {
-    override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = runCatching {
+    override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = Either.catch {
         vcts[vct]?.let { url ->
             httpClientFactory().use { httpClient ->
                 val response = httpClient.get(url) {
@@ -42,5 +43,8 @@ class LookupTypeMetadataFromUrl(
                 }
             }
         }
-    }
+    }.fold(
+        ifLeft = { Result.failure(it) },
+        ifRight = { Result.success(it) },
+    )
 }
