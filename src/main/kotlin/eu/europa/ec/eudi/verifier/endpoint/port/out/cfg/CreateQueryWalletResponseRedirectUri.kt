@@ -28,7 +28,7 @@ interface CreateQueryWalletResponseRedirectUri {
 
     fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URL>
 
-    fun String.validTemplate(): Boolean = redirectUri(this, ResponseCode("test")).isRight() // .isSuccess
+    fun String.validTemplate(): Boolean = redirectUri(this, ResponseCode("test")).isRight()
 
     companion object {
         const val RESPONSE_CODE_PLACE_HOLDER = "{RESPONSE_CODE}"
