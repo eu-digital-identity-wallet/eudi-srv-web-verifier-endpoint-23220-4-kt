@@ -47,15 +47,10 @@ internal class StatusListTokenValidator(
                 }.also {
                     require(it == Status.Valid) { "Attestation status expected to be VALID but is $it" }
                 }
-            }.fold(
-                ifLeft = { error ->
-                    transactionId?.let { logStatusCheckFailed(transactionId, statusReference, error) }
-                    throw StatusCheckException("Attestation status check failed, ${error.message}", error)
-                },
-                ifRight = {
-                    transactionId?.let { logStatusCheckSuccess(transactionId, statusReference) }
-                },
-            )
+            }
+                .onLeft { error -> transactionId?.let { logStatusCheckFailed(it, statusReference, error) } }
+                .onRight { transactionId?.let { logStatusCheckSuccess(it, statusReference) } }
+                .getOrThrow { StatusCheckException("Attestation status check failed, ${it.message}", it) }
         }
     }
 

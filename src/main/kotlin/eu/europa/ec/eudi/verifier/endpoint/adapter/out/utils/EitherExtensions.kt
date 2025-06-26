@@ -18,6 +18,16 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils
 import arrow.core.Either
 import arrow.core.getOrElse
 
-internal fun <T> Either<Throwable, T>.getOrThrow(): T {
-    return this.getOrElse { throw it }
-}
+internal fun <T> Either<Throwable, T>.getOrThrow(): T = getOrElse { throw it }
+
+internal fun <T, E : Exception> Either<Throwable, T>.getOrThrow(convert: (Throwable) -> E): T =
+    fold(
+        ifLeft = { throw convert(it) },
+        ifRight = { it },
+    )
+
+internal fun <T> Either<Throwable, T>.toResult(): Result<T> =
+    fold(
+        ifLeft = { Result.failure(it) },
+        ifRight = { Result.success(it) },
+    )

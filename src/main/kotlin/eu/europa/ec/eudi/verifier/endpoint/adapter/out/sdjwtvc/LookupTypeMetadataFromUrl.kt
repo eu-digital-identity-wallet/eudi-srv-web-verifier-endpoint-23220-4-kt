@@ -20,6 +20,7 @@ import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.sdjwt.vc.LookupTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.Vct
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.toResult
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -29,22 +30,20 @@ class LookupTypeMetadataFromUrl(
     private val httpClientFactory: KtorHttpClientFactory,
     private val vcts: Map<Vct, Url>,
 ) : LookupTypeMetadata {
-    override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> = Either.catch {
-        vcts[vct]?.let { url ->
-            httpClientFactory().use { httpClient ->
-                val response = httpClient.get(url) {
-                    expectSuccess = false
-                }
+    override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> =
+        Either.catch {
+            vcts[vct]?.let { url ->
+                httpClientFactory().use { httpClient ->
+                    val response = httpClient.get(url) {
+                        expectSuccess = false
+                    }
 
-                when (response.status) {
-                    HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
-                    HttpStatusCode.NotFound -> null
-                    else -> throw ResponseException(response, "Failed to retrieve type metadata")
+                    when (response.status) {
+                        HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
+                        HttpStatusCode.NotFound -> null
+                        else -> throw ResponseException(response, "Failed to retrieve type metadata")
+                    }
                 }
             }
-        }
-    }.fold(
-        ifLeft = { Result.failure(it) },
-        ifRight = { Result.success(it) },
-    )
+        }.toResult()
 }
