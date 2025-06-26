@@ -19,6 +19,8 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.flatMap
+import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.toNonEmptyListOrNull
@@ -30,7 +32,7 @@ import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.applyCatching
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
@@ -473,12 +475,15 @@ internal fun InitTransactionTO.toDomain(
 
         return transactionData?.map {
             TransactionData.validate(JsonObject(it + ("transaction_data_hashes_alg" to hashAlgorithms)), credentialIds)
-                .applyCatching {
-                    when (type) {
-                        QesAuthorization.TYPE -> QesAuthorization.serializer()
-                        QCertCreationAcceptance.TYPE -> QCertCreationAcceptance.serializer()
-                        else -> null
-                    }?.let { deserializer -> decodeAs(deserializer) }
+                .flatMap { transactionData ->
+                    Either.catch {
+                        when (transactionData.type) {
+                            QesAuthorization.TYPE -> QesAuthorization.serializer()
+                            QCertCreationAcceptance.TYPE -> QCertCreationAcceptance.serializer()
+                            else -> null
+                        }?.let { deserializer -> it.decodeAs(deserializer) }
+                        transactionData
+                    }
                 }
                 .getOrElse { raise(ValidationError.InvalidTransactionData) }
         }?.toNonEmptyListOrNull()

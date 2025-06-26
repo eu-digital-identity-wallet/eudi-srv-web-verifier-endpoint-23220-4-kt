@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.getOrElse
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
@@ -160,13 +161,13 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 }
 
-private fun JWTClaimsSet.stringClaim(claim: String): Result<String> =
-    runCatching {
+private fun JWTClaimsSet.stringClaim(claim: String): Either<Throwable, String> =
+    Either.catch {
         getStringClaim(claim)
     }
 
-private fun JWTClaimsSet.stringListClaim(claim: String): Result<List<String>> =
-    runCatching {
+private fun JWTClaimsSet.stringListClaim(claim: String): Either<Throwable, List<String>> =
+    Either.catch {
         getStringListClaim(claim)
     }
 

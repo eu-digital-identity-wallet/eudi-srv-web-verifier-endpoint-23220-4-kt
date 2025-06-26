@@ -15,12 +15,15 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.getOrElse
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
 import id.walt.mdoc.dataelement.*
@@ -152,7 +155,7 @@ internal class ValidateMsoMdocDeviceResponse(
             )
     }
 
-    private fun deviceResponseValidator(issuerChainInPem: String?): Result<DeviceResponseValidator> = runCatching {
+    private fun deviceResponseValidator(issuerChainInPem: String?): Either<Throwable, DeviceResponseValidator> = Either.catch {
         val x5cShouldBe = issuerChainInPem
             ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         deviceResponseValidatorFactory(x5cShouldBe)

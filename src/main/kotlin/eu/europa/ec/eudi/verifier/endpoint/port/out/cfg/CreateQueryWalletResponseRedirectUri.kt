@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.cfg
 
+import arrow.core.Either
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.GetWalletResponseMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import java.net.URL
@@ -24,14 +26,14 @@ interface CreateQueryWalletResponseRedirectUri {
     fun GetWalletResponseMethod.Redirect.redirectUri(responseCode: ResponseCode): URL =
         redirectUri(redirectUriTemplate, responseCode).getOrThrow()
 
-    fun redirectUri(template: String, responseCode: ResponseCode): Result<URL>
+    fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URL>
 
-    fun String.validTemplate(): Boolean = redirectUri(this, ResponseCode("test")).isSuccess
+    fun String.validTemplate(): Boolean = redirectUri(this, ResponseCode("test")).isRight()
 
     companion object {
         const val RESPONSE_CODE_PLACE_HOLDER = "{RESPONSE_CODE}"
         val Simple: CreateQueryWalletResponseRedirectUri = object : CreateQueryWalletResponseRedirectUri {
-            override fun redirectUri(template: String, responseCode: ResponseCode): Result<URL> = runCatching {
+            override fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URL> = Either.catch {
                 require(template.contains(RESPONSE_CODE_PLACE_HOLDER)) { "Expected response_code place holder not found in template" }
                 val url = template.replace(RESPONSE_CODE_PLACE_HOLDER, responseCode.value)
                 URL(url)

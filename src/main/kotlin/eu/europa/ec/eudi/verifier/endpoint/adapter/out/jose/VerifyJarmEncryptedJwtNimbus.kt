@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.Either
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.proc.JWEDecryptionKeySelector
@@ -53,7 +54,7 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
         jarmJwt: Jwt,
         apv: Nonce,
-    ): Result<AuthorisationResponseTO> = runCatching {
+    ): Either<Throwable, AuthorisationResponseTO> = Either.catch {
         val processor = processor(jarmOption, ephemeralEcPrivateKey)
         val jwt = JWTParser.parse(jarmJwt)
         if (jwt is EncryptedJWT) {

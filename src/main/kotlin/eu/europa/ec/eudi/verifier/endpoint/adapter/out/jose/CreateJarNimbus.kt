@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
+import arrow.core.Either
 import arrow.core.flatMap
 import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.ECDHEncrypter
@@ -52,7 +53,7 @@ class CreateJarNimbus : CreateJar {
         presentation: Presentation.Requested,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
-    ): Result<Jwt> {
+    ): Either<Throwable, Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
         val jarmEncryptionEphemeralKey = presentation.jarmEncryptionEphemeralKey
         val signedJar = sign(verifierConfig.clientMetaData, jarmEncryptionEphemeralKey, requestObject, walletNonce)
@@ -67,7 +68,7 @@ class CreateJarNimbus : CreateJar {
         jarmEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
         walletNonce: String?,
-    ): Result<SignedJWT> = runCatching {
+    ): Either<Throwable, SignedJWT> = Either.catch {
         val (key, algorithm) = requestObject.verifierId.jarSigning
         val header = JWSHeader.Builder(algorithm)
             .apply {
@@ -87,7 +88,7 @@ class CreateJarNimbus : CreateJar {
     internal fun encrypt(
         walletJarEncryptionRequirement: EncryptionRequirement.Required,
         signed: SignedJWT,
-    ): Result<JWEObject> = runCatching {
+    ): Either<Throwable, JWEObject> = Either.catch {
         val (walletJarEncryptionKey, encryptionAlgorithm, encryptionMethod) = walletJarEncryptionRequirement
         val encrypter = when (walletJarEncryptionKey) {
             is RSAKey -> RSAEncrypter(walletJarEncryptionKey)

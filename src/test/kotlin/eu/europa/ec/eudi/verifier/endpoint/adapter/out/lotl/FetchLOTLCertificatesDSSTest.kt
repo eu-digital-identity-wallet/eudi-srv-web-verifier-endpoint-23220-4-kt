@@ -15,7 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl
 
-import arrow.core.raise.result
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -25,30 +25,27 @@ import java.security.KeyStore
 
 class FetchLOTLCertificatesDSSTest {
 
-//    @Test
+    // @Test
     fun `get certs`() = runTest {
         val fetchLOTLCertificatesDSS = FetchLOTLCertificatesDSS()
 
-        val result = fetchLOTLCertificatesDSS(
+        val certificates = fetchLOTLCertificatesDSS(
             TrustedListConfig(
                 URI("https://ec.europa.eu/tools/lotl/eu-lotl.xml").toURL(),
                 null,
                 "0 *",
                 keystoreConfig = null,
             ),
-        )
-
-        assertTrue(result.isSuccess)
-        assertTrue(result.getOrNull()?.isNotEmpty() == true)
+        ).getOrThrow()
+        assertTrue(certificates.isNotEmpty())
 
         val keyStore = KeyStore.getInstance("JKS")
         keyStore.load(null, null)
 
-        val certs = result.getOrNull()
-        certs?.forEachIndexed { index, cert ->
+        certificates.forEachIndexed { index, cert ->
             keyStore.setCertificateEntry("cert_$index", cert)
         }
 
-        assertEquals(certs?.size, keyStore.aliases().toList().size)
+        assertEquals(certificates.size, keyStore.aliases().toList().size)
     }
 }

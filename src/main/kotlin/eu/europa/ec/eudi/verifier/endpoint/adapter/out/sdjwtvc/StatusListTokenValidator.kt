@@ -15,12 +15,14 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
+import arrow.core.Either
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.statium.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
@@ -39,21 +41,16 @@ internal class StatusListTokenValidator(
 
     suspend fun validate(sdJwtVc: SdJwtAndKbJwt<SignedJWT>, transactionId: TransactionId? = null) {
         sdJwtVc.sdJwt.jwt.statusReference()?.let { statusReference ->
-            runCatching {
+            Either.catch {
                 with(getStatus()) {
                     statusReference.currentStatus().getOrThrow()
                 }.also {
                     require(it == Status.Valid) { "Attestation status expected to be VALID but is $it" }
                 }
-            }.fold(
-                onSuccess = {
-                    transactionId?.let { logStatusCheckSuccess(transactionId, statusReference) }
-                },
-                onFailure = { error ->
-                    transactionId?.let { logStatusCheckFailed(transactionId, statusReference, error) }
-                    throw StatusCheckException("Attestation status check failed, ${error.message}", error)
-                },
-            )
+            }
+                .onLeft { error -> transactionId?.let { logStatusCheckFailed(it, statusReference, error) } }
+                .onRight { transactionId?.let { logStatusCheckSuccess(it, statusReference) } }
+                .getOrThrow { StatusCheckException("Attestation status check failed, ${it.message}", it) }
         }
     }
 
@@ -92,7 +89,7 @@ private fun SignedJWT.statusReference(): StatusReference? {
     }
 
     val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX]?.decodeAs<Int>()?.getOrThrow()!!)
-    val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()?.getOrThrow()!!
+    val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()!!.getOrThrow()!!
 
     return StatusReference(index, uri)
 }

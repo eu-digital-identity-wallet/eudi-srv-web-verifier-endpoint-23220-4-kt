@@ -15,23 +15,25 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.x509
 
+import arrow.core.Either
 import arrow.core.NonEmptyList
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ConfigurePKIXParameters
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.SkipRevocation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import java.security.cert.X509Certificate
 
 /**
  * Parses a PEM encoded X509 Certificate.
  */
 fun interface ParsePemEncodedX509CertificateChain {
-    operator fun invoke(chain: String): Result<NonEmptyList<X509Certificate>>
+    operator fun invoke(chain: String): Either<Throwable, NonEmptyList<X509Certificate>>
 }
 
 fun ParsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(
     chain: String,
     customizePKIX: ConfigurePKIXParameters = SkipRevocation,
-): Result<X5CShouldBe.Trusted?> = runCatching {
+): Either<Throwable, X5CShouldBe.Trusted?> = Either.catch {
     val certs = invoke(chain).getOrThrow()
     X5CShouldBe.Trusted(certs, customizePKIX)
 }

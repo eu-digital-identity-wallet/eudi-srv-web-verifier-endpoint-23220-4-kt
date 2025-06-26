@@ -31,6 +31,7 @@ import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import net.minidev.json.JSONObject

@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
@@ -31,6 +32,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
@@ -117,7 +119,13 @@ class RetrieveRequestObjectLive(
             suspend fun updatePresentationAndCreateJar(
                 encryptionRequirement: EncryptionRequirement,
             ): Pair<Presentation.RequestObjectRetrieved, Jwt> {
-                val jar = createJar(verifierConfig, clock, presentation, method.walletNonceOrNull, encryptionRequirement).getOrThrow()
+                val jar = createJar(
+                    verifierConfig,
+                    clock,
+                    presentation,
+                    method.walletNonceOrNull,
+                    encryptionRequirement,
+                ).getOrThrow()
                 val updatedPresentation = presentation.retrieveRequestObject(clock).getOrThrow()
                 storePresentation(updatedPresentation)
                 return updatedPresentation to jar
@@ -356,8 +364,8 @@ private fun ResponseModeOption.name(): String =
         ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.DIRECT_POST_JWT
     }
 
-private fun JsonObject.toVpFormats(): Result<List<VpFormat>> =
-    runCatching {
+private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
+    Either.catch {
         mapNotNull { (identifier, serializedProperties) ->
             when (identifier) {
                 SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->

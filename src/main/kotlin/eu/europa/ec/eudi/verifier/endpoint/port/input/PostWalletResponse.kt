@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
@@ -29,6 +30,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.JsonPathReader
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
@@ -208,7 +210,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
         ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
 
         suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
-            val vpToken = runCatching {
+            val vpToken = Either.catch {
                 Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
             }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 

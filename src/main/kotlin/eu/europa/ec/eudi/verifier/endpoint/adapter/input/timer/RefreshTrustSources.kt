@@ -17,6 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer
 
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.KeyStoreConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourceConfig
 import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig

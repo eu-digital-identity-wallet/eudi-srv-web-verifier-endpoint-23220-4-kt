@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
+import arrow.core.Either
 import eu.europa.ec.eudi.verifier.endpoint.domain.EncryptionRequirement
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
@@ -31,5 +32,5 @@ fun interface CreateJar {
         presentation: Presentation.Requested,
         walletNonce: String?,
         walletJarEncryptionRequirement: EncryptionRequirement,
-    ): Result<Jwt>
+    ): Either<Throwable, Jwt>
 }

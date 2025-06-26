@@ -15,11 +15,13 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.Either
 import arrow.core.Ior
 import arrow.core.NonEmptyList
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import java.net.URL
 import java.security.KeyStore
 import java.security.cert.X509Certificate
@@ -158,9 +160,9 @@ data class SigningConfig(
         require(algorithm in JWSAlgorithm.Family.SIGNATURE) { "'${algorithm.name}' is not a valid signature algorithm" }
 
         // Verify a JWSSigner can be instantiated with the provided key/algorithm combo
-        runCatching {
+        Either.catch {
             DefaultJWSSignerFactory().createJWSSigner(key, algorithm)
-        }.getOrElse { throw IllegalArgumentException("Invalid configuration", it) }
+        }.getOrThrow { IllegalArgumentException("Invalid configuration", it) }
     }
 
     /**
