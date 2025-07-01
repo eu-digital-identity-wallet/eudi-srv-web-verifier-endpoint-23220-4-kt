@@ -21,9 +21,7 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.proc.JWEDecryptionKeySelector
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jose.shaded.gson.Gson
-import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jose.util.JSONObjectUtils
-import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
@@ -57,11 +55,6 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
     ): Either<Throwable, AuthorisationResponseTO> = Either.catch {
         val processor = processor(jarmOption, ephemeralEcPrivateKey)
         val jwt = JWTParser.parse(jarmJwt)
-        if (jwt is EncryptedJWT) {
-            require(jwt.header.agreementPartyVInfo == Base64URL.encode(apv.value)) {
-                "'apv' header claim must be set to the 'nonce' value provided by the verifier"
-            }
-        }
         val claimSet = processor.process(jwt, null)
         claimSet.mapToDomain()
     }
