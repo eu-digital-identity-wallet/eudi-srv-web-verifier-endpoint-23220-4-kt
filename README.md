@@ -885,6 +885,10 @@ Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_CACHE_MAXENTRIES`
 Description: Cache maximum entries for resolved Type Metadata  
 Default value: `10`  
 
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_JSONSCHEMA_VALIDATION_ENABLED`  
+Description: Whether Json Schema validation should be enabled or not    
+Default value: `true`   
+
 ## How to contribute
 
 We welcome contributions to this project. To ensure that the process is smooth for everyone
