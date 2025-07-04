@@ -309,10 +309,17 @@ internal fun beans(clock: Clock) = beans {
             "verifier.validation.sdJwtVc.typeMetadata.policy",
             TypeMetadataPolicyEnum::class.java,
         )
+
+        val validateJsonSchema by lazy {
+            if (env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.jsonSchema.validation.enabled", true))
+                ValidateJsonSchema
+            else null
+        }
+
         when (policy) {
             TypeMetadataPolicyEnum.NotUsed -> TypeMetadataPolicy.NotUsed
-            TypeMetadataPolicyEnum.Optional -> TypeMetadataPolicy.Optional(resolveTypeMetadata(), ValidateJsonSchema)
-            TypeMetadataPolicyEnum.AlwaysRequired -> TypeMetadataPolicy.AlwaysRequired(resolveTypeMetadata(), ValidateJsonSchema)
+            TypeMetadataPolicyEnum.Optional -> TypeMetadataPolicy.Optional(resolveTypeMetadata(), validateJsonSchema)
+            TypeMetadataPolicyEnum.AlwaysRequired -> TypeMetadataPolicy.AlwaysRequired(resolveTypeMetadata(), validateJsonSchema)
             TypeMetadataPolicyEnum.RequiredFor -> {
                 val vcts = env.getOptionalList(
                     name = "verifier.validation.sdJwtVc.typeMetadata.policy.requiredFor",
@@ -326,7 +333,7 @@ internal fun beans(clock: Clock) = beans {
                 TypeMetadataPolicy.RequiredFor(
                     vcts,
                     resolveTypeMetadata(),
-                    ValidateJsonSchema,
+                    validateJsonSchema,
                 )
             }
         }
