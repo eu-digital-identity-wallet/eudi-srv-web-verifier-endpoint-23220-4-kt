@@ -134,13 +134,13 @@ class CreateJarNimbus : CreateJar {
                     null
                 } else r.idTokenType.joinToString(" "),
             )
-            optionalClaim(
-                OpenId4VPSpec.PRESENTATION_DEFINITION,
-                r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) },
-            )
+//            optionalClaim(
+//                OpenId4VPSpec.PRESENTATION_DEFINITION,
+//                r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) },
+//            )
             optionalClaim("client_metadata", clientMetaData?.toJSONObject())
             optionalClaim(OpenId4VPSpec.RESPONSE_URI, r.responseUri?.toExternalForm())
-            optionalClaim(OpenId4VPSpec.PRESENTATION_DEFINITION_URI, r.presentationDefinitionUri?.toExternalForm())
+//            optionalClaim(OpenId4VPSpec.PRESENTATION_DEFINITION_URI, r.presentationDefinitionUri?.toExternalForm())
             optionalClaim(OpenId4VPSpec.DCQL_QUERY, r.dcqlQuery?.toJackson())
             optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, r.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
