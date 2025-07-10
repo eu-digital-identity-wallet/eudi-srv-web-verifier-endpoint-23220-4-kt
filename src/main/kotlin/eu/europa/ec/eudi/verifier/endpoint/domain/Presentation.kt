@@ -17,8 +17,6 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
-import eu.europa.ec.eudi.prex.PresentationDefinition
-import eu.europa.ec.eudi.prex.PresentationSubmission
 import kotlinx.serialization.json.JsonObject
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -64,25 +62,13 @@ enum class IdTokenType {
 sealed interface PresentationQuery {
 
     /**
-     * The requirements of the Verifiable Presentations to be presented, expressed using Presentation Definition.
-     */
-    data class ByPresentationDefinition(val presentationDefinition: PresentationDefinition) : PresentationQuery
-
-    /**
      * The requirements of the Verifiable Presentations to be presented, expressed using DCQL.
      */
     data class ByDigitalCredentialsQueryLanguage(val query: DCQL) : PresentationQuery
 }
 
-val PresentationQuery.presentationDefinitionOrNull: PresentationDefinition?
-    get() = when (this) {
-        is PresentationQuery.ByPresentationDefinition -> presentationDefinition
-        is PresentationQuery.ByDigitalCredentialsQueryLanguage -> null
-    }
-
 val PresentationQuery.dcqlQueryOrNull: DCQL?
     get() = when (this) {
-        is PresentationQuery.ByPresentationDefinition -> null
         is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query
     }
 
@@ -112,13 +98,6 @@ val PresentationType.presentationQueryOrNull: PresentationQuery?
         is PresentationType.IdTokenRequest -> null
         is PresentationType.VpTokenRequest -> presentationQuery
         is PresentationType.IdAndVpToken -> presentationQuery
-    }
-
-val PresentationType.presentationDefinitionOrNull: PresentationDefinition?
-    get() = when (this) {
-        is PresentationType.IdTokenRequest -> null
-        is PresentationType.VpTokenRequest -> presentationQuery.presentationDefinitionOrNull
-        is PresentationType.IdAndVpToken -> presentationQuery.presentationDefinitionOrNull
     }
 
 val PresentationType.dcqlQueryOrNull: DCQL?
@@ -154,19 +133,8 @@ sealed interface VerifiablePresentation {
 /**
  * The Wallet's response to a 'vp_token' request.
  */
+// Data class TODO ValueClass
 sealed interface VpContent {
-
-    /**
-     * A 'vp_token' response as defined by Presentation Exchange.
-     */
-    data class PresentationExchange(
-        val verifiablePresentations: NonEmptyList<VerifiablePresentation>,
-        val presentationSubmission: PresentationSubmission,
-    ) : VpContent {
-        init {
-            require(verifiablePresentations.size == verifiablePresentations.distinct().size)
-        }
-    }
 
     /**
      * A 'vp_token' response as defined by DCQL.
@@ -180,14 +148,7 @@ sealed interface VpContent {
 
 internal fun VpContent.verifiablePresentations(): List<VerifiablePresentation> =
     when (this) {
-        is VpContent.PresentationExchange -> verifiablePresentations
         is VpContent.DCQL -> verifiablePresentations.values.distinct()
-    }
-
-internal fun VpContent.presentationSubmissionOrNull(): PresentationSubmission? =
-    when (this) {
-        is VpContent.PresentationExchange -> presentationSubmission
-        is VpContent.DCQL -> null
     }
 
 sealed interface WalletResponse {
