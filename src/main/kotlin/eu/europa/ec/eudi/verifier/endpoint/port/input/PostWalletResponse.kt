@@ -91,17 +91,6 @@ private suspend fun AuthorisationResponseTO.toDomain(
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
     suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent = when (presentationQuery) {
-//        is PresentationQuery.ByPresentationDefinition ->
-//            presentationExchangeVpContent(
-//                presentationQuery.presentationDefinition,
-//                presentation.id,
-//                presentation.nonce,
-//                presentation.type.transactionDataOrNull,
-//                validateVerifiablePresentation,
-//                vpFormats,
-//                presentation.issuerChain,
-//            )
-
         is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
             dcqlVpContent(
                 presentationQuery.query,
@@ -130,66 +119,6 @@ private suspend fun AuthorisationResponseTO.toDomain(
 
 private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
 
-// private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
-// //    presentationDefinition: PresentationDefinition,
-//    transactionId: TransactionId,
-//    nonce: Nonce,
-//    transactionData: NonEmptyList<TransactionData>?,
-//    validateVerifiablePresentation: ValidateVerifiablePresentation,
-//    vpFormats: VpFormats,
-//    issuerChain: NonEmptyList<X509Certificate>?,
-// ): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
-//    either {
-//        ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
-//        ensureNotNull(presentationSubmission) { WalletResponseValidationError.MissingPresentationSubmission }
-//        ensure(presentationSubmission.definitionId == presentationDefinition.id) {
-//            WalletResponseValidationError.InvalidPresentationSubmission
-//        }
-//
-//        val descriptorMaps = presentationSubmission.descriptorMaps
-//            .toNonEmptyListOrNull()
-//            ?: raise(WalletResponseValidationError.InvalidPresentationSubmission)
-//        val vpTokenReader = JsonPathReader(vpToken)
-//        val verifiablePresentations = descriptorMaps.map { descriptorMap ->
-//            ensure(jsonPathPattern.matcher(descriptorMap.path.value).matches()) {
-//                WalletResponseValidationError.InvalidPresentationSubmission
-//            }
-//
-//            val inputDescriptor =
-//                ensureNotNull(presentationDefinition.inputDescriptors.firstOrNull { it.id == descriptorMap.id }) {
-//                    WalletResponseValidationError.InvalidPresentationSubmission
-//                }
-//            val inputDescriptorFormat = inputDescriptor.format ?: presentationDefinition.format
-//            val element = vpTokenReader.readPath(descriptorMap.path.value).getOrNull()
-//                ?: raise(
-//                    WalletResponseValidationError.InvalidVpToken(
-//                        "JsonPath of DescriptorMap does not point to a valid vp_token element",
-//                        null,
-//                    ),
-//                )
-//            val format = Format(descriptorMap.format)
-//            val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
-//            val applicableTransactionData = transactionData?.filter {
-//                descriptorMap.id.value in it.credentialIds
-//            }?.toNonEmptyListOrNull()
-//            val vpFormat =
-//                inputDescriptorFormat?.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission)
-//                    ?.bind()
-//                    ?: vpFormats.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission).bind()
-//
-//            validateVerifiablePresentation(
-//                transactionId,
-//                unvalidatedVerifiablePresentation,
-//                vpFormat,
-//                nonce,
-//                applicableTransactionData,
-//                issuerChain,
-//            ).bind()
-//        }.distinct()
-//
-//        VpContent.PresentationExchange(verifiablePresentations, presentationSubmission)
-//    }
-
 private suspend fun AuthorisationResponseTO.dcqlVpContent(
     query: DCQL,
     transactionId: TransactionId,
@@ -201,7 +130,6 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
 ): Either<WalletResponseValidationError, VpContent.DCQL> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
-//        ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
 
         suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
             val vpToken = Either.catch {
@@ -282,33 +210,6 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
             else -> element.asStringOrObject()
         }
     }
-
-// private fun eu.europa.ec.eudi.prex.Format.vpFormat(
-//    format: Format,
-//    ifInvalid: WalletResponseValidationError,
-// ): Either<WalletResponseValidationError, VpFormat> =
-//    either {
-//        val serializedProperties = ensureNotNull(jsonObject()[format.value]) {
-//            WalletResponseValidationError.InvalidPresentationSubmission
-//        }
-//
-//        when (format.value) {
-//            SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
-//                val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrThrow()
-//                VpFormat.SdJwtVc(
-//                    properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
-//                    properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
-//                )
-//            }
-//
-//            OpenId4VPSpec.FORMAT_MSO_MDOC -> {
-//                val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrThrow()
-//                VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!)
-//            }
-//
-//            else -> raise(ifInvalid)
-//        }
-//    }
 
 private fun VpFormats.vpFormat(
     format: Format,

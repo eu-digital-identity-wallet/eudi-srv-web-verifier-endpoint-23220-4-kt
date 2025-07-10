@@ -47,12 +47,6 @@ sealed interface PresentationEvent {
         val cause: String,
     ) : PresentationEvent
 
-//    data class PresentationDefinitionRetrieved(
-//        override val transactionId: TransactionId,
-//        override val timestamp: Instant,
-//        val presentationDefinition: PresentationDefinition,
-//    ) : PresentationEvent
-
     data class JarmJwkSetRetrieved(
         override val transactionId: TransactionId,
         override val timestamp: Instant,

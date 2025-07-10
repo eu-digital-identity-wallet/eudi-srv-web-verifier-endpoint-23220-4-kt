@@ -436,7 +436,7 @@ internal fun InitTransactionTO.toDomain(
             }
             else -> raise(
                 ValidationError.MultiplePresentationQueries,
-            ) // TODO: This will have to be removed as well. Why does it ends up here?
+            )
         }
     fun requiredNonce(): Nonce {
         ensure(!nonce.isNullOrBlank()) { ValidationError.MissingNonce }
@@ -446,7 +446,6 @@ internal fun InitTransactionTO.toDomain(
     fun optionalTransactionData(query: PresentationQuery): NonEmptyList<TransactionData>? {
         val credentialIds: List<String> by lazy {
             when (query) {
-//                is PresentationQuery.ByPresentationDefinition -> query.presentationDefinition.inputDescriptors.map { it.id.value }
                 is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.credentials.map { it.id.value }
             }
         }
@@ -492,28 +491,6 @@ internal fun InitTransactionTO.toDomain(
 
     nonce to presentationType
 }
-
-// private fun VpFormats.supportsFormats(presentationDefinition: PresentationDefinition): Boolean =
-//    presentationDefinition.inputDescriptors.all { inputDescriptor ->
-//        val format = inputDescriptor.format ?: presentationDefinition.format
-//        format?.let {
-//            it.jsonObject().all { (identifier, serializedProperties) ->
-//                when (identifier) {
-//                    SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
-//                        serializedProperties.decodeAs<SdJwtVcFormatTO>()
-//                            .map { properties -> sdJwtVc.supports(properties.sdJwtAlgorithms, properties.kbJwtAlgorithms) }
-//                            .getOrElse { false }
-//
-//                    OpenId4VPSpec.FORMAT_MSO_MDOC ->
-//                        serializedProperties.decodeAs<MsoMdocFormatTO>()
-//                            .map { properties -> msoMdoc.supports(properties.algorithms) }
-//                            .getOrElse { false }
-//
-//                    else -> false
-//                }
-//            }
-//        } ?: true
-//    }
 
 private fun DCQL.formatsAre(vararg supportedFormats: String): Boolean = credentials.all { it.format.value in supportedFormats }
 

@@ -104,11 +104,6 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
                         else -> error("Unexpected type ('${vpToken::class.java.canonicalName}') for vp_token claim")
                     }
                 },
-//            presentationSubmission = getJSONObjectClaim("presentation_submission")?.let {
-//                val json = Gson().toJson(it)
-//                logger.debug("presentation_submission: $json")
-// //                PresentationExchange.jsonParser.decodePresentationSubmission(json).getOrThrow()
-//            },
             error = getClaim("error")?.toString(),
             errorDescription = getClaim("error_description")?.toString(),
         )

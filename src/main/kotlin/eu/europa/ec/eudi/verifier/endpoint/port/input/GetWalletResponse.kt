@@ -35,7 +35,6 @@ import java.time.Clock
 data class WalletResponseTO(
     @SerialName("id_token") val idToken: String? = null,
     @SerialName("vp_token") val vpToken: JsonElement? = null,
-//    @SerialName("presentation_submission") val presentationSubmission: PresentationSubmission? = null,
     @SerialName("error") val error: String? = null,
     @SerialName("error_description") val errorDescription: String? = null,
 )
@@ -53,27 +52,19 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
         }
     }
 
-//    fun VpContent.PresentationExchange.toJsonElement(): JsonElement = when {
-//        verifiablePresentations.size > 0 -> JsonArray(verifiablePresentations.map { it.toJsonElement() })
-//        else -> throw IllegalStateException("No attestations shared from wallet")
-//    }
-
     fun VpContent.toJsonElement(): JsonElement = when (this) {
         is VpContent.DCQL -> toJsonElement()
-//        is VpContent.PresentationExchange -> toJsonElement()
     }
 
     return when (this) {
         is WalletResponse.IdToken -> WalletResponseTO(idToken = idToken)
         is WalletResponse.VpToken -> WalletResponseTO(
             vpToken = vpContent.toJsonElement(),
-//            presentationSubmission = vpContent.presentationSubmissionOrNull(),
         )
 
         is WalletResponse.IdAndVpToken -> WalletResponseTO(
             idToken = idToken,
             vpToken = vpContent.toJsonElement(),
-//            presentationSubmission = vpContent.presentationSubmissionOrNull(),
         )
 
         is WalletResponse.Error -> WalletResponseTO(
