@@ -21,7 +21,6 @@ import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
-import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.*
 import org.slf4j.Logger
@@ -41,7 +40,6 @@ private val REQUEST_OBJECT_MEDIA_TYPE = MediaType.parseMediaType(RFC9101.REQUEST
  */
 class WalletApi(
     private val retrieveRequestObject: RetrieveRequestObject,
-//    private val getPresentationDefinition: GetPresentationDefinition,
     private val postWalletResponse: PostWalletResponse,
     private val signingKey: JWK,
 ) {
