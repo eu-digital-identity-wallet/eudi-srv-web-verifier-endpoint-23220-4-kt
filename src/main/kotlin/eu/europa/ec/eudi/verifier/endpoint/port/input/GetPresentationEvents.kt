@@ -19,115 +19,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEven
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
-// @Serializable
-// data class PresentationEventsTO(
-//    @SerialName("transaction_id") @Required val transactionId: String,
-//    @SerialName("last_updated") @Required val lastUpdated: Long,
-//    @SerialName("events") @Required val events: List<JsonObject>,
-// )
-//
-// fun interface GetPresentationEvents {
-//    suspend operator fun invoke(transactionId: TransactionId): QueryResponse<PresentationEventsTO>
-// }
-
-// class GetPresentationEventsLive(
-//
-//    private val loadPresentationById: LoadPresentationById,
-//    private val loadPresentationEvents: LoadPresentationEvents,
-// ) : GetPresentationEvents {
-//    override suspend fun invoke(
-//        transactionId: TransactionId,
-//    ): QueryResponse<PresentationEventsTO> = coroutineScope {
-//        if (presentationExists(transactionId)) {
-//            val events = loadPresentationEvents(transactionId)
-//            checkNotNull(events) { "Didn't find any events for transaction $transactionId" }
-//            val lastTimestamp = events.map { it.timestamp }.max()
-//            val transferObject = PresentationEventsTO(transactionId, lastTimestamp, events)
-//            QueryResponse.Found(transferObject)
-//        } else {
-//            QueryResponse.NotFound
-//        }
-//    }
-//
-//    private suspend fun presentationExists(transactionId: TransactionId): Boolean =
-//        loadPresentationById(transactionId) != null
-// }
-
-// private operator fun PresentationEventsTO.Companion.invoke(
-//    transactionId: TransactionId,
-//    lastUpdated: Instant,
-//    events: NonEmptyList<PresentationEvent>,
-// ) =
-//    PresentationEventsTO(
-//        transactionId = transactionId.value,
-//        lastUpdated = lastUpdated.toEpochMilli(),
-//        events = events.map { event ->
-//            require(event.transactionId == transactionId)
-//            toTransferObject(event)
-//        }.toList(),
-//    )
-
-// private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
-//    put("timestamp", event.timestamp.toEpochMilli())
-//    putEventNameAndActor(event)
-//    when (event) {
-//        is PresentationEvent.TransactionInitialized -> {
-//            put("response", event.response.json())
-//        }
-//
-//        is PresentationEvent.RequestObjectRetrieved -> {
-//            put("jwt", event.jwt)
-//        }
-//
-//        is PresentationEvent.FailedToRetrieveRequestObject -> {
-//            put("cause", event.cause)
-//        }
-//
-//        is PresentationEvent.JarmJwkSetRetrieved -> {
-//            put("jwk_set", event.jwkSet)
-//        }
-//
-//        is PresentationEvent.FailedToRetrieveJarmJwkSet -> {
-//            put("cause", event.cause)
-//        }
-//
-//        is PresentationEvent.PresentationDefinitionRetrieved -> {
-//            put("presentation_definition", event.presentationDefinition.json())
-//        }
-//
-//        is PresentationEvent.FailedToRetrievePresentationDefinition -> {
-//            put("cause", event.cause)
-//        }
-//
-//        is PresentationEvent.WalletResponsePosted -> {
-//            put("wallet_response", event.walletResponse.json())
-//        }
-//        is PresentationEvent.WalletFailedToPostResponse -> {
-//            put("cause", event.cause.asText())
-//        }
-//
-//        is PresentationEvent.VerifierGotWalletResponse -> {
-//            put("wallet_response", event.walletResponse.json())
-//        }
-//
-//        is PresentationEvent.VerifierFailedToGetWalletResponse -> {
-//            put("cause", event.cause)
-//        }
-//
-//        is PresentationEvent.PresentationExpired -> {
-//        }
-//
-//        is PresentationEvent.AttestationStatusCheckSuccessful -> {
-//            put("status_reference", event.statusReference.json())
-//        }
-//
-//        is PresentationEvent.AttestationStatusCheckFailed -> {
-//            put("status_reference", event.statusReference.json())
-//            put("cause", event.cause)
-//        }
-//    }
-// }
-
 @Serializable
 private enum class Actor {
     Verifier,
@@ -142,7 +33,6 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
         is PresentationEvent.FailedToRetrieveRequestObject -> "FailedToRetrieve request" to Actor.Wallet
         is PresentationEvent.JarmJwkSetRetrieved -> "JARM JWK set retrieved" to Actor.Wallet
         is PresentationEvent.FailedToRetrieveJarmJwkSet -> "FailedToRetrieve JARM JWK set retrieved" to Actor.Wallet
-//        is PresentationEvent.PresentationDefinitionRetrieved -> "Presentation definition retrieved" to Actor.Wallet
         is PresentationEvent.FailedToRetrievePresentationDefinition -> "Failed to retrieve presentation definition" to Actor.Wallet
         is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet
         is PresentationEvent.WalletFailedToPostResponse -> "Wallet failed to post response" to Actor.Wallet

@@ -118,7 +118,6 @@ private fun log(e: PresentationEvent) {
         is PresentationEvent.FailedToRetrieveRequestObject -> warn("Wallet failed to retrieve request object. Cause ${e.cause}")
         is PresentationEvent.PresentationExpired -> info("Presentation expired")
         is PresentationEvent.JarmJwkSetRetrieved -> info("Wallet retrieved JARM JWKS")
-//        is PresentationEvent.PresentationDefinitionRetrieved -> info("Wallet retrieved presentation definition")
         is PresentationEvent.RequestObjectRetrieved -> info("Wallet retrieved Request Object")
         is PresentationEvent.TransactionInitialized -> info("Verifier initialized transaction")
         is PresentationEvent.VerifierGotWalletResponse -> info("Verifier retrieved wallet response")

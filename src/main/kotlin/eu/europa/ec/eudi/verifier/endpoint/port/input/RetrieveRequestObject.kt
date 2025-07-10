@@ -189,21 +189,6 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         encryptionRequirement(metadata)
     }
 
-//    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportPresentationDefinitionUriIfRequired(
-//        metadata: WalletMetadataTO,
-//        presentation: Presentation.Requested,
-//    ) {
-//        val supportsPresentationDefinitionByReference =
-//            metadata.presentationDefinitionUriSupported ?: OpenId4VPSpec.DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED
-// //        val requiresPresentationDefinitionByReference =
-// //            presentation.presentationDefinitionMode is EmbedOption.ByReference && null != presentation.type.presentationDefinitionOrNull
-//        ensure(supportsPresentationDefinitionByReference || !requiresPresentationDefinitionByReference) {
-//            RetrieveRequestObjectError.UnsupportedWalletMetadata(
-//                "Wallet does not support fetching PresentationDefinition by reference",
-//            )
-//        }
-//    }
-
     private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredVpFormats(
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
@@ -213,9 +198,8 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         }.groupBy { it::class }
         val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
         val queryRequiredVpFormats = when (val query = presentation.type.presentationQueryOrNull) {
-//            is PresentationQuery.ByPresentationDefinition -> query.presentationDefinition.vpFormats(verifierSupportedVpFormats)
             is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.vpFormats(verifierSupportedVpFormats)
-            null -> emptyList<VpFormat>()
+            null -> emptyList()
         }.groupBy { it::class }
         val walletSupportsAllRequiredVpFormats = queryRequiredVpFormats.map { (vpFormatType, vpFormats) ->
             val walletSupported = walletSupportedVpFormats[vpFormatType].orEmpty()

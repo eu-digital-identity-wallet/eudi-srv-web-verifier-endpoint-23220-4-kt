@@ -176,7 +176,6 @@ internal fun beans(clock: Clock) = beans {
 
     bean { RetrieveRequestObjectLive(ref(), ref(), ref(), ref(), ref(), ref(), ref()) }
 
-//    bean { GetPresentationDefinitionLive(ref(), ref(), ref()) }
     bean {
         TimeoutPresentationsLive(
             ref(),
@@ -197,7 +196,6 @@ internal fun beans(clock: Clock) = beans {
     bean { PostWalletResponseLive(ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref()) }
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
     bean { GetWalletResponseLive(ref(), ref(), ref()) }
-//    bean { GetPresentationEventsLive(ref(), ref()) }
     bean(::GetClientMetadataLive)
 
     if (env.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)) {
@@ -358,14 +356,12 @@ internal fun beans(clock: Clock) = beans {
     bean {
         val walletApi = WalletApi(
             ref(),
-//            ref(),
             ref(),
             ref<VerifierConfig>().verifierId.jarSigning.key,
         )
         val verifierApi = VerifierApi(
             ref(),
             ref(),
-//            ref(),
             ref(),
         )
         val staticContent = StaticContent()
