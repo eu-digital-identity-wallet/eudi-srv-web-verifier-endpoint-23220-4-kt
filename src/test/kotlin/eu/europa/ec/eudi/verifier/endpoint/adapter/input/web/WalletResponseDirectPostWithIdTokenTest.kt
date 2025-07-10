@@ -127,7 +127,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
             null,
-            null,
+//            null,
             "nonce",
             redirectUriTemplate =
                 "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -195,7 +195,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
             null,
-            null,
+//            null,
             "nonce",
             redirectUriTemplate =
                 "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -230,7 +230,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
             null,
-            null,
+//            null,
             "nonce",
             redirectUriTemplate =
                 "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",

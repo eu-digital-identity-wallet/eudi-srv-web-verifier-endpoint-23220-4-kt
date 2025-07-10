@@ -59,7 +59,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-                null,
+//                null,
                 "nonce",
             )
 
@@ -101,7 +101,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-                null,
+//                null,
                 "nonce",
             )
 
@@ -128,7 +128,7 @@ class InitTransactionTest {
         val input = InitTransactionTO(
             type = PresentationTypeTO.VpTokenRequest,
             idTokenType = null,
-            presentationDefinition = null,
+//            presentationDefinition = null,
             nonce = "nonce",
         )
         testWithInvalidInput(input, ValidationError.MissingPresentationQuery)
@@ -141,7 +141,7 @@ class InitTransactionTest {
         val input = InitTransactionTO(
             type = PresentationTypeTO.IdTokenRequest,
             idTokenType = IdTokenTypeTO.SubjectSigned,
-            presentationDefinition = null,
+//            presentationDefinition = null,
             nonce = null,
         )
         testWithInvalidInput(input, ValidationError.MissingNonce)
@@ -250,7 +250,7 @@ class InitTransactionTest {
             val invalidPlaceHolderInput = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
-                null,
+//                null,
                 null,
                 "nonce",
                 redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
@@ -270,7 +270,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-                null,
+//                null,
                 "nonce",
                 redirectUriTemplate =
                     "hts:/client.example.org/cb%response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -294,7 +294,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-                null,
+//                null,
                 "nonce",
                 redirectUriTemplate =
                     "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -321,7 +321,7 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-                null,
+//                null,
                 "nonce",
             )
 
