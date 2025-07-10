@@ -19,8 +19,6 @@ import arrow.core.Either
 import arrow.core.getOrElse
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
-import eu.europa.ec.eudi.prex.PresentationDefinition
-import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
@@ -43,7 +41,7 @@ private val REQUEST_OBJECT_MEDIA_TYPE = MediaType.parseMediaType(RFC9101.REQUEST
  */
 class WalletApi(
     private val retrieveRequestObject: RetrieveRequestObject,
-    private val getPresentationDefinition: GetPresentationDefinition,
+//    private val getPresentationDefinition: GetPresentationDefinition,
     private val postWalletResponse: PostWalletResponse,
     private val signingKey: JWK,
 ) {
@@ -60,7 +58,6 @@ class WalletApi(
             contentType(MediaType.APPLICATION_FORM_URLENCODED) and accept(REQUEST_OBJECT_MEDIA_TYPE),
             this@WalletApi::handleRetrieveRequestObject,
         )
-        GET(PRESENTATION_DEFINITION_PATH, this@WalletApi::handleGetPresentationDefinition)
         POST(
             WALLET_RESPONSE_PATH,
             this@WalletApi::handlePostWalletResponse,
@@ -104,23 +101,6 @@ class WalletApi(
                 status(status).buildAndAwait()
             },
         )
-    }
-
-    /**
-     * Handles a request placed by wallet, input order to obtain
-     * the [PresentationDefinition] of the presentation
-     */
-    private suspend fun handleGetPresentationDefinition(req: ServerRequest): ServerResponse {
-        suspend fun pdFound(pd: PresentationDefinition) = ok().json().bodyValueAndAwait(pd)
-
-        val requestId = req.requestId()
-        logger.info("Handling GetPresentationDefinition for ${requestId.value} ...")
-
-        return when (val result = getPresentationDefinition(requestId)) {
-            is NotFound -> notFound().buildAndAwait()
-            is InvalidState -> badRequest().buildAndAwait()
-            is Found -> pdFound(result.value)
-        }
     }
 
     /**
@@ -198,9 +178,6 @@ class WalletApi(
                     state = getFirst("state"),
                     idToken = getFirst("id_token"),
                     vpToken = getFirst("vp_token")?.toJsonElement(),
-                    presentationSubmission = getFirst("presentation_submission")?.let {
-                        PresentationExchange.jsonParser.decodePresentationSubmission(it).getOrThrow()
-                    },
                     error = getFirst("error"),
                     errorDescription = getFirst("error_description"),
                 ).run { AuthorisationResponse.DirectPost(this) }

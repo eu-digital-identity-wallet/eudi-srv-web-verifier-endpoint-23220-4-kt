@@ -23,6 +23,7 @@ import arrow.core.raise.ensure
 import com.eygraber.uri.Uri
 import com.eygraber.uri.toURI
 import com.nimbusds.jose.JWSAlgorithm
+import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -418,6 +419,25 @@ internal fun InitTransactionTO.toDomain(
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
+    fun requiredPresentationQuery(): PresentationQuery =
+        when {
+            dcqlQuery != null -> {
+                ensure(
+                    dcqlQuery.formatsAre(
+                        SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT,
+                        SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
+                        OpenId4VPSpec.FORMAT_MSO_MDOC,
+                    ),
+                ) {
+                    ValidationError.UnsupportedFormat
+                }
+
+                PresentationQuery.ByDigitalCredentialsQueryLanguage(dcqlQuery)
+            }
+            else -> raise(
+                ValidationError.MultiplePresentationQueries,
+            ) // TODO: This will have to be removed as well. Why does it ends up here?
+        }
     fun requiredNonce(): Nonce {
         ensure(!nonce.isNullOrBlank()) { ValidationError.MissingNonce }
         return Nonce(nonce)
@@ -456,7 +476,16 @@ internal fun InitTransactionTO.toDomain(
     val presentationType = when (type) {
         PresentationTypeTO.IdTokenRequest ->
             PresentationType.IdTokenRequest(requiredIdTokenType())
-        else -> TODO()
+        PresentationTypeTO.VpTokenRequest -> {
+            val query = requiredPresentationQuery()
+            PresentationType.VpTokenRequest(query, optionalTransactionData(query))
+        }
+
+        PresentationTypeTO.IdAndVpTokenRequest -> {
+            val idTokenTypes = requiredIdTokenType()
+            val query = requiredPresentationQuery()
+            PresentationType.IdAndVpToken(idTokenTypes, query, optionalTransactionData(query))
+        }
     }
 
     val nonce = requiredNonce()

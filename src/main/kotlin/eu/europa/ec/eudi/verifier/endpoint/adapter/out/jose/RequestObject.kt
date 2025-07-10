@@ -15,7 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import eu.europa.ec.eudi.prex.PresentationDefinition
+// import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 import java.time.Clock
@@ -24,8 +24,8 @@ import java.time.Instant
 internal data class RequestObject(
     val verifierId: VerifierId,
     val responseType: List<String>,
-    val presentationDefinitionUri: URL?,
-    val presentationDefinition: PresentationDefinition? = null,
+//    val presentationDefinitionUri: URL?,
+//    val presentationDefinition: PresentationDefinition? = null,
     val dcqlQuery: DCQL? = null,
     val scope: List<String>,
     val idTokenType: List<String>,
@@ -59,19 +59,19 @@ internal fun requestObjectFromDomain(
             IdTokenType.SubjectSigned -> "subject_signed_id_token"
         }
     }
-    val maybePresentationDefinition = type.presentationDefinitionOrNull
-    val presentationDefinitionUri = maybePresentationDefinition?.let {
-        when (val option = presentation.presentationDefinitionMode) {
-            is EmbedOption.ByValue -> null
-            is EmbedOption.ByReference -> option.buildUrl(presentation.requestId)
-        }
-    }
-    val presentationDefinition = maybePresentationDefinition?.let { presentationDefinition ->
-        when (presentation.presentationDefinitionMode) {
-            is EmbedOption.ByValue -> presentationDefinition
-            is EmbedOption.ByReference -> null
-        }
-    }
+//    val maybePresentationDefinition = type.presentationDefinitionOrNull
+//    val presentationDefinitionUri = maybePresentationDefinition?.let {
+//        when (val option = presentation.presentationDefinitionMode) {
+//            is EmbedOption.ByValue -> null
+//            is EmbedOption.ByReference -> option.buildUrl(presentation.requestId)
+//        }
+//    }
+//    val presentationDefinition = maybePresentationDefinition?.let { presentationDefinition ->
+//        when (presentation.presentationDefinitionMode) {
+//            is EmbedOption.ByValue -> presentationDefinition
+//            is EmbedOption.ByReference -> null
+//        }
+//    }
     val responseType = when (type) {
         is PresentationType.IdTokenRequest -> listOf("id_token")
         is PresentationType.VpTokenRequest -> listOf("vp_token")
@@ -89,8 +89,8 @@ internal fun requestObjectFromDomain(
         verifierId = verifierConfig.verifierId,
         scope = scope,
         idTokenType = idTokenType,
-        presentationDefinitionUri = presentationDefinitionUri,
-        presentationDefinition = presentationDefinition,
+//        presentationDefinitionUri = presentationDefinitionUri,
+//        presentationDefinition = presentationDefinition,
         dcqlQuery = type.dcqlQueryOrNull,
         responseType = responseType,
         aud = aud,

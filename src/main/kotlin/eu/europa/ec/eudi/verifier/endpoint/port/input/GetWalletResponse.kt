@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
-import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.QueryResponse.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
@@ -23,7 +22,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEven
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -37,7 +35,7 @@ import java.time.Clock
 data class WalletResponseTO(
     @SerialName("id_token") val idToken: String? = null,
     @SerialName("vp_token") val vpToken: JsonElement? = null,
-    @SerialName("presentation_submission") val presentationSubmission: PresentationSubmission? = null,
+//    @SerialName("presentation_submission") val presentationSubmission: PresentationSubmission? = null,
     @SerialName("error") val error: String? = null,
     @SerialName("error_description") val errorDescription: String? = null,
 )
@@ -55,27 +53,27 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
         }
     }
 
-    fun VpContent.PresentationExchange.toJsonElement(): JsonElement = when {
-        verifiablePresentations.size > 0 -> JsonArray(verifiablePresentations.map { it.toJsonElement() })
-        else -> throw IllegalStateException("No attestations shared from wallet")
-    }
+//    fun VpContent.PresentationExchange.toJsonElement(): JsonElement = when {
+//        verifiablePresentations.size > 0 -> JsonArray(verifiablePresentations.map { it.toJsonElement() })
+//        else -> throw IllegalStateException("No attestations shared from wallet")
+//    }
 
     fun VpContent.toJsonElement(): JsonElement = when (this) {
         is VpContent.DCQL -> toJsonElement()
-        is VpContent.PresentationExchange -> toJsonElement()
+//        is VpContent.PresentationExchange -> toJsonElement()
     }
 
     return when (this) {
         is WalletResponse.IdToken -> WalletResponseTO(idToken = idToken)
         is WalletResponse.VpToken -> WalletResponseTO(
             vpToken = vpContent.toJsonElement(),
-            presentationSubmission = vpContent.presentationSubmissionOrNull(),
+//            presentationSubmission = vpContent.presentationSubmissionOrNull(),
         )
 
         is WalletResponse.IdAndVpToken -> WalletResponseTO(
             idToken = idToken,
             vpToken = vpContent.toJsonElement(),
-            presentationSubmission = vpContent.presentationSubmissionOrNull(),
+//            presentationSubmission = vpContent.presentationSubmissionOrNull(),
         )
 
         is WalletResponse.Error -> WalletResponseTO(

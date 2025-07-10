@@ -20,13 +20,11 @@ import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.proc.JWEDecryptionKeySelector
 import com.nimbusds.jose.proc.SecurityContext
-import com.nimbusds.jose.shaded.gson.Gson
 import com.nimbusds.jose.util.JSONObjectUtils
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.proc.JWTProcessor
-import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
@@ -106,11 +104,11 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
                         else -> error("Unexpected type ('${vpToken::class.java.canonicalName}') for vp_token claim")
                     }
                 },
-            presentationSubmission = getJSONObjectClaim("presentation_submission")?.let {
-                val json = Gson().toJson(it)
-                logger.debug("presentation_submission: $json")
-                PresentationExchange.jsonParser.decodePresentationSubmission(json).getOrThrow()
-            },
+//            presentationSubmission = getJSONObjectClaim("presentation_submission")?.let {
+//                val json = Gson().toJson(it)
+//                logger.debug("presentation_submission: $json")
+// //                PresentationExchange.jsonParser.decodePresentationSubmission(json).getOrThrow()
+//            },
             error = getClaim("error")?.toString(),
             errorDescription = getClaim("error_description")?.toString(),
         )
