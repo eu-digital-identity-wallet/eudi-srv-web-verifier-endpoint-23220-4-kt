@@ -254,7 +254,7 @@ data class VerifierConfig(
     val verifierId: VerifierId,
     val requestJarOption: EmbedOption<RequestId>,
     val requestUriMethod: RequestUriMethod,
-    val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
+//    val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseModeOption: ResponseModeOption,
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,
     val maxAge: Duration,

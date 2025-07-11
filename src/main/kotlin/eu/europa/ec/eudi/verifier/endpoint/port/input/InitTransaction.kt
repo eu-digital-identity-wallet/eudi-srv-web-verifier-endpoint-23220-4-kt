@@ -122,9 +122,8 @@ data class InitTransactionTO(
     @SerialName("dcql_query") val dcqlQuery: DCQL? = null,
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
-    @SerialName("jar_mode") val jarMode: EmbedModeTO? = null, // Should this stay ?
+    @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
     @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO? = null,
-    @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null, // TODO: Remove
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
@@ -254,7 +253,6 @@ class InitTransactionLive(
             nonce = nonce,
             jarmEncryptionEphemeralKey = newEphemeralEcPublicKey,
             responseMode = responseMode,
-            presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
             issuerChain = issuerChain,
@@ -379,17 +377,6 @@ class InitTransactionLive(
             null -> verifierConfig.requestUriMethod
         }
 
-    /**
-     * Gets the PresentationDefinition [EmbedOption] for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.presentationDefinitionEmbedOption].
-     */
-    private fun presentationDefinitionMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
-        when (initTransaction.presentationDefinitionMode) {
-            EmbedModeTO.ByValue -> EmbedOption.ByValue
-            EmbedModeTO.ByReference -> presentationDefinitionByReference
-            null -> verifierConfig.presentationDefinitionEmbedOption
-        }
-
     private suspend fun logTransactionInitialized(p: Presentation, request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO) {
         val event = PresentationEvent.TransactionInitialized(p.id, p.initiatedAt, request)
         publishPresentationEvent(event)
@@ -432,7 +419,7 @@ internal fun InitTransactionTO.toDomain(
                     ValidationError.UnsupportedFormat
                 }
 
-                PresentationQuery.ByDigitalCredentialsQueryLanguage(dcqlQuery)
+                PresentationQuery(dcqlQuery)
             }
             else -> raise(
                 ValidationError.MultiplePresentationQueries,
@@ -446,7 +433,7 @@ internal fun InitTransactionTO.toDomain(
     fun optionalTransactionData(query: PresentationQuery): NonEmptyList<TransactionData>? {
         val credentialIds: List<String> by lazy {
             when (query) {
-                is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.credentials.map { it.id.value }
+                is PresentationQuery -> query.query.credentials.map { it.id.value }
             }
         }
 

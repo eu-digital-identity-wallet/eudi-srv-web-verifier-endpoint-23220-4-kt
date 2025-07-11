@@ -91,7 +91,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
     suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent = when (presentationQuery) {
-        is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
+        is PresentationQuery ->
             dcqlVpContent(
                 presentationQuery.query,
                 presentation.id,
