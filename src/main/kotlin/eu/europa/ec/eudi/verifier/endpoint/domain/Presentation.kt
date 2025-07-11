@@ -59,17 +59,11 @@ enum class IdTokenType {
 /**
  * The requirements of the Verifiable Presentations to be presented.
  */
-sealed interface PresentationQuery {
-
-    /**
-     * The requirements of the Verifiable Presentations to be presented, expressed using DCQL.
-     */
-    data class ByDigitalCredentialsQueryLanguage(val query: DCQL) : PresentationQuery
-}
+data class PresentationQuery(val query: DCQL)
 
 val PresentationQuery.dcqlQueryOrNull: DCQL?
     get() = when (this) {
-        is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query
+        is PresentationQuery -> query
     }
 
 /**
@@ -210,7 +204,6 @@ sealed interface Presentation {
         val nonce: Nonce,
         val jarmEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
         val responseMode: ResponseModeOption,
-        val presentationDefinitionMode: EmbedOption<RequestId>,
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
     ) : Presentation

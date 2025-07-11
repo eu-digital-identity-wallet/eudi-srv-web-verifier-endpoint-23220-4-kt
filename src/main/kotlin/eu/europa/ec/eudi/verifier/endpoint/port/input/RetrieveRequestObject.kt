@@ -198,7 +198,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         }.groupBy { it::class }
         val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
         val queryRequiredVpFormats = when (val query = presentation.type.presentationQueryOrNull) {
-            is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.vpFormats(verifierSupportedVpFormats)
+            is PresentationQuery -> query.query.vpFormats(verifierSupportedVpFormats)
             null -> emptyList()
         }.groupBy { it::class }
         val walletSupportsAllRequiredVpFormats = queryRequiredVpFormats.map { (vpFormatType, vpFormats) ->
