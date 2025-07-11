@@ -41,7 +41,6 @@ class InitTransactionTest {
     private val verifierConfig = VerifierConfig(
         verifierId = TestContext.verifierId,
         requestJarOption = EmbedOption.ByValue,
-        presentationDefinitionEmbedOption = EmbedOption.ByValue,
         responseUriBuilder = { _ -> uri },
         responseModeOption = ResponseModeOption.DirectPostJwt,
         maxAge = Duration.ofDays(3),
@@ -86,7 +85,6 @@ class InitTransactionTest {
             val verifierConfig = VerifierConfig(
                 verifierId = TestContext.verifierId,
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
-                presentationDefinitionEmbedOption = EmbedOption.ByValue,
                 responseUriBuilder = { _ -> URL("https://foo") },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
                 maxAge = Duration.ofDays(3),
@@ -208,35 +206,35 @@ class InitTransactionTest {
             Unit
         }
 
-    /**
-     * Verifies [InitTransactionTO.presentationDefinitionMode] takes precedence over [VerifierConfig.presentationDefinitionEmbedOption].
-     */
-    @Test
-    fun `when presentation_definition_mode is provided this must take precedence over what is configured in VerifierConfig`() =
-        runTest {
-            val input = VerifierApiClient.loadInitTransactionTO(
-                "00-presentationDefinition.json",
-            ).copy(presentationDefinitionMode = EmbedModeTO.ByReference)
-
-            val useCase: InitTransaction = TestContext.initTransaction(
-                verifierConfig,
-                EmbedOption.byReference { _ -> uri },
-                EmbedOption.byReference { _ -> uri },
-            )
-
-            // we expect the Authorization Request to contain a request that contains a presentation_definition_uri
-            // and the Presentation to be in state RequestedObjectRetrieved
-            val jwtSecuredAuthorizationRequest = assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-                useCase(input).getOrElse { fail("Unexpected $it") },
-            )
-            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
-            assertNotNull(jwtSecuredAuthorizationRequest.request)
-            val claims = SignedJWT.parse(jwtSecuredAuthorizationRequest.request).payload!!.toJSONObject()!!
-            assertEquals(uri.toExternalForm(), claims["presentation_definition_uri"])
-            val presentation = loadPresentationById(testTransactionId)
-            assertIs<Presentation.RequestObjectRetrieved>(presentation)
-            Unit
-        }
+//    /**
+//     * Verifies [InitTransactionTO.presentationDefinitionMode] takes precedence over [VerifierConfig.presentationDefinitionEmbedOption].
+//     */
+//    @Test
+//    fun `when presentation_definition_mode is provided this must take precedence over what is configured in VerifierConfig`() =
+//        runTest {
+//            val input = VerifierApiClient.loadInitTransactionTO(
+//                "00-presentationDefinition.json",
+//            ).copy(presentationDefinitionMode = EmbedModeTO.ByReference)
+//
+//            val useCase: InitTransaction = TestContext.initTransaction(
+//                verifierConfig,
+//                EmbedOption.byReference { _ -> uri },
+//                EmbedOption.byReference { _ -> uri },
+//            )
+//
+//            // we expect the Authorization Request to contain a request that contains a presentation_definition_uri
+//            // and the Presentation to be in state RequestedObjectRetrieved
+//            val jwtSecuredAuthorizationRequest = assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
+//                useCase(input).getOrElse { fail("Unexpected $it") },
+//            )
+//            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
+//            assertNotNull(jwtSecuredAuthorizationRequest.request)
+//            val claims = SignedJWT.parse(jwtSecuredAuthorizationRequest.request).payload!!.toJSONObject()!!
+//            assertEquals(uri.toExternalForm(), claims["presentation_definition_uri"])
+//            val presentation = loadPresentationById(testTransactionId)
+//            assertIs<Presentation.RequestObjectRetrieved>(presentation)
+//            Unit
+//        }
 
     @Test
     fun `when wallet_response_redirect_uri_template is invalid, validation error InvalidWalletResponseTemplate should be raised`() =
