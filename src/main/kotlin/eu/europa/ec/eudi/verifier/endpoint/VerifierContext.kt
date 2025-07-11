@@ -176,7 +176,6 @@ internal fun beans(clock: Clock) = beans {
 
     bean { RetrieveRequestObjectLive(ref(), ref(), ref(), ref(), ref(), ref(), ref()) }
 
-    bean { GetPresentationDefinitionLive(ref(), ref(), ref()) }
     bean {
         TimeoutPresentationsLive(
             ref(),
@@ -197,7 +196,6 @@ internal fun beans(clock: Clock) = beans {
     bean { PostWalletResponseLive(ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref()) }
     bean { GenerateEphemeralEncryptionKeyPairNimbus }
     bean { GetWalletResponseLive(ref(), ref(), ref()) }
-    bean { GetPresentationEventsLive(ref(), ref()) }
     bean(::GetClientMetadataLive)
 
     if (env.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)) {
@@ -359,10 +357,13 @@ internal fun beans(clock: Clock) = beans {
         val walletApi = WalletApi(
             ref(),
             ref(),
-            ref(),
             ref<VerifierConfig>().verifierId.jarSigning.key,
         )
-        val verifierApi = VerifierApi(ref(), ref(), ref(), ref())
+        val verifierApi = VerifierApi(
+            ref(),
+            ref(),
+            ref(),
+        )
         val staticContent = StaticContent()
         val swaggerUi = SwaggerUi(
             publicResourcesBasePath = env.getRequiredProperty("spring.webflux.static-path-pattern").removeSuffix("/**"),
@@ -557,13 +558,6 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         environment.getProperty("verifier.response.mode", ResponseModeOption::class.java)
             ?: ResponseModeOption.DirectPostJwt
 
-    val presentationDefinitionEmbedOption =
-        environment.getProperty("verifier.presentationDefinition.embed", EmbedOptionEnum::class.java).let {
-            when (it) {
-                ByReference -> WalletApi.presentationDefinitionByReference(publicUrl)
-                ByValue, null -> EmbedOption.ByValue
-            }
-        }
     val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofMinutes(5)
 
     val transactionDataHashAlgorithm = environment.getProperty("verifier.transactionData.hashAlgorithm", "sha-256")
@@ -582,7 +576,6 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         verifierId = verifierId,
         requestJarOption = requestJarOption,
         requestUriMethod = requestUriMethod,
-        presentationDefinitionEmbedOption = presentationDefinitionEmbedOption,
         responseUriBuilder = WalletApi.directPost(publicUrl),
         responseModeOption = responseModeOption,
         maxAge = maxAge,
