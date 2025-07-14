@@ -51,8 +51,7 @@ data class AuthorisationResponseTO(
     val error: String? = null,
     val errorDescription: String? = null,
     val idToken: String? = null,
-    val vpToken: JsonElement? = null,
-//    val presentationSubmission: PresentationSubmission? = null,
+    val vpToken: JsonObject? = null,
 )
 
 sealed interface AuthorisationResponse {

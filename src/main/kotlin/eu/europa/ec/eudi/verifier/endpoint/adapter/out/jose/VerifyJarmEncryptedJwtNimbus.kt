@@ -32,9 +32,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -87,22 +85,9 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
         AuthorisationResponseTO(
             state = getClaim("state")?.toString(),
             idToken = getClaim("id_token")?.toString(),
-            vpToken = getClaim("vp_token")
+            vpToken = getJSONObjectClaim("vp_token")
                 ?.let { vpToken ->
-                    fun Any.toJsonElement(): JsonElement =
-                        when (this) {
-                            is String -> JsonPrimitive(this)
-
-                            // Convert JSON Object from Nimbus to KotlinX Serialization
-                            is Map<*, *> -> Json.decodeFromString(JSONObjectUtils.toJSONString(this as Map<String, *>))
-
-                            else -> error("Unexpected type ('${this::class.java.canonicalName}') for vp_token claim")
-                        }
-                    when (vpToken) {
-                        is String, is Map<*, *> -> vpToken.toJsonElement()
-                        is List<*> -> JsonArray(vpToken.mapNotNull { it?.toJsonElement() })
-                        else -> error("Unexpected type ('${vpToken::class.java.canonicalName}') for vp_token claim")
-                    }
+                    Json.decodeFromString<JsonObject>(JSONObjectUtils.toJSONString(vpToken))
                 },
             error = getClaim("error")?.toString(),
             errorDescription = getClaim("error_description")?.toString(),
