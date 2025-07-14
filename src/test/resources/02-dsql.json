@@ -1,0 +1,20 @@
+{
+  "type": "vp_token id_token",
+  "id_token_type": "subject_signed_id_token",
+  "dcql_query": {
+    "credentials": [
+      {
+        "id": "wa_driver_license",
+        "format": "dc+sd-jwt",
+        "claims": [
+          { "id": "claim1","path": ["credentialSubject","dateOfBirth"]},
+          { "id": "claim2","path": ["credentialSubject","dob"]},
+          { "id": "claim3","path": ["vc","credentialSubject", "dateOfBirth"]},
+          { "id": "claim4","path": ["vc","credentialSubject", "dob"]}
+        ],
+        "claim_sets": [["claim1"],["claim2"],["claim3"],["claim4"]]
+      }
+    ]
+  },
+  "nonce": "nonce"
+}
