@@ -263,8 +263,8 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
             assertNotNull(VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
 
         val vpToken = assertIs<JsonObject>(assertNotNull(transactionResponse.vpToken))
-
-        assertIs<JsonObject>(vpToken["eu_europa_ec_eudi_pid_1"])
+        assertIs<JsonPrimitive>(vpToken["eu_europa_ec_eudi_pid_1"])
+        assertIs<JsonPrimitive>(vpToken["org_iso_18013_5_1_mDL"])
     }
 
     @Test
