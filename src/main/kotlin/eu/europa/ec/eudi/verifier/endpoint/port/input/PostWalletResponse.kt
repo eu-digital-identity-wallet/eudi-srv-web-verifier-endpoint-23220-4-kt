@@ -284,7 +284,7 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
         val element = this@toVerifiablePresentation
         when (format) {
             Format.MsoMdoc -> element.asString()
-            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> element.asStringOrObject()
+            Format.SdJwtVc -> element.asStringOrObject()
             else -> element.asStringOrObject()
         }
     }
@@ -299,7 +299,7 @@ private fun eu.europa.ec.eudi.prex.Format.vpFormat(
         }
 
         when (format.value) {
-            SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
+            SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
                 val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrThrow()
                 VpFormat.SdJwtVc(
                     properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
@@ -322,7 +322,7 @@ private fun VpFormats.vpFormat(
 ): Either<WalletResponseValidationError, VpFormat> =
     either {
         when (format.value) {
-            SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
+            SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
             OpenId4VPSpec.FORMAT_MSO_MDOC -> msoMdoc
             else -> raise(ifInvalid)
         }
