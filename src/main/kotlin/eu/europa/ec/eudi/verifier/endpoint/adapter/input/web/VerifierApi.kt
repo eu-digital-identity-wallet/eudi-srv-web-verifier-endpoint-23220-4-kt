@@ -32,6 +32,7 @@ import kotlin.jvm.optionals.getOrNull
 internal class VerifierApi(
     private val initTransaction: InitTransaction,
     private val getWalletResponse: GetWalletResponse,
+    private val getPresentationEvents: GetPresentationEvents,
     private val getClientMetadata: GetClientMetadata,
 ) {
 
@@ -44,6 +45,7 @@ internal class VerifierApi(
             ::handleInitTransaction,
         )
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
+        GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
         GET(CLIENT_METADATA_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetClientMetadata)
     }
 
@@ -88,6 +90,23 @@ internal class VerifierApi(
 
         logger.info("Handling GetWalletResponse for tx ${transactionId.value} and response_code: ${responseCode?.value ?: "n/a"}. ...")
         return when (val result = getWalletResponse(transactionId, responseCode)) {
+            is QueryResponse.NotFound -> notFound().buildAndAwait()
+            is QueryResponse.InvalidState -> badRequest().buildAndAwait()
+            is QueryResponse.Found -> found(result.value)
+        }
+    }
+
+    /**
+     * Handles a request placed by verifier, input order to obtain
+     * presentation logs
+     */
+    private suspend fun handleGetPresentationEvents(req: ServerRequest): ServerResponse {
+        suspend fun found(events: PresentationEventsTO) = ok().json().bodyValueAndAwait(events)
+
+        val transactionId = req.transactionId()
+
+        logger.info("Handling Get PresentationEvents for tx ${transactionId.value}")
+        return when (val result = getPresentationEvents(transactionId)) {
             is QueryResponse.NotFound -> notFound().buildAndAwait()
             is QueryResponse.InvalidState -> badRequest().buildAndAwait()
             is QueryResponse.Found -> found(result.value)
