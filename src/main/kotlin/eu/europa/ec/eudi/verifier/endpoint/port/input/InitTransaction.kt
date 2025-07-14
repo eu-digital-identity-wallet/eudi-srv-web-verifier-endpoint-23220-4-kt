@@ -407,23 +407,20 @@ internal fun InitTransactionTO.toDomain(
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
     fun requiredPresentationQuery(): PresentationQuery =
-        when {
-            dcqlQuery != null -> {
-                ensure(
-                    dcqlQuery.formatsAre(
-                        SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT,
-                        SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
-                        OpenId4VPSpec.FORMAT_MSO_MDOC,
-                    ),
-                ) {
-                    ValidationError.UnsupportedFormat
-                }
-
-                PresentationQuery(dcqlQuery)
+        if (dcqlQuery != null) {
+            ensure(
+                dcqlQuery.formatsAre(
+                    SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT,
+                    SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
+                    OpenId4VPSpec.FORMAT_MSO_MDOC,
+                ),
+            ) {
+                ValidationError.UnsupportedFormat
             }
-            else -> raise(
-                ValidationError.MultiplePresentationQueries,
-            )
+
+            PresentationQuery(dcqlQuery)
+        } else {
+            raise(ValidationError.MissingPresentationQuery)
         }
     fun requiredNonce(): Nonce {
         ensure(!nonce.isNullOrBlank()) { ValidationError.MissingNonce }
