@@ -38,7 +38,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 //
 //    @Test
 //    fun `post presentation definition returns 200`() {
-//        val initTransaction = VerifierApiClient.loadInitTransactionTO("00-presentationDefinition.json")
+//        val initTransaction = VerifierApiClient.loadInitTransactionTO("00-dsql.json")
 //        log.info("initTransaction: $initTransaction")
 //        val transactionInitialized =
 //            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
@@ -50,7 +50,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 //
 //    @Test
 //    fun `get presentation definition returns 200`() {
-//        val initTransaction = VerifierApiClient.loadInitTransactionTO("00-presentationDefinition.json")
+//        val initTransaction = VerifierApiClient.loadInitTransactionTO("00-dsql.json")
 //        log.info("initTransaction: $initTransaction")
 //        val transactionInitialized =
 //            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))

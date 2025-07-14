@@ -62,7 +62,7 @@ internal class WalletResponseDirectPostTest {
     @Order(value = 1)
     fun `get request object when request mode is direct_post, confirm headers do not exist`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dsql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)

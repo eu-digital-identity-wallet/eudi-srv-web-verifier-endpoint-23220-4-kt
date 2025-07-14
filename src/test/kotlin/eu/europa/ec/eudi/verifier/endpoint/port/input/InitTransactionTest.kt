@@ -58,7 +58,6 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-//                null,
                 "nonce",
             )
 
@@ -126,7 +125,7 @@ class InitTransactionTest {
         val input = InitTransactionTO(
             type = PresentationTypeTO.VpTokenRequest,
             idTokenType = null,
-//            presentationDefinition = null,
+            dcqlQuery = null,
             nonce = "nonce",
         )
         testWithInvalidInput(input, ValidationError.MissingPresentationQuery)
@@ -139,7 +138,6 @@ class InitTransactionTest {
         val input = InitTransactionTO(
             type = PresentationTypeTO.IdTokenRequest,
             idTokenType = IdTokenTypeTO.SubjectSigned,
-//            presentationDefinition = null,
             nonce = null,
         )
         testWithInvalidInput(input, ValidationError.MissingNonce)
@@ -206,36 +204,6 @@ class InitTransactionTest {
             Unit
         }
 
-//    /**
-//     * Verifies [InitTransactionTO.presentationDefinitionMode] takes precedence over [VerifierConfig.presentationDefinitionEmbedOption].
-//     */
-//    @Test
-//    fun `when presentation_definition_mode is provided this must take precedence over what is configured in VerifierConfig`() =
-//        runTest {
-//            val input = VerifierApiClient.loadInitTransactionTO(
-//                "00-presentationDefinition.json",
-//            ).copy(presentationDefinitionMode = EmbedModeTO.ByReference)
-//
-//            val useCase: InitTransaction = TestContext.initTransaction(
-//                verifierConfig,
-//                EmbedOption.byReference { _ -> uri },
-//                EmbedOption.byReference { _ -> uri },
-//            )
-//
-//            // we expect the Authorization Request to contain a request that contains a presentation_definition_uri
-//            // and the Presentation to be in state RequestedObjectRetrieved
-//            val jwtSecuredAuthorizationRequest = assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
-//                useCase(input).getOrElse { fail("Unexpected $it") },
-//            )
-//            assertEquals(jwtSecuredAuthorizationRequest.clientId, verifierConfig.verifierId.clientId)
-//            assertNotNull(jwtSecuredAuthorizationRequest.request)
-//            val claims = SignedJWT.parse(jwtSecuredAuthorizationRequest.request).payload!!.toJSONObject()!!
-//            assertEquals(uri.toExternalForm(), claims["presentation_definition_uri"])
-//            val presentation = loadPresentationById(testTransactionId)
-//            assertIs<Presentation.RequestObjectRetrieved>(presentation)
-//            Unit
-//        }
-
     @Test
     fun `when wallet_response_redirect_uri_template is invalid, validation error InvalidWalletResponseTemplate should be raised`() =
         runTest {
@@ -248,7 +216,6 @@ class InitTransactionTest {
             val invalidPlaceHolderInput = InitTransactionTO(
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
-//                null,
                 null,
                 "nonce",
                 redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
@@ -268,7 +235,6 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-//                null,
                 "nonce",
                 redirectUriTemplate =
                     "hts:/client.example.org/cb%response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -292,7 +258,6 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-//                null,
                 "nonce",
                 redirectUriTemplate =
                     "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -319,7 +284,6 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-//                null,
                 "nonce",
             )
 
@@ -347,7 +311,7 @@ class InitTransactionTest {
 
         suspend fun test(transactionData: JsonObject) {
             val input = VerifierApiClient.loadInitTransactionTO(
-                "00-presentationDefinition.json",
+                "00-dsql.json",
             ).copy(transactionData = listOf(transactionData))
 
             val result = useCase(input)
@@ -387,7 +351,7 @@ class InitTransactionTest {
             assertEquals(ValidationError.InvalidTransactionData.left(), result)
         }
 
-        test("00-presentationDefinition.json", "_foo_wa_driver_license")
+        test("00-dsql.json", "_foo_wa_driver_license")
         test("04-dcql.json", "_foo_employment_input")
     }
 
@@ -432,7 +396,7 @@ class InitTransactionTest {
             assertEquals(expectedJarTransactionData, jarTransactionData)
         }
 
-        test("00-presentationDefinition.json", "wa_driver_license")
+        test("00-dsql.json", "wa_driver_license")
         test("04-dcql.json", "employment_input")
     }
 

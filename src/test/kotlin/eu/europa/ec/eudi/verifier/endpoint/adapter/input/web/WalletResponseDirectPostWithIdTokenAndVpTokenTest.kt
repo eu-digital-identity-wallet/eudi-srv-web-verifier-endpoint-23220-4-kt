@@ -22,7 +22,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
@@ -78,7 +77,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 1)
     fun `post wallet response (only idToken) - confirm returns 200`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dsql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -90,7 +89,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("id_token", "value 1")
         formEncodedBody.add("vp_token", TestUtils.loadResource("02-vpToken.json"))
-        formEncodedBody.add("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
 
         // when
         WalletApiClient.directPost(client, requestId, formEncodedBody)
@@ -111,7 +109,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     fun `get authorisation response - confirm returns 200`() = runTest {
         suspend fun test(
             presentationDefinition: String,
-            presentationSubmission: String,
             vpToken: String,
             asserter: (WalletResponseTO) -> Unit,
         ) {
@@ -130,7 +127,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
             formEncodedBody.add("state", requestId.value)
             formEncodedBody.add("id_token", "value 1")
             formEncodedBody.add("vp_token", TestUtils.loadResource(vpToken))
-            formEncodedBody.add("presentation_submission", TestUtils.loadResource(presentationSubmission))
 
             WalletApiClient.directPost(client, requestId, formEncodedBody)
 
@@ -143,19 +139,16 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         }
 
         // Test with single Verifiable Presentation -- single JsonObject
-        test("02-presentationDefinition.json", "02-presentationSubmission.json", "02-vpToken.json") {
-            val vpToken = assertNotNull(it.vpToken)
-            assertIs<JsonArray>(vpToken)
-            assertIs<JsonObject>(vpToken[0])
+        test("02-dsql.json", "02-vpToken.json") {
+            val vpToken = assertIs<JsonObject>(assertNotNull(it.vpToken))
+            assertIs<JsonObject>(vpToken["wa_driver_license"])
         }
 
         // Test with multiple Verifiable Presentation -- single JsonArray that contains one JsonPrimitive and one JsonObject
-        test("03-presentationDefinition.json", "03-presentationSubmission.json", "03-vpToken.json") {
-            val vpToken = assertNotNull(it.vpToken)
-            assertIs<JsonArray>(vpToken)
-            assertEquals(2, vpToken.size)
-            assertIs<JsonPrimitive>(vpToken[0])
-            assertIs<JsonObject>(vpToken[1])
+        test("03-dsql.json", "03-vpToken.json") {
+            val vpToken = assertIs<JsonObject>(assertNotNull(it.vpToken))
+            assertIs<JsonPrimitive>(vpToken["employment_input"])
+            assertIs<JsonObject>(vpToken["employment_input_2"])
         }
     }
 
@@ -166,7 +159,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 3)
     fun `with response_mode direct_post, direct_post_jwt wallet responses are rejected`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dsql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -215,52 +208,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     }
 
     @Test
-    @Order(value = 5)
-    fun `presentation with presentation exchange query rejects dcql response`() = runTest {
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("03-presentationDefinition.json")
-        val transactionInitialized =
-            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
-        val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-
-        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
-        formEncodedBody.add("state", requestId.value)
-        formEncodedBody.add("id_token", "value 1")
-        formEncodedBody.add("vp_token", TestUtils.loadResource("04-vpToken.json"))
-
-        try {
-            WalletApiClient.directPost(client, requestId, formEncodedBody)
-            fail("Expected DCQL response to be rejected for Presentation Exchange query")
-        } catch (error: AssertionError) {
-            assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
-        }
-    }
-
-    @Test
-    @Order(value = 6)
-    fun `presentation with dcql query rejects presentation exchange response`() = runTest {
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("04-dcql.json")
-        val transactionInitialized =
-            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
-        val requestId = RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-        WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
-
-        val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
-        formEncodedBody.add("state", requestId.value)
-        formEncodedBody.add("id_token", "value 1")
-        formEncodedBody.add("vp_token", TestUtils.loadResource("03-vpToken.json"))
-        formEncodedBody.add("presentation_submission", TestUtils.loadResource("03-presentationSubmission.json"))
-
-        try {
-            WalletApiClient.directPost(client, requestId, formEncodedBody)
-            fail("Expected Presentation Exchange response to be rejected for DCQL query")
-        } catch (error: AssertionError) {
-            assertEquals("Status expected:<200 OK> but was:<400 BAD_REQUEST>", error.message)
-        }
-    }
-
-    @Test
-    @Order(value = 7)
+    @Order(value = 7) // TODO: Change order
     fun `presentation with dcql query rejects dcql response when credential sets are not satisfied`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("05-dcql.json")
         val transactionInitialized =
