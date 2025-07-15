@@ -90,15 +90,15 @@ private suspend fun AuthorisationResponseTO.toDomain(
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
     suspend fun requiredVpContent(presentationQuery: DCQL): VerifiablePresentations =
-            dcqlVpContent(
-                presentationQuery,
-                presentation.id,
-                presentation.nonce,
-                presentation.type.transactionDataOrNull,
-                validateVerifiablePresentation,
-                vpFormats,
-                presentation.issuerChain,
-            ).bind()
+        dcqlVpContent(
+            presentationQuery,
+            presentation.id,
+            presentation.nonce,
+            presentation.type.transactionDataOrNull,
+            validateVerifiablePresentation,
+            vpFormats,
+            presentation.issuerChain,
+        ).bind()
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
     maybeError ?: when (val type = presentation.type) {
@@ -142,7 +142,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                             null,
                         ),
                     )
-                val unvalidatedVerifiablePresentations = value.map{ it.toVerifiablePresentation(format).bind() }
+                val unvalidatedVerifiablePresentations = value.map { it.toVerifiablePresentation(format).bind() }
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
@@ -153,7 +153,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                         null,
                     ),
                 ).bind()
-                unvalidatedVerifiablePresentations.map{
+                unvalidatedVerifiablePresentations.map {
                     validateVerifiablePresentation(
                         transactionId,
                         it,
@@ -163,7 +163,6 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                         issuerChain,
                     ).bind()
                 }
-
             }
         }
 
