@@ -74,7 +74,7 @@ internal fun requestObjectFromDomain(
         verifierId = verifierConfig.verifierId,
         scope = scope,
         idTokenType = idTokenType,
-        dcqlQuery = type.dcqlQueryOrNull,
+        dcqlQuery = type.queryOrNull,
         responseType = responseType,
         aud = aud,
         nonce = presentation.nonce.value,

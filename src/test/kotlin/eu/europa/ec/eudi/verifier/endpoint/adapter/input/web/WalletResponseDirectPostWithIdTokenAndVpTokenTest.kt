@@ -22,6 +22,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation
@@ -69,15 +70,14 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response
      */
     @Test
     @Order(value = 1)
     fun `post wallet response (only idToken) - confirm returns 200`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dsql.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -99,8 +99,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response
      * - verifier to verifier backend, to get wallet response
      */
@@ -108,12 +107,12 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 2)
     fun `get authorisation response - confirm returns 200`() = runTest {
         suspend fun test(
-            presentationDefinition: String,
+            dcqlQuery: String,
             vpToken: String,
             asserter: (WalletResponseTO) -> Unit,
         ) {
             // given
-            val initTransaction = VerifierApiClient.loadInitTransactionTO(presentationDefinition)
+            val initTransaction = VerifierApiClient.loadInitTransactionTO(dcqlQuery)
             val transactionInitialized =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(client, initTransaction),
@@ -139,16 +138,16 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         }
 
         // Test with single Verifiable Presentation -- single JsonObject
-        test("02-dsql.json", "02-vpToken.json") {
+        test("02-dcql.json", "02-vpToken.json") {
             val vpToken = assertIs<JsonObject>(assertNotNull(it.vpToken))
-            assertIs<JsonObject>(vpToken["wa_driver_license"])
+            assertIs<JsonObject>(assertIs<JsonArray>(vpToken["wa_driver_license"])[0])
         }
 
         // Test with multiple Verifiable Presentation -- single JsonArray that contains one JsonPrimitive and one JsonObject
-        test("03-dsql.json", "03-vpToken.json") {
+        test("03-dcql.json", "03-vpToken.json") {
             val vpToken = assertIs<JsonObject>(assertNotNull(it.vpToken))
-            assertIs<JsonPrimitive>(vpToken["employment_input"])
-            assertIs<JsonObject>(vpToken["employment_input_2"])
+            assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input"])[0])
+            assertIs<JsonObject>(assertIs<JsonArray>(vpToken["employment_input_2"])[0])
         }
     }
 
@@ -159,7 +158,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Order(value = 3)
     fun `with response_mode direct_post, direct_post_jwt wallet responses are rejected`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dsql.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -203,12 +202,12 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val vpToken = assertNotNull(response.vpToken)
         assertIs<JsonObject>(vpToken)
         assertEquals(2, vpToken.size)
-        assertIs<JsonPrimitive>(vpToken["employment_input"])
-        assertIs<JsonObject>(vpToken["employment_input_2"])
+        assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input"])[0])
+        assertIs<JsonObject>(assertIs<JsonArray>(vpToken["employment_input_2"])[0])
     }
 
     @Test
-    @Order(value = 7) // TODO: Change order
+    @Order(value = 5)
     fun `presentation with dcql query rejects dcql response when credential sets are not satisfied`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("05-dcql.json")
         val transactionInitialized =
@@ -230,7 +229,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     }
 
     @Test
-    @Order(value = 8)
+    @Order(value = 6)
     fun `presentation with dcql query accepts dcql response when all required credential sets are satisfied`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("05-dcql.json")
         val transactionInitialized =
@@ -251,8 +250,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val vpToken = assertNotNull(response.vpToken)
         assertIs<JsonObject>(vpToken)
         assertEquals(3, vpToken.size)
-        assertIs<JsonPrimitive>(vpToken["employment_input"])
-        assertIs<JsonObject>(vpToken["employment_input_2"])
-        assertIs<JsonPrimitive>(vpToken["employment_input_3"])
+        assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input"])[0])
+        assertIs<JsonObject>(assertIs<JsonArray>(vpToken["employment_input_2"])[0])
+        assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input_3"])[0])
     }
 }

@@ -22,10 +22,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEven
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.*
 import java.time.Clock
 
 /**
@@ -48,9 +45,11 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
         }
 
     fun VerifiablePresentations.toJsonObject(): JsonObject = buildJsonObject {
-        presentations.forEach { (key, value) ->
-            value.forEach {
-                put(key.value, it.toJsonElement())
+        value.forEach { (queryId, verifiablePresentations) ->
+            putJsonArray(queryId.value) {
+                verifiablePresentations.forEach {
+                    add(it.toJsonElement())
+                }
             }
         }
     }

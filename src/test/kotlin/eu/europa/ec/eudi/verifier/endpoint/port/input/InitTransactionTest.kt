@@ -64,7 +64,6 @@ class InitTransactionTest {
             val useCase: InitTransaction = TestContext.initTransaction(
                 verifierConfig,
                 EmbedOption.byReference { _ -> uri },
-                EmbedOption.byReference { _ -> uri },
             )
 
             val jwtSecuredAuthorizationRequest = assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
@@ -98,13 +97,11 @@ class InitTransactionTest {
                 PresentationTypeTO.IdTokenRequest,
                 IdTokenTypeTO.SubjectSigned,
                 null,
-//                null,
                 "nonce",
             )
 
             val useCase = TestContext.initTransaction(
                 verifierConfig,
-                EmbedOption.byReference { _ -> uri },
                 EmbedOption.byReference { _ -> uri },
             )
 
@@ -119,9 +116,9 @@ class InitTransactionTest {
         }
 
     @Test
-    fun `when input misses presentation definition validation error is raised`() = runTest {
+    fun `when input misses DCQL validation error is raised`() = runTest {
         // Input is invalid.
-        //  Misses presentation definition
+        //  Misses DCQL
         val input = InitTransactionTO(
             type = PresentationTypeTO.VpTokenRequest,
             idTokenType = null,
@@ -134,7 +131,7 @@ class InitTransactionTest {
     @Test
     fun `when input misses nonce validation error is raised`() = runTest {
         // Input is invalid.
-        //  Misses presentation definition
+        //  Misses DCQL query
         val input = InitTransactionTO(
             type = PresentationTypeTO.IdTokenRequest,
             idTokenType = IdTokenTypeTO.SubjectSigned,
@@ -158,7 +155,6 @@ class InitTransactionTest {
 
             val useCase: InitTransaction = TestContext.initTransaction(
                 verifierConfig,
-                EmbedOption.byReference { _ -> uri },
                 EmbedOption.byReference { _ -> uri },
             )
 
@@ -188,7 +184,6 @@ class InitTransactionTest {
             val useCase: InitTransaction = TestContext.initTransaction(
                 verifierConfig,
                 EmbedOption.byReference { _ -> uri },
-                EmbedOption.byReference { _ -> uri },
             )
 
             // we expect the Authorization Request to contain a request_uri
@@ -209,7 +204,6 @@ class InitTransactionTest {
         runTest {
             val useCase: InitTransaction = TestContext.initTransaction(
                 verifierConfig,
-                EmbedOption.byReference { _ -> uri },
                 EmbedOption.byReference { _ -> uri },
             )
 
@@ -266,7 +260,6 @@ class InitTransactionTest {
             val useCase: InitTransaction = TestContext.initTransaction(
                 verifierConfig,
                 EmbedOption.byReference { _ -> uri },
-                EmbedOption.byReference { _ -> uri },
             )
 
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
@@ -290,7 +283,6 @@ class InitTransactionTest {
             val useCase: InitTransaction = TestContext.initTransaction(
                 verifierConfig,
                 EmbedOption.byReference { _ -> uri },
-                EmbedOption.byReference { _ -> uri },
             )
 
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
@@ -306,12 +298,11 @@ class InitTransactionTest {
         val useCase: InitTransaction = TestContext.initTransaction(
             verifierConfig,
             EmbedOption.byReference { _ -> uri },
-            EmbedOption.byReference { _ -> uri },
         )
 
         suspend fun test(transactionData: JsonObject) {
             val input = VerifierApiClient.loadInitTransactionTO(
-                "00-dsql.json",
+                "00-dcql.json",
             ).copy(transactionData = listOf(transactionData))
 
             val result = useCase(input)
@@ -332,7 +323,6 @@ class InitTransactionTest {
         val useCase: InitTransaction = TestContext.initTransaction(
             verifierConfig,
             EmbedOption.byReference { _ -> uri },
-            EmbedOption.byReference { _ -> uri },
         )
 
         suspend fun test(baseInput: String, credentialId: String) {
@@ -351,7 +341,7 @@ class InitTransactionTest {
             assertEquals(ValidationError.InvalidTransactionData.left(), result)
         }
 
-        test("00-dsql.json", "_foo_wa_driver_license")
+        test("00-dcql.json", "_foo_wa_driver_license")
         test("04-dcql.json", "_foo_employment_input")
     }
 
@@ -359,7 +349,6 @@ class InitTransactionTest {
     fun `when transaction_data contains jsonobjects with valid credential ids, inittransaction succeeds`() = runTest {
         val useCase: InitTransaction = TestContext.initTransaction(
             verifierConfig,
-            EmbedOption.byReference { _ -> uri },
             EmbedOption.byReference { _ -> uri },
         )
 
@@ -396,7 +385,7 @@ class InitTransactionTest {
             assertEquals(expectedJarTransactionData, jarTransactionData)
         }
 
-        test("00-dsql.json", "wa_driver_license")
+        test("00-dcql.json", "wa_driver_license")
         test("04-dcql.json", "employment_input")
     }
 

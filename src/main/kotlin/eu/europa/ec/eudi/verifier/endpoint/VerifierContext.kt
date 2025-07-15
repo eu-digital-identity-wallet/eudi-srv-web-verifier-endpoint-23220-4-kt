@@ -166,7 +166,6 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             ref(),
             WalletApi.requestJwtByReference(env.publicUrl()),
-            WalletApi.presentationDefinitionByReference(env.publicUrl()),
             ref(),
             ref(),
             ref(),

@@ -20,5 +20,6 @@
       }
     ]
   },
-  "nonce": "e25344b3-c078-46d2-a31b-49afcc62cf4d"
+  "nonce": "e25344b3-c078-46d2-a31b-49afcc62cf4d",
+  "request_uri_method": "get"
 }

@@ -52,8 +52,7 @@ internal class WalletResponseDirectPostTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response, an idToken
      *
      * @see: <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-response-mode-direct_postjw">OpenId4vp Response Mode "direct_post.jwt"</a>
@@ -62,7 +61,7 @@ internal class WalletResponseDirectPostTest {
     @Order(value = 1)
     fun `get request object when request mode is direct_post, confirm headers do not exist`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dsql.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)

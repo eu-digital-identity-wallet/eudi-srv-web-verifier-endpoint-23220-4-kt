@@ -63,15 +63,14 @@ internal class WalletResponseDirectPostWithIdTokenTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response
      */
     @Test
     @Order(value = 1)
     fun `post wallet response (only idToken) - confirm returns 200`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -88,8 +87,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response
      * - verifier to verifier backend, to get wallet response
      */
@@ -97,7 +95,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
     @Order(value = 2)
     fun `get authorisation response - confirm returns 200`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -127,7 +125,6 @@ internal class WalletResponseDirectPostWithIdTokenTest {
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
             null,
-//            null,
             "nonce",
             redirectUriTemplate =
                 "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -163,7 +160,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
     @Order(value = 4)
     fun `when method to get wallet response does not require response_code and code is provided, BAD_REQUEST is responded`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -195,7 +192,6 @@ internal class WalletResponseDirectPostWithIdTokenTest {
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
             null,
-//            null,
             "nonce",
             redirectUriTemplate =
                 "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -230,7 +226,6 @@ internal class WalletResponseDirectPostWithIdTokenTest {
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
             null,
-//            null,
             "nonce",
             redirectUriTemplate =
                 "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",

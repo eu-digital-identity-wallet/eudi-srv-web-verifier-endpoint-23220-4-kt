@@ -66,29 +66,22 @@ sealed interface PresentationType {
     ) : PresentationType
 
     data class VpTokenRequest(
-        val presentationQuery: DCQL,
+        val query: DCQL,
         val transactionData: NonEmptyList<TransactionData>?,
     ) : PresentationType
 
     data class IdAndVpToken(
         val idTokenType: List<IdTokenType>,
-        val presentationQuery: DCQL,
+        val query: DCQL,
         val transactionData: NonEmptyList<TransactionData>?,
     ) : PresentationType
 }
 
-val PresentationType.presentationQueryOrNull: DCQL?
+val PresentationType.queryOrNull: DCQL?
     get() = when (this) {
         is PresentationType.IdTokenRequest -> null
-        is PresentationType.VpTokenRequest -> presentationQuery
-        is PresentationType.IdAndVpToken -> presentationQuery
-    }
-
-val PresentationType.dcqlQueryOrNull: DCQL?
-    get() = when (this) {
-        is PresentationType.IdTokenRequest -> null
-        is PresentationType.VpTokenRequest -> presentationQuery
-        is PresentationType.IdAndVpToken -> presentationQuery
+        is PresentationType.VpTokenRequest -> query
+        is PresentationType.IdAndVpToken -> query
     }
 
 val PresentationType.transactionDataOrNull: NonEmptyList<TransactionData>?
@@ -118,10 +111,10 @@ sealed interface VerifiablePresentation {
  * The Wallet's response to a 'vp_token' request.
  */
 @JvmInline
-value class VerifiablePresentations(val presentations: Map<QueryId, List<VerifiablePresentation>>) {
+value class VerifiablePresentations(val value: Map<QueryId, List<VerifiablePresentation>>) {
     init {
-        require(presentations.isNotEmpty())
-        require(presentations.values.all { it.isNotEmpty() })
+        require(value.isNotEmpty())
+        require(value.values.all { it.isNotEmpty() })
     }
 }
 

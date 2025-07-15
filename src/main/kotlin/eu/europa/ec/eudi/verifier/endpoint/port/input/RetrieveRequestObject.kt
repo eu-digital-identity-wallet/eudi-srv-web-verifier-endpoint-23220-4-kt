@@ -196,7 +196,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
             raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet metadata contains malformed VpFormats", it))
         }.groupBy { it::class }
         val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
-        val queryRequiredVpFormats = when (val query = presentation.type.presentationQueryOrNull) {
+        val queryRequiredVpFormats = when (val query = presentation.type.queryOrNull) {
             is DCQL -> query.vpFormats(verifierSupportedVpFormats)
             null -> emptyList()
         }.groupBy { it::class }

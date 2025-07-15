@@ -20,6 +20,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.*
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import arrow.core.raise.ensureNotNull
 import com.eygraber.uri.Uri
 import com.eygraber.uri.toURI
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
@@ -219,7 +220,6 @@ class InitTransactionLive(
     private val clock: Clock,
     private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
     private val requestJarByReference: EmbedOption.ByReference<RequestId>,
-    private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
@@ -404,21 +404,17 @@ internal fun InitTransactionTO.toDomain(
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
-    fun requiredPresentationQuery(): DCQL =
-        if (dcqlQuery != null) {
-            ensure(
-                dcqlQuery.formatsAre(
-                    SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
-                    OpenId4VPSpec.FORMAT_MSO_MDOC,
-                ),
-            ) {
-                ValidationError.UnsupportedFormat
-            }
+    fun requiredQuery(): DCQL {
+        ensureNotNull(dcqlQuery) { raise(ValidationError.MissingPresentationQuery) }
+        ensure(
+            dcqlQuery.formatsAre(
+                SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
+                OpenId4VPSpec.FORMAT_MSO_MDOC,
+            ),
+        ) { ValidationError.UnsupportedFormat }
+        return dcqlQuery
+    }
 
-            dcqlQuery
-        } else {
-            raise(ValidationError.MissingPresentationQuery)
-        }
     fun requiredNonce(): Nonce {
         ensure(!nonce.isNullOrBlank()) { ValidationError.MissingNonce }
         return Nonce(nonce)
@@ -426,9 +422,7 @@ internal fun InitTransactionTO.toDomain(
 
     fun optionalTransactionData(query: DCQL): NonEmptyList<TransactionData>? {
         val credentialIds: List<String> by lazy {
-            when (query) {
-                is DCQL -> query.credentials.map { it.id.value }
-            }
+            query.credentials.map { it.id.value }
         }
 
         val hashAlgorithms: JsonArray by lazy {
@@ -456,14 +450,15 @@ internal fun InitTransactionTO.toDomain(
     val presentationType = when (type) {
         PresentationTypeTO.IdTokenRequest ->
             PresentationType.IdTokenRequest(requiredIdTokenType())
+
         PresentationTypeTO.VpTokenRequest -> {
-            val query = requiredPresentationQuery()
+            val query = requiredQuery()
             PresentationType.VpTokenRequest(query, optionalTransactionData(query))
         }
 
         PresentationTypeTO.IdAndVpTokenRequest -> {
             val idTokenTypes = requiredIdTokenType()
-            val query = requiredPresentationQuery()
+            val query = requiredQuery()
             PresentationType.IdAndVpToken(idTokenTypes, query, optionalTransactionData(query))
         }
     }

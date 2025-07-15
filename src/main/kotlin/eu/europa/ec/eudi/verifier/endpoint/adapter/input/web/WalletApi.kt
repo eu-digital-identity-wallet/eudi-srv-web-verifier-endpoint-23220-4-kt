@@ -148,12 +148,6 @@ class WalletApi(
 
         /**
          * Path template for the route for
-         * getting the presentation definition
-         */
-        const val PRESENTATION_DEFINITION_PATH = "/wallet/pd/{requestId}"
-
-        /**
-         * Path template for the route for
          * posting the Authorisation Response
          */
         const val WALLET_RESPONSE_PATH = "/wallet/direct_post/{requestId}"
@@ -185,9 +179,6 @@ class WalletApi(
 
         fun requestJwtByReference(baseUrl: String): EmbedOption.ByReference<RequestId> =
             urlBuilder(baseUrl = baseUrl, pathTemplate = REQUEST_JWT_PATH)
-
-        fun presentationDefinitionByReference(baseUrl: String): EmbedOption.ByReference<RequestId> =
-            urlBuilder(baseUrl = baseUrl, pathTemplate = PRESENTATION_DEFINITION_PATH)
 
         fun publicJwkSet(baseUrl: String): EmbedOption.ByReference<Any> = EmbedOption.ByReference { _ ->
             DefaultUriBuilderFactory(baseUrl)

@@ -89,8 +89,8 @@ private suspend fun AuthorisationResponseTO.toDomain(
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
-    suspend fun requiredVpContent(presentationQuery: DCQL): VerifiablePresentations =
-        dcqlVpContent(
+    suspend fun requiredVerifiablePresentations(presentationQuery: DCQL): VerifiablePresentations =
+        verifiablePresentations(
             presentationQuery,
             presentation.id,
             presentation.nonce,
@@ -104,19 +104,19 @@ private suspend fun AuthorisationResponseTO.toDomain(
     maybeError ?: when (val type = presentation.type) {
         is PresentationType.IdTokenRequest -> WalletResponse.IdToken(requiredIdToken())
         is PresentationType.VpTokenRequest -> WalletResponse.VpToken(
-            requiredVpContent(type.presentationQuery),
+            requiredVerifiablePresentations(type.query),
         )
 
         is PresentationType.IdAndVpToken -> WalletResponse.IdAndVpToken(
             requiredIdToken(),
-            requiredVpContent(type.presentationQuery),
+            requiredVerifiablePresentations(type.query),
         )
     }
 }
 
 private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
 
-private suspend fun AuthorisationResponseTO.dcqlVpContent(
+private suspend fun AuthorisationResponseTO.verifiablePresentations(
     query: DCQL,
     transactionId: TransactionId,
     nonce: Nonce,

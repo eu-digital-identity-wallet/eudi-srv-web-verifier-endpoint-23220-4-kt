@@ -87,7 +87,6 @@ object TestContext {
     fun initTransaction(
         verifierConfig: VerifierConfig,
         requestJarByReference: EmbedOption.ByReference<RequestId>,
-        presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     ): InitTransaction =
         InitTransactionLive(
             generatedTransactionId,
@@ -98,7 +97,6 @@ object TestContext {
             testClock,
             generateEphemeralKey,
             requestJarByReference,
-            presentationDefinitionByReference,
             CreateQueryWalletResponseRedirectUri.Simple,
             repo.publishPresentationEvent,
             ParsePemEncodedX509CertificateChainWithNimbus,
