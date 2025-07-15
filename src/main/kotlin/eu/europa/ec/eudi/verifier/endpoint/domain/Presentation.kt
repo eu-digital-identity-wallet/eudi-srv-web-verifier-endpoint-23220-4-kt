@@ -57,16 +57,6 @@ enum class IdTokenType {
 }
 
 /**
- * The requirements of the Verifiable Presentations to be presented.
- */
-data class PresentationQuery(val query: DCQL)
-
-val PresentationQuery.dcqlQueryOrNull: DCQL?
-    get() = when (this) {
-        is PresentationQuery -> query
-    }
-
-/**
  * Represents what the [Presentation] is asking
  * from the wallet
  */
@@ -76,18 +66,18 @@ sealed interface PresentationType {
     ) : PresentationType
 
     data class VpTokenRequest(
-        val presentationQuery: PresentationQuery,
+        val presentationQuery: DCQL,
         val transactionData: NonEmptyList<TransactionData>?,
     ) : PresentationType
 
     data class IdAndVpToken(
         val idTokenType: List<IdTokenType>,
-        val presentationQuery: PresentationQuery,
+        val presentationQuery: DCQL,
         val transactionData: NonEmptyList<TransactionData>?,
     ) : PresentationType
 }
 
-val PresentationType.presentationQueryOrNull: PresentationQuery?
+val PresentationType.presentationQueryOrNull: DCQL?
     get() = when (this) {
         is PresentationType.IdTokenRequest -> null
         is PresentationType.VpTokenRequest -> presentationQuery
@@ -97,8 +87,8 @@ val PresentationType.presentationQueryOrNull: PresentationQuery?
 val PresentationType.dcqlQueryOrNull: DCQL?
     get() = when (this) {
         is PresentationType.IdTokenRequest -> null
-        is PresentationType.VpTokenRequest -> presentationQuery.dcqlQueryOrNull
-        is PresentationType.IdAndVpToken -> presentationQuery.dcqlQueryOrNull
+        is PresentationType.VpTokenRequest -> presentationQuery
+        is PresentationType.IdAndVpToken -> presentationQuery
     }
 
 val PresentationType.transactionDataOrNull: NonEmptyList<TransactionData>?
@@ -127,23 +117,13 @@ sealed interface VerifiablePresentation {
 /**
  * The Wallet's response to a 'vp_token' request.
  */
-// Data class TODO ValueClass
-sealed interface VpContent {
-
-    /**
-     * A 'vp_token' response as defined by DCQL.
-     */
-    data class DCQL(val verifiablePresentations: Map<QueryId, VerifiablePresentation>) : VpContent {
-        init {
-            require(verifiablePresentations.isNotEmpty())
-        }
+@JvmInline
+value class VerifiablePresentations(val presentations: Map<QueryId, List<VerifiablePresentation>>) {
+    init {
+        require(presentations.isNotEmpty())
+        require(presentations.values.all { it.isNotEmpty() })
     }
 }
-
-internal fun VpContent.verifiablePresentations(): List<VerifiablePresentation> =
-    when (this) {
-        is VpContent.DCQL -> verifiablePresentations.values.distinct()
-    }
 
 sealed interface WalletResponse {
 
@@ -156,12 +136,12 @@ sealed interface WalletResponse {
     }
 
     data class VpToken(
-        val vpContent: VpContent,
+        val verifiablePresentations: VerifiablePresentations,
     ) : WalletResponse
 
     data class IdAndVpToken(
         val idToken: Jwt,
-        val vpContent: VpContent,
+        val verifiablePresentations: VerifiablePresentations,
     ) : WalletResponse {
         init {
             require(idToken.isNotEmpty())

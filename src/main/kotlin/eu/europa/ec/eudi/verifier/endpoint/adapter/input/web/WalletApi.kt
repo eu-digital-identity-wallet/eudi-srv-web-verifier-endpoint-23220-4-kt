@@ -15,10 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import arrow.core.Either
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.SerializationException
@@ -167,10 +165,7 @@ class WalletApi(
 
         private fun MultiValueMap<String, String>.walletResponse(): AuthorisationResponse {
             fun directPost(): AuthorisationResponse.DirectPost {
-                fun String.toJsonObject(): JsonObject =
-                    Either.catch {
-                        Json.decodeFromString<JsonObject>(this)
-                    }.getOrThrow()
+                fun String.toJsonObject(): JsonObject = Json.decodeFromString<JsonObject>(this)
 
                 return AuthorisationResponseTO(
                     state = getFirst("state"),

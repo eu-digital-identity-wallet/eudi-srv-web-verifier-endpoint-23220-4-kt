@@ -180,7 +180,6 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
     ): Either<RetrieveRequestObjectError, EncryptionRequirement> = either {
-//        ensureWalletSupportPresentationDefinitionUriIfRequired(metadata, presentation)
         ensureWalletSupportsRequiredVpFormats(metadata, presentation)
         ensureWalletSupportsVerifierClientIdScheme(metadata)
         ensureVerifierSupportsWalletJarSigningAlgorithms(metadata)
@@ -198,7 +197,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         }.groupBy { it::class }
         val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
         val queryRequiredVpFormats = when (val query = presentation.type.presentationQueryOrNull) {
-            is PresentationQuery -> query.query.vpFormats(verifierSupportedVpFormats)
+            is DCQL -> query.vpFormats(verifierSupportedVpFormats)
             null -> emptyList()
         }.groupBy { it::class }
         val walletSupportsAllRequiredVpFormats = queryRequiredVpFormats.map { (vpFormatType, vpFormats) ->

@@ -23,6 +23,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentat
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.time.Clock
@@ -34,7 +35,7 @@ import java.time.Clock
 @SerialName("wallet_response")
 data class WalletResponseTO(
     @SerialName("id_token") val idToken: String? = null,
-    @SerialName("vp_token") val vpToken: JsonElement? = null,
+    @SerialName("vp_token") val vpToken: JsonObject? = null,
     @SerialName("error") val error: String? = null,
     @SerialName("error_description") val errorDescription: String? = null,
 )
@@ -46,25 +47,23 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
             is VerifiablePresentation.Json -> value
         }
 
-    fun VpContent.DCQL.toJsonElement(): JsonElement = buildJsonObject {
-        verifiablePresentations.forEach { (key, value) ->
-            put(key.value, value.toJsonElement())
+    fun VerifiablePresentations.toJsonObject(): JsonObject = buildJsonObject {
+        presentations.forEach { (key, value) ->
+            value.forEach {
+                put(key.value, it.toJsonElement())
+            }
         }
-    }
-
-    fun VpContent.toJsonElement(): JsonElement = when (this) {
-        is VpContent.DCQL -> toJsonElement()
     }
 
     return when (this) {
         is WalletResponse.IdToken -> WalletResponseTO(idToken = idToken)
         is WalletResponse.VpToken -> WalletResponseTO(
-            vpToken = vpContent.toJsonElement(),
+            vpToken = verifiablePresentations.toJsonObject(),
         )
 
         is WalletResponse.IdAndVpToken -> WalletResponseTO(
             idToken = idToken,
-            vpToken = vpContent.toJsonElement(),
+            vpToken = verifiablePresentations.toJsonObject(),
         )
 
         is WalletResponse.Error -> WalletResponseTO(

@@ -22,7 +22,6 @@ import arrow.core.raise.either
 import arrow.core.raise.ensure
 import com.eygraber.uri.Uri
 import com.eygraber.uri.toURI
-import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
@@ -406,11 +405,10 @@ internal fun InitTransactionTO.toDomain(
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
-    fun requiredPresentationQuery(): PresentationQuery =
+    fun requiredPresentationQuery(): DCQL =
         if (dcqlQuery != null) {
             ensure(
                 dcqlQuery.formatsAre(
-                    SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT,
                     SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
                     OpenId4VPSpec.FORMAT_MSO_MDOC,
                 ),
@@ -418,7 +416,7 @@ internal fun InitTransactionTO.toDomain(
                 ValidationError.UnsupportedFormat
             }
 
-            PresentationQuery(dcqlQuery)
+            dcqlQuery
         } else {
             raise(ValidationError.MissingPresentationQuery)
         }
@@ -427,10 +425,10 @@ internal fun InitTransactionTO.toDomain(
         return Nonce(nonce)
     }
 
-    fun optionalTransactionData(query: PresentationQuery): NonEmptyList<TransactionData>? {
+    fun optionalTransactionData(query: DCQL): NonEmptyList<TransactionData>? {
         val credentialIds: List<String> by lazy {
             when (query) {
-                is PresentationQuery -> query.query.credentials.map { it.id.value }
+                is DCQL -> query.credentials.map { it.id.value }
             }
         }
 
@@ -482,13 +480,6 @@ private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
-
-private fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwtAlgorithms: List<JWSAlgorithm>): Boolean =
-    this.sdJwtAlgorithms.intersect(sdJwtAlgorithms.toSet()).isNotEmpty() &&
-        this.kbJwtAlgorithms.intersect(kbJwtAlgorithms.toSet()).isNotEmpty()
-
-private fun VpFormat.MsoMdoc.supports(algorithms: List<JWSAlgorithm>): Boolean =
-    this.algorithms.intersect(algorithms.toSet()).isNotEmpty()
 
 private fun createAuthorizationRequestUri(
     scheme: String,

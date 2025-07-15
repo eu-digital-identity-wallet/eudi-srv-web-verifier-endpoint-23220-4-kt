@@ -89,10 +89,10 @@ private suspend fun AuthorisationResponseTO.toDomain(
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
-    suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent = when (presentationQuery) {
-        is PresentationQuery ->
+    suspend fun requiredVpContent(presentationQuery: DCQL): VerifiablePresentations = when (presentationQuery) {
+        is DCQL ->
             dcqlVpContent(
-                presentationQuery.query,
+                presentationQuery,
                 presentation.id,
                 presentation.nonce,
                 presentation.type.transactionDataOrNull,
@@ -126,11 +126,11 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
     issuerChain: NonEmptyList<X509Certificate>?,
-): Either<WalletResponseValidationError, VpContent.DCQL> =
+): Either<WalletResponseValidationError, DCQL> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
 
-        suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
+        suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, List<VerifiablePresentation>> {
             val vpToken = Either.catch {
                 Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
             }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
@@ -171,7 +171,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
             WalletResponseValidationError.RequiredCredentialSetNotSatisfied
         }
 
-        VpContent.DCQL(verifiablePresentations)
+        VerifiablePresentations.DCQL(verifiablePresentations)
     }
 
 private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletResponseValidationError, VerifiablePresentation> =
