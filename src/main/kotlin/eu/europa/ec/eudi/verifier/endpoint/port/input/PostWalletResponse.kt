@@ -89,8 +89,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
-    suspend fun requiredVpContent(presentationQuery: DCQL): VerifiablePresentations = when (presentationQuery) {
-        is DCQL ->
+    suspend fun requiredVpContent(presentationQuery: DCQL): VerifiablePresentations =
             dcqlVpContent(
                 presentationQuery,
                 presentation.id,
@@ -99,8 +98,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
                 validateVerifiablePresentation,
                 vpFormats,
                 presentation.issuerChain,
-            )
-    }.bind()
+            ).bind()
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
     maybeError ?: when (val type = presentation.type) {
@@ -126,13 +124,13 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
     issuerChain: NonEmptyList<X509Certificate>?,
-): Either<WalletResponseValidationError, DCQL> =
+): Either<WalletResponseValidationError, VerifiablePresentations> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
 
-        suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, List<VerifiablePresentation>> {
+        suspend fun JsonObject.toVerifiablePresentations(): Map<QueryId, List<VerifiablePresentation>> {
             val vpToken = Either.catch {
-                Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
+                Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
             }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 
             val credentialQueries = query.credentials.associateBy { it.id }
@@ -144,7 +142,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                             null,
                         ),
                     )
-                val unvalidatedVerifiablePresentation = value.toVerifiablePresentation(format).bind()
+                val unvalidatedVerifiablePresentations = value.map{ it.toVerifiablePresentation(format).bind() }
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
@@ -155,14 +153,17 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                         null,
                     ),
                 ).bind()
-                validateVerifiablePresentation(
-                    transactionId,
-                    unvalidatedVerifiablePresentation,
-                    vpFormat,
-                    nonce,
-                    applicableTransactionData,
-                    issuerChain,
-                ).bind()
+                unvalidatedVerifiablePresentations.map{
+                    validateVerifiablePresentation(
+                        transactionId,
+                        it,
+                        vpFormat,
+                        nonce,
+                        applicableTransactionData,
+                        issuerChain,
+                    ).bind()
+                }
+
             }
         }
 
@@ -171,7 +172,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
             WalletResponseValidationError.RequiredCredentialSetNotSatisfied
         }
 
-        VerifiablePresentations.DCQL(verifiablePresentations)
+        VerifiablePresentations(verifiablePresentations)
     }
 
 private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletResponseValidationError, VerifiablePresentation> =
@@ -373,7 +374,7 @@ private fun AuthorisationResponse.responseMode(): ResponseModeOption = when (thi
     is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
 }
 
-private fun DCQL.satisfiedBy(response: Map<QueryId, VerifiablePresentation>): Boolean =
+private fun DCQL.satisfiedBy(response: Map<QueryId, List<VerifiablePresentation>>): Boolean =
     credentialSets?.filter { credentialSet -> credentialSet.required ?: true }
         ?.map { credentialSet -> credentialSet.options.any { option -> response.keys.containsAll(option) } }
         ?.fold(true, Boolean::and)

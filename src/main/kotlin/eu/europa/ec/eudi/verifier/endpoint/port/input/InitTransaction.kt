@@ -135,7 +135,6 @@ data class InitTransactionTO(
  */
 enum class ValidationError {
     MissingPresentationQuery,
-    MultiplePresentationQueries,
     MissingNonce,
     InvalidWalletResponseTemplate,
     InvalidTransactionData,
