@@ -405,7 +405,7 @@ internal fun InitTransactionTO.toDomain(
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
     fun requiredQuery(): DCQL {
-        ensureNotNull(dcqlQuery) { raise(ValidationError.MissingPresentationQuery) }
+        ensureNotNull(dcqlQuery) { ValidationError.MissingPresentationQuery }
         ensure(
             dcqlQuery.formatsAre(
                 SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,

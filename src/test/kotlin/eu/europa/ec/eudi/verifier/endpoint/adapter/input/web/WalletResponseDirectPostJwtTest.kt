@@ -156,16 +156,24 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 
         // Test with single Verifiable Presentation -- single JsonObject
         test("02-dcql.json", "02-vpToken.json") {
-            val vpToken = assertIs<JsonObject>(assertNotNull(it.vpToken))
-            assertIs<JsonObject>(assertIs<JsonArray>(vpToken["wa_driver_license"])[0])
+            val vpToken = assertNotNull(it.vpToken)
+
+            val waDriverLicence = assertIs<JsonArray>(vpToken["wa_driver_license"])
+            assertEquals(1, waDriverLicence.size)
+            assertIs<JsonObject>(waDriverLicence[0])
         }
 
         // Test with multiple Verifiable Presentation -- single JsonArray that contains one JsonPrimitive and one JsonObject
         test("03-dcql.json", "03-vpToken.json") {
-            val vpToken = assertIs<JsonObject>(assertNotNull(it.vpToken))
+            val vpToken = assertNotNull(it.vpToken)
 
-            assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input"])[0])
-            assertIs<JsonObject>(assertIs<JsonArray>(vpToken["employment_input_2"])[0])
+            val employmentInput = assertIs<JsonArray>(vpToken["employment_input"])
+            assertEquals(1, employmentInput.size)
+            assertIs<JsonPrimitive>(employmentInput[0])
+
+            val employmentInput2 = assertIs<JsonArray>(vpToken["employment_input_2"])
+            assertEquals(1, employmentInput2.size)
+            assertIs<JsonObject>(employmentInput2[0])
         }
     }
 
@@ -262,9 +270,16 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         val transactionResponse =
             assertNotNull(VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
 
-        val vpToken = assertIs<JsonObject>(assertNotNull(transactionResponse.vpToken))
-        assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["eu_europa_ec_eudi_pid_1"])[0])
-        assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["org_iso_18013_5_1_mDL"])[0])
+        val vpToken = assertNotNull(transactionResponse.vpToken)
+        assertEquals(2, vpToken.size)
+
+        val eudiPid = assertIs<JsonArray>(vpToken["eu_europa_ec_eudi_pid_1"])
+        assertEquals(1, eudiPid.size)
+        assertIs<JsonPrimitive>(eudiPid[0])
+
+        val mDL = assertIs<JsonArray>(vpToken["org_iso_18013_5_1_mDL"])
+        assertEquals(1, mDL.size)
+        assertIs<JsonPrimitive>(mDL[0])
     }
 
     @Test

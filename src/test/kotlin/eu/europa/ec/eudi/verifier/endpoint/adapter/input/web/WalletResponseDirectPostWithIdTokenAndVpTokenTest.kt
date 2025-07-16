@@ -139,15 +139,25 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
         // Test with single Verifiable Presentation -- single JsonObject
         test("02-dcql.json", "02-vpToken.json") {
-            val vpToken = assertIs<JsonObject>(assertNotNull(it.vpToken))
-            assertIs<JsonObject>(assertIs<JsonArray>(vpToken["wa_driver_license"])[0])
+            val vpToken = assertNotNull(it.vpToken)
+
+            val waDriverLicence = assertIs<JsonArray>(vpToken["wa_driver_license"])
+            assertEquals(1, waDriverLicence.size)
+            assertIs<JsonObject>(waDriverLicence[0])
         }
 
         // Test with multiple Verifiable Presentation -- single JsonArray that contains one JsonPrimitive and one JsonObject
         test("03-dcql.json", "03-vpToken.json") {
-            val vpToken = assertIs<JsonObject>(assertNotNull(it.vpToken))
-            assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input"])[0])
-            assertIs<JsonObject>(assertIs<JsonArray>(vpToken["employment_input_2"])[0])
+            val vpToken = assertNotNull(it.vpToken)
+            assertEquals(2, vpToken.size)
+
+            val employmentInput = assertIs<JsonArray>(vpToken["employment_input"])
+            assertEquals(1, employmentInput.size)
+            assertIs<JsonPrimitive>(employmentInput[0])
+
+            val employmentInput2 = assertIs<JsonArray>(vpToken["employment_input_2"])
+            assertEquals(1, employmentInput2.size)
+            assertIs<JsonObject>(employmentInput2[0])
         }
     }
 
@@ -248,10 +258,18 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val response = assertNotNull(VerifierApiClient.getWalletResponse(client, presentationId))
 
         val vpToken = assertNotNull(response.vpToken)
-        assertIs<JsonObject>(vpToken)
         assertEquals(3, vpToken.size)
-        assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input"])[0])
-        assertIs<JsonObject>(assertIs<JsonArray>(vpToken["employment_input_2"])[0])
-        assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input_3"])[0])
+
+        val employmentInput = assertIs<JsonArray>(vpToken["employment_input"])
+        assertEquals(1, employmentInput.size)
+        assertIs<JsonPrimitive>(employmentInput[0])
+
+        val employmentInput2 = assertIs<JsonArray>(vpToken["employment_input_2"])
+        assertEquals(1, employmentInput2.size)
+        assertIs<JsonObject>(employmentInput2[0])
+
+        val employmentInput3 = assertIs<JsonArray>(vpToken["employment_input_3"])
+        assertEquals(1, employmentInput3.size)
+        assertIs<JsonPrimitive>(employmentInput3[0])
     }
 }

@@ -30,6 +30,7 @@ import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -49,11 +50,11 @@ class CreateJarNimbusTest {
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
-        val loadDCQL = Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery
+        val query = Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery
         val requestObject = RequestObject(
             verifierId = verifierId,
             responseType = listOf("vp_token", "id_token"),
-            dcqlQuery = loadDCQL,
+            dcqlQuery = query,
             scope = listOf("openid"),
             idTokenType = listOf("subject_signed_id_token"),
             nonce = UUID.randomUUID().toString(),
@@ -98,8 +99,8 @@ class CreateJarNimbusTest {
         assertEquals(r.verifierId.clientId, c.getStringClaim("client_id"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
         assertEquals(
-            Json.encodeToString(r.dcqlQuery),
-            c.getJSONObjectClaim(OpenId4VPSpec.DCQL_QUERY).toJsonObject().toString(),
+            r.dcqlQuery,
+            c.getJSONObjectClaim(OpenId4VPSpec.DCQL_QUERY).toJsonObject().decodeAs(DCQL.serializer()).getOrThrow(),
         )
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
         assertEquals(r.idTokenType.joinToString(separator = " "), c.getStringClaim("id_token_type"))
