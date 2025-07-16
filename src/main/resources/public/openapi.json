@@ -43,20 +43,11 @@
                 "InitIdTokenTransactionByValueSameDevice": {
                   "$ref": "#/components/examples/InitIdTokenTransactionByValueSameDevice"
                 },
-                "InitVpTokenTransactionByValueCrossDevicePresentationExchange": {
-                  "$ref": "#/components/examples/InitVpTokenTransactionByValueCrossDevicePresentationExchange"
-                },
                 "InitVpTokenTransactionByValueCrossDeviceDCQL": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueCrossDeviceDCQL"
                 },
                 "InitVpTokenTransactionByValueCrossDeviceDCQLWithIssuerChain": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueCrossDeviceDCQLWithIssuerChain"
-                },
-                "InitVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
-                  "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDevicePresentationExchange"
-                },
-                "InitVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost": {
-                  "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost"
                 },
                 "InitVpTokenTransactionByReferenceCrossDeviceDCQL": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQL"
@@ -67,35 +58,20 @@
                 "InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithIssuerChain": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPostWithIssuerChain"
                 },
-                "InitVpTokenTransactionByValueSameDevicePresentationExchange": {
-                  "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDevicePresentationExchange"
-                },
                 "InitVpTokenTransactionByValueSameDeviceDCQL": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDeviceDCQL"
                 },
                 "InitVpTokenTransactionByValueSameDeviceDCQLWithIssuerChain": {
                   "$ref": "#/components/examples/InitVpTokenTransactionByValueSameDeviceDCQLWithIssuerChain"
                 },
-                "InitIdTokenAndVpTokenTransactionByValueCrossDevicePresentationExchange": {
-                  "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByValueCrossDevicePresentationExchange"
-                },
                 "InitIdTokenAndVpTokenTransactionByValueCrossDeviceDCQL": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByValueCrossDeviceDCQL"
-                },
-                "InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
-                  "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchange"
-                },
-                "InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost": {
-                  "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost"
                 },
                 "InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQL": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQL"
                 },
                 "InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByReferenceCrossDeviceDCQLRequestUriMethodPost"
-                },
-                "InitIdTokenAndVpTokenTransactionByValueSameDevicePresentationExchange": {
-                  "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByValueSameDevicePresentationExchange"
                 },
                 "InitIdTokenAndVpTokenTransactionByValueSameDeviceDCQL": {
                   "$ref": "#/components/examples/InitIdTokenAndVpTokenTransactionByValueSameDeviceDCQL"
@@ -561,12 +537,6 @@
         ],
         "additionalProperties": false
       },
-      "PresentationDefinition": {
-        "description": "Presentation Definition as defined by Presentation Exchange v2. More information here: https://identity.foundation/presentation-exchange/spec/v2.0.0/",
-        "type": "object",
-        "nullable": false,
-        "additionalProperties": true
-      },
       "DcqlQuery": {
         "description": "Query using the Digital Credentials Query Language as defined by OpenId4VP. More information here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-digital-credentials-query-l",
         "type": "object",
@@ -619,16 +589,6 @@
               "vp_token"
             ]
           },
-          "presentation_definition": {
-            "allOf": [
-              {
-                "description": "A json object depicting the presentation definition to be included in the OpenId4VP authorization request."
-              },
-              {
-                "$ref": "#/components/schemas/PresentationDefinition"
-              }
-            ]
-          },
           "dcql_query": {
             "allOf": [
               {
@@ -676,16 +636,6 @@
               },
               {
                 "$ref": "#/components/schemas/RequestUriMethod"
-              }
-            ]
-          },
-          "presentation_definition_mode": {
-            "allOf": [
-              {
-                "description": "Controls how the presentation definition will be embedded in the request. If 'by_value' it will be embedded inline, if 'by_reference' a 'presentation_definition_uri' url will be embedded in the request. When omitted defaults to the Verifier Endpoint configuration."
-              },
-              {
-                "$ref": "#/components/schemas/EmbedMode"
               }
             ]
           },
@@ -757,16 +707,6 @@
               }
             ]
           },
-          "presentation_definition": {
-            "allOf": [
-              {
-                "description": "A json object depicting the presentation definition to be included in the OpenId4VP authorization request."
-              },
-              {
-                "$ref": "#/components/schemas/PresentationDefinition"
-              }
-            ]
-          },
           "dcql_query": {
             "allOf": [
               {
@@ -814,16 +754,6 @@
               },
               {
                 "$ref": "#/components/schemas/RequestUriMethod"
-              }
-            ]
-          },
-          "presentation_definition_mode": {
-            "allOf": [
-              {
-                "description": "Controls how the presentation definition will be embedded in the request. If 'by_value' it will be embedded inline, if 'by_reference' a 'presentation_definition_uri' url will be embedded in the request. When omitted defaults to the Verifier Endpoint configuration."
-              },
-              {
-                "$ref": "#/components/schemas/EmbedMode"
               }
             ]
           },
@@ -1698,43 +1628,6 @@
           "wallet_response_redirect_uri_template": "https://dev.verifier.eudiw.dev/get-wallet-code?response_code={RESPONSE_CODE}"
         }
       },
-      "InitVpTokenTransactionByValueCrossDevicePresentationExchange": {
-        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by value.",
-        "value": {
-          "type": "vp_token",
-          "presentation_definition": {
-            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
-            "input_descriptors": [
-              {
-                "id": "eu.europa.ec.eudi.pid.1",
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256"
-                    ]
-                  }
-                },
-                "constraints": {
-                  "fields": [
-                    {
-                      "path": [
-                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
-                      ],
-                      "intent_to_retain": false
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "dcql_query": null,
-          "jar_mode": "by_value",
-          "presentation_definition_mode": "by_value",
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
-        }
-      },
       "InitVpTokenTransactionByValueCrossDeviceDCQL": {
         "description": "Initialize a VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by value.",
         "value": {
@@ -1802,81 +1695,6 @@
           "jar_mode": "by_value",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
           "issuer_chain": "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
-        }
-      },
-      "InitVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
-        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by reference.",
-        "value": {
-          "type": "vp_token",
-          "presentation_definition": {
-            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
-            "input_descriptors": [
-              {
-                "id": "eu.europa.ec.eudi.pid.1",
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256"
-                    ]
-                  }
-                },
-                "constraints": {
-                  "fields": [
-                    {
-                      "path": [
-                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
-                      ],
-                      "intent_to_retain": false
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "dcql_query": null,
-          "jar_mode": "by_reference",
-          "presentation_definition_mode": "by_reference",
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
-        }
-      },
-      "InitVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost": {
-        "description": "Initialize a VP Token Transaction for 'cross device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by reference.",
-        "value": {
-          "type": "vp_token",
-          "presentation_definition": {
-            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
-            "input_descriptors": [
-              {
-                "id": "eu.europa.ec.eudi.pid.1",
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256"
-                    ]
-                  }
-                },
-                "constraints": {
-                  "fields": [
-                    {
-                      "path": [
-                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
-                      ],
-                      "intent_to_retain": false
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "dcql_query": null,
-          "jar_mode": "by_reference",
-          "request_uri_method": "post",
-          "presentation_definition_mode": "by_reference",
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
       "InitVpTokenTransactionByReferenceCrossDeviceDCQL": {
@@ -1984,44 +1802,6 @@
           "issuer_chain": "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
         }
       },
-      "InitVpTokenTransactionByValueSameDevicePresentationExchange": {
-        "description": "Initialize a VP Token Transaction for 'same device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by value.",
-        "value": {
-          "type": "vp_token",
-          "presentation_definition": {
-            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
-            "input_descriptors": [
-              {
-                "id": "eu.europa.ec.eudi.pid.1",
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256"
-                    ]
-                  }
-                },
-                "constraints": {
-                  "fields": [
-                    {
-                      "path": [
-                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
-                      ],
-                      "intent_to_retain": false
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "dcql_query": null,
-          "jar_mode": "by_value",
-          "presentation_definition_mode": "by_value",
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-          "wallet_response_redirect_uri_template": "https://dev.verifier.eudiw.dev/get-wallet-code?response_code={RESPONSE_CODE}"
-        }
-      },
       "InitVpTokenTransactionByValueSameDeviceDCQL": {
         "description": "Initialize a VP Token Transaction for 'same device' scenario, using DCQL. JAR is passed by value.",
         "value": {
@@ -2093,44 +1873,6 @@
           "issuer_chain": "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
         }
       },
-      "InitIdTokenAndVpTokenTransactionByValueCrossDevicePresentationExchange": {
-        "description": "Initialize an ID Token and VP Token Transaction for 'cross device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by value.",
-        "value": {
-          "type": "vp_token id_token",
-          "id_token_type": "subject_signed_id_token",
-          "presentation_definition": {
-            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
-            "input_descriptors": [
-              {
-                "id": "eu.europa.ec.eudi.pid.1",
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256"
-                    ]
-                  }
-                },
-                "constraints": {
-                  "fields": [
-                    {
-                      "path": [
-                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
-                      ],
-                      "intent_to_retain": false
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "dcql_query": null,
-          "jar_mode": "by_value",
-          "presentation_definition_mode": "by_value",
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
-        }
-      },
       "InitIdTokenAndVpTokenTransactionByValueCrossDeviceDCQL": {
         "description": "Initialize an ID Token and VP Token Transaction for 'cross device' scenario, using DCQL. JAR is passed by value.",
         "value": {
@@ -2163,83 +1905,6 @@
             ]
           },
           "jar_mode": "by_value",
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
-        }
-      },
-      "InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchange": {
-        "description": "Initialize an ID Token and VP Token Transaction for 'cross device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by reference.",
-        "value": {
-          "type": "vp_token id_token",
-          "id_token_type": "subject_signed_id_token",
-          "presentation_definition": {
-            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
-            "input_descriptors": [
-              {
-                "id": "eu.europa.ec.eudi.pid.1",
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256"
-                    ]
-                  }
-                },
-                "constraints": {
-                  "fields": [
-                    {
-                      "path": [
-                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
-                      ],
-                      "intent_to_retain": false
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "dcql_query": null,
-          "jar_mode": "by_reference",
-          "presentation_definition_mode": "by_reference",
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
-        }
-      },
-      "InitIdTokenAndVpTokenTransactionByReferenceCrossDevicePresentationExchangeRequestUriMethodPost": {
-        "description": "Initialize an ID Token and VP Token Transaction for 'cross device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by reference.",
-        "value": {
-          "type": "vp_token id_token",
-          "id_token_type": "subject_signed_id_token",
-          "presentation_definition": {
-            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
-            "input_descriptors": [
-              {
-                "id": "eu.europa.ec.eudi.pid.1",
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256"
-                    ]
-                  }
-                },
-                "constraints": {
-                  "fields": [
-                    {
-                      "path": [
-                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
-                      ],
-                      "intent_to_retain": false
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "dcql_query": null,
-          "jar_mode": "by_reference",
-          "request_uri_method": "post",
-          "presentation_definition_mode": "by_reference",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
         }
       },
@@ -2312,45 +1977,6 @@
           "jar_mode": "by_reference",
           "request_uri_method": "post",
           "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33"
-        }
-      },
-      "InitIdTokenAndVpTokenTransactionByValueSameDevicePresentationExchange": {
-        "description": "Initialize an ID Token and VP Token Transaction for 'same device' scenario, using Presentation Exchange. JAR and Presentation Definition are passed by value.",
-        "value": {
-          "type": "vp_token id_token",
-          "id_token_type": "subject_signed_id_token",
-          "presentation_definition": {
-            "id": "c4822b58-7fb4-454e-b827-f8758fe27f9a",
-            "input_descriptors": [
-              {
-                "id": "eu.europa.ec.eudi.pid.1",
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256"
-                    ]
-                  }
-                },
-                "constraints": {
-                  "fields": [
-                    {
-                      "path": [
-                        "$['eu.europa.ec.eudi.pid.1']['family_name']"
-                      ],
-                      "intent_to_retain": false
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          "dcql_query": null,
-          "jar_mode": "by_value",
-          "presentation_definition_mode": "by_value",
-          "nonce": "88c615a2-b7ca-4329-b673-3f4c4146ad33",
-          "wallet_response_redirect_uri_template": "https://dev.verifier.eudiw.dev/get-wallet-code?response_code={RESPONSE_CODE}"
         }
       },
       "InitIdTokenAndVpTokenTransactionByValueSameDeviceDCQL": {
