@@ -37,7 +37,6 @@ An Open API v3 specification of these operations is available [here](src/main/re
 
 The Wallet API, provides the following main operations
 * [Get Request Object](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/RetrieveRequestObject.kt) according JWT Secured Authorization Request
-* [Get Presentation Definition](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetPresentationDefinition.kt) according to OpenId4VP in case of using `presentation_definition_uri`
 * [Direct Post](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/PostWalletResponse.kt) according to OpenID4VP `direct_post`
 
 Please note that 
@@ -155,8 +154,8 @@ sequenceDiagram
     W->>W: Parse authorization request
     
     opt
-        W->>+VE: Get presentation definition 
-        VE-->>-W: presentation_definition
+        W->>+VE: Get dcql 
+        VE-->>-W: dcql
     end
     
     W->>W: Prepare response     
@@ -204,8 +203,8 @@ sequenceDiagram
     W->>W: Parse authorization request
     
     opt
-        W->>+VE: Get presentation definition 
-        VE-->>-W: presentation_definition
+        W->>+VE: Get dcql
+        VE-->>-W: dcql
     end
     
     W->>W: Prepare response     
@@ -411,7 +410,6 @@ A form post (application/x-www-form-urlencoded encoding) with the following form
 - `state`: The state claim included in the authorization request JWT. Its value matches the authorization request identifier.  
 - `id_token`: The requested id_token if authorization request 'response_type' attribute contains `id_token`.
 - `vp_token`: The requested vp_token if authorization request 'response_type' attribute contains `vp_token`.
-- `presentation_submission`: The presentation submission accompanying the vp_token in case 'response_type' attribute of authorization request contains `vp_token` (applicable only when using Presentation Exchange).
 
 _**response_mode = direct_post.jwt**_
 
