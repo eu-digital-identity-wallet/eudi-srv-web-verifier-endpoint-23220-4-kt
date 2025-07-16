@@ -249,13 +249,11 @@ This identifier is used in the [WalletApi](src/main/kotlin/eu/europa/ec/eudi/ver
 An endpoint to control the content of the authorization request that will be prepared from the verifier backend service. Payload of this request is a json object with the following acceptable attributes:
 - `type`: The type of the response to the authorization request. Allowed values are one of: `id_token`, `vp_token` or `vp_token id_token`.
 - `id_token_type`: In case type is `id_token` controls the type of id_token that will be requested from wallet. Allowed values are one of `subject_signed_id_token` or `attester_signed_id_token`. 
-- `presentation_definition`: A json object depicting the presentation definition to be included in the OpenId4VP authorization request in case `type` is 'vp_token', or 'vp_token id_token'. 
 - `dcql_query`: A json object depicting the query, expressed using DCQL, to be included in the OpenId4VP authorization request in case `type` is 'vp_token', or 'vp_token id_token'. 
 - `nonce`: Nonce value to be included in the OpenId4VP authorization request.
 - `response_mode`: Controls the `response_mode` attribute of the OpenId4VP authorization request. Allowed values are one of `direct_post` or `direct_post.jwt`.  
 - `jar_mode`: Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if `by_reference` a `request_uri` url will be returned.
 - `request_uri_method`: Optional. When `post`, `request_uri_method` for the Transaction is `post`, when `get` `request_uri_method` for the Transaction is `get`. Applicable only when `jar_mode` is `by_reference`. If omitted, defaults to `VERIFIER_REQUESTJWT_REQUESTURIMETHOD`  
-- `presentation_definition_mode`: Controls how the presentation definition will be embedded in the request. If 'by_value' it will be embedded inline, if `by_reference` a `presentation_definition_uri` url will be embedded in the request.
 - `wallet_response_redirect_uri_template`: If provided will be used to construct the response to wallet, when it posts its response to the authorization request.   
 - `issuer_chain`: If provided, a PEM encoded X509 Certificate chain (including start and end markers) of a Verifiable Credential Issuer trusted during this Transaction.
 - `authorization_request_scheme`: If provided, it will be used as the scheme part of the URI contained inside the QR code
@@ -267,49 +265,6 @@ This endpoint can produce either JSON or a QR code depending on the Accept heade
 
 
 **Usage:**
-
-Using Presentation Exchange:
-
-```bash
-curl -X POST -H "Content-type: application/json" -d '{
-  "type": "vp_token",  
-  "presentation_definition": {
-        "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
-        "input_descriptors": [
-            {
-                "constraints": {
-                    "fields": [
-                        {
-                            "intent_to_retain": false,
-                            "path": [
-                                "$['\''eu.europa.ec.eudi.pid.1'\'']['\''family_name'\'']"
-                            ]
-                        }
-                    ]
-                },
-                "id": "eu.europa.ec.eudi.pid.1",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256",
-                      "ES384",
-                      "ES512",
-                      "EdDSA"
-                    ]
-                  }
-                },
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity"
-            }
-        ]
-  },
-  "dcql_query": null,
-  "nonce": "nonce",
-  "jar_mode": "by_reference",
-  "request_uri_method": "post",
-  "issuer_chain": "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
-}' 'http://localhost:8080/ui/presentations'
-```
 
 Using DCQL:
 
@@ -366,37 +321,33 @@ To generate a qr code use the following example:
 ```bash
 curl -X POST -H "Content-type: application/json" -H "Accept: image/png" -d '{
   "type": "vp_token",  
-  "presentation_definition": {
+  "dcql_query": {
+    "credentials": [
+      {
         "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
-        "input_descriptors": [
-            {
-                "constraints": {
-                    "fields": [
-                        {
-                            "intent_to_retain": false,
-                            "path": [
-                                "$['\''eu.europa.ec.eudi.pid.1'\'']['\''family_name'\'']"
-                            ]
-                        }
-                    ]
-                },
-                "id": "eu.europa.ec.eudi.pid.1",
-                "format": {
-                  "mso_mdoc": {
-                    "alg": [
-                      "ES256",
-                      "ES384",
-                      "ES512",
-                      "EdDSA"
-                    ]
-                  }
-                },
-                "name": "EUDI PID",
-                "purpose": "We need to verify your identity"
-            }
+        "format": "mso_mdoc",
+        "meta": {
+          "doctype_value": "eu.europa.ec.eudi.pid.1"
+        },
+        "claims": [
+          {
+            "namespace": "eu.europa.ec.eudi.pid.1",
+            "claim_name": "family_name"
+          }
         ]
+      }
+    ],
+    "credential_sets": [
+      {
+        "options": [
+          [
+            "32f54163-7166-48f1-93d8-ff217bdb0653"
+          ]
+        ],
+        "purpose": "We need to verify your identity"
+      }
+    ]
   },
-  "dcql_query": null,
   "nonce": "nonce",
   "jar_mode": "by_reference",
   "request_uri_method": "post",
@@ -445,23 +396,6 @@ curl -X POST https://localhost:8080/wallet/request.jwt/5N6E7VZsmwXOGLz1Xlfi96Moy
 ```
 **Returns:** The authorization request payload as a signed or, signed and encrypted JWT.
 
-### Get presentation definition
-
-- _Method_: GET
-- _URL_: http://localhost:8080/wallet/pd/{requestId}
-- _Parameters_
-    - `requestId`: The identifier of the authorization request
-- _Actor_: [Wallet](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/WalletApi.kt)
-
-An endpoint to be used by wallet when the presentation definition of the OpenId4VP authorization request is not embedded inline in the request but by reference as a `presentation_definition_uri`.
-
-**Usage:**
-```bash
-curl https://localhost:8080/wallet/pd/5N6E7VZsmwXOGLz1Xlfi96MoyZVC3FZxwdAuJ26DnGcan-vYs-VAKErioQ58BWEsKlVw2_X49jpZHyp0Mk9nKw
-```
-
-**Returns:** The presentation definition of the authorization request as JSON.
-
 ### Send wallet response
 
 - _Method_: POST
@@ -486,30 +420,6 @@ A form post (application/x-www-form-urlencoded encoding) with the following form
 - `response`: A string representing an encrypted JWT (JWE) that contains as claims the form parameters mentioned in the case above    
 
 **Usage:**
-
-Using Presentation Exchange:
-
-```bash
-STATE=IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA
-curl -v -X POST 'http://localhost:8080/wallet/direct_post' \
-  -H "Content-type: application/x-www-form-urlencoded" \
-  -H "Accept: application/json" \
-  --data-urlencode "state=$STATE" \
-  --data-urlencode 'vp_token={"id": "123456"}' \
-  --data-urlencode presentation_submission@- << EOF
-{
-  "id": "a30e3b91-fb77-4d22-95fa-871689c322e2",
-  "definition_id": "32f54163-7166-48f1-93d8-ff217bdb0653",
-  "descriptor_map": [
-    {
-      "id": "employment_input",
-      "format": "jwt_vc",
-      "path": "$.verifiableCredential[0]"
-    }
-  ]
-}
-EOF
-```
 
 Using DCQL:
 
@@ -680,11 +590,6 @@ Variable: `VERIFIER_REQUESTJWT_REQUESTURIMETHOD`
 Description: Default `request_uri_method` to use for a Presentation when one is not provided during its initialization. Applicable when `VERIFIER_REQUESTJWT_EMBED` is `ByReference`          
 Possible values: `Get`, `Post`  
 Default value: `Get`  
-
-Variable: `VERIFIER_PRESENTATIONDEFINITION_EMBED`  
-Description: How Presentation Definitions will be provided in Authorization Requests    
-Possible values: `ByValue`, `ByReference`  
-Default value: `ByValue`
 
 Variable: `VERIFIER_RESPONSE_MODE`  
 Description: How Authorization Responses are expected    
