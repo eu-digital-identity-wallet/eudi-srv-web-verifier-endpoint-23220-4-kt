@@ -89,9 +89,9 @@ private suspend fun AuthorisationResponseTO.toDomain(
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
-    suspend fun requiredVerifiablePresentations(presentationQuery: DCQL): VerifiablePresentations =
+    suspend fun requiredVerifiablePresentations(query: DCQL): VerifiablePresentations =
         verifiablePresentations(
-            presentationQuery,
+            query,
             presentation.id,
             presentation.nonce,
             presentation.type.transactionDataOrNull,

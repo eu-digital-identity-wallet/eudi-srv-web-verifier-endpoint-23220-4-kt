@@ -273,9 +273,9 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         val vpToken = assertNotNull(transactionResponse.vpToken)
         assertEquals(2, vpToken.size)
 
-        val eudiPid = assertIs<JsonArray>(vpToken["eu_europa_ec_eudi_pid_1"])
-        assertEquals(1, eudiPid.size)
-        assertIs<JsonPrimitive>(eudiPid[0])
+        val pid = assertIs<JsonArray>(vpToken["eu_europa_ec_eudi_pid_1"])
+        assertEquals(1, pid.size)
+        assertIs<JsonPrimitive>(pid[0])
 
         val mDL = assertIs<JsonArray>(vpToken["org_iso_18013_5_1_mDL"])
         assertEquals(1, mDL.size)

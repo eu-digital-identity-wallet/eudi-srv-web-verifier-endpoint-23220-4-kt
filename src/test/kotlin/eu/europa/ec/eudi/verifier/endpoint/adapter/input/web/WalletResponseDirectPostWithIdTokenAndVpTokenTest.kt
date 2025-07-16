@@ -210,10 +210,15 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
         val response = assertNotNull(VerifierApiClient.getWalletResponse(client, presentationId))
 
         val vpToken = assertNotNull(response.vpToken)
-        assertIs<JsonObject>(vpToken)
         assertEquals(2, vpToken.size)
-        assertIs<JsonPrimitive>(assertIs<JsonArray>(vpToken["employment_input"])[0])
-        assertIs<JsonObject>(assertIs<JsonArray>(vpToken["employment_input_2"])[0])
+
+        val employmentInput = assertIs<JsonArray>(vpToken["employment_input"])
+        assertEquals(1, employmentInput.size)
+        assertIs<JsonPrimitive>(employmentInput[0])
+
+        val employmentInput2 = assertIs<JsonArray>(vpToken["employment_input_2"])
+        assertEquals(1, employmentInput2.size)
+        assertIs<JsonObject>(employmentInput2[0])
     }
 
     @Test
