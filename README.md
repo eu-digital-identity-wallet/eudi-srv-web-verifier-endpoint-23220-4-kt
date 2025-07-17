@@ -20,7 +20,7 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
  
 ## Overview
 
-This is a Web application (Backend Restful service) that acts as a Verifier/RP trusted end-point that implements [OpenId4VP (draft 24)](https://openid.net/specs/openid-4-verifiable-presentations-1_0-24.html) protocol. 
+This is a Web application (Backend Restful service) that acts as a Verifier/RP trusted end-point that implements [OpenId4VP (1.0)](https://openid.net/specs/openid-4-verifiable-presentations-1_0-final.html) protocol. 
 This backend service is accompanied by a Web UI application implemented [here](https://github.com/eu-digital-identity-wallet/eudi-web-verifier). 
 
 See section [Run all verifier components together](#run-all-verifier-components-together) on how to boot both applications together.
@@ -153,11 +153,6 @@ sequenceDiagram
     
     W->>W: Parse authorization request
     
-    opt
-        W->>+VE: Get dcql 
-        VE-->>-W: dcql
-    end
-    
     W->>W: Prepare response     
     
     W->>+VE: Post vp_token response 
@@ -201,12 +196,7 @@ sequenceDiagram
     VE-->>-W: authorization_request
     
     W->>W: Parse authorization request
-    
-    opt
-        W->>+VE: Get dcql
-        VE-->>-W: dcql
-    end
-    
+        
     W->>W: Prepare response     
     
     W->>+VE: Post vp_token response 
@@ -280,8 +270,7 @@ curl -X POST -H "Content-type: application/json" -d '{
         },
         "claims": [
           {
-            "namespace": "eu.europa.ec.eudi.pid.1",
-            "claim_name": "family_name"
+            "path": ["eu.europa.ec.eudi.pid.1", "family_name"],
           }
         ]
       }
@@ -330,8 +319,7 @@ curl -X POST -H "Content-type: application/json" -H "Accept: image/png" -d '{
         },
         "claims": [
           {
-            "namespace": "eu.europa.ec.eudi.pid.1",
-            "claim_name": "family_name"
+            "path": ["eu.europa.ec.eudi.pid.1", "family_name"],
           }
         ]
       }
@@ -361,7 +349,7 @@ You can also try it out in [Swagger UI](http://localhost:8080/swagger-ui#/verifi
 An endpoint to be used by wallet when the OpenId4VP authorization request is passed to wallet by reference as a request_uri.
 In essence this is the endpoint that responds to the url included as the `request_uri` attribute of the [Initialize transaction endpoint](#initialize-transaction-endpoint)'s response.
 
-This endpoint also support `request_uri_method` `post`. More details can be found [here](https://openid.net/specs/openid-4-verifiable-presentations-1_0-23.html#name-request-uri-method-post).
+This endpoint also support `request_uri_method` `post`. More details can be found [here](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-request-uri-method-post).
 
 #### request_uri_method: get
 
