@@ -1,7 +1,7 @@
 {
-  "employment_input": "jwt_vc",
-  "employment_input_2": {
-    "id": "123456"
-  },
-  "employment_input_3": "dc+jwt_vc"
+  "employment_input": ["jwt_vc"],
+  "employment_input_2": [
+    {"id": "123456"}
+  ],
+  "employment_input_3": ["dc+jwt_vc"]
 }

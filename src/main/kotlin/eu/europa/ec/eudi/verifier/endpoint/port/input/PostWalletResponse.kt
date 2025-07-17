@@ -23,13 +23,7 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.proc.BadJOSEException
-import eu.europa.ec.eudi.prex.PresentationDefinition
-import eu.europa.ec.eudi.prex.PresentationSubmission
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.JsonPathReader
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
@@ -57,8 +51,7 @@ data class AuthorisationResponseTO(
     val error: String? = null,
     val errorDescription: String? = null,
     val idToken: String? = null,
-    val vpToken: JsonElement? = null,
-    val presentationSubmission: PresentationSubmission? = null,
+    val vpToken: JsonObject? = null,
 )
 
 sealed interface AuthorisationResponse {
@@ -96,107 +89,34 @@ private suspend fun AuthorisationResponseTO.toDomain(
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
-    suspend fun requiredVpContent(presentationQuery: PresentationQuery): VpContent = when (presentationQuery) {
-        is PresentationQuery.ByPresentationDefinition ->
-            presentationExchangeVpContent(
-                presentationQuery.presentationDefinition,
-                presentation.id,
-                presentation.nonce,
-                presentation.type.transactionDataOrNull,
-                validateVerifiablePresentation,
-                vpFormats,
-                presentation.issuerChain,
-            )
-
-        is PresentationQuery.ByDigitalCredentialsQueryLanguage ->
-            dcqlVpContent(
-                presentationQuery.query,
-                presentation.id,
-                presentation.nonce,
-                presentation.type.transactionDataOrNull,
-                validateVerifiablePresentation,
-                vpFormats,
-                presentation.issuerChain,
-            )
-    }.bind()
+    suspend fun requiredVerifiablePresentations(query: DCQL): VerifiablePresentations =
+        verifiablePresentations(
+            query,
+            presentation.id,
+            presentation.nonce,
+            presentation.type.transactionDataOrNull,
+            validateVerifiablePresentation,
+            vpFormats,
+            presentation.issuerChain,
+        ).bind()
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
     maybeError ?: when (val type = presentation.type) {
         is PresentationType.IdTokenRequest -> WalletResponse.IdToken(requiredIdToken())
         is PresentationType.VpTokenRequest -> WalletResponse.VpToken(
-            requiredVpContent(type.presentationQuery),
+            requiredVerifiablePresentations(type.query),
         )
 
         is PresentationType.IdAndVpToken -> WalletResponse.IdAndVpToken(
             requiredIdToken(),
-            requiredVpContent(type.presentationQuery),
+            requiredVerifiablePresentations(type.query),
         )
     }
 }
 
 private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
 
-private suspend fun AuthorisationResponseTO.presentationExchangeVpContent(
-    presentationDefinition: PresentationDefinition,
-    transactionId: TransactionId,
-    nonce: Nonce,
-    transactionData: NonEmptyList<TransactionData>?,
-    validateVerifiablePresentation: ValidateVerifiablePresentation,
-    vpFormats: VpFormats,
-    issuerChain: NonEmptyList<X509Certificate>?,
-): Either<WalletResponseValidationError, VpContent.PresentationExchange> =
-    either {
-        ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
-        ensureNotNull(presentationSubmission) { WalletResponseValidationError.MissingPresentationSubmission }
-        ensure(presentationSubmission.definitionId == presentationDefinition.id) {
-            WalletResponseValidationError.InvalidPresentationSubmission
-        }
-
-        val descriptorMaps = presentationSubmission.descriptorMaps
-            .toNonEmptyListOrNull()
-            ?: raise(WalletResponseValidationError.InvalidPresentationSubmission)
-        val vpTokenReader = JsonPathReader(vpToken)
-        val verifiablePresentations = descriptorMaps.map { descriptorMap ->
-            ensure(jsonPathPattern.matcher(descriptorMap.path.value).matches()) {
-                WalletResponseValidationError.InvalidPresentationSubmission
-            }
-
-            val inputDescriptor =
-                ensureNotNull(presentationDefinition.inputDescriptors.firstOrNull { it.id == descriptorMap.id }) {
-                    WalletResponseValidationError.InvalidPresentationSubmission
-                }
-            val inputDescriptorFormat = inputDescriptor.format ?: presentationDefinition.format
-            val element = vpTokenReader.readPath(descriptorMap.path.value).getOrNull()
-                ?: raise(
-                    WalletResponseValidationError.InvalidVpToken(
-                        "JsonPath of DescriptorMap does not point to a valid vp_token element",
-                        null,
-                    ),
-                )
-            val format = Format(descriptorMap.format)
-            val unvalidatedVerifiablePresentation = element.toVerifiablePresentation(format).bind()
-            val applicableTransactionData = transactionData?.filter {
-                descriptorMap.id.value in it.credentialIds
-            }?.toNonEmptyListOrNull()
-            val vpFormat =
-                inputDescriptorFormat?.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission)
-                    ?.bind()
-                    ?: vpFormats.vpFormat(format, WalletResponseValidationError.InvalidPresentationSubmission).bind()
-
-            validateVerifiablePresentation(
-                transactionId,
-                unvalidatedVerifiablePresentation,
-                vpFormat,
-                nonce,
-                applicableTransactionData,
-                issuerChain,
-            ).bind()
-        }.distinct()
-
-        VpContent.PresentationExchange(verifiablePresentations, presentationSubmission)
-    }
-
-private suspend fun AuthorisationResponseTO.dcqlVpContent(
+private suspend fun AuthorisationResponseTO.verifiablePresentations(
     query: DCQL,
     transactionId: TransactionId,
     nonce: Nonce,
@@ -204,14 +124,13 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormats: VpFormats,
     issuerChain: NonEmptyList<X509Certificate>?,
-): Either<WalletResponseValidationError, VpContent.DCQL> =
+): Either<WalletResponseValidationError, VerifiablePresentations> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
-        ensure(presentationSubmission == null) { WalletResponseValidationError.PresentationSubmissionMustNotBePresent }
 
-        suspend fun JsonElement.toVerifiablePresentations(): Map<QueryId, VerifiablePresentation> {
+        suspend fun JsonObject.toVerifiablePresentations(): Map<QueryId, List<VerifiablePresentation>> {
             val vpToken = Either.catch {
-                Json.decodeFromJsonElement<Map<QueryId, JsonElement>>(this)
+                Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
             }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 
             val credentialQueries = query.credentials.associateBy { it.id }
@@ -223,7 +142,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                             null,
                         ),
                     )
-                val unvalidatedVerifiablePresentation = value.toVerifiablePresentation(format).bind()
+                val unvalidatedVerifiablePresentations = value.map { it.toVerifiablePresentation(format).bind() }
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
@@ -234,14 +153,16 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
                         null,
                     ),
                 ).bind()
-                validateVerifiablePresentation(
-                    transactionId,
-                    unvalidatedVerifiablePresentation,
-                    vpFormat,
-                    nonce,
-                    applicableTransactionData,
-                    issuerChain,
-                ).bind()
+                unvalidatedVerifiablePresentations.map {
+                    validateVerifiablePresentation(
+                        transactionId,
+                        it,
+                        vpFormat,
+                        nonce,
+                        applicableTransactionData,
+                        issuerChain,
+                    ).bind()
+                }
             }
         }
 
@@ -250,7 +171,7 @@ private suspend fun AuthorisationResponseTO.dcqlVpContent(
             WalletResponseValidationError.RequiredCredentialSetNotSatisfied
         }
 
-        VpContent.DCQL(verifiablePresentations)
+        VerifiablePresentations(verifiablePresentations)
     }
 
 private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletResponseValidationError, VerifiablePresentation> =
@@ -286,33 +207,6 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
             Format.MsoMdoc -> element.asString()
             Format.SdJwtVc -> element.asStringOrObject()
             else -> element.asStringOrObject()
-        }
-    }
-
-private fun eu.europa.ec.eudi.prex.Format.vpFormat(
-    format: Format,
-    ifInvalid: WalletResponseValidationError,
-): Either<WalletResponseValidationError, VpFormat> =
-    either {
-        val serializedProperties = ensureNotNull(jsonObject()[format.value]) {
-            WalletResponseValidationError.InvalidPresentationSubmission
-        }
-
-        when (format.value) {
-            SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> {
-                val properties = serializedProperties.decodeAs<SdJwtVcFormatTO>().getOrThrow()
-                VpFormat.SdJwtVc(
-                    properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
-                    properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
-                )
-            }
-
-            OpenId4VPSpec.FORMAT_MSO_MDOC -> {
-                val properties = serializedProperties.decodeAs<MsoMdocFormatTO>().getOrThrow()
-                VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!)
-            }
-
-            else -> raise(ifInvalid)
         }
     }
 
@@ -479,7 +373,7 @@ private fun AuthorisationResponse.responseMode(): ResponseModeOption = when (thi
     is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
 }
 
-private fun DCQL.satisfiedBy(response: Map<QueryId, VerifiablePresentation>): Boolean =
+private fun DCQL.satisfiedBy(response: Map<QueryId, List<VerifiablePresentation>>): Boolean =
     credentialSets?.filter { credentialSet -> credentialSet.required ?: true }
         ?.map { credentialSet -> credentialSet.options.any { option -> response.keys.containsAll(option) } }
         ?.fold(true, Boolean::and)

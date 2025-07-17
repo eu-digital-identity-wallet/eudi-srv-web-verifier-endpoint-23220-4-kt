@@ -28,12 +28,14 @@ import com.nimbusds.jose.util.X509CertUtils
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
-import eu.europa.ec.eudi.prex.PresentationDefinition
-import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
-import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
-import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
+import kotlinx.serialization.json.Json
 import net.minidev.json.JSONObject
 import java.net.URL
 import java.util.*
@@ -48,11 +50,11 @@ class CreateJarNimbusTest {
 
     @Test
     fun `given a request object, it should be signed and decoded`() {
+        val query = Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery
         val requestObject = RequestObject(
             verifierId = verifierId,
             responseType = listOf("vp_token", "id_token"),
-            presentationDefinitionUri = null,
-            presentationDefinition = PresentationExchange.jsonParser.decodePresentationDefinition(pd).getOrThrow(),
+            dcqlQuery = query,
             scope = listOf("openid"),
             idTokenType = listOf("subject_signed_id_token"),
             nonce = UUID.randomUUID().toString(),
@@ -96,8 +98,10 @@ class CreateJarNimbusTest {
     private fun assertEqualsRequestObjectJWTClaimSet(r: RequestObject, c: JWTClaimsSet) {
         assertEquals(r.verifierId.clientId, c.getStringClaim("client_id"))
         assertEquals(r.responseType.joinToString(separator = " "), c.getStringClaim("response_type"))
-        assertEquals(r.presentationDefinitionUri?.toExternalForm(), c.getStringClaim(OpenId4VPSpec.PRESENTATION_DEFINITION_URI))
-        assertEquals(r.presentationDefinition, c.getJSONObjectClaim(OpenId4VPSpec.PRESENTATION_DEFINITION))
+        assertEquals(
+            r.dcqlQuery,
+            c.getJSONObjectClaim(OpenId4VPSpec.DCQL_QUERY).toJsonObject().decodeAs<DCQL>().getOrThrow(),
+        )
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
         assertEquals(r.idTokenType.joinToString(separator = " "), c.getStringClaim("id_token_type"))
         assertEquals(r.nonce, c.getStringClaim("nonce"))
@@ -116,38 +120,4 @@ class CreateJarNimbusTest {
             assertNotNull(X509CertUtils.parse(it.decode()))
         }
     }
-
-    private fun assertEquals(pd: PresentationDefinition?, c: MutableMap<String, Any?>?) {
-        val pd2 = c?.let { PresentationDefinitionJackson.fromJsonObject(c).getOrThrow() }
-        assertEquals(pd, pd2)
-    }
-
-    private val pd = """
-        {
-  "type": "vp_token id_token",
-  "id_token_type": "subject_signed_id_token",
-  "presentation_definition": {
-    "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
-    "input_descriptors": [
-      {
-        "id": "wa_driver_license",
-        "name": "Washington State Business License",
-        "purpose": "We can only allow licensed Washington State business representatives into the WA Business Conference",
-        "constraints": {
-          "fields": [
-            {
-              "path": [
-                "${'$'}.credentialSubject.dateOfBirth",
-                "${'$'}.credentialSubject.dob",
-                "${'$'}.vc.credentialSubject.dateOfBirth",
-                "${'$'}.vc.credentialSubject.dob"
-              ]
-            }
-          ]
-        }
-      }
-    ]
-  }
-}
-"""
 }

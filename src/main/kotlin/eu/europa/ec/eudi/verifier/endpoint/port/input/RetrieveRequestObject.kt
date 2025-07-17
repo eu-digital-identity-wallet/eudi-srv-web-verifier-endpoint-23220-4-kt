@@ -25,7 +25,6 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
-import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
@@ -181,28 +180,12 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
     ): Either<RetrieveRequestObjectError, EncryptionRequirement> = either {
-        ensureWalletSupportPresentationDefinitionUriIfRequired(metadata, presentation)
         ensureWalletSupportsRequiredVpFormats(metadata, presentation)
         ensureWalletSupportsVerifierClientIdScheme(metadata)
         ensureVerifierSupportsWalletJarSigningAlgorithms(metadata)
         ensureWalletSupportsRequiredResponseType(metadata, presentation)
         ensureWalletSupportsRequiredResponseMode(metadata, presentation)
         encryptionRequirement(metadata)
-    }
-
-    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportPresentationDefinitionUriIfRequired(
-        metadata: WalletMetadataTO,
-        presentation: Presentation.Requested,
-    ) {
-        val supportsPresentationDefinitionByReference =
-            metadata.presentationDefinitionUriSupported ?: OpenId4VPSpec.DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED
-        val requiresPresentationDefinitionByReference =
-            presentation.presentationDefinitionMode is EmbedOption.ByReference && null != presentation.type.presentationDefinitionOrNull
-        ensure(supportsPresentationDefinitionByReference || !requiresPresentationDefinitionByReference) {
-            RetrieveRequestObjectError.UnsupportedWalletMetadata(
-                "Wallet does not support fetching PresentationDefinition by reference",
-            )
-        }
     }
 
     private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredVpFormats(
@@ -213,9 +196,8 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
             raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet metadata contains malformed VpFormats", it))
         }.groupBy { it::class }
         val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
-        val queryRequiredVpFormats = when (val query = presentation.type.presentationQueryOrNull) {
-            is PresentationQuery.ByPresentationDefinition -> query.presentationDefinition.vpFormats(verifierSupportedVpFormats)
-            is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.vpFormats(verifierSupportedVpFormats)
+        val queryRequiredVpFormats = when (val query = presentation.type.queryOrNull) {
+            is DCQL -> query.vpFormats(verifierSupportedVpFormats)
             null -> emptyList()
         }.groupBy { it::class }
         val walletSupportsAllRequiredVpFormats = queryRequiredVpFormats.map { (vpFormatType, vpFormats) ->
@@ -386,12 +368,6 @@ private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
             }
         }.distinct()
     }
-
-private fun PresentationDefinition.vpFormats(supported: VpFormats): List<VpFormat> =
-    inputDescriptors.flatMap { inputDescriptor ->
-        val format = inputDescriptor.format ?: format
-        format?.jsonObject()?.toVpFormats()?.getOrThrow() ?: listOf(supported.sdJwtVc, supported.msoMdoc)
-    }.distinct()
 
 private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =
     credentials.mapNotNull {

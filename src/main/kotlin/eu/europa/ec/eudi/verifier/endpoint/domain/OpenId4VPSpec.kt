@@ -22,8 +22,7 @@ object OpenId4VPSpec {
     const val VERSION: String = "draft 24"
 
     const val RESPONSE_URI: String = "response_uri"
-    const val PRESENTATION_DEFINITION: String = "presentation_definition"
-    const val PRESENTATION_DEFINITION_URI: String = "presentation_definition_uri"
+
     const val DCQL_QUERY: String = "dcql_query"
     const val TRANSACTION_DATA: String = "transaction_data"
 

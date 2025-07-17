@@ -36,7 +36,6 @@ dependencies {
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
-    implementation(libs.presentation.exchange)
     implementation(libs.nimbusds.oauth2.oidc.sdk)
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation(libs.bouncy.castle)
