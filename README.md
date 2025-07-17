@@ -255,8 +255,6 @@ This endpoint can produce either JSON or a QR code depending on the Accept heade
 
 **Usage:**
 
-Using DCQL:
-
 ```bash
 curl -X POST -H "Content-type: application/json" -d '{
   "type": "vp_token",  
@@ -406,8 +404,6 @@ A form post (application/x-www-form-urlencoded encoding) with the following form
 - `response`: A string representing an encrypted JWT (JWE) that contains as claims the form parameters mentioned in the case above    
 
 **Usage:**
-
-Using DCQL:
 
 ```bash
 STATE=IsoY9VwZXJ8GS7zg4CEHsCNu-5LpAiPGjbwYssZ2nh3tnkhytNw2mNZLSFsKOwdG2Ww33hX6PUp6P9xImdS-qA
