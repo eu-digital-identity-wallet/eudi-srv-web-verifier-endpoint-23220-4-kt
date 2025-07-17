@@ -411,7 +411,7 @@ curl -v -X POST 'http://localhost:8080/wallet/direct_post' \
   -H "Content-type: application/x-www-form-urlencoded" \
   -H "Accept: application/json" \
   --data-urlencode "state=$STATE" \
-  --data-urlencode 'vp_token={"32f54163-7166-48f1-93d8-ff217bdb0653": {"id": "123456"}}'
+  --data-urlencode 'vp_token={"32f54163-7166-48f1-93d8-ff217bdb0653": [{"id": "123456"}]}'
 ```
 
 **Returns:**
