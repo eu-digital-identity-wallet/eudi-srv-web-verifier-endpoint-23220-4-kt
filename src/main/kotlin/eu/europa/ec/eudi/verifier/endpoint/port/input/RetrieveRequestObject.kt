@@ -181,7 +181,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         presentation: Presentation.Requested,
     ): Either<RetrieveRequestObjectError, EncryptionRequirement> = either {
         ensureWalletSupportsRequiredVpFormats(metadata, presentation)
-        ensureWalletSupportsVerifierClientIdScheme(metadata)
+        ensureWalletSupportsVerifierClientIdPrefix(metadata)
         ensureVerifierSupportsWalletJarSigningAlgorithms(metadata)
         ensureWalletSupportsRequiredResponseType(metadata, presentation)
         ensureWalletSupportsRequiredResponseMode(metadata, presentation)
@@ -209,11 +209,11 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         }
     }
 
-    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsVerifierClientIdScheme(metadata: WalletMetadataTO) {
-        val clientIdScheme = verifierConfig.verifierId.clientIdScheme
-        val supportedClientIdSchemes = metadata.clientIdSchemesSupported ?: OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED
-        ensure(clientIdScheme in supportedClientIdSchemes) {
-            RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Client Id Scheme '$clientIdScheme'")
+    private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsVerifierClientIdPrefix(metadata: WalletMetadataTO) {
+        val clientIdPrefix = verifierConfig.verifierId.clientIdPrefix
+        val supportedClientPrefixes = metadata.clientIdPrefixesSupported ?: OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED
+        ensure(clientIdPrefix in supportedClientPrefixes) {
+            RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Client Id Prefix '$clientIdPrefix'")
         }
     }
 
@@ -283,7 +283,7 @@ private data class WalletMetadataTO(
     val vpFormatsSupported: JsonObject,
 
     @SerialName(OpenId4VPSpec.CLIENT_ID_SCHEMES_SUPPORTED)
-    val clientIdSchemesSupported: List<String>? = OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED,
+    val clientIdPrefixesSupported: List<String>? = OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED,
 
     @SerialName(RFC8414.JWKS)
     val jwks: JsonObject? = null,
@@ -325,11 +325,10 @@ private val RetrieveRequestObjectMethod.walletNonceOrNull: String?
         is RetrieveRequestObjectMethod.Post -> walletNonce
     }
 
-private val VerifierId.clientIdScheme: String
+private val VerifierId.clientIdPrefix: String
     get() = when (this) {
         is VerifierId.PreRegistered -> OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED
         is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_DNS
-        is VerifierId.X509SanUri -> OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_URI
     }
 
 private val PresentationType.responseType: String

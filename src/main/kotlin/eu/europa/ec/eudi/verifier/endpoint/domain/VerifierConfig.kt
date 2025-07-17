@@ -214,24 +214,6 @@ sealed interface VerifierId {
 
         override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_DNS}:$originalClientId"
     }
-
-    /**
-     * When the Client Identifier Scheme is x509_san_uri, the Client Identifier
-     * MUST be a URI and match a uniformResourceIdentifier Subject Alternative Name (SAN) RFC5280
-     * entry in the leaf certificate passed with the request
-     */
-    data class X509SanUri(
-        override val originalClientId: String,
-        override val jarSigning: SigningConfig,
-    ) : VerifierId {
-        init {
-            require(jarSigning.certificate.containsSanUri(originalClientId)) {
-                "Original Client Id '$originalClientId' not contained in 'URI' Subject Alternative Names of JAR Signing Certificate."
-            }
-        }
-
-        override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_URI}:$originalClientId"
-    }
 }
 
 /**

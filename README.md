@@ -537,12 +537,12 @@ Description: Port for the HTTP listener of the Verifier Endpoint application
 Default value: `8080`
 
 Variable: `VERIFIER_ORIGINALCLIENTID`  
-Description: Client Id of the Verifier Endpoint application **without** the Client Id Scheme prefix   
+Description: Client Id of the Verifier Endpoint application **without** the Client Id prefix   
 Default value: `Verifier`
 
-Variable: `VERIFIER_CLIENTIDSCHEME`  
-Description: Client Id Scheme used by the Verifier Endpoint application  
-Possible values: `pre-registered`, `x509_san_dns`, `x509_san_uri`  
+Variable: `VERIFIER_CLIENTIDPREFIX`  
+Description: Client Id Prefix used by the Verifier Endpoint application  
+Possible values: `pre-registered`, `x509_san_dns`  
 Default value: `pre-registered`
 
 Variable: `VERIFIER_JAR_SIGNING_ALGORITHM`  
