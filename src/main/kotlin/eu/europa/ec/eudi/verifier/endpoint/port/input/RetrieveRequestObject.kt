@@ -329,7 +329,6 @@ private val VerifierId.clientIdScheme: String
     get() = when (this) {
         is VerifierId.PreRegistered -> OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED
         is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_DNS
-        is VerifierId.X509SanUri -> OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_URI
     }
 
 private val PresentationType.responseType: String

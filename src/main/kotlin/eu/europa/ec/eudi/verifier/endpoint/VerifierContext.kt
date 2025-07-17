@@ -539,10 +539,9 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         val jarSigning = jarSigningConfig(environment, clock)
 
         val factory =
-            when (val clientIdScheme = environment.getProperty("verifier.clientIdScheme", "pre-registered")) {
+            when (val clientIdScheme = environment.getProperty("verifier.clientIdPrefix", "pre-registered")) {
                 "pre-registered" -> VerifierId::PreRegistered
                 "x509_san_dns" -> VerifierId::X509SanDns
-                "x509_san_uri" -> VerifierId::X509SanUri
                 else -> error("Unknown clientIdScheme '$clientIdScheme'")
             }
         factory(originalClientId, jarSigning)

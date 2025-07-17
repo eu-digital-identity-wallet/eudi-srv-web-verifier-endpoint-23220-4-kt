@@ -74,7 +74,7 @@ class CreateJarNimbus : CreateJar {
             .apply {
                 when (requestObject.verifierId) {
                     is VerifierId.PreRegistered -> keyID(key.keyID)
-                    is VerifierId.X509SanDns, is VerifierId.X509SanUri -> x509CertChain(key.x509CertChain)
+                    is VerifierId.X509SanDns -> x509CertChain(key.x509CertChain)
                 }
             }
             .type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
