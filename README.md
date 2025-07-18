@@ -542,7 +542,7 @@ Default value: `Verifier`
 
 Variable: `VERIFIER_CLIENTIDPREFIX`  
 Description: Client Id Prefix used by the Verifier Endpoint application  
-Possible values: `pre-registered`, `x509_san_dns`  
+Possible values: `pre-registered`, `x509_san_dns`, `x509_hash`  
 Default value: `pre-registered`
 
 Variable: `VERIFIER_JAR_SIGNING_ALGORITHM`  
