@@ -22,8 +22,7 @@ object OpenId4VPSpec {
     const val VERSION: String = "draft 24"
 
     const val RESPONSE_URI: String = "response_uri"
-    const val PRESENTATION_DEFINITION: String = "presentation_definition"
-    const val PRESENTATION_DEFINITION_URI: String = "presentation_definition_uri"
+
     const val DCQL_QUERY: String = "dcql_query"
     const val TRANSACTION_DATA: String = "transaction_data"
 
@@ -68,7 +67,7 @@ object OpenId4VPSpec {
 
     const val CLIENT_ID_SCHEME_PRE_REGISTERED: String = "pre-registered"
     const val CLIENT_ID_SCHEME_X509_SAN_DNS: String = "x509_san_dns"
-    const val CLIENT_ID_SCHEME_X509_SAN_URI: String = "x509_san_uri"
+    const val CLIENT_ID_SCHEME_X509_HASH: String = "x509_hash"
 
     const val DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED: Boolean = true
     val DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED: List<String> = listOf(CLIENT_ID_SCHEME_PRE_REGISTERED)

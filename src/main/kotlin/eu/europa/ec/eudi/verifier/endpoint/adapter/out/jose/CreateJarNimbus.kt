@@ -74,7 +74,7 @@ class CreateJarNimbus : CreateJar {
             .apply {
                 when (requestObject.verifierId) {
                     is VerifierId.PreRegistered -> keyID(key.keyID)
-                    is VerifierId.X509SanDns, is VerifierId.X509SanUri -> x509CertChain(key.x509CertChain)
+                    is VerifierId.X509SanDns, is VerifierId.X509Hash -> x509CertChain(key.x509CertChain)
                 }
             }
             .type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
@@ -134,13 +134,8 @@ class CreateJarNimbus : CreateJar {
                     null
                 } else r.idTokenType.joinToString(" "),
             )
-            optionalClaim(
-                OpenId4VPSpec.PRESENTATION_DEFINITION,
-                r.presentationDefinition?.let { PresentationDefinitionJackson.toJsonObject(it) },
-            )
             optionalClaim("client_metadata", clientMetaData?.toJSONObject())
             optionalClaim(OpenId4VPSpec.RESPONSE_URI, r.responseUri?.toExternalForm())
-            optionalClaim(OpenId4VPSpec.PRESENTATION_DEFINITION_URI, r.presentationDefinitionUri?.toExternalForm())
             optionalClaim(OpenId4VPSpec.DCQL_QUERY, r.dcqlQuery?.toJackson())
             optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, r.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)

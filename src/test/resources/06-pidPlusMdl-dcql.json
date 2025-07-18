@@ -1,0 +1,34 @@
+{
+  "type": "vp_token",
+  "dcql_query": {
+    "credentials": [
+      {
+        "id": "eu_europa_ec_eudi_pid_1",
+        "format": "mso_mdoc",
+        "meta": {
+          "doctype_value": "eu.europa.ec.eudi.pid.1"
+        },
+        "claims": [
+          {
+            "path": ["eu.europa.ec.eudi.pid.1", "family_name"],
+            "intent_to_retain": false
+          }
+        ]
+      },
+      {
+        "id": "org_iso_18013_5_1_mDL",
+        "format": "mso_mdoc",
+        "meta": {
+          "doctype_value": "org.iso.18013.5.1.mDL"
+        },
+        "claims": [
+          {
+            "path": ["org.iso.18013.5.1", "family_name"],
+            "intent_to_retain": false
+          }
+        ]
+      }
+    ]
+  },
+  "nonce": "acac8b92-3b7e-4609-b17f-efa62134e890"
+}

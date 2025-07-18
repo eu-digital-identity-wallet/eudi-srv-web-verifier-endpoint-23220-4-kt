@@ -20,13 +20,11 @@ import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.proc.JWEDecryptionKeySelector
 import com.nimbusds.jose.proc.SecurityContext
-import com.nimbusds.jose.shaded.gson.Gson
 import com.nimbusds.jose.util.JSONObjectUtils
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.proc.JWTProcessor
-import eu.europa.ec.eudi.prex.PresentationExchange
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
@@ -34,9 +32,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -89,28 +85,10 @@ object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
         AuthorisationResponseTO(
             state = getClaim("state")?.toString(),
             idToken = getClaim("id_token")?.toString(),
-            vpToken = getClaim("vp_token")
+            vpToken = getJSONObjectClaim("vp_token")
                 ?.let { vpToken ->
-                    fun Any.toJsonElement(): JsonElement =
-                        when (this) {
-                            is String -> JsonPrimitive(this)
-
-                            // Convert JSON Object from Nimbus to KotlinX Serialization
-                            is Map<*, *> -> Json.decodeFromString(JSONObjectUtils.toJSONString(this as Map<String, *>))
-
-                            else -> error("Unexpected type ('${this::class.java.canonicalName}') for vp_token claim")
-                        }
-                    when (vpToken) {
-                        is String, is Map<*, *> -> vpToken.toJsonElement()
-                        is List<*> -> JsonArray(vpToken.mapNotNull { it?.toJsonElement() })
-                        else -> error("Unexpected type ('${vpToken::class.java.canonicalName}') for vp_token claim")
-                    }
+                    Json.decodeFromString<JsonObject>(JSONObjectUtils.toJSONString(vpToken))
                 },
-            presentationSubmission = getJSONObjectClaim("presentation_submission")?.let {
-                val json = Gson().toJson(it)
-                logger.debug("presentation_submission: $json")
-                PresentationExchange.jsonParser.decodePresentationSubmission(json).getOrThrow()
-            },
             error = getClaim("error")?.toString(),
             errorDescription = getClaim("error_description")?.toString(),
         )
