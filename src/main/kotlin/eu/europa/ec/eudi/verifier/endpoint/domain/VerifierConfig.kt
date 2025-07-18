@@ -227,10 +227,7 @@ sealed interface VerifierId {
         override val jarSigning: SigningConfig,
     ) : VerifierId {
         init {
-            require(jarSigning.certificate.ensureEncodedHashMatches(originalClientId)) {
-                "Original Client Id '$originalClientId' Base64 Url-Safe with no padding," +
-                    "SHA-256 hash of the DER encoded certificate does not match provided counterpart"
-            }
+            jarSigning.certificate.ensureEncodedHashMatches(originalClientId)
         }
 
         override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_HASH}:$originalClientId"
@@ -278,10 +275,12 @@ private fun X509Certificate.containsSan(value: String, type: SanType) =
 private fun X509Certificate.containsSanDns(value: String) =
     containsSan(value, SanType.DNS)
 
-private fun X509Certificate.ensureEncodedHashMatches(expected: String): Boolean {
+private fun X509Certificate.ensureEncodedHashMatches(expected: String) {
     val hash = hash(encoded, HashAlgorithm.SHA_256)
     val encodedHash = base64UrlNoPadding.encode(hash)
-    return expected == encodedHash
+    require(expected == encodedHash) {
+        "Original Client Id '$expected' doesn't match the expected value"
+    }
 }
 
 /**
