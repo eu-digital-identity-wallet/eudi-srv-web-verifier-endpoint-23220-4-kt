@@ -21,6 +21,8 @@ import arrow.core.NonEmptyList
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import java.net.URL
 import java.security.KeyStore
@@ -198,7 +200,7 @@ sealed interface VerifierId {
     }
 
     /**
-     * When the Client Identifier Scheme is x509_san_dns, the Client Identifier
+     * When the Client Identifier Prefix is x509_san_dns, the Client Identifier
      * MUST be a DNS name and match a dNSName Subject Alternative Name (SAN) RFC5280
      * entry in the leaf certificate passed with the request
      */
@@ -213,6 +215,24 @@ sealed interface VerifierId {
         }
 
         override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_DNS}:$originalClientId"
+    }
+
+    /**
+     * When the Client Identifier Prefix is x509_hash, the Client Identifier
+     * MUST match the Base64 Url-Safe with no padding encoded SHA-256 hash of the DER
+     * encoded leaf certificate
+     */
+    data class X509Hash(
+        override val originalClientId: String,
+        override val jarSigning: SigningConfig,
+    ) : VerifierId {
+        init {
+            require(jarSigning.certificate.encodedHashMatches(originalClientId)) {
+                "Original Client Id '$originalClientId' doesn't match the expected value"
+            }
+        }
+
+        override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_HASH}:$originalClientId"
     }
 }
 
@@ -256,6 +276,12 @@ private fun X509Certificate.containsSan(value: String, type: SanType) =
  */
 private fun X509Certificate.containsSanDns(value: String) =
     containsSan(value, SanType.DNS)
+
+private fun X509Certificate.encodedHashMatches(expected: String): Boolean {
+    val hash = hash(encoded, HashAlgorithm.SHA_256)
+    val encodedHash = base64UrlNoPadding.encode(hash)
+    return expected == encodedHash
+}
 
 /**
  * Checks if [value] is a 'URI' Subject Alternative Name in this [X509Certificate].

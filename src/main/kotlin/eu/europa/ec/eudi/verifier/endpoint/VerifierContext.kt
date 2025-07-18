@@ -542,6 +542,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             when (val clientIdPrefix = environment.getProperty("verifier.clientIdPrefix", "pre-registered")) {
                 "pre-registered" -> VerifierId::PreRegistered
                 "x509_san_dns" -> VerifierId::X509SanDns
+                "x509_hash" -> VerifierId::X509Hash
                 else -> error("Unknown clientIdPrefix '$clientIdPrefix'")
             }
         factory(originalClientId, jarSigning)
