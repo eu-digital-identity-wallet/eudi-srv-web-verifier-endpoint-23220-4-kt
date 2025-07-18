@@ -67,6 +67,7 @@ object OpenId4VPSpec {
 
     const val CLIENT_ID_SCHEME_PRE_REGISTERED: String = "pre-registered"
     const val CLIENT_ID_SCHEME_X509_SAN_DNS: String = "x509_san_dns"
+    const val CLIENT_ID_SCHEME_X509_HASH: String = "x509_hash"
 
     const val DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED: Boolean = true
     val DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED: List<String> = listOf(CLIENT_ID_SCHEME_PRE_REGISTERED)
