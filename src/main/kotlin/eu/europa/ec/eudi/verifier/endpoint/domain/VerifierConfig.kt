@@ -219,16 +219,17 @@ sealed interface VerifierId {
 
     /**
      * When the Client Identifier Prefix is x509_hash, the Client Identifier
-     * MUST be a valid SHA-256 hashed value and match the X509 DER certification encoded SHA-256 hashed value
-     * entry in the leaf certificate passed with the request
+     * MUST be a Base64 Url-Safe with no padding, SHA-256 hash of the DER encoded certificate and match the
+     * entry in the leaf certificate Base64 Url-Safe with no padding, SHA-256 hash of it
      */
     data class X509Hash(
         override val originalClientId: String,
         override val jarSigning: SigningConfig,
     ) : VerifierId {
         init {
-            require(jarSigning.certificate.ensureHash(originalClientId)) {
-                "Original Client Id '$originalClientId' hash equals to X509 DER encoded SHA-256 value."
+            require(jarSigning.certificate.ensureEncodedHashMatches(originalClientId)) {
+                "Original Client Id '$originalClientId' Base64 Url-Safe with no padding," +
+                    "SHA-256 hash of the DER encoded certificate does not match provided counterpart"
             }
         }
 
@@ -277,11 +278,10 @@ private fun X509Certificate.containsSan(value: String, type: SanType) =
 private fun X509Certificate.containsSanDns(value: String) =
     containsSan(value, SanType.DNS)
 
-private fun X509Certificate.ensureHash(value: String): Boolean {
-    val derCertificate = this.encoded
-    val derHashCertificate = hash(derCertificate, HashAlgorithm.SHA_256)
-    val encodedHashCertificate = base64UrlNoPadding.encode(derHashCertificate)
-    return value == encodedHashCertificate
+private fun X509Certificate.ensureEncodedHashMatches(expected: String): Boolean {
+    val hash = hash(encoded, HashAlgorithm.SHA_256)
+    val encodedHash = base64UrlNoPadding.encode(hash)
+    return expected == encodedHash
 }
 
 /**
