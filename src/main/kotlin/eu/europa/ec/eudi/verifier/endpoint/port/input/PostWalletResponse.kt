@@ -59,6 +59,8 @@ sealed interface AuthorisationResponse {
     data class DirectPostJwt(val jarm: Jwt) : AuthorisationResponse
 }
 
+private fun AuthorisationResponse.DirectPost.isErrorResponse(): Boolean = null != response.error
+
 sealed interface WalletResponseValidationError {
     data object MissingState : WalletResponseValidationError
     data object PresentationNotFound : WalletResponseValidationError
@@ -269,29 +271,15 @@ class PostWalletResponseLive(
         walletResponse: AuthorisationResponse,
     ): Either<WalletResponseValidationError, Pair<Submitted, WalletResponseAcceptedTO?>> =
         either {
-            fun containsErrorAndErrorDescription(walletResponse: AuthorisationResponse): Boolean =
-                (walletResponse as? AuthorisationResponse.DirectPost)?.let { directPost ->
-                    !directPost.response.error.isNullOrEmpty() && !directPost.response.errorDescription.isNullOrEmpty()
-                } ?: false
-
-            fun acceptUnencryptedAuthorizationErrorResponse(
-                presentation: RequestObjectRetrieved,
-                responseMode: ResponseModeOption,
-            ): Boolean {
-                return (presentation.responseMode == ResponseModeOption.DirectPost) &&
-                    (responseMode == ResponseModeOption.DirectPostJwt) &&
-                    containsErrorAndErrorDescription(walletResponse)
-            }
-
             ensure(presentation is RequestObjectRetrieved) {
                 WalletResponseValidationError.PresentationNotInExpectedState
             }
 
             // Verify the AuthorisationResponse matches what is expected for the Presentation
             val responseMode = walletResponse.responseMode()
-
             ensure(
-                (presentation.responseMode == responseMode) || acceptUnencryptedAuthorizationErrorResponse(presentation, responseMode),
+                responseMode == presentation.responseMode ||
+                    (walletResponse is AuthorisationResponse.DirectPost && walletResponse.isErrorResponse()),
             ) {
                 WalletResponseValidationError.UnexpectedResponseMode(
                     presentation.requestId,
