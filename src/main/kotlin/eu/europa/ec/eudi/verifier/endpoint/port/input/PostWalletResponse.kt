@@ -269,13 +269,35 @@ class PostWalletResponseLive(
         walletResponse: AuthorisationResponse,
     ): Either<WalletResponseValidationError, Pair<Submitted, WalletResponseAcceptedTO?>> =
         either {
+            fun containsErrorAndErrorDescription(walletResponse: AuthorisationResponse): Boolean {
+                return when (walletResponse) {
+                    is AuthorisationResponse.DirectPost -> {
+                        !walletResponse.response.error.isNullOrEmpty() &&
+                            !walletResponse.response.errorDescription.isNullOrEmpty()
+                    }
+
+                    else -> false
+                }
+            }
+            fun acceptUnencryptedAuthorizationErrorResponse(
+                presentation: RequestObjectRetrieved,
+                responseMode: ResponseModeOption,
+            ): Boolean {
+                return (presentation.responseMode == ResponseModeOption.DirectPost) &&
+                    (responseMode == ResponseModeOption.DirectPostJwt) &&
+                    containsErrorAndErrorDescription(walletResponse)
+            }
+
             ensure(presentation is RequestObjectRetrieved) {
                 WalletResponseValidationError.PresentationNotInExpectedState
             }
 
             // Verify the AuthorisationResponse matches what is expected for the Presentation
             val responseMode = walletResponse.responseMode()
-            ensure(presentation.responseMode == responseMode) {
+
+            ensure(
+                (presentation.responseMode == responseMode) || acceptUnencryptedAuthorizationErrorResponse(presentation, responseMode),
+            ) {
                 WalletResponseValidationError.UnexpectedResponseMode(
                     presentation.requestId,
                     expected = presentation.responseMode,
