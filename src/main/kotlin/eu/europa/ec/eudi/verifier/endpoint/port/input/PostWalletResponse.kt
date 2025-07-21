@@ -269,16 +269,11 @@ class PostWalletResponseLive(
         walletResponse: AuthorisationResponse,
     ): Either<WalletResponseValidationError, Pair<Submitted, WalletResponseAcceptedTO?>> =
         either {
-            fun containsErrorAndErrorDescription(walletResponse: AuthorisationResponse): Boolean {
-                return when (walletResponse) {
-                    is AuthorisationResponse.DirectPost -> {
-                        !walletResponse.response.error.isNullOrEmpty() &&
-                            !walletResponse.response.errorDescription.isNullOrEmpty()
-                    }
+            fun containsErrorAndErrorDescription(walletResponse: AuthorisationResponse): Boolean =
+                (walletResponse as? AuthorisationResponse.DirectPost)?.let { directPost ->
+                    !directPost.response.error.isNullOrEmpty() && !directPost.response.errorDescription.isNullOrEmpty()
+                } ?: false
 
-                    else -> false
-                }
-            }
             fun acceptUnencryptedAuthorizationErrorResponse(
                 presentation: RequestObjectRetrieved,
                 responseMode: ResponseModeOption,
