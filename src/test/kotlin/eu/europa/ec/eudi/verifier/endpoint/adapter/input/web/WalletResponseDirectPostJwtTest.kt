@@ -283,7 +283,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
     }
 
     @Test
-    fun `when wallet responds with an unencrypted error during direct post jwt`() = runTest {
+    fun `when wallet responds with an error during direct post jwt, verifier accepts unencrypted direct post`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-dcql.json")
 
         val transactionDetails =
@@ -303,9 +303,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         val expectedWalletResponseTO = WalletResponseTO(
             error = "error",
         )
-        val transactionResponse =
-            assertNotNull(VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
-        assert(transactionResponse == expectedWalletResponseTO)
+        assertEquals(expectedWalletResponseTO, VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
     }
 
     @Test
