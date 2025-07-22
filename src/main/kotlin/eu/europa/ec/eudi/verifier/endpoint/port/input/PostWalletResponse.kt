@@ -59,6 +59,8 @@ sealed interface AuthorisationResponse {
     data class DirectPostJwt(val jarm: Jwt) : AuthorisationResponse
 }
 
+private fun AuthorisationResponse.DirectPost.isErrorResponse(): Boolean = null != response.error
+
 sealed interface WalletResponseValidationError {
     data object MissingState : WalletResponseValidationError
     data object PresentationNotFound : WalletResponseValidationError
@@ -275,7 +277,10 @@ class PostWalletResponseLive(
 
             // Verify the AuthorisationResponse matches what is expected for the Presentation
             val responseMode = walletResponse.responseMode()
-            ensure(presentation.responseMode == responseMode) {
+            ensure(
+                responseMode == presentation.responseMode ||
+                    (walletResponse is AuthorisationResponse.DirectPost && walletResponse.isErrorResponse()),
+            ) {
                 WalletResponseValidationError.UnexpectedResponseMode(
                     presentation.requestId,
                     expected = presentation.responseMode,

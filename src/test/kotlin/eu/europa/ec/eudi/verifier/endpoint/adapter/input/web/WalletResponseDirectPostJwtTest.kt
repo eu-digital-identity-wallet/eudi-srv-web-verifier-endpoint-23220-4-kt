@@ -283,6 +283,30 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
     }
 
     @Test
+    fun `verifier accepts unencrypted error responses even when direct_post_jwt is expected`() = runTest {
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-dcql.json")
+
+        val transactionDetails =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
+        WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
+
+        val requestId = RequestId(transactionDetails.requestUri!!.removePrefix("http://localhost:0/wallet/request.jwt/"))
+
+        val walletResponse = LinkedMultiValueMap<String, Any>()
+            .apply {
+                add("state", requestId.value)
+                add("error", "error")
+            }
+
+        WalletApiClient.directPost(client, requestId, walletResponse)
+
+        val expectedWalletResponseTO = WalletResponseTO(
+            error = "error",
+        )
+        assertEquals(expectedWalletResponseTO, VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
+    }
+
+    @Test
     fun `when wallet posts sd-jwt-vc with invalid status list details, post fails`() = runTest {
         val initTransaction = VerifierApiClient.loadInitTransactionTO("07-ehicSdJwtVc-dcql.json")
         val transactionDetails =
