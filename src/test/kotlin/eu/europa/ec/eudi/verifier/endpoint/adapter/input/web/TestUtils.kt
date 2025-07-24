@@ -15,16 +15,14 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.KeyType
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
-import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -78,12 +76,10 @@ fun JsonObject.ecKey(): ECKey? = fromClientMetaData { clientMetaData ->
     }?.toECKey()
 }
 
-fun JsonObject.jarmOption(): JarmOption? = fromClientMetaData { clientMetaData ->
-    val a = clientMetaData["authorization_signed_response_alg"]?.jsonPrimitive?.contentOrNull
-    val b = clientMetaData["authorization_encrypted_response_alg"]?.jsonPrimitive?.contentOrNull
-    val c = clientMetaData["authorization_encrypted_response_enc"]?.jsonPrimitive?.contentOrNull
-    ParseJarmOptionNimbus(a, b, c)
-}
+fun JsonObject.supportedEncryptionMethods(): List<EncryptionMethod>? =
+    fromClientMetaData { clientMetadata ->
+        clientMetadata["encrypted_response_enc_values_supported"]?.jsonArray?.map { EncryptionMethod.parse(it.jsonPrimitive.content) }
+    }
 
 fun <A> JsonObject.fromClientMetaData(extract: (JsonObject) -> A): A? {
     return this["client_metadata"]?.jsonObject?.let { extract(it) }

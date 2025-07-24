@@ -68,7 +68,7 @@ internal class WalletResponseDirectPostTest {
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        assertNull(requestObjectJsonResponse.jarmOption())
+        assertNull(requestObjectJsonResponse.supportedEncryptionMethods())
         assertNull(requestObjectJsonResponse.ecKey(), "jwks must not contain EC key")
     }
 }
