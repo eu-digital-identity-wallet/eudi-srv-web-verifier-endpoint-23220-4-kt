@@ -17,17 +17,14 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
 import arrow.core.Either
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
-import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
-
-fun interface VerifyJarmJwtSignature {
+fun interface VerifyEncryptedResponse {
 
     operator fun invoke(
-        jarmOption: JarmOption,
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
-        jarmJwt: Jwt,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
+        encryptedJwt: Jwt,
         apv: Nonce,
     ): Either<Throwable, AuthorisationResponseTO>
 }

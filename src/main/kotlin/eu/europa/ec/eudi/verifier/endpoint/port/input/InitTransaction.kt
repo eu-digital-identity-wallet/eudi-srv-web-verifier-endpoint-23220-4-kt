@@ -279,12 +279,7 @@ class InitTransactionLive(
     private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
         when (responseModeOption) {
             ResponseModeOption.DirectPost -> null
-            ResponseModeOption.DirectPostJwt ->
-                when (val jarmOption = verifierConfig.clientMetaData.jarmOption) {
-                    is JarmOption.Signed -> error("Misconfiguration")
-                    is JarmOption.Encrypted -> jarmOption
-                    is JarmOption.SignedAndEncrypted -> jarmOption.encrypted
-                }.run { generateEphemeralEncryptionKeyPair(this).getOrThrow() }
+            ResponseModeOption.DirectPostJwt -> generateEphemeralEncryptionKeyPair().getOrThrow()
         }
 
     /**

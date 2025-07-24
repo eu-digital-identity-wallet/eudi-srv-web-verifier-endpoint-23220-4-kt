@@ -18,7 +18,10 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
 import arrow.core.Either
 import arrow.core.Ior
 import arrow.core.NonEmptyList
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
@@ -60,36 +63,14 @@ enum class ResponseModeOption {
     DirectPost,
     DirectPostJwt,
 }
-
-sealed interface JarmOption {
-
-    val jwsAlg: String?
-        get() = when (this) {
-            is Signed -> algorithm
-            is SignedAndEncrypted -> signed.algorithm
-            else -> null
-        }
-
-    val jweAlg: String?
-        get() = when (this) {
-            is Encrypted -> algorithm
-            is SignedAndEncrypted -> encrypted.algorithm
-            else -> null
-        }
-
-    val encryptionMethod: String?
-        get() = when (this) {
-            is Encrypted -> encode
-            is SignedAndEncrypted -> encrypted.encode
-            else -> null
-        }
-
-    data class Signed(val algorithm: String) : JarmOption
-    data class Encrypted(val algorithm: String, val encode: String) : JarmOption
-    data class SignedAndEncrypted(
-        val signed: Signed,
-        val encrypted: Encrypted,
-    ) : JarmOption
+data class ResponseEncryptionOption(
+    val algorithm: JWEAlgorithm,
+    val encryptionMethod: EncryptionMethod,
+) {
+    init {
+        require(algorithm in ECDHEncrypter.SUPPORTED_ALGORITHMS)
+        require(encryptionMethod in ECDHEncrypter.SUPPORTED_ENCRYPTION_METHODS)
+    }
 }
 
 /**
@@ -146,7 +127,7 @@ data class ClientMetaData(
     val idTokenEncryptedResponseAlg: String,
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
-    val jarmOption: JarmOption,
+    val responseEncryptionOption: ResponseEncryptionOption, // responseEncryptionOption
     val vpFormats: VpFormats,
 )
 
