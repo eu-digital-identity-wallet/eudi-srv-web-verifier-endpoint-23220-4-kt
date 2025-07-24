@@ -595,22 +595,17 @@ Description: The Authorization Request Scheme to be used for the QR code generat
 Example: `eudi-openid4vp`  
 Default value: `eudi-openid4vp`
 
-Variable: `VERIFIER_CLIENTMETADATA_AUTHORIZATIONSIGNEDRESPONSEALG`  
-Description: Accept only Authorization Responses that are _signed_ using this algorithm  
+Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_ALGORITHM`  
+Description: Algorithm that verifier is using to encrypt the authorization response  
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
-https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms
-
-Variable: `VERIFIER_CLIENTMETADATA_AUTHORIZATIONENCRYPTEDRESPONSEALG`  
-Description: Accept only Authorization Responses that are _encrypted_ using this algorithm  
-Possible values: Any `Algorithm Name` of an IANA registered asymmetric encryption algorithm (i.e. Usage is `alg`):
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms  
 Default value: `ECDH-ES`
 
-Variable: `VERIFIER_CLIENTMETADATA_AUTHORIZATIONENCRYPTEDRESPONSEENC`  
-Description: Accept only Authorization Responses that are _encrypted_ using this method  
-Possible values: Any `Algorithm Name` of an IANA registered asymmetric encryption method (i.e. Usage is `enc`):
-https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms    
-Default value: `A128CBC-HS256`
+Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_METHOD`  
+Description: Method that verifier is using to encrypt the authorization response  
+Possible values: Any `Encryption Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `enc`):
+https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms
+Default value: `A128GCM`  
 
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_SDJWTVC_SDJWTALGORITHMS`  
 Description: Comma separated list of signature algorithms the Issuer Signed JWT of an SD-JWT VC can be signed with     
