@@ -249,7 +249,7 @@ class InitTransactionLive(
             requestId = generateRequestId(),
             type = type,
             nonce = nonce,
-            jarmEncryptionEphemeralKey = newEphemeralEcPublicKey,
+            responseEncryptionEphemeralKey = newEphemeralEcPublicKey,
             responseMode = responseMode,
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),

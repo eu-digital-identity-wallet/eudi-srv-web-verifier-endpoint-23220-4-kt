@@ -55,8 +55,8 @@ class CreateJarNimbus : CreateJar {
         walletJarEncryptionRequirement: EncryptionRequirement,
     ): Either<Throwable, Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        val jarmEncryptionEphemeralKey = presentation.jarmEncryptionEphemeralKey
-        val signedJar = sign(verifierConfig.clientMetaData, jarmEncryptionEphemeralKey, requestObject, walletNonce)
+        val responseEncryptionEphemeralKey = presentation.responseEncryptionEphemeralKey
+        val signedJar = sign(verifierConfig.clientMetaData, responseEncryptionEphemeralKey, requestObject, walletNonce)
         return when (walletJarEncryptionRequirement) {
             EncryptionRequirement.NotRequired -> signedJar.map { it.serialize() }
             is EncryptionRequirement.Required -> signedJar.flatMap { encrypt(walletJarEncryptionRequirement, it) }.map { it.serialize() }
