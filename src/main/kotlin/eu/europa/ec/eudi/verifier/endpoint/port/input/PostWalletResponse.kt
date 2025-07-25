@@ -62,7 +62,6 @@ sealed interface AuthorisationResponse {
 private fun AuthorisationResponse.DirectPost.isErrorResponse(): Boolean = null != response.error
 
 sealed interface WalletResponseValidationError {
-    data object MissingState : WalletResponseValidationError
     data object PresentationNotFound : WalletResponseValidationError
 
     data class UnexpectedResponseMode(
@@ -77,11 +76,9 @@ sealed interface WalletResponseValidationError {
     data object MissingIdToken : WalletResponseValidationError
     data class InvalidVpToken(val message: String, val cause: Throwable? = null) : WalletResponseValidationError
     data object MissingVpToken : WalletResponseValidationError
-    data object MissingPresentationSubmission : WalletResponseValidationError
-    data object PresentationSubmissionMustNotBePresent : WalletResponseValidationError
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
     data object InvalidPresentationSubmission : WalletResponseValidationError
-    data class InvalidJarm(val error: BadJOSEException) : WalletResponseValidationError
+    data class InvalidEncryptedResponse(val error: BadJOSEException) : WalletResponseValidationError
 }
 
 private suspend fun AuthorisationResponseTO.toDomain(
@@ -330,7 +327,7 @@ class PostWalletResponseLive(
                     apv = presentation.nonce,
                 ).getOrElse {
                     when (it) {
-                        is BadJOSEException -> raise(WalletResponseValidationError.InvalidJarm(it))
+                        is BadJOSEException -> raise(WalletResponseValidationError.InvalidEncryptedResponse(it))
                         else -> throw it
                     }
                 }

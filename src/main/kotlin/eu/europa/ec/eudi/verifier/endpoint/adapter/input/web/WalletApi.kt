@@ -210,8 +210,8 @@ class WalletApi(
                     put("error", "IncorrectState")
                     put("description", "Wallet responded with a 'state' that does not match the expected one.")
                 }
-                is WalletResponseValidationError.InvalidJarm -> {
-                    put("error", "InvalidJarm")
+                is WalletResponseValidationError.InvalidEncryptedResponse -> {
+                    put("error", "InvalidEncryptedResponse")
                     put("description", this@toJson.error.message)
                     put("cause", this@toJson.error.cause?.message)
                 }
@@ -228,14 +228,6 @@ class WalletApi(
                     put("error", "MissingIdToken")
                     put("description", "Expected an id_token to be presented but was not.")
                 }
-                WalletResponseValidationError.MissingPresentationSubmission -> {
-                    put("error", "MissingPresentationSubmission")
-                    put("description", "Expected 'presentation_submission' to be posted by wallet but was not.")
-                }
-                WalletResponseValidationError.MissingState -> {
-                    put("error", "MissingState")
-                    put("description", "Missing state from JARM")
-                }
                 WalletResponseValidationError.MissingVpToken -> {
                     put("error", "MissingVpToken")
                     put("description", "Expected 'vp_token' to be posted by wallet but was not.")
@@ -247,14 +239,6 @@ class WalletApi(
                 WalletResponseValidationError.PresentationNotInExpectedState -> {
                     put("error", "PresentationNotInExpectedState")
                     put("description", "The referenced presentation transaction is not in state to accept wallet response.")
-                }
-                WalletResponseValidationError.PresentationSubmissionMustNotBePresent -> {
-                    put("error", "PresentationSubmissionMustNotBePresent")
-                    put(
-                        "description",
-                        "Wallet posted 'presentation_submission' while not expected to. " +
-                            "A response to a DCQL presentation query must not include a 'presentation_submission'.",
-                    )
                 }
                 WalletResponseValidationError.RequiredCredentialSetNotSatisfied -> {
                     put("error", "RequiredCredentialSetNotSatisfied")

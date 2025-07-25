@@ -110,14 +110,12 @@ private fun log(e: PresentationEvent) {
     fun info(s: String) = logger.info(txt(s))
     when (e) {
         is PresentationEvent.VerifierFailedToGetWalletResponse -> warn("Verifier failed to retrieve wallet response. Cause ${e.cause}")
-        is PresentationEvent.FailedToRetrieveJarmJwkSet -> warn("Wallet failed to retrieve JARM JWKS. Cause ${e.cause}")
         is PresentationEvent.FailedToRetrievePresentationDefinition -> warn(
             "Wallet failed to retrieve presentation definition. Cause ${e.cause}",
         )
         is PresentationEvent.WalletFailedToPostResponse -> warn("Wallet failed to post response. Cause ${e.cause}")
         is PresentationEvent.FailedToRetrieveRequestObject -> warn("Wallet failed to retrieve request object. Cause ${e.cause}")
         is PresentationEvent.PresentationExpired -> info("Presentation expired")
-        is PresentationEvent.JarmJwkSetRetrieved -> info("Wallet retrieved JARM JWKS")
         is PresentationEvent.RequestObjectRetrieved -> info("Wallet retrieved Request Object")
         is PresentationEvent.TransactionInitialized -> info("Verifier initialized transaction")
         is PresentationEvent.VerifierGotWalletResponse -> info("Verifier retrieved wallet response")

@@ -31,7 +31,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 /**
- * when response mode is direct_post the ResponseObject must not contain JARM parameters
+ * when response mode is direct_post the RequestObject must not contain response encryption parameters
  */
 @VerifierApplicationTest
 @TestPropertySource(
