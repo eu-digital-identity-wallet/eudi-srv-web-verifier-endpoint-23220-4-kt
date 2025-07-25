@@ -65,7 +65,7 @@ class CreateJarNimbus : CreateJar {
 
     internal fun sign(
         clientMetaData: ClientMetaData,
-        jarmEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
+        responseEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
         walletNonce: String?,
     ): Either<Throwable, SignedJWT> = Either.catch {
@@ -80,7 +80,7 @@ class CreateJarNimbus : CreateJar {
             .type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
             .build()
         val responseMode = requestObject.responseMode
-        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, jarmEncryptionEphemeralKey), requestObject, walletNonce)
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, responseEncryptionEphemeralKey), requestObject, walletNonce)
 
         SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
     }
