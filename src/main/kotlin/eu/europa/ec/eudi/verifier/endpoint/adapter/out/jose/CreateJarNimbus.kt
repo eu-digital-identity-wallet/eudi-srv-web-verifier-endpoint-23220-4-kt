@@ -55,8 +55,8 @@ class CreateJarNimbus : CreateJar {
         walletJarEncryptionRequirement: EncryptionRequirement,
     ): Either<Throwable, Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        val jarmEncryptionEphemeralKey = presentation.jarmEncryptionEphemeralKey
-        val signedJar = sign(verifierConfig.clientMetaData, jarmEncryptionEphemeralKey, requestObject, walletNonce)
+        val responseEncryptionEphemeralKey = presentation.responseEncryptionEphemeralKey
+        val signedJar = sign(verifierConfig.clientMetaData, responseEncryptionEphemeralKey, requestObject, walletNonce)
         return when (walletJarEncryptionRequirement) {
             EncryptionRequirement.NotRequired -> signedJar.map { it.serialize() }
             is EncryptionRequirement.Required -> signedJar.flatMap { encrypt(walletJarEncryptionRequirement, it) }.map { it.serialize() }
@@ -65,7 +65,7 @@ class CreateJarNimbus : CreateJar {
 
     internal fun sign(
         clientMetaData: ClientMetaData,
-        jarmEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
+        responseEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
         requestObject: RequestObject,
         walletNonce: String?,
     ): Either<Throwable, SignedJWT> = Either.catch {
@@ -80,7 +80,7 @@ class CreateJarNimbus : CreateJar {
             .type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
             .build()
         val responseMode = requestObject.responseMode
-        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, jarmEncryptionEphemeralKey), requestObject, walletNonce)
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, responseEncryptionEphemeralKey), requestObject, walletNonce)
 
         SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
     }
@@ -160,9 +160,10 @@ class CreateJarNimbus : CreateJar {
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
 
             if (OpenId4VPSpec.DIRECT_POST_JWT == responseMode) {
-                c.jarmOption.jwsAlg?.let { setCustomField("authorization_signed_response_alg", it) }
-                c.jarmOption.jweAlg?.let { setCustomField("authorization_encrypted_response_alg", it) }
-                c.jarmOption.encryptionMethod?.let { setCustomField("authorization_encrypted_response_enc", it) }
+                setCustomField(
+                    OpenId4VPSpec.ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED,
+                    listOf(c.responseEncryptionOption.encryptionMethod.name),
+                )
             }
 
             setCustomField(OpenId4VPSpec.VP_FORMATS, c.vpFormats.toJsonObject().toJackson())

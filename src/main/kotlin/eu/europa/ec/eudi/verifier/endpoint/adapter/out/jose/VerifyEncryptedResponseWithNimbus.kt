@@ -26,11 +26,11 @@ import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.proc.JWTProcessor
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
-import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseEncryptionOption
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyEncryptedResponse
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.slf4j.Logger
@@ -39,43 +39,30 @@ import org.slf4j.LoggerFactory
 /**
  * Decrypts an encrypted JWT and maps the JWT claimSet to an AuthorisationResponseTO
  */
-object VerifyJarmEncryptedJwtNimbus : VerifyJarmJwtSignature {
+class VerifyEncryptedResponseWithNimbus(
+    private val responseEncryptionOption: ResponseEncryptionOption,
+) : VerifyEncryptedResponse {
 
-    private val logger: Logger = LoggerFactory.getLogger(VerifyJarmEncryptedJwtNimbus::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(VerifyEncryptedResponseWithNimbus::class.java)
 
     override fun invoke(
-        jarmOption: JarmOption,
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
-        jarmJwt: Jwt,
+        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
+        encryptedResponse: Jwt,
         apv: Nonce,
     ): Either<Throwable, AuthorisationResponseTO> = Either.catch {
-        val processor = processor(jarmOption, ephemeralEcPrivateKey)
-        val jwt = JWTParser.parse(jarmJwt)
+        val processor = encryptedProcessor(responseEncryptionOption, ephemeralEcPrivateKey)
+        val jwt = JWTParser.parse(encryptedResponse)
         val claimSet = processor.process(jwt, null)
         claimSet.mapToDomain()
     }
 
-    private fun processor(
-        jarmOption: JarmOption,
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
-    ): JWTProcessor<SecurityContext> {
-        return when (jarmOption) {
-            is JarmOption.Signed -> error("Signed not supported yet")
-            is JarmOption.Encrypted -> {
-                require(ephemeralEcPrivateKey != null) { "Missing decryption key" }
-                encryptedProcessor(jarmOption, ephemeralEcPrivateKey)
-            }
-            is JarmOption.SignedAndEncrypted -> error("SignedAndEncrypted not supported yet")
-        }
-    }
-
     private fun encryptedProcessor(
-        encrypt: JarmOption.Encrypted,
+        encrypt: ResponseEncryptionOption,
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
     ): JWTProcessor<SecurityContext> = DefaultJWTProcessor<SecurityContext>().apply {
         jweKeySelector = JWEDecryptionKeySelector(
-            encrypt.nimbusJWSAlgorithm(),
-            encrypt.nimbusEnc(),
+            encrypt.algorithm,
+            encrypt.encryptionMethod,
             ImmutableJWKSet(JWKSet(ephemeralEcPrivateKey.jwk())),
         )
     }

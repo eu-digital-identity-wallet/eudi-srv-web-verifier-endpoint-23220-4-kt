@@ -23,19 +23,19 @@ import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
-import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseEncryptionOption
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.GenerateEphemeralEncryptionKeyPair
 import java.util.*
 
 /**
  * An implementation of [GenerateEphemeralEncryptionKeyPair] that uses Nimbus SDK
  */
-object GenerateEphemeralEncryptionKeyPairNimbus : GenerateEphemeralEncryptionKeyPair {
+class GenerateEphemeralEncryptionKeyPairNimbus(
+    private val responseEncryptionOption: ResponseEncryptionOption,
+) : GenerateEphemeralEncryptionKeyPair {
 
-    override fun invoke(
-        encryptedResponse: JarmOption.Encrypted,
-    ): Either<Throwable, EphemeralEncryptionKeyPairJWK> {
-        val alg = encryptedResponse.nimbusJWSAlgorithm()
+    override fun invoke(): Either<Throwable, EphemeralEncryptionKeyPairJWK> {
+        val alg = responseEncryptionOption.algorithm
         return createEphemeralEncryptionKey(alg).map { EphemeralEncryptionKeyPairJWK.from(keyPair = it) }
     }
 

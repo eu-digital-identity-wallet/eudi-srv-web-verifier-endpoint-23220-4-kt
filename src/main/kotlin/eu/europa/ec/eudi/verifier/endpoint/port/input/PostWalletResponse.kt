@@ -30,7 +30,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetr
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.Submitted
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
-import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyJarmJwtSignature
+import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyEncryptedResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
@@ -56,13 +56,12 @@ data class AuthorisationResponseTO(
 
 sealed interface AuthorisationResponse {
     data class DirectPost(val response: AuthorisationResponseTO) : AuthorisationResponse
-    data class DirectPostJwt(val jarm: Jwt) : AuthorisationResponse
+    data class DirectPostJwt(val encryptedResponse: Jwt) : AuthorisationResponse
 }
 
 private fun AuthorisationResponse.DirectPost.isErrorResponse(): Boolean = null != response.error
 
 sealed interface WalletResponseValidationError {
-    data object MissingState : WalletResponseValidationError
     data object PresentationNotFound : WalletResponseValidationError
 
     data class UnexpectedResponseMode(
@@ -77,11 +76,9 @@ sealed interface WalletResponseValidationError {
     data object MissingIdToken : WalletResponseValidationError
     data class InvalidVpToken(val message: String, val cause: Throwable? = null) : WalletResponseValidationError
     data object MissingVpToken : WalletResponseValidationError
-    data object MissingPresentationSubmission : WalletResponseValidationError
-    data object PresentationSubmissionMustNotBePresent : WalletResponseValidationError
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
     data object InvalidPresentationSubmission : WalletResponseValidationError
-    data class InvalidJarm(val error: BadJOSEException) : WalletResponseValidationError
+    data class InvalidEncryptedResponse(val error: BadJOSEException) : WalletResponseValidationError
 }
 
 private suspend fun AuthorisationResponseTO.toDomain(
@@ -245,7 +242,7 @@ fun interface PostWalletResponse {
 class PostWalletResponseLive(
     private val loadPresentationByRequestId: LoadPresentationByRequestId,
     private val storePresentation: StorePresentation,
-    private val verifyJarmJwtSignature: VerifyJarmJwtSignature,
+    private val verifyEncryptedResponse: VerifyEncryptedResponse,
     private val clock: Clock,
     private val verifierConfig: VerifierConfig,
     private val generateResponseCode: GenerateResponseCode,
@@ -324,14 +321,13 @@ class PostWalletResponseLive(
         when (walletResponse) {
             is AuthorisationResponse.DirectPost -> walletResponse.response
             is AuthorisationResponse.DirectPostJwt -> {
-                val response = verifyJarmJwtSignature(
-                    jarmOption = verifierConfig.clientMetaData.jarmOption,
-                    ephemeralEcPrivateKey = presentation.ephemeralEcPrivateKey,
-                    jarmJwt = walletResponse.jarm,
+                val response = verifyEncryptedResponse(
+                    ephemeralEcPrivateKey = checkNotNull(presentation.ephemeralEcPrivateKey),
+                    encryptedResponse = walletResponse.encryptedResponse,
                     apv = presentation.nonce,
                 ).getOrElse {
                     when (it) {
-                        is BadJOSEException -> raise(WalletResponseValidationError.InvalidJarm(it))
+                        is BadJOSEException -> raise(WalletResponseValidationError.InvalidEncryptedResponse(it))
                         else -> throw it
                     }
                 }

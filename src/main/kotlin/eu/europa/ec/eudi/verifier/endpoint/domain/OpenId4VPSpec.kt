@@ -71,4 +71,6 @@ object OpenId4VPSpec {
 
     const val DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED: Boolean = true
     val DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED: List<String> = listOf(CLIENT_ID_SCHEME_PRE_REGISTERED)
+
+    const val ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED = "encrypted_response_enc_values_supported"
 }

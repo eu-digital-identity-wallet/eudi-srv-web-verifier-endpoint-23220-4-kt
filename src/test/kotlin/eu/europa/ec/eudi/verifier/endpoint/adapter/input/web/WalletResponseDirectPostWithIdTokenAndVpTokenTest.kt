@@ -46,9 +46,8 @@ import kotlin.test.*
     properties = [
         "verifier.maxAge=PT6400M",
         "verifier.response.mode=DirectPost",
-        "verifier.clientMetadata.authorizationSignedResponseAlg=",
-        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
-        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
+        "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
+        "verifier.clientMetadata.responseEncryption.method=A128CBC-HS256",
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
@@ -175,8 +174,8 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
             RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         WalletApiClient.getRequestObject(client, transactionInitialized.requestUri!!)
 
-        // At this point we don't generate an actual JARM response
-        // The response will be rejected before JARM parsing/verification takes place
+        // At this point we don't generate an actual encrypted response
+        // The response will be rejected before encrypted parsing/verification takes place
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("response", "response")
 

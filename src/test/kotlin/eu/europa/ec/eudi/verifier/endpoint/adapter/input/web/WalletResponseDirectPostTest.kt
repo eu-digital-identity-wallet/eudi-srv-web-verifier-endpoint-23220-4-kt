@@ -31,16 +31,15 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 /**
- * when response mode is direct_post the ResponseObject must not contain JARM parameters
+ * when response mode is direct_post the RequestObject must not contain response encryption parameters
  */
 @VerifierApplicationTest
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
         "verifier.response.mode=DirectPost",
-        "verifier.clientMetadata.authorizationSignedResponseAlg=",
-        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
-        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
+        "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
+        "verifier.clientMetadata.responseEncryption.method=A128CBC-HS256",
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
@@ -68,7 +67,7 @@ internal class WalletResponseDirectPostTest {
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        assertNull(requestObjectJsonResponse.jarmOption())
+        assertNull(requestObjectJsonResponse.supportedEncryptionMethods())
         assertNull(requestObjectJsonResponse.ecKey(), "jwks must not contain EC key")
     }
 }

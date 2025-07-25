@@ -38,8 +38,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimb
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyJarmEncryptedJwtNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyEncryptedResponseWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl.FetchLOTLCertificatesDSS
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
@@ -104,7 +103,7 @@ internal fun beans(clock: Clock) = beans {
     // JOSE
     //
     bean { CreateJarNimbus() }
-    bean { VerifyJarmEncryptedJwtNimbus }
+    bean { VerifyEncryptedResponseWithNimbus(ref<VerifierConfig>().clientMetaData.responseEncryptionOption) }
 
     //
     // Persistence
@@ -193,7 +192,7 @@ internal fun beans(clock: Clock) = beans {
 
     bean { GenerateResponseCode.Random }
     bean { PostWalletResponseLive(ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref(), ref()) }
-    bean { GenerateEphemeralEncryptionKeyPairNimbus }
+    bean { GenerateEphemeralEncryptionKeyPairNimbus(ref<VerifierConfig>().clientMetaData.responseEncryptionOption) }
     bean { GetWalletResponseLive(ref(), ref(), ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
 
@@ -673,15 +672,11 @@ private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePas
 }
 
 private fun Environment.clientMetaData(): ClientMetaData {
-    val authorizationSignedResponseAlg =
-        getProperty("verifier.clientMetadata.authorizationSignedResponseAlg")
-    val authorizationEncryptedResponseAlg =
-        getProperty("verifier.clientMetadata.authorizationEncryptedResponseAlg")
-    val authorizationEncryptedResponseEnc =
-        getProperty("verifier.clientMetadata.authorizationEncryptedResponseEnc")
+    val responseEncryptionOptionAlgorithm =
+        getProperty("verifier.clientMetadata.responseEncryption.algorithm", JWEAlgorithm.ECDH_ES.name)
 
-    val defaultJarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, EncryptionMethod.A256GCM.name)
-    checkNotNull(defaultJarmOption)
+    val responseEncryptionOptionMethod =
+        getProperty("verifier.clientMetadata.responseEncryption.method", EncryptionMethod.A128GCM.name)
 
     val vpFormats = VpFormats(
         VpFormat.SdJwtVc(
@@ -711,11 +706,10 @@ private fun Environment.clientMetaData(): ClientMetaData {
         subjectSyntaxTypesSupported = listOf(
             "urn:ietf:params:oauth:jwk-thumbprint",
         ),
-        jarmOption = ParseJarmOptionNimbus.invoke(
-            authorizationSignedResponseAlg,
-            authorizationEncryptedResponseAlg,
-            authorizationEncryptedResponseEnc,
-        ) ?: defaultJarmOption,
+        responseEncryptionOption = ResponseEncryptionOption(
+            algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
+            encryptionMethod = EncryptionMethod.parse(responseEncryptionOptionMethod),
+        ),
         vpFormats = vpFormats,
     )
 }

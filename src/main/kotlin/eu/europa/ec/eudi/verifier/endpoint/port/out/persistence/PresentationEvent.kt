@@ -22,7 +22,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseAcceptedTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
-import kotlinx.serialization.json.JsonElement
 import java.time.Instant
 
 sealed interface PresentationEvent {
@@ -42,18 +41,6 @@ sealed interface PresentationEvent {
     ) : PresentationEvent
 
     data class FailedToRetrieveRequestObject(
-        override val transactionId: TransactionId,
-        override val timestamp: Instant,
-        val cause: String,
-    ) : PresentationEvent
-
-    data class JarmJwkSetRetrieved(
-        override val transactionId: TransactionId,
-        override val timestamp: Instant,
-        val jwkSet: JsonElement,
-    ) : PresentationEvent
-
-    data class FailedToRetrieveJarmJwkSet(
         override val transactionId: TransactionId,
         override val timestamp: Instant,
         val cause: String,
