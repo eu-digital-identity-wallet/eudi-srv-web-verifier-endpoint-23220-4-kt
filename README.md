@@ -597,14 +597,12 @@ Default value: `eudi-openid4vp`
 
 Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_ALGORITHM`  
 Description: Algorithm that verifier is using to encrypt the authorization response  
-Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
-https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms  
+Possible values: `ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A192KW`, `ECDH-ES+A256KW`  
 Default value: `ECDH-ES`
 
 Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_METHOD`  
 Description: Method that verifier is using to encrypt the authorization response  
-Possible values: Any `Encryption Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `enc`):
-https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms
+Possible values: `A128CBC_HS256`, `A192CBC_HS384`, `A256CBC_HS512`, `A128GCM`, `A192GCM`, `256GCM`, `XC20P`  
 Default value: `A128GCM`  
 
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_SDJWTVC_SDJWTALGORITHMS`  
