@@ -66,13 +66,13 @@ class CreateJarNimbusTest {
         )
 
         // responseMode is direct_post.jwt, so we need to generate an ephemeral key
-        val ecKeyGenerator = ECKeyGenerator(Curve.P_256)
+        val ecKey = ECKeyGenerator(Curve.P_256)
             .keyUse(KeyUse.ENCRYPTION)
             .algorithm(JWEAlgorithm.ECDH_ES)
             .keyID(UUID.randomUUID().toString())
-        val ecPublicKey = EphemeralEncryptionKeyPairJWK.from(ecKeyGenerator.generate())
+            .generate()
 
-        val jwt = createJar.sign(clientMetaData, ecPublicKey, requestObject, null)
+        val jwt = createJar.sign(clientMetaData, ResponseMode.DirectPostJwt(ecKey), requestObject, null)
             .getOrThrow()
             .serialize()
             .also { println(it) }
@@ -84,7 +84,7 @@ class CreateJarNimbusTest {
         assertTrue { claimSet.claims.containsKey("client_metadata") }
         val clientMetadata = OIDCClientMetadata.parse(JSONObject(claimSet.getJSONObjectClaim("client_metadata")))
         assertNull(clientMetadata.jwkSetURI)
-        assertEquals(JWKSet(ecPublicKey.jwk()).toPublicJWKSet(), clientMetadata.jwkSet)
+        assertEquals(JWKSet(ecKey).toPublicJWKSet(), clientMetadata.jwkSet)
     }
 
     private fun decode(jwt: String): Result<SignedJWT> {

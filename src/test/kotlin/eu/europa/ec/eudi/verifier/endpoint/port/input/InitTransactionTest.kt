@@ -165,7 +165,7 @@ class InitTransactionTest {
             assertNotNull(jwtSecuredAuthorizationRequest.request)
             val presentation = loadPresentationById(testTransactionId)
             val requestObjectRetrieved = assertIs<Presentation.RequestObjectRetrieved>(presentation)
-            assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.responseMode)
+            assertEquals(ResponseModeOption.DirectPost, requestObjectRetrieved.responseMode.option)
         }
 
     /**

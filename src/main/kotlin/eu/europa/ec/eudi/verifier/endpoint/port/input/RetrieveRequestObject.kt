@@ -240,7 +240,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
     ) {
-        val responseMode = presentation.responseMode.name()
+        val responseMode = presentation.responseMode.option.name()
         val supportedResponseModes = metadata.responseModesSupported ?: RFC8414.DEFAULT_RESPONSE_MODES_SUPPORTED
         ensure(responseMode in supportedResponseModes) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Mode '$responseMode'")
@@ -341,8 +341,8 @@ private val PresentationType.responseType: String
 
 private fun ResponseModeOption.name(): String =
     when (this) {
-        ResponseModeOption.DirectPost -> OpenId4VPSpec.DIRECT_POST
-        ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.DIRECT_POST_JWT
+        ResponseModeOption.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
+        ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
     }
 
 private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =

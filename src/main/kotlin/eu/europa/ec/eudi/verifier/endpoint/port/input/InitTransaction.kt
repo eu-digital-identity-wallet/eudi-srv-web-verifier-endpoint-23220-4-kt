@@ -96,10 +96,10 @@ enum class RequestUriMethodTO {
  */
 @Serializable
 enum class ResponseModeTO {
-    @SerialName(OpenId4VPSpec.DIRECT_POST)
+    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST)
     DirectPost,
 
-    @SerialName(OpenId4VPSpec.DIRECT_POST_JWT)
+    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT)
     DirectPostJwt,
 }
 
@@ -237,7 +237,6 @@ class InitTransactionLive(
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
-        val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
 
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
         val issuerChain = issuerChain(initTransactionTO).bind()
@@ -249,7 +248,6 @@ class InitTransactionLive(
             requestId = generateRequestId(),
             type = type,
             nonce = nonce,
-            responseEncryptionEphemeralKey = newEphemeralEcPublicKey,
             responseMode = responseMode,
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
@@ -275,12 +273,6 @@ class InitTransactionLive(
 
         response
     }
-
-    private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
-        when (responseModeOption) {
-            ResponseModeOption.DirectPost -> null
-            ResponseModeOption.DirectPostJwt -> generateEphemeralEncryptionKeyPair().getOrThrow()
-        }
 
     /**
      * Creates a request and depending on the case updates also the [requestedPresentation]
@@ -338,15 +330,23 @@ class InitTransactionLive(
     }
 
     /**
-     * Gets the [ResponseModeOption] for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.responseModeOption].
+     * Gets the [ResponseMode] for the provided [InitTransactionTO].
      */
-    private fun responseMode(initTransaction: InitTransactionTO): ResponseModeOption =
-        when (initTransaction.responseMode) {
+    private fun responseMode(initTransaction: InitTransactionTO): ResponseMode {
+        val responseModeOption = when (initTransaction.responseMode) {
             ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
             ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
             null -> verifierConfig.responseModeOption
         }
+
+        return when (responseModeOption) {
+            ResponseModeOption.DirectPost -> ResponseMode.DirectPost
+            ResponseModeOption.DirectPostJwt -> {
+                val responseEncryptionKey = generateEphemeralEncryptionKeyPair().getOrThrow()
+                ResponseMode.DirectPostJwt(responseEncryptionKey)
+            }
+        }
+    }
 
     /**
      * Gets the JAR [EmbedOption] for the provided [InitTransactionTO].
