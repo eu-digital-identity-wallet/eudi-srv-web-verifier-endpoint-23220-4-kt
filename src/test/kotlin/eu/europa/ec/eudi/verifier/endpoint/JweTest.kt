@@ -15,7 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import com.nimbusds.jose.*
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
+import com.nimbusds.jose.JWEEncrypter
+import com.nimbusds.jose.JWEHeader
 import com.nimbusds.jose.crypto.ECDHDecrypter
 import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jose.jwk.Curve
@@ -99,7 +102,7 @@ internal class JweTest {
 
         // (Verifier, on the response of the request of the wallet to get the request object)
         // sends public key, alg and enc from verifier backend to wallet
-        log.info("ecKey alg (authorization_signed_response_alg) : $alg")
+        log.info("ecKey alg : $alg")
         log.info("ecKey enc : $enc")
         log.info("ecKey ec public : $ecPublicKey")
 

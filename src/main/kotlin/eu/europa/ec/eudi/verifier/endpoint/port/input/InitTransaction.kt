@@ -17,21 +17,14 @@
 
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
-import arrow.core.Either
-import arrow.core.NonEmptyList
-import arrow.core.flatMap
-import arrow.core.getOrElse
+import arrow.core.*
 import arrow.core.raise.either
 import arrow.core.raise.ensure
-import arrow.core.toNonEmptyListOrNull
+import arrow.core.raise.ensureNotNull
 import com.eygraber.uri.Uri
 import com.eygraber.uri.toURI
-import com.nimbusds.jose.JWSAlgorithm
-import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -46,11 +39,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels.Companion.pixels
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.by
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.Required
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
+import kotlinx.serialization.*
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -107,10 +96,10 @@ enum class RequestUriMethodTO {
  */
 @Serializable
 enum class ResponseModeTO {
-    @SerialName(OpenId4VPSpec.DIRECT_POST)
+    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST)
     DirectPost,
 
-    @SerialName(OpenId4VPSpec.DIRECT_POST_JWT)
+    @SerialName(OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT)
     DirectPostJwt,
 }
 
@@ -130,13 +119,11 @@ enum class EmbedModeTO {
 data class InitTransactionTO(
     @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
     @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
-    @SerialName("presentation_definition") val presentationDefinition: PresentationDefinition? = null,
     @SerialName("dcql_query") val dcqlQuery: DCQL? = null,
     @SerialName("nonce") val nonce: String? = null,
     @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
     @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO? = null,
-    @SerialName("presentation_definition_mode") val presentationDefinitionMode: EmbedModeTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
@@ -149,7 +136,6 @@ data class InitTransactionTO(
  */
 enum class ValidationError {
     MissingPresentationQuery,
-    MultiplePresentationQueries,
     MissingNonce,
     InvalidWalletResponseTemplate,
     InvalidTransactionData,
@@ -234,7 +220,6 @@ class InitTransactionLive(
     private val clock: Clock,
     private val generateEphemeralEncryptionKeyPair: GenerateEphemeralEncryptionKeyPair,
     private val requestJarByReference: EmbedOption.ByReference<RequestId>,
-    private val presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
@@ -252,7 +237,6 @@ class InitTransactionLive(
 
         // if response mode is direct post jwt then generate ephemeral key
         val responseMode = responseMode(initTransactionTO)
-        val newEphemeralEcPublicKey = ephemeralEncryptionKeyPair(responseMode)
 
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
         val issuerChain = issuerChain(initTransactionTO).bind()
@@ -264,9 +248,7 @@ class InitTransactionLive(
             requestId = generateRequestId(),
             type = type,
             nonce = nonce,
-            jarmEncryptionEphemeralKey = newEphemeralEcPublicKey,
             responseMode = responseMode,
-            presentationDefinitionMode = presentationDefinitionMode(initTransactionTO),
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
             issuerChain = issuerChain,
@@ -291,17 +273,6 @@ class InitTransactionLive(
 
         response
     }
-
-    private fun ephemeralEncryptionKeyPair(responseModeOption: ResponseModeOption): EphemeralEncryptionKeyPairJWK? =
-        when (responseModeOption) {
-            ResponseModeOption.DirectPost -> null
-            ResponseModeOption.DirectPostJwt ->
-                when (val jarmOption = verifierConfig.clientMetaData.jarmOption) {
-                    is JarmOption.Signed -> error("Misconfiguration")
-                    is JarmOption.Encrypted -> jarmOption
-                    is JarmOption.SignedAndEncrypted -> jarmOption.encrypted
-                }.run { generateEphemeralEncryptionKeyPair(this).getOrThrow() }
-        }
 
     /**
      * Creates a request and depending on the case updates also the [requestedPresentation]
@@ -359,15 +330,23 @@ class InitTransactionLive(
     }
 
     /**
-     * Gets the [ResponseModeOption] for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.responseModeOption].
+     * Gets the [ResponseMode] for the provided [InitTransactionTO].
      */
-    private fun responseMode(initTransaction: InitTransactionTO): ResponseModeOption =
-        when (initTransaction.responseMode) {
+    private fun responseMode(initTransaction: InitTransactionTO): ResponseMode {
+        val responseModeOption = when (initTransaction.responseMode) {
             ResponseModeTO.DirectPost -> ResponseModeOption.DirectPost
             ResponseModeTO.DirectPostJwt -> ResponseModeOption.DirectPostJwt
             null -> verifierConfig.responseModeOption
         }
+
+        return when (responseModeOption) {
+            ResponseModeOption.DirectPost -> ResponseMode.DirectPost
+            ResponseModeOption.DirectPostJwt -> {
+                val responseEncryptionKey = generateEphemeralEncryptionKeyPair().getOrThrow()
+                ResponseMode.DirectPostJwt(responseEncryptionKey)
+            }
+        }
+    }
 
     /**
      * Gets the JAR [EmbedOption] for the provided [InitTransactionTO].
@@ -389,17 +368,6 @@ class InitTransactionLive(
             RequestUriMethodTO.Get -> RequestUriMethod.Get
             RequestUriMethodTO.Post -> RequestUriMethod.Post
             null -> verifierConfig.requestUriMethod
-        }
-
-    /**
-     * Gets the PresentationDefinition [EmbedOption] for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.presentationDefinitionEmbedOption].
-     */
-    private fun presentationDefinitionMode(initTransaction: InitTransactionTO): EmbedOption<RequestId> =
-        when (initTransaction.presentationDefinitionMode) {
-            EmbedModeTO.ByValue -> EmbedOption.ByValue
-            EmbedModeTO.ByReference -> presentationDefinitionByReference
-            null -> verifierConfig.presentationDefinitionEmbedOption
         }
 
     private suspend fun logTransactionInitialized(p: Presentation, request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO) {
@@ -431,40 +399,25 @@ internal fun InitTransactionTO.toDomain(
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
 
-    fun requiredPresentationQuery(): PresentationQuery =
-        when {
-            presentationDefinition != null && dcqlQuery == null -> {
-                ensure(vpFormats.supportsFormats(presentationDefinition)) { ValidationError.UnsupportedFormat }
-                PresentationQuery.ByPresentationDefinition(presentationDefinition)
-            }
-            presentationDefinition == null && dcqlQuery != null -> {
-                ensure(
-                    dcqlQuery.formatsAre(
-                        SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT,
-                        SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
-                        OpenId4VPSpec.FORMAT_MSO_MDOC,
-                    ),
-                ) {
-                    ValidationError.UnsupportedFormat
-                }
-
-                PresentationQuery.ByDigitalCredentialsQueryLanguage(dcqlQuery)
-            }
-            presentationDefinition == null && dcqlQuery == null -> raise(ValidationError.MissingPresentationQuery)
-            else -> raise(ValidationError.MultiplePresentationQueries)
-        }
+    fun requiredQuery(): DCQL {
+        ensureNotNull(dcqlQuery) { ValidationError.MissingPresentationQuery }
+        ensure(
+            dcqlQuery.formatsAre(
+                SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
+                OpenId4VPSpec.FORMAT_MSO_MDOC,
+            ),
+        ) { ValidationError.UnsupportedFormat }
+        return dcqlQuery
+    }
 
     fun requiredNonce(): Nonce {
         ensure(!nonce.isNullOrBlank()) { ValidationError.MissingNonce }
         return Nonce(nonce)
     }
 
-    fun optionalTransactionData(query: PresentationQuery): NonEmptyList<TransactionData>? {
+    fun optionalTransactionData(query: DCQL): NonEmptyList<TransactionData>? {
         val credentialIds: List<String> by lazy {
-            when (query) {
-                is PresentationQuery.ByPresentationDefinition -> query.presentationDefinition.inputDescriptors.map { it.id.value }
-                is PresentationQuery.ByDigitalCredentialsQueryLanguage -> query.query.credentials.map { it.id.value }
-            }
+            query.credentials.map { it.id.value }
         }
 
         val hashAlgorithms: JsonArray by lazy {
@@ -494,13 +447,13 @@ internal fun InitTransactionTO.toDomain(
             PresentationType.IdTokenRequest(requiredIdTokenType())
 
         PresentationTypeTO.VpTokenRequest -> {
-            val query = requiredPresentationQuery()
+            val query = requiredQuery()
             PresentationType.VpTokenRequest(query, optionalTransactionData(query))
         }
 
         PresentationTypeTO.IdAndVpTokenRequest -> {
             val idTokenTypes = requiredIdTokenType()
-            val query = requiredPresentationQuery()
+            val query = requiredQuery()
             PresentationType.IdAndVpToken(idTokenTypes, query, optionalTransactionData(query))
         }
     }
@@ -510,41 +463,12 @@ internal fun InitTransactionTO.toDomain(
     nonce to presentationType
 }
 
-private fun VpFormats.supportsFormats(presentationDefinition: PresentationDefinition): Boolean =
-    presentationDefinition.inputDescriptors.all { inputDescriptor ->
-        val format = inputDescriptor.format ?: presentationDefinition.format
-        format?.let {
-            it.jsonObject().all { (identifier, serializedProperties) ->
-                when (identifier) {
-                    SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT, SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
-                        serializedProperties.decodeAs<SdJwtVcFormatTO>()
-                            .map { properties -> sdJwtVc.supports(properties.sdJwtAlgorithms, properties.kbJwtAlgorithms) }
-                            .getOrElse { false }
-
-                    OpenId4VPSpec.FORMAT_MSO_MDOC ->
-                        serializedProperties.decodeAs<MsoMdocFormatTO>()
-                            .map { properties -> msoMdoc.supports(properties.algorithms) }
-                            .getOrElse { false }
-
-                    else -> false
-                }
-            }
-        } ?: true
-    }
-
 private fun DCQL.formatsAre(vararg supportedFormats: String): Boolean = credentials.all { it.format.value in supportedFormats }
 
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
     IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
-
-private fun VpFormat.SdJwtVc.supports(sdJwtAlgorithms: List<JWSAlgorithm>, kbJwtAlgorithms: List<JWSAlgorithm>): Boolean =
-    this.sdJwtAlgorithms.intersect(sdJwtAlgorithms.toSet()).isNotEmpty() &&
-        this.kbJwtAlgorithms.intersect(kbJwtAlgorithms.toSet()).isNotEmpty()
-
-private fun VpFormat.MsoMdoc.supports(algorithms: List<JWSAlgorithm>): Boolean =
-    this.algorithms.intersect(algorithms.toSet()).isNotEmpty()
 
 private fun createAuthorizationRequestUri(
     scheme: String,

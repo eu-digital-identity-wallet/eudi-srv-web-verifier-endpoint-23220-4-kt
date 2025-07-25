@@ -22,8 +22,7 @@ object OpenId4VPSpec {
     const val VERSION: String = "draft 24"
 
     const val RESPONSE_URI: String = "response_uri"
-    const val PRESENTATION_DEFINITION: String = "presentation_definition"
-    const val PRESENTATION_DEFINITION_URI: String = "presentation_definition_uri"
+
     const val DCQL_QUERY: String = "dcql_query"
     const val TRANSACTION_DATA: String = "transaction_data"
 
@@ -34,8 +33,8 @@ object OpenId4VPSpec {
     const val REQUEST_URI_METHOD_GET: String = "get"
     const val REQUEST_URI_METHOD_POST: String = "post"
 
-    const val DIRECT_POST: String = "direct_post"
-    const val DIRECT_POST_JWT: String = "direct_post.jwt"
+    const val RESPONSE_MODE_DIRECT_POST: String = "direct_post"
+    const val RESPONSE_MODE_DIRECT_POST_JWT: String = "direct_post.jwt"
 
     const val VP_FORMATS: String = "vp_formats"
 
@@ -68,8 +67,10 @@ object OpenId4VPSpec {
 
     const val CLIENT_ID_SCHEME_PRE_REGISTERED: String = "pre-registered"
     const val CLIENT_ID_SCHEME_X509_SAN_DNS: String = "x509_san_dns"
-    const val CLIENT_ID_SCHEME_X509_SAN_URI: String = "x509_san_uri"
+    const val CLIENT_ID_SCHEME_X509_HASH: String = "x509_hash"
 
     const val DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED: Boolean = true
     val DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED: List<String> = listOf(CLIENT_ID_SCHEME_PRE_REGISTERED)
+
+    const val ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED = "encrypted_response_enc_values_supported"
 }

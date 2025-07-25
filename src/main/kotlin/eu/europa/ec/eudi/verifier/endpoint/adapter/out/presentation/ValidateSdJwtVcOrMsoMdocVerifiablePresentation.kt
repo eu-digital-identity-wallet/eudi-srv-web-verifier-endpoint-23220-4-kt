@@ -25,7 +25,6 @@ import arrow.core.raise.ensureNotNull
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
@@ -62,7 +61,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         issuerChain: X5CShouldBe.Trusted?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
-            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
+            Format.SdJwtVc -> {
                 require(vpFormat is VpFormat.SdJwtVc)
                 val validator = sdJwtVcValidatorFactory(issuerChain)
                 validator.validateSdJwtVcVerifiablePresentation(
