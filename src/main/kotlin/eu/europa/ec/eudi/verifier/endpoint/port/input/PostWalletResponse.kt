@@ -56,7 +56,7 @@ data class AuthorisationResponseTO(
 
 sealed interface AuthorisationResponse {
     data class DirectPost(val response: AuthorisationResponseTO) : AuthorisationResponse
-    data class DirectPostJwt(val responseEncryption: Jwt) : AuthorisationResponse
+    data class DirectPostJwt(val encryptedResponse: Jwt) : AuthorisationResponse
 }
 
 private fun AuthorisationResponse.DirectPost.isErrorResponse(): Boolean = null != response.error
@@ -326,7 +326,7 @@ class PostWalletResponseLive(
             is AuthorisationResponse.DirectPostJwt -> {
                 val response = verifyEncryptedResponse(
                     ephemeralEcPrivateKey = checkNotNull(presentation.ephemeralEcPrivateKey),
-                    encryptedJwt = walletResponse.responseEncryption,
+                    encryptedResponse = walletResponse.encryptedResponse,
                     apv = presentation.nonce,
                 ).getOrElse {
                     when (it) {

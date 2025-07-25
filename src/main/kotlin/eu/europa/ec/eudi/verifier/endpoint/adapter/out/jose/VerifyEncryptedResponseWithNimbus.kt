@@ -47,11 +47,11 @@ class VerifyEncryptedResponseWithNimbus(
 
     override fun invoke(
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
-        encryptedJwt: Jwt,
+        encryptedResponse: Jwt,
         apv: Nonce,
     ): Either<Throwable, AuthorisationResponseTO> = Either.catch {
         val processor = encryptedProcessor(responseEncryptionOption, ephemeralEcPrivateKey)
-        val jwt = JWTParser.parse(encryptedJwt)
+        val jwt = JWTParser.parse(encryptedResponse)
         val claimSet = processor.process(jwt, null)
         claimSet.mapToDomain()
     }

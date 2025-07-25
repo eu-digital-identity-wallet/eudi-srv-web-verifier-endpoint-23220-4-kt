@@ -160,7 +160,10 @@ class CreateJarNimbus : CreateJar {
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
 
             if (OpenId4VPSpec.DIRECT_POST_JWT == responseMode) {
-                setCustomField("encrypted_response_enc_values_supported", listOf(c.responseEncryptionOption.encryptionMethod.name))
+                setCustomField(
+                    OpenId4VPSpec.ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED,
+                    listOf(c.responseEncryptionOption.encryptionMethod.name),
+                )
             }
 
             setCustomField(OpenId4VPSpec.VP_FORMATS, c.vpFormats.toJsonObject().toJackson())

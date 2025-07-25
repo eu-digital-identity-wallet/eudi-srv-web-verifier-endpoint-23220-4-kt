@@ -23,6 +23,7 @@ import com.nimbusds.jose.jwk.KeyType
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -78,7 +79,11 @@ fun JsonObject.ecKey(): ECKey? = fromClientMetaData { clientMetaData ->
 
 fun JsonObject.supportedEncryptionMethods(): List<EncryptionMethod>? =
     fromClientMetaData { clientMetadata ->
-        clientMetadata["encrypted_response_enc_values_supported"]?.jsonArray?.map { EncryptionMethod.parse(it.jsonPrimitive.content) }
+        clientMetadata[OpenId4VPSpec.ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED]?.jsonArray?.map {
+            EncryptionMethod.parse(
+                it.jsonPrimitive.content,
+            )
+        }
     }
 
 fun <A> JsonObject.fromClientMetaData(extract: (JsonObject) -> A): A? {

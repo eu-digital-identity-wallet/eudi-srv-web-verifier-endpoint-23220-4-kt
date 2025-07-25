@@ -127,7 +127,7 @@ data class ClientMetaData(
     val idTokenEncryptedResponseAlg: String,
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
-    val responseEncryptionOption: ResponseEncryptionOption, // responseEncryptionOption
+    val responseEncryptionOption: ResponseEncryptionOption,
     val vpFormats: VpFormats,
 )
 

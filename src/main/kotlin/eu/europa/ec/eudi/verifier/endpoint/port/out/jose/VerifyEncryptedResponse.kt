@@ -24,7 +24,7 @@ fun interface VerifyEncryptedResponse {
 
     operator fun invoke(
         ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
-        encryptedJwt: Jwt,
+        encryptedResponse: Jwt,
         apv: Nonce,
     ): Either<Throwable, AuthorisationResponseTO>
 }

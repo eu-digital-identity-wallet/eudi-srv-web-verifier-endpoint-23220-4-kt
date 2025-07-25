@@ -49,7 +49,7 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import kotlin.test.*
 
-@VerifierApplicationTest([WalletResponseDirectPostJwtTest.Config::class])
+@VerifierApplicationTest([WalletResponseDirectPostJwtValidationsDisabledTest.Config::class])
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -61,9 +61,9 @@ import kotlin.test.*
 )
 @TestMethodOrder(OrderAnnotation::class)
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString()) // used for debugging only
-internal class WalletResponseDirectPostJwtTest {
+internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 
-    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostJwtTest::class.java)
+    private val log: Logger = LoggerFactory.getLogger(WalletResponseDirectPostJwtValidationsDisabledTest::class.java)
 
     @Autowired
     private lateinit var client: WebTestClient
@@ -113,6 +113,7 @@ internal class WalletResponseDirectPostJwtTest {
 
             val ecKey = requestObjectJsonResponse.ecKey()
             assertNotNull(ecKey)
+            assertNotNull(ecKey.algorithm)
             val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
             assertEquals(config.clientMetaData.responseEncryptionOption.algorithm, supportedAlgorithm)
 
@@ -257,6 +258,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
 
         val ecKey = requestObjectJsonResponse.ecKey()
         assertNotNull(ecKey)
+        assertNotNull(ecKey.algorithm)
         val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
 
         val requestId = RequestId(transactionDetails.requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
@@ -331,6 +333,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
 
         val ecKey = requestObjectJsonResponse.ecKey()
         assertNotNull(ecKey)
+        assertNotNull(ecKey.algorithm)
         val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
 
         val requestId = RequestId(transactionDetails.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
