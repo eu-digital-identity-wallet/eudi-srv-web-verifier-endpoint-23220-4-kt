@@ -63,6 +63,26 @@ enum class ResponseModeOption {
     DirectPost,
     DirectPostJwt,
 }
+
+sealed interface ResponseMode {
+
+    data object DirectPost : ResponseMode
+
+    data class DirectPostJwt(
+        val ephemeralResponseEncryptionKey: JWK,
+    ) : ResponseMode {
+        init {
+            require(ephemeralResponseEncryptionKey.isPrivate)
+        }
+    }
+}
+
+val ResponseMode.option: ResponseModeOption
+    get() = when (this) {
+        ResponseMode.DirectPost -> ResponseModeOption.DirectPost
+        is ResponseMode.DirectPostJwt -> ResponseModeOption.DirectPostJwt
+    }
+
 data class ResponseEncryptionOption(
     val algorithm: JWEAlgorithm,
     val encryptionMethod: EncryptionMethod,

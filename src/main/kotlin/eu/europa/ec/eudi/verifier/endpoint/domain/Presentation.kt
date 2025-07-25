@@ -145,11 +145,6 @@ sealed interface WalletResponse {
 }
 
 @JvmInline
-value class EphemeralEncryptionKeyPairJWK(val value: String) {
-    companion object
-}
-
-@JvmInline
 value class ResponseCode(val value: String)
 
 sealed interface GetWalletResponseMethod {
@@ -175,8 +170,7 @@ sealed interface Presentation {
         val requestId: RequestId,
         val requestUriMethod: RequestUriMethod,
         val nonce: Nonce,
-        val responseEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
-        val responseMode: ResponseModeOption,
+        val responseMode: ResponseMode,
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
     ) : Presentation
@@ -194,8 +188,7 @@ sealed interface Presentation {
         val requestId: RequestId,
         val requestObjectRetrievedAt: Instant,
         val nonce: Nonce,
-        val ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK?,
-        val responseMode: ResponseModeOption,
+        val responseMode: ResponseMode,
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
     ) : Presentation {
@@ -213,7 +206,6 @@ sealed interface Presentation {
                         requested.requestId,
                         at,
                         requested.nonce,
-                        requested.responseEncryptionEphemeralKey,
                         requested.responseMode,
                         requested.getWalletResponseMethod,
                         requested.issuerChain,

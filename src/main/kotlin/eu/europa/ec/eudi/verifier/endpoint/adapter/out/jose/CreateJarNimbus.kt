@@ -29,7 +29,6 @@ import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.oauth2.sdk.AuthorizationRequest
-import com.nimbusds.oauth2.sdk.ResponseMode
 import com.nimbusds.oauth2.sdk.ResponseType
 import com.nimbusds.oauth2.sdk.Scope
 import com.nimbusds.oauth2.sdk.id.ClientID
@@ -41,6 +40,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import java.time.Clock
 import java.util.*
+import com.nimbusds.oauth2.sdk.ResponseMode as NimbusResponseMode
 
 /**
  * An implementation of [CreateJar] that uses Nimbus SDK
@@ -55,8 +55,7 @@ class CreateJarNimbus : CreateJar {
         walletJarEncryptionRequirement: EncryptionRequirement,
     ): Either<Throwable, Jwt> {
         val requestObject = requestObjectFromDomain(verifierConfig, clock, presentation)
-        val responseEncryptionEphemeralKey = presentation.responseEncryptionEphemeralKey
-        val signedJar = sign(verifierConfig.clientMetaData, responseEncryptionEphemeralKey, requestObject, walletNonce)
+        val signedJar = sign(verifierConfig.clientMetaData, presentation.responseMode, requestObject, walletNonce)
         return when (walletJarEncryptionRequirement) {
             EncryptionRequirement.NotRequired -> signedJar.map { it.serialize() }
             is EncryptionRequirement.Required -> signedJar.flatMap { encrypt(walletJarEncryptionRequirement, it) }.map { it.serialize() }
@@ -65,7 +64,7 @@ class CreateJarNimbus : CreateJar {
 
     internal fun sign(
         clientMetaData: ClientMetaData,
-        responseEncryptionEphemeralKey: EphemeralEncryptionKeyPairJWK?,
+        responseMode: ResponseMode,
         requestObject: RequestObject,
         walletNonce: String?,
     ): Either<Throwable, SignedJWT> = Either.catch {
@@ -79,8 +78,7 @@ class CreateJarNimbus : CreateJar {
             }
             .type(JOSEObjectType(RFC9101.REQUEST_OBJECT_MEDIA_SUBTYPE))
             .build()
-        val responseMode = requestObject.responseMode
-        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode, responseEncryptionEphemeralKey), requestObject, walletNonce)
+        val claimSet = asClaimSet(toNimbus(clientMetaData, responseMode), requestObject, walletNonce)
 
         SignedJWT(header, claimSet).apply { sign(DefaultJWSSignerFactory().createJWSSigner(key, algorithm)) }
     }
@@ -117,7 +115,7 @@ class CreateJarNimbus : CreateJar {
         val authorizationRequestClaims = with(AuthorizationRequest.Builder(responseType, clientId)) {
             state(state)
             scope(scope)
-            responseMode(ResponseMode(r.responseMode))
+            responseMode(NimbusResponseMode(r.responseMode))
             build()
         }.toJWTClaimsSet()
 
@@ -145,21 +143,16 @@ class CreateJarNimbus : CreateJar {
 
     private fun toNimbus(
         c: ClientMetaData,
-        responseMode: String,
-        ecPublicKey: EphemeralEncryptionKeyPairJWK?,
+        responseMode: ResponseMode,
     ): OIDCClientMetadata {
-        val jwkSet = if (ecPublicKey != null) {
-            JWKSet(listOf(ecPublicKey.jwk())).toPublicJWKSet()
-        } else null
-
         return OIDCClientMetadata().apply {
             idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
             idTokenJWEAlg = JWEAlgorithm.parse(c.idTokenEncryptedResponseAlg)
             idTokenJWEEnc = EncryptionMethod.parse(c.idTokenEncryptedResponseEnc)
-            jwkSet?.let { this.jwkSet = it }
             setCustomField("subject_syntax_types_supported", c.subjectSyntaxTypesSupported)
 
-            if (OpenId4VPSpec.DIRECT_POST_JWT == responseMode) {
+            if (responseMode is ResponseMode.DirectPostJwt) {
+                jwkSet = JWKSet(listOf(responseMode.ephemeralResponseEncryptionKey)).toPublicJWKSet()
                 setCustomField(
                     OpenId4VPSpec.ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED,
                     listOf(c.responseEncryptionOption.encryptionMethod.name),

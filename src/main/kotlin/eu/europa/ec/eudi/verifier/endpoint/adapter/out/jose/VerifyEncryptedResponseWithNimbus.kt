@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import arrow.core.Either
+import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.proc.JWEDecryptionKeySelector
@@ -25,7 +26,6 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.proc.JWTProcessor
-import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseEncryptionOption
@@ -46,11 +46,11 @@ class VerifyEncryptedResponseWithNimbus(
     private val logger: Logger = LoggerFactory.getLogger(VerifyEncryptedResponseWithNimbus::class.java)
 
     override fun invoke(
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
+        ephemeralResponseEncryptionKey: JWK,
         encryptedResponse: Jwt,
         apv: Nonce,
     ): Either<Throwable, AuthorisationResponseTO> = Either.catch {
-        val processor = encryptedProcessor(responseEncryptionOption, ephemeralEcPrivateKey)
+        val processor = encryptedProcessor(responseEncryptionOption, ephemeralResponseEncryptionKey)
         val jwt = JWTParser.parse(encryptedResponse)
         val claimSet = processor.process(jwt, null)
         claimSet.mapToDomain()
@@ -58,12 +58,12 @@ class VerifyEncryptedResponseWithNimbus(
 
     private fun encryptedProcessor(
         encrypt: ResponseEncryptionOption,
-        ephemeralEcPrivateKey: EphemeralEncryptionKeyPairJWK,
+        ephemeralResponseEncryptionKey: JWK,
     ): JWTProcessor<SecurityContext> = DefaultJWTProcessor<SecurityContext>().apply {
         jweKeySelector = JWEDecryptionKeySelector(
             encrypt.algorithm,
             encrypt.encryptionMethod,
-            ImmutableJWKSet(JWKSet(ephemeralEcPrivateKey.jwk())),
+            ImmutableJWKSet(JWKSet(ephemeralResponseEncryptionKey)),
         )
     }
 

@@ -272,19 +272,6 @@ class PostWalletResponseLive(
                 WalletResponseValidationError.PresentationNotInExpectedState
             }
 
-            // Verify the AuthorisationResponse matches what is expected for the Presentation
-            val responseMode = walletResponse.responseMode()
-            ensure(
-                responseMode == presentation.responseMode ||
-                    (walletResponse is AuthorisationResponse.DirectPost && walletResponse.isErrorResponse()),
-            ) {
-                WalletResponseValidationError.UnexpectedResponseMode(
-                    presentation.requestId,
-                    expected = presentation.responseMode,
-                    actual = responseMode,
-                )
-            }
-
             val responseObject = responseObject(walletResponse, presentation).bind()
 
             // Verify response `state` is RequestId
@@ -318,20 +305,43 @@ class PostWalletResponseLive(
         walletResponse: AuthorisationResponse,
         presentation: RequestObjectRetrieved,
     ): Either<WalletResponseValidationError, AuthorisationResponseTO> = either {
-        when (walletResponse) {
-            is AuthorisationResponse.DirectPost -> walletResponse.response
-            is AuthorisationResponse.DirectPostJwt -> {
-                val response = verifyEncryptedResponse(
-                    ephemeralEcPrivateKey = checkNotNull(presentation.ephemeralEcPrivateKey),
-                    encryptedResponse = walletResponse.encryptedResponse,
-                    apv = presentation.nonce,
-                ).getOrElse {
-                    when (it) {
-                        is BadJOSEException -> raise(WalletResponseValidationError.InvalidEncryptedResponse(it))
-                        else -> throw it
-                    }
+        when (val responseMode = presentation.responseMode) {
+            ResponseMode.DirectPost -> {
+                ensure(walletResponse is AuthorisationResponse.DirectPost) {
+                    WalletResponseValidationError.UnexpectedResponseMode(
+                        presentation.requestId,
+                        expected = ResponseModeOption.DirectPost,
+                        actual = ResponseModeOption.DirectPostJwt,
+                    )
                 }
-                response
+                walletResponse.response
+            }
+
+            is ResponseMode.DirectPostJwt -> {
+                when (walletResponse) {
+                    is AuthorisationResponse.DirectPost -> {
+                        ensure(walletResponse.isErrorResponse()) {
+                            WalletResponseValidationError.UnexpectedResponseMode(
+                                presentation.requestId,
+                                expected = ResponseModeOption.DirectPostJwt,
+                                actual = ResponseModeOption.DirectPost,
+                            )
+                        }
+                        walletResponse.response
+                    }
+
+                    is AuthorisationResponse.DirectPostJwt ->
+                        verifyEncryptedResponse(
+                            ephemeralResponseEncryptionKey = responseMode.ephemeralResponseEncryptionKey,
+                            encryptedResponse = walletResponse.encryptedResponse,
+                            apv = presentation.nonce,
+                        ).getOrElse {
+                            when (it) {
+                                is BadJOSEException -> raise(WalletResponseValidationError.InvalidEncryptedResponse(it))
+                                else -> throw it
+                            }
+                        }
+                }
             }
         }
     }
@@ -369,7 +379,7 @@ class PostWalletResponseLive(
 /**
  * Gets the [ResponseModeOption] that corresponds to the receiver [AuthorisationResponse].
  */
-private fun AuthorisationResponse.responseMode(): ResponseModeOption = when (this) {
+private fun AuthorisationResponse.responseModeOption(): ResponseModeOption = when (this) {
     is AuthorisationResponse.DirectPost -> ResponseModeOption.DirectPost
     is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
 }
