@@ -231,7 +231,6 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
     properties = [
         "verifier.maxAge=PT6400M",
         "verifier.response.mode=DirectPostJwt",
-        "verifier.clientMetadata.authorizationSignedResponseAlg=",
         "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
         "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",
