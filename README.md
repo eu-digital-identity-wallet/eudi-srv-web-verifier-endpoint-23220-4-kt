@@ -596,12 +596,12 @@ Example: `eudi-openid4vp`
 Default value: `eudi-openid4vp`
 
 Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_ALGORITHM`  
-Description: Algorithm that verifier is advertising for authorization response encryption    
+Description: Algorithm that verifier is advertising and supports for authorization response encryption    
 Possible values: `ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A192KW`, `ECDH-ES+A256KW`  
 Default value: `ECDH-ES`
 
 Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_METHOD`  
-Description: Method that verifier is advertising for authorization response encryption   
+Description: Method that verifier is advertising and supports for authorization response encryption   
 Possible values: `A128CBC-HS256`, `A192CBC-HS384`, `A256CBC-HS512`, `A128GCM`, `A192GCM`, `256GCM`, `XC20P`  
 Default value: `A128GCM`  
 
