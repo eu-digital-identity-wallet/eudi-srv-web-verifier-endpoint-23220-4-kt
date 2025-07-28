@@ -6,6 +6,9 @@
       {
         "id": "employment_input",
         "format": "dc+sd-jwt",
+        "meta": {
+          "vct_values": ["emp_card"]
+        },
         "claims": [
           {
             "id": "dateOfBirth",
@@ -32,6 +35,9 @@
       {
         "id": "employment_input_2",
         "format": "dc+sd-jwt",
+        "meta": {
+          "vct_values": ["emp_card"]
+        },
         "claims": [
           {
             "id": "dateOfBirth",
@@ -57,7 +63,10 @@
       },
       {
         "id": "employment_input_3",
-        "format": "dc+sd-jwt"
+        "format": "dc+sd-jwt",
+        "meta": {
+          "vct_values": ["emp_card"]
+        }
       }
     ],
     "credential_sets": [
@@ -67,16 +76,14 @@
             "employment_input",
             "employment_input_2"
           ]
-        ],
-        "purpose": "We can only allow licensed Washington State business representatives into the WA Business Conference"
+        ]
       },
       {
         "options": [
           [
             "employment_input_3"
           ]
-        ],
-        "purpose": "We can only allow licensed Washington State business representatives into the WA Business Conference"
+        ]
       }
     ]
   },

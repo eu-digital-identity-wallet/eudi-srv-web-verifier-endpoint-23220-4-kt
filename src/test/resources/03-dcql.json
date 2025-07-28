@@ -6,6 +6,9 @@
       {
         "id": "employment_input",
         "format": "dc+sd-jwt",
+        "meta": {
+          "vct_values": ["emp_card"]
+        },
         "claims": [
           { "id": "claim1","path": ["credentialSubject","dateOfBirth"]},
           { "id": "claim2","path": ["credentialSubject","dob"]},
@@ -17,6 +20,9 @@
       {
         "id": "employment_input_2",
         "format": "dc+sd-jwt",
+        "meta": {
+          "vct_values": ["emp_card"]
+        },
         "claims": [
           { "id": "claim1","path": ["credentialSubject","dateOfBirth"]},
           { "id": "claim2","path": ["credentialSubject","dob"]},

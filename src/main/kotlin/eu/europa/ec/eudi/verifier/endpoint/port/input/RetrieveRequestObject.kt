@@ -370,7 +370,7 @@ private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
     }
 
 private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =
-    credentials.mapNotNull {
+    credentials.value.mapNotNull {
         when (it.format.value) {
             SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> supported.sdJwtVc
             OpenId4VPSpec.FORMAT_MSO_MDOC -> supported.msoMdoc
