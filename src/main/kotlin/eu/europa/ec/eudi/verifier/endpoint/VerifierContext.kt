@@ -196,8 +196,6 @@ internal fun beans(clock: Clock) = beans {
     bean { GetWalletResponseLive(ref(), ref(), ref()) }
     bean { GetPresentationEventsLive(ref(), ref()) }
 
-    bean(::GetClientMetadataLive)
-
     if (env.getProperty("verifier.validation.sdJwtVc.statusCheck.enabled", true)) {
         log.info("Enabling Status List Token validations")
         bean<StatusListTokenValidator> {
@@ -360,7 +358,6 @@ internal fun beans(clock: Clock) = beans {
             ref<VerifierConfig>().verifierId.jarSigning.key,
         )
         val verifierApi = VerifierApi(
-            ref(),
             ref(),
             ref(),
             ref(),
