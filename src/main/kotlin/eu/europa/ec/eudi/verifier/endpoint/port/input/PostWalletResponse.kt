@@ -132,7 +132,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                 Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
             }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 
-            val credentialQueries = query.credentials.associateBy { it.id }
+            val credentialQueries = query.credentials.value.associateBy { it.id }
             return vpToken.mapValues { (queryId, value) ->
                 val format = credentialQueries[queryId]?.format
                     ?: raise(
@@ -385,7 +385,9 @@ private fun AuthorisationResponse.responseModeOption(): ResponseModeOption = whe
 }
 
 private fun DCQL.satisfiedBy(response: Map<QueryId, List<VerifiablePresentation>>): Boolean =
-    credentialSets?.filter { credentialSet -> credentialSet.required ?: true }
-        ?.map { credentialSet -> credentialSet.options.any { option -> response.keys.containsAll(option) } }
+    credentialSets
+        ?.value
+        ?.filter { credentialSet -> credentialSet.requiredOrDefault }
+        ?.map { credentialSet -> credentialSet.options.any { option -> response.keys.containsAll(option.value) } }
         ?.fold(true, Boolean::and)
-        ?: response.keys.containsAll(credentials.map { it.id })
+        ?: response.keys.containsAll(credentials.ids)

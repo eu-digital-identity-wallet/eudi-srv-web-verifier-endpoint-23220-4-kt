@@ -417,7 +417,7 @@ internal fun InitTransactionTO.toDomain(
 
     fun optionalTransactionData(query: DCQL): NonEmptyList<TransactionData>? {
         val credentialIds: List<String> by lazy {
-            query.credentials.map { it.id.value }
+            query.credentials.ids.map { it.value }
         }
 
         val hashAlgorithms: JsonArray by lazy {
@@ -463,7 +463,7 @@ internal fun InitTransactionTO.toDomain(
     nonce to presentationType
 }
 
-private fun DCQL.formatsAre(vararg supportedFormats: String): Boolean = credentials.all { it.format.value in supportedFormats }
+private fun DCQL.formatsAre(vararg supportedFormats: String): Boolean = credentials.value.all { it.format.value in supportedFormats }
 
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
