@@ -15,7 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-import kotlinx.serialization.encodeToString
+import arrow.core.nonEmptyListOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -50,11 +50,11 @@ class QesAuthorizationSerializationTest {
         // Create a QesAuthorization instance
         val qesAuthorization = QesAuthorization(
             type = QesAuthorization.TYPE,
-            credentialIds = listOf("607510a9-c957-4095-906d-f99fd006c4ae"),
-            hashAlgorithms = listOf("SHA-256"),
+            credentialIds = nonEmptyListOf("607510a9-c957-4095-906d-f99fd006c4ae"),
+            hashAlgorithms = nonEmptyListOf("SHA-256"),
             signatureQualifier = SignatureQualifier.EuEidasQes,
             credentialId = null,
-            documentDigests = listOf(documentDigest),
+            documentDigests = nonEmptyListOf(documentDigest),
             processId = null,
         )
 
@@ -105,11 +105,11 @@ class QesAuthorizationSerializationTest {
         // Create a QesAuthorization instance
         val qesAuthorization = QesAuthorization(
             type = QesAuthorization.TYPE,
-            credentialIds = listOf("607510a9-c957-4095-906d-f99fd006c4ae"),
-            hashAlgorithms = listOf("SHA-256"),
+            credentialIds = nonEmptyListOf("607510a9-c957-4095-906d-f99fd006c4ae"),
+            hashAlgorithms = nonEmptyListOf("SHA-256"),
             signatureQualifier = SignatureQualifier.EuEidasQes,
             credentialId = null,
-            documentDigests = listOf(documentDigest),
+            documentDigests = nonEmptyListOf(documentDigest),
             processId = null,
         )
 
