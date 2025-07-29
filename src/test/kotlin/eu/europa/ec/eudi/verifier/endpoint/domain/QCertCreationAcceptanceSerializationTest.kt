@@ -56,7 +56,7 @@ class QCertCreationAcceptanceSerializationTest {
 
         // Verify JSON structure and values
         val jsonObject = jsonElement.jsonObject
-        assertEquals(QCertCreationAcceptance.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QCertCreationAcceptance.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Deserialize back to QCertCreationAcceptance
         val deserializedQCertCreationAcceptance = json.decodeFromString<QCertCreationAcceptance>(jsonString)
@@ -92,16 +92,16 @@ class QCertCreationAcceptanceSerializationTest {
         val jsonObject = json.parseToJsonElement(jsonString).jsonObject
 
         // Verify all expected fields are present with correct values
-        assertEquals(QCertCreationAcceptance.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QCertCreationAcceptance.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Check credential_ids
-        val credentialIds = jsonObject["credential_ids"]
+        val credentialIds = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]
         assertNotNull(credentialIds)
         assertTrue(credentialIds.toString().contains("credential1"))
         assertTrue(credentialIds.toString().contains("credential2"))
 
         // Check transaction_data_hashes_alg
-        val hashAlgorithms = jsonObject["transaction_data_hashes_alg"]
+        val hashAlgorithms = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS]
         assertNotNull(hashAlgorithms)
         assertTrue(hashAlgorithms.toString().contains("SHA-256"))
         assertTrue(hashAlgorithms.toString().contains("SHA-512"))

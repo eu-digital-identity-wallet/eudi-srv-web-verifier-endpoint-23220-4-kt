@@ -67,7 +67,7 @@ class QesAuthorizationSerializationTest {
 
         // Verify JSON structure and values
         val jsonObject = jsonElement.jsonObject
-        assertEquals(QesAuthorization.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QesAuthorization.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Deserialize back to QesAuthorization
         val deserializedQesAuthorization = json.decodeFromString<QesAuthorization>(jsonString)
@@ -120,15 +120,15 @@ class QesAuthorizationSerializationTest {
         val jsonObject = json.parseToJsonElement(jsonString).jsonObject
 
         // Verify all expected fields are present with correct values
-        assertEquals(QesAuthorization.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QesAuthorization.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Check credential_ids
-        val credentialIds = jsonObject["credential_ids"]
+        val credentialIds = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]
         assertNotNull(credentialIds)
         assertTrue(credentialIds.toString().contains("607510a9-c957-4095-906d-f99fd006c4ae"))
 
         // Check transaction_data_hashes_alg
-        val hashAlgorithms = jsonObject["transaction_data_hashes_alg"]
+        val hashAlgorithms = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS]
         assertNotNull(hashAlgorithms)
         assertTrue(hashAlgorithms.toString().contains("SHA-256"))
 

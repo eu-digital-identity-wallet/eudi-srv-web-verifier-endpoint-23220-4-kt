@@ -174,21 +174,21 @@ private fun <Error> Raise<Error>.ensureValidTransactionDataHashes(
     hashAlgorithm: HashAlgorithm,
     convert: (String) -> Error,
 ) {
-    val actualHashAlgorithm = keyBindingJwt.jwtClaimsSet.stringClaim("transaction_data_hashes_alg")
+    val actualHashAlgorithm = keyBindingJwt.jwtClaimsSet.stringClaim(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
         .getOrElse {
-            raise(convert(it.message ?: "'transaction_data_hashes_alg' claim is not a string"))
+            raise(convert(it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' claim is not a string"))
         }
     ensure(hashAlgorithm.ianaName == actualHashAlgorithm) {
-        convert("'transaction_data_hashes_alg' must be '${hashAlgorithm.ianaName}'")
+        convert("'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' must be '${hashAlgorithm.ianaName}'")
     }
 
     val expectedHashes = transactionData.map {
         val hash = hash(it.base64Url, hashAlgorithm)
         base64UrlNoPadding.encode(hash)
     }
-    val actualHashes = keyBindingJwt.jwtClaimsSet.stringListClaim("transaction_data_hashes")
+    val actualHashes = keyBindingJwt.jwtClaimsSet.stringListClaim(OpenId4VPSpec.TRANSACTION_DATA_HASHES)
         .getOrElse {
-            raise(convert(it.message ?: "'transaction_data_hashes_alg' claim is not a string list"))
+            raise(convert(it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASHES}' claim is not a string list"))
         }
     ensure(actualHashes.isNotEmpty() && actualHashes.size <= expectedHashes.size && expectedHashes.containsAll(actualHashes)) {
         convert("hashes of transaction data do not match the expected values")
