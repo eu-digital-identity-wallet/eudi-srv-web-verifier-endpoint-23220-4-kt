@@ -107,17 +107,17 @@ class QCertCreationAcceptanceSerializationTest {
         assertTrue(hashAlgorithms.toString().contains("SHA-512"))
 
         // Check QC_terms_conditions_uri
-        val termsAndConditions = jsonObject["QC_terms_conditions_uri"]
+        val termsAndConditions = jsonObject[RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_TERM_AND_CONDITIONS_URI]
         assertNotNull(termsAndConditions)
         assertEquals("\"https://example.com/terms\"", termsAndConditions.toString())
 
         // Check QC_hash
-        val documentHash = jsonObject["QC_hash"]
+        val documentHash = jsonObject[RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_HASH]
         assertNotNull(documentHash)
         assertEquals("\"dGVzdEhhc2g\"", documentHash.toString())
 
         // Check QC_hashAlgorithmOID
-        val hashAlgorithm = jsonObject["QC_hashAlgorithmOID"]
+        val hashAlgorithm = jsonObject[RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_HASH_ALGORITHM]
         assertNotNull(hashAlgorithm)
         assertEquals("\"2.16.840.1.101.3.4.2.1\"", hashAlgorithm.toString())
     }

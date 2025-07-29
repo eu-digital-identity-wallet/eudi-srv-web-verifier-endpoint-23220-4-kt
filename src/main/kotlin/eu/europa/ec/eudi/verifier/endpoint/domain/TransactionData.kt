@@ -173,28 +173,28 @@ internal value class SignatureQualifier(val value: String) {
 
     companion object {
         val EuEidasQes: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_qes")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_QES)
 
         val EuEidasAes: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_aes")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_AES)
 
         val EuEidasAesQc: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_aesqc")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_AES_QC)
 
         val EuEidasQeSeal: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_qeseal")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_QE_SEAL)
 
         val EuEidasAeSeal: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_aeseal")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_AE_SEAL)
 
         val EuEidasAeSealQc: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_aesealqc")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_AE_SEAL_QC)
 
         val ZaEctaAes: SignatureQualifier
-            get() = SignatureQualifier("za_ecta_aes")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_ZA_ECTA_AES)
 
         val ZaEctaOes: SignatureQualifier
-            get() = SignatureQualifier("za_ecta_oes")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_ZA_ECTA_OES)
     }
 }
 
@@ -265,19 +265,19 @@ internal value class AccessMode(val value: String) {
 
     companion object {
         val Public: AccessMode
-            get() = AccessMode("public")
+            get() = AccessMode(RQES.ACCESS_MODE_PUBLIC)
 
         val OneTimePassword: AccessMode
-            get() = AccessMode("OTP")
+            get() = AccessMode(RQES.ACCESS_MODE_OTP)
 
         val BasicAuthentication: AccessMode
-            get() = AccessMode("Basic_Auth")
+            get() = AccessMode(RQES.ACCESS_MODE_BASIC_AUTHENTICATION)
 
         val DigestAuthentication: AccessMode
-            get() = AccessMode("Digest_Auth")
+            get() = AccessMode(RQES.ACCESS_MODE_DIGEST_AUTHENTICATION)
 
         val OAuth20: AccessMode
-            get() = AccessMode("OAuth_20")
+            get() = AccessMode(RQES.ACCESS_MODE_OAUTH20)
     }
 }
 
@@ -300,17 +300,21 @@ internal value class OneTimePassword(val value: String) {
 @Serializable
 internal data class DocumentAccessMethod(
 
-    @SerialName("document_access_mode")
+    @SerialName(RQES.DOCUMENT_ACCESS_METHOD_ACCESS_MODE)
     @Required
     val accessMode: AccessMode,
 
-    @SerialName("oneTimePassword")
+    @SerialName(RQES.DOCUMENT_ACCESS_METHOD_OTP)
     val oneTimePassword: OneTimePassword? = null,
 
 ) {
     init {
         if (AccessMode.OneTimePassword == accessMode) {
-            requireNotNull(oneTimePassword) { "'oneTimePassword' is required when 'document_access_mode' is 'OTP'." }
+            requireNotNull(oneTimePassword) {
+                "'${RQES.DOCUMENT_ACCESS_METHOD_OTP}' is required when " +
+                    "'${RQES.DOCUMENT_ACCESS_METHOD_ACCESS_MODE}' is " +
+                    "'${RQES.ACCESS_MODE_OTP}'."
+            }
         }
     }
 }
@@ -321,49 +325,51 @@ internal data class DocumentAccessMethod(
 @Serializable
 internal data class DocumentDigest(
 
-    @SerialName("label")
+    @SerialName(RQES.DOCUMENT_DIGEST_LABEL)
     @Required
     val label: Label,
 
-    @SerialName("hash")
+    @SerialName(RQES.DOCUMENT_DIGEST_HASH)
     val hash: String? = null,
 
-    @SerialName("hashAlgorithmOID")
+    @SerialName(RQES.DOCUMENT_DIGEST_HASH_ALGORITHM)
     val hashAlgorithm: HashAlgorithmOID? = null,
 
-    @SerialName("documentLocation_uri")
+    @SerialName(RQES.DOCUMENT_DIGEST_DOCUMENT_LOCATION_URI)
     @Serializable(with = URLStringSerializer::class)
     val documentLocation: URL? = null,
 
-    @SerialName("documentLocation_method")
+    @SerialName(RQES.DOCUMENT_DIGEST_DOCUMENT_LOCATION_METHOD)
     val documentAccessMethod: DocumentAccessMethod? = null,
 
-    @SerialName("DTBS/R")
+    @SerialName(RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION)
     val dataToBeSignedRepresentation: String? = null,
 
-    @SerialName("DTBS/RHashAlgorithmOID")
+    @SerialName(RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION_HASH_ALGORITHM)
     val dataToBeSignedRepresentationHashAlgorithm: HashAlgorithmOID? = null,
 
 ) {
     init {
         require((null == hash && null == hashAlgorithm) || (null != hash && null != hashAlgorithm)) {
-            "either provide both 'hash' and 'hashAlgorithmOID', or none."
+            "either provide both '${RQES.DOCUMENT_DIGEST_HASH}' and '${RQES.DOCUMENT_DIGEST_HASH_ALGORITHM}', or none."
         }
         require(
             (null == dataToBeSignedRepresentation && null == dataToBeSignedRepresentationHashAlgorithm) ||
                 (null != dataToBeSignedRepresentation && null != dataToBeSignedRepresentationHashAlgorithm),
         ) {
-            "either provide both 'DTBS/R' and 'DTBS/RHashAlgorithmOID', or none."
+            "either provide both '${RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION}' and " +
+                "'${RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION_HASH_ALGORITHM}', or none."
         }
         require(
             (null == documentLocation && null == documentAccessMethod) ||
                 (null != documentLocation && null != documentAccessMethod),
         ) {
-            "either provide both 'documentLocation_uri' and 'documentLocation_method', or none."
+            "either provide both '${RQES.DOCUMENT_DIGEST_DOCUMENT_LOCATION_URI}' and " +
+                "'${RQES.DOCUMENT_DIGEST_DOCUMENT_LOCATION_METHOD}', or none."
         }
-        require(
-            null != hash || null != dataToBeSignedRepresentation,
-        ) { "either 'hash', or 'dataToBeSignedRepresentation' must be present." }
+        require(null != hash || null != dataToBeSignedRepresentation) {
+            "either '${RQES.DOCUMENT_DIGEST_HASH}', or '${RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION}' must be present."
+        }
     }
 }
 
@@ -396,17 +402,17 @@ internal data class QesAuthorization(
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
     val hashAlgorithms: List<String>? = null,
 
-    @SerialName("signatureQualifier")
+    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER)
     val signatureQualifier: SignatureQualifier? = null,
 
-    @SerialName("credentialID")
+    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_CREDENTIAL_ID)
     val credentialId: CredentialId? = null,
 
-    @SerialName("documentDigests")
+    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_DOCUMENT_DIGESTS)
     @Required
     val documentDigests: List<DocumentDigest>,
 
-    @SerialName("processID")
+    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_PROCESS_ID)
     val processId: ProcessId? = null,
 
 ) {
@@ -414,13 +420,16 @@ internal data class QesAuthorization(
         require(TYPE == type) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '$type'." }
         require(credentialIds.isNotEmpty()) { "'${OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS}' must not be empty." }
         require(null != credentialId || null != signatureQualifier) {
-            "either 'credentialID', or 'signatureQualifier' must be present."
+            "either '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_CREDENTIAL_ID}', " +
+                "or '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER}' must be present."
         }
-        require(documentDigests.isNotEmpty()) { "'documentDigests' must not be empty." }
+        require(documentDigests.isNotEmpty()) {
+            "'${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_DOCUMENT_DIGESTS}' must not be empty."
+        }
     }
 
     companion object {
-        const val TYPE = "qes_authorization"
+        const val TYPE = RQES.TYPE_QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION
     }
 }
 
@@ -440,16 +449,16 @@ internal data class QCertCreationAcceptance(
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
     val hashAlgorithms: List<String>? = null,
 
-    @SerialName("QC_terms_conditions_uri")
+    @SerialName(RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_TERM_AND_CONDITIONS_URI)
     @Required
     @Serializable(with = URLStringSerializer::class)
     val termsAndConditions: URL,
 
-    @SerialName("QC_hash")
+    @SerialName(RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_HASH)
     @Required
     val documentHash: String,
 
-    @SerialName("QC_hashAlgorithmOID")
+    @SerialName(RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_HASH_ALGORITHM)
     @Required
     val hashAlgorithm: HashAlgorithmOID,
 
@@ -460,6 +469,6 @@ internal data class QCertCreationAcceptance(
     }
 
     companion object {
-        const val TYPE = "qcert_creation_acceptance"
+        const val TYPE = RQES.TYPE_QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE
     }
 }

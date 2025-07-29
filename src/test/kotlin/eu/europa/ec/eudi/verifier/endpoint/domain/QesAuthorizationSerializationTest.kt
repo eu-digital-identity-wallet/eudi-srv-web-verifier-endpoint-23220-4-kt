@@ -133,12 +133,12 @@ class QesAuthorizationSerializationTest {
         assertTrue(hashAlgorithms.toString().contains("SHA-256"))
 
         // Check signatureQualifier
-        val signatureQualifier = jsonObject["signatureQualifier"]
+        val signatureQualifier = jsonObject[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER]
         assertNotNull(signatureQualifier)
         assertEquals("\"eu_eidas_qes\"", signatureQualifier.toString())
 
         // Check documentDigests
-        val documentDigests = jsonObject["documentDigests"]
+        val documentDigests = jsonObject[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_DOCUMENT_DIGESTS]
         assertNotNull(documentDigests)
 
         // Verify the first document digest
