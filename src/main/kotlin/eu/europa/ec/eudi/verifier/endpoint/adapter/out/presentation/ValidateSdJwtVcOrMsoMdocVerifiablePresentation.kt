@@ -152,9 +152,9 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
             val algorithm = issuerAuth.algorithm.toJwsAlgorithm().bind()
-            ensure(algorithm in vpFormat.algorithms) {
-                WalletResponseValidationError.InvalidVpToken("MSO MDoc is not signed with a supported algorithms")
-            }
+//            ensure(algorithm in vpFormat.algorithms) {
+//                WalletResponseValidationError.InvalidVpToken("MSO MDoc is not signed with a supported algorithms")
+//            }
         }
         verifiablePresentation
     }

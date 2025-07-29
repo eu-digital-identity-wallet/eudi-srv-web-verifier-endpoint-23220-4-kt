@@ -687,12 +687,17 @@ private fun Environment.clientMetaData(): ClientMetaData {
                 filter = { it.isNotBlank() },
             )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
         ),
-
+        // TODO: This has to change to two separate fields
         VpFormat.MsoMdoc(
-            algorithms = getOptionalList(
+            issuerAuthAlg = getOptionalList(
                 name = "verifier.clientMetadata.vpFormats.msoMdoc.algorithms",
                 filter = { it.isNotBlank() },
-            )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
+            )?.distinct()?.map { VpFormat.CoseAlgorithm(it.toInt()) } ?: nonEmptyListOf(VpFormat.CoseAlgorithm(3)),
+            deviceAuthAlg = getOptionalList(
+                name = "verifier.clientMetadata.vpFormats.msoMdoc.algorithms",
+                filter = { it.isNotBlank() },
+            )?.distinct()?.map { VpFormat.CoseAlgorithm(it.toInt()) } ?: nonEmptyListOf(VpFormat.CoseAlgorithm(3)),
+//                ?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
         ),
     )
 

@@ -119,12 +119,20 @@ sealed interface VpFormat {
      * MSO MDoc
      */
     data class MsoMdoc(
-        val algorithms: NonEmptyList<JWSAlgorithm>,
+        val issuerAuthAlg: NonEmptyList<CoseAlgorithm>,
+        val deviceAuthAlg: NonEmptyList<CoseAlgorithm>, // COSEAlgorithmIdentifier
     ) : VpFormat {
+//        init {
+//            require(algorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
+//                "algorithms must contain asymmetric signature algorithms"
+//            }
+//        }
+    }
+
+    @JvmInline
+    value class CoseAlgorithm(val algorithm: Int) {
         init {
-            require(algorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
-                "algorithms must contain asymmetric signature algorithms"
-            }
+//            require{algorithm }
         }
     }
 }

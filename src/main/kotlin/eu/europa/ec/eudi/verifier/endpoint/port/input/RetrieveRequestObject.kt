@@ -362,7 +362,12 @@ private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
                 OpenId4VPSpec.FORMAT_MSO_MDOC ->
                     serializedProperties.decodeAs<MsoMdocFormatTO>()
                         .getOrThrow()
-                        .let { properties -> VpFormat.MsoMdoc(properties.algorithms.toNonEmptyListOrNull()!!) }
+                        .let { properties ->
+                            VpFormat.MsoMdoc(
+                                deviceAuthAlg = properties.deviceAuthAlgorithms.toNonEmptyListOrNull()!!,
+                                issuerAuthAlg = properties.issuerAuthAlgorithms.toNonEmptyListOrNull()!!,
+                            )
+                        }
 
                 else -> null
             }
@@ -387,7 +392,8 @@ private fun VpFormat.supports(other: VpFormat): Boolean =
 
         is VpFormat.MsoMdoc ->
             other is VpFormat.MsoMdoc &&
-                algorithms.intersect(other.algorithms).isNotEmpty()
+                issuerAuthAlg.intersect(other.issuerAuthAlg).isNotEmpty() &&
+                deviceAuthAlg.intersect(other.deviceAuthAlg).isNotEmpty()
     }
 
 private fun JsonObject.toJwks(): Either<RetrieveRequestObjectError.InvalidWalletMetadata, JWKSet> =

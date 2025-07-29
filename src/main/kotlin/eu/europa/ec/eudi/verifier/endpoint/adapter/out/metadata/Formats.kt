@@ -19,6 +19,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormat.CoseAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormats
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Required
@@ -39,6 +40,15 @@ internal object JWSAlgorithmStringSerializer : KSerializer<JWSAlgorithm> {
         encoder.encodeString(value.name)
     }
     override fun deserialize(decoder: Decoder): JWSAlgorithm = JWSAlgorithm.parse(decoder.decodeString())
+}
+
+internal object COSEAlgorithmStringSerializer : KSerializer<CoseAlgorithm> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("CoseAlgorithmString", PrimitiveKind.INT)
+    override fun serialize(encoder: Encoder, value: CoseAlgorithm) {
+        encoder.encodeInt(value.algorithm)
+    }
+
+    override fun deserialize(decoder: Decoder): CoseAlgorithm = CoseAlgorithm(decoder.decodeInt())
 }
 
 @Serializable
@@ -66,14 +76,20 @@ internal data class SdJwtVcFormatTO(
 @Serializable
 internal data class MsoMdocFormatTO(
     @Required
-    @SerialName("alg")
-    val algorithms: List<
-        @Serializable(with = JWSAlgorithmStringSerializer::class)
-        JWSAlgorithm,
+    @SerialName("issuerauth_alg_values")
+    val issuerAuthAlgorithms: List<
+        @Serializable(with = COSEAlgorithmStringSerializer::class)
+        CoseAlgorithm,
+        >,
+    @Required
+    @SerialName("deviceauth_alg_values")
+    val deviceAuthAlgorithms: List<
+        @Serializable(with = COSEAlgorithmStringSerializer::class)
+        CoseAlgorithm,
         >,
 ) {
     init {
-        require(algorithms.isNotEmpty())
+        require(issuerAuthAlgorithms.isNotEmpty() && deviceAuthAlgorithms.isNotEmpty())
     }
 }
 
@@ -84,6 +100,11 @@ internal fun VpFormats.toJsonObject(): JsonObject = buildJsonObject {
     val sdJwtVcFormatTO = jsonSupport.encodeToJsonElement(SdJwtVcFormatTO(sdJwtVc.sdJwtAlgorithms, sdJwtVc.kbJwtAlgorithms))
     put(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, sdJwtVcFormatTO)
 
-    val msoMdocFormatTO = jsonSupport.encodeToJsonElement(MsoMdocFormatTO(msoMdoc.algorithms))
+    val msoMdocFormatTO = jsonSupport.encodeToJsonElement(
+        MsoMdocFormatTO(
+            issuerAuthAlgorithms = msoMdoc.issuerAuthAlg,
+            deviceAuthAlgorithms = msoMdoc.deviceAuthAlg,
+        ),
+    )
     put(OpenId4VPSpec.FORMAT_MSO_MDOC, msoMdocFormatTO)
 }
