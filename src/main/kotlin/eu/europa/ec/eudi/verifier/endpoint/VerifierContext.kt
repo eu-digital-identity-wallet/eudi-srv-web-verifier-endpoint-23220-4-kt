@@ -675,31 +675,39 @@ private fun Environment.clientMetaData(): ClientMetaData {
     val responseEncryptionOptionMethod =
         getProperty("verifier.clientMetadata.responseEncryption.method", EncryptionMethod.A128GCM.name)
 
-    val vpFormatsSupported = VpFormatsSupported(
-        VpFormat.SdJwtVc(
-            sdJwtAlgorithms = getOptionalList(
-                name = "verifier.clientMetadata.vpFormats.sdJwtVc.sdJwtAlgorithms",
-                filter = { it.isNotBlank() },
-            )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
+    val vpFormatsSupportedSupported = run {
+        val sdJwtVc =
+            if (getProperty<Boolean>("verifier.clientMetadata.vpFormats.sdJwtVc.enabled") ?: true) {
+                val sdJwtAlgorithms = getOptionalList(
+                    name = "verifier.clientMetadata.vpFormats.sdJwtVc.sdJwtAlgorithms",
+                    filter = { it.isNotBlank() },
+                )?.map(JWSAlgorithm::parse)
 
-            kbJwtAlgorithms = getOptionalList(
-                name = "verifier.clientMetadata.vpFormats.sdJwtVc.kbJwtAlgorithms",
-                filter = { it.isNotBlank() },
-            )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
-        ),
-        VpFormat.MsoMdoc(
-            issuerAuthAlg = getOptionalList(
-                name = "verifier.clientMetadata.vpFormats.msoMdoc.issuerAuth.algorithms",
-                filter = { it.isNotBlank() },
-                // TODO: dummy value change it to default
-            )?.distinct()?.map { VpFormat.CoseAlgorithm(it.toInt()) } ?: nonEmptyListOf(VpFormat.CoseAlgorithm(3)),
-            deviceAuthAlg = getOptionalList(
-                name = "verifier.clientMetadata.vpFormats.msoMdoc.deviceAuth.algorithms",
-                filter = { it.isNotBlank() },
-                // TODO: dummy value change it to default
-            )?.distinct()?.map { VpFormat.CoseAlgorithm(it.toInt()) } ?: nonEmptyListOf(VpFormat.CoseAlgorithm(3)),
-        ),
-    )
+                val kbJwtAlgorithms = getOptionalList(
+                    name = "verifier.clientMetadata.vpFormats.sdJwtVc.kbJwtAlgorithms",
+                    filter = { it.isNotBlank() },
+                )?.map(JWSAlgorithm::parse)
+
+                VpFormatsSupported.SdJwtVc(sdJwtAlgorithms = sdJwtAlgorithms, kbJwtAlgorithms = kbJwtAlgorithms)
+            } else null
+
+        val msoMdoc =
+            if (getProperty<Boolean>("verifier.clientMetadata.vpFormats.msoMdoc.enabled") ?: true) {
+                val issuerAuthAlgorithms = getOptionalList(
+                    name = "verifier.clientMetadata.vpFormats.msoMdoc.issuerAuthAlgorithms",
+                    filter = { it.isNotBlank() },
+                )?.map { CoseAlgorithm(it.toInt()) }
+
+                val deviceAuthAlgorithms = getOptionalList(
+                    name = "verifier.clientMetadata.vpFormats.msoMdoc.deviceAuthAlgorithms",
+                    filter = { it.isNotBlank() },
+                )?.map { CoseAlgorithm(it.toInt()) }
+
+                VpFormatsSupported.MsoMdoc(issuerAuthAlgorithms = issuerAuthAlgorithms, deviceAuthAlgorithms = deviceAuthAlgorithms)
+            } else null
+
+        VpFormatsSupported(sdJwtVc, msoMdoc)
+    }
 
     return ClientMetaData(
         idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
@@ -712,7 +720,7 @@ private fun Environment.clientMetaData(): ClientMetaData {
             algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
             encryptionMethod = EncryptionMethod.parse(responseEncryptionOptionMethod),
         ),
-        vpFormatsSupported = vpFormatsSupported,
+        vpFormatsSupported = vpFormatsSupportedSupported,
     )
 }
 
@@ -806,6 +814,7 @@ private fun createHttpClient(
             }
         }
     }
+
 data class HttpProxy(
     val url: Url,
     val username: String? = null,

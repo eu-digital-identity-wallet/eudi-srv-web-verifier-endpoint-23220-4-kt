@@ -16,21 +16,15 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
-import arrow.core.getOrElse
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
-import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
-import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.MsoMdocFormatTO
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.SdJwtVcFormatTO
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
@@ -192,18 +186,31 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         metadata: WalletMetadataTO,
         presentation: Presentation.Requested,
     ) {
-        val walletSupportedVpFormats = metadata.vpFormatsSupported.toVpFormats().getOrElse {
-            raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet metadata contains malformed VpFormats", it))
-        }.groupBy { it::class }
+        val walletSupportedVpFormats = metadata.vpFormatsSupported
+        val queryRequiredFormats = when (val query = presentation.type.queryOrNull) {
+            is DCQL -> query.credentials.value.map { it.format }.toSet()
+            null -> emptySet()
+        }
+
         val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormatsSupported
-        val queryRequiredVpFormats = when (val query = presentation.type.queryOrNull) {
-            is DCQL -> query.vpFormats(verifierSupportedVpFormats)
-            null -> emptyList()
-        }.groupBy { it::class }
-        val walletSupportsAllRequiredVpFormats = queryRequiredVpFormats.map { (vpFormatType, vpFormats) ->
-            val walletSupported = walletSupportedVpFormats[vpFormatType].orEmpty()
-            vpFormats.all { required -> walletSupported.any { supported -> supported.supports(required) } }
+        val walletSupportsAllRequiredVpFormats = queryRequiredFormats.map { requiredFormat ->
+            when (requiredFormat) {
+                Format.SdJwtVc -> {
+                    val verifierSupported = checkNotNull(verifierSupportedVpFormats.sdJwtVc)
+                    val walletSupported = walletSupportedVpFormats.sdJwtVc
+                    null != walletSupported && commonGround(walletSupported = walletSupported, verifierSupported = verifierSupported)
+                }
+
+                Format.MsoMdoc -> {
+                    val verifierSupported = checkNotNull(verifierSupportedVpFormats.msoMdoc)
+                    val walletSupported = walletSupportedVpFormats.msoMdoc
+                    null != walletSupported && commonGround(walletSupported = walletSupported, verifierSupported = verifierSupported)
+                }
+
+                else -> false
+            }
         }.foldRight(true, Boolean::and)
+
         ensure(walletSupportsAllRequiredVpFormats) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support all required VpFormats")
         }
@@ -280,7 +287,7 @@ private data class WalletMetadataTO(
 
     @Required
     @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
-    val vpFormatsSupported: JsonObject,
+    val vpFormatsSupported: VpFormatsSupported,
 
     @SerialName(OpenId4VPSpec.CLIENT_ID_SCHEMES_SUPPORTED)
     val clientIdPrefixesSupported: List<String>? = OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED,
@@ -345,56 +352,34 @@ private fun ResponseModeOption.name(): String =
         ResponseModeOption.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
     }
 
-private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
-    Either.catch {
-        mapNotNull { (identifier, serializedProperties) ->
-            when (identifier) {
-                SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT ->
-                    serializedProperties.decodeAs<SdJwtVcFormatTO>()
-                        .getOrThrow()
-                        .let { properties ->
-                            VpFormat.SdJwtVc(
-                                sdJwtAlgorithms = properties.sdJwtAlgorithms.toNonEmptyListOrNull()!!,
-                                kbJwtAlgorithms = properties.kbJwtAlgorithms.toNonEmptyListOrNull()!!,
-                            )
-                        }
+private fun <T> commonGround(
+    walletSupported: Collection<T>?,
+    verifierSupported: Collection<T>?,
+): Boolean =
+    if (null != walletSupported && null != verifierSupported) walletSupported.intersect(verifierSupported).isNotEmpty()
+    else true
 
-                OpenId4VPSpec.FORMAT_MSO_MDOC ->
-                    serializedProperties.decodeAs<MsoMdocFormatTO>()
-                        .getOrThrow()
-                        .let { properties ->
-                            VpFormat.MsoMdoc(
-                                deviceAuthAlg = properties.deviceAuthAlgorithms.toNonEmptyListOrNull()!!,
-                                issuerAuthAlg = properties.issuerAuthAlgorithms.toNonEmptyListOrNull()!!,
-                            )
-                        }
+private fun commonGround(
+    walletSupported: VpFormatsSupported.SdJwtVc,
+    verifierSupported: VpFormatsSupported.SdJwtVc,
+): Boolean {
+    val sdJwtAlgorithmCommonGround =
+        commonGround(walletSupported = walletSupported.sdJwtAlgorithms, verifierSupported = verifierSupported.sdJwtAlgorithms)
+    val kbJwtAlgorithmCommonGround =
+        commonGround(walletSupported = walletSupported.kbJwtAlgorithms, verifierSupported = verifierSupported.kbJwtAlgorithms)
+    return sdJwtAlgorithmCommonGround && kbJwtAlgorithmCommonGround
+}
 
-                else -> null
-            }
-        }.distinct()
-    }
-
-private fun DCQL.vpFormats(supported: VpFormatsSupported): List<VpFormat> =
-    credentials.value.mapNotNull {
-        when (it.format.value) {
-            SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> supported.sdJwtVc
-            OpenId4VPSpec.FORMAT_MSO_MDOC -> supported.msoMdoc
-            else -> null
-        }
-    }.distinct()
-
-private fun VpFormat.supports(other: VpFormat): Boolean =
-    when (this) {
-        is VpFormat.SdJwtVc ->
-            other is VpFormat.SdJwtVc &&
-                sdJwtAlgorithms.intersect(other.sdJwtAlgorithms).isNotEmpty() &&
-                kbJwtAlgorithms.intersect(other.kbJwtAlgorithms).isNotEmpty()
-
-        is VpFormat.MsoMdoc ->
-            other is VpFormat.MsoMdoc &&
-                issuerAuthAlg.intersect(other.issuerAuthAlg).isNotEmpty() &&
-                deviceAuthAlg.intersect(other.deviceAuthAlg).isNotEmpty()
-    }
+private fun commonGround(
+    walletSupported: VpFormatsSupported.MsoMdoc,
+    verifierSupported: VpFormatsSupported.MsoMdoc,
+): Boolean {
+    val issuerAuthAlgorithmsCommonGround =
+        commonGround(walletSupported = walletSupported.issuerAuthAlgorithms, verifierSupported = verifierSupported.issuerAuthAlgorithms)
+    val deviceAuthAlgorithmsCommonGround =
+        commonGround(walletSupported = walletSupported.deviceAuthAlgorithms, verifierSupported = verifierSupported.deviceAuthAlgorithms)
+    return issuerAuthAlgorithmsCommonGround && deviceAuthAlgorithmsCommonGround
+}
 
 private fun JsonObject.toJwks(): Either<RetrieveRequestObjectError.InvalidWalletMetadata, JWKSet> =
     Either.catch {

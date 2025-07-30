@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.bouncy.castle)
     implementation(libs.arrow.core)
     implementation(libs.arrow.fx.coroutines)
+    implementation(libs.arrow.core.serialization)
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.webjars:webjars-locator-core")
     implementation(libs.swagger.ui)

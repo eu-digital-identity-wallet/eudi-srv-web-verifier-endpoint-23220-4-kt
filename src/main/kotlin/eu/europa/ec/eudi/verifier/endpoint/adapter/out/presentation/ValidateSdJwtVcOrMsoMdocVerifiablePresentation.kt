@@ -22,7 +22,6 @@ import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
-import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
@@ -55,17 +54,17 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     override suspend fun invoke(
         transactionId: TransactionId?,
         verifiablePresentation: VerifiablePresentation,
-        vpFormat: VpFormat,
+        vpFormatsSupported: VpFormatsSupported,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         issuerChain: X5CShouldBe.Trusted?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
             Format.SdJwtVc -> {
-                require(vpFormat is VpFormat.SdJwtVc)
+                val vpFormatSupported = requireNotNull(vpFormatsSupported.sdJwtVc)
                 val validator = sdJwtVcValidatorFactory(issuerChain)
                 validator.validateSdJwtVcVerifiablePresentation(
-                    vpFormat,
+                    vpFormatSupported,
                     verifiablePresentation,
                     nonce,
                     transactionData,
@@ -74,10 +73,10 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             }
 
             Format.MsoMdoc -> {
-                require(vpFormat is VpFormat.MsoMdoc)
+                val vpFormatSupported = requireNotNull(vpFormatsSupported.msoMdoc)
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
-                    vpFormat,
+                    vpFormatSupported,
                     verifiablePresentation,
                 ).bind()
             }
@@ -88,7 +87,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 
     private suspend fun SdJwtVcValidator.validateSdJwtVcVerifiablePresentation(
-        vpFormat: VpFormat.SdJwtVc,
+        vpFormatSupported: VpFormatsSupported.SdJwtVc,
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
@@ -115,15 +114,20 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         }.mapLeft { errors -> invalidVpToken(errors) }.bind()
 
         // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
-        ensure(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
-            WalletResponseValidationError.InvalidVpToken("SD-JWT not signed with a supported algorithm")
-        }
-        // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
-        ensure(kbJwt.header.algorithm in vpFormat.kbJwtAlgorithms) {
-            WalletResponseValidationError.InvalidVpToken("Keybinding JWT not signed with a supported algorithm")
+        if (null != vpFormatSupported.sdJwtAlgorithms) {
+            ensure(sdJwt.jwt.header.algorithm in vpFormatSupported.sdJwtAlgorithms) {
+                WalletResponseValidationError.InvalidVpToken("SD-JWT not signed with a supported algorithm")
+            }
         }
 
-        transactionData?.let {
+        // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
+        if (null != vpFormatSupported.kbJwtAlgorithms) {
+            ensure(kbJwt.header.algorithm in vpFormatSupported.kbJwtAlgorithms) {
+                WalletResponseValidationError.InvalidVpToken("Keybinding JWT not signed with a supported algorithm")
+            }
+        }
+
+        if (null != transactionData) {
             ensureValidTransactionDataHashes(kbJwt, transactionData, config.transactionDataHashAlgorithm) { error ->
                 WalletResponseValidationError.InvalidVpToken(error)
             }
@@ -133,7 +137,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
-        vpFormat: VpFormat.MsoMdoc,
+        vpFormatSupported: VpFormatsSupported.MsoMdoc,
         verifiablePresentation: VerifiablePresentation,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {
@@ -151,11 +155,33 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
-            val algorithm = issuerAuth.algorithm.toJwsAlgorithm().bind()
-//            ensure(algorithm in vpFormat.algorithms) {
-//                WalletResponseValidationError.InvalidVpToken("MSO MDoc is not signed with a supported algorithms")
-//            }
+            val algorithm = CoseAlgorithm(issuerAuth.algorithm)
+            if (null != vpFormatSupported.issuerAuthAlgorithms) {
+                ensure(algorithm in vpFormatSupported.issuerAuthAlgorithms) {
+                    WalletResponseValidationError.InvalidVpToken("MSO MDoc IssuerAuth is not signed with a supported algorithms")
+                }
+            }
+
+            val deviceAuth = document.deviceSigned?.deviceAuth
+            if (null != vpFormatSupported.deviceAuthAlgorithms && null != deviceAuth) {
+                val deviceMacHasSupportedAlgorithm = deviceAuth.deviceMac
+                    ?.let {
+                        val algorithm = CoseAlgorithm(it.algorithm)
+                        algorithm in vpFormatSupported.deviceAuthAlgorithms
+                    } ?: true
+
+                val deviceSignatureHasSupportedAlgorithm = deviceAuth.deviceSignature
+                    ?.let {
+                        val algorithm = CoseAlgorithm(it.algorithm)
+                        algorithm in vpFormatSupported.deviceAuthAlgorithms
+                    } ?: true
+
+                ensure(deviceMacHasSupportedAlgorithm || deviceSignatureHasSupportedAlgorithm) {
+                    WalletResponseValidationError.InvalidVpToken("MSO MDoc DeviceAuth is not signed with a supported algorithms")
+                }
+            }
         }
+
         verifiablePresentation
     }
 }
@@ -213,27 +239,6 @@ private fun DeviceResponseError.toWalletResponseValidationError(): WalletRespons
     }
 
     return WalletResponseValidationError.InvalidVpToken(error)
-}
-
-// Mappings taken from https://www.iana.org/assignments/cose/cose.xhtml#algorithms
-private fun Int.toJwsAlgorithm(): Either<WalletResponseValidationError, JWSAlgorithm> = either {
-    when (this@toJwsAlgorithm) {
-        5 -> JWSAlgorithm.HS256
-        6 -> JWSAlgorithm.HS384
-        7 -> JWSAlgorithm.HS512
-        -257 -> JWSAlgorithm.RS256
-        -258 -> JWSAlgorithm.RS384
-        -259 -> JWSAlgorithm.RS512
-        -7 -> JWSAlgorithm.ES256
-        -47 -> JWSAlgorithm.ES256K
-        -35 -> JWSAlgorithm.ES384
-        -36 -> JWSAlgorithm.ES512
-        -37 -> JWSAlgorithm.PS256
-        -38 -> JWSAlgorithm.PS384
-        -39 -> JWSAlgorithm.PS512
-        -8 -> JWSAlgorithm.EdDSA
-        else -> raise(WalletResponseValidationError.InvalidVpToken("Unknown AlgorithmID '${this@toJwsAlgorithm}'"))
-    }
 }
 
 private fun Collection<SdJwtVcValidationError>.toJson(): JsonArray =

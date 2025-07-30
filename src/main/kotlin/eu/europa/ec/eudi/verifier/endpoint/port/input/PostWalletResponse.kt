@@ -23,7 +23,6 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.proc.BadJOSEException
-import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
@@ -41,7 +40,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import java.security.cert.X509Certificate
 import java.time.Clock
-import java.util.regex.Pattern
 
 /**
  * Represent the Authorization Response placed by wallet
@@ -113,8 +111,6 @@ private suspend fun AuthorisationResponseTO.toDomain(
     }
 }
 
-private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
-
 private suspend fun AuthorisationResponseTO.verifiablePresentations(
     query: DCQL,
     transactionId: TransactionId,
@@ -145,18 +141,17 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
-                val vpFormat = vpFormatsSupported.vpFormat(
-                    format,
+                ensure(vpFormatsSupported.isSupported(format)) {
                     WalletResponseValidationError.InvalidVpToken(
                         "vp_token contains a Verifiable Presentation in an unsupported format",
                         null,
-                    ),
-                ).bind()
+                    )
+                }
                 unvalidatedVerifiablePresentations.map {
                     validateVerifiablePresentation(
                         transactionId,
                         it,
-                        vpFormat,
+                        vpFormatsSupported,
                         nonce,
                         applicableTransactionData,
                         issuerChain,
@@ -209,16 +204,11 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
         }
     }
 
-private fun VpFormatsSupported.vpFormat(
-    format: Format,
-    ifInvalid: WalletResponseValidationError,
-): Either<WalletResponseValidationError, VpFormat> =
-    either {
-        when (format.value) {
-            SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
-            OpenId4VPSpec.FORMAT_MSO_MDOC -> msoMdoc
-            else -> raise(ifInvalid)
-        }
+private fun VpFormatsSupported.isSupported(format: Format): Boolean =
+    when (format) {
+        Format.SdJwtVc -> null != sdJwtVc
+        Format.MsoMdoc -> null != msoMdoc
+        else -> false
     }
 
 @Serializable

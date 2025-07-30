@@ -35,7 +35,6 @@ import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.metadata.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import java.time.Clock
@@ -159,7 +158,7 @@ class CreateJarNimbus : CreateJar {
                 )
             }
 
-            setCustomField(OpenId4VPSpec.VP_FORMATS_SUPPORTED, c.vpFormatsSupported.toJsonObject().toJackson())
+            setCustomField(OpenId4VPSpec.VP_FORMATS_SUPPORTED, c.vpFormatsSupported.toJackson())
         }
     }
 }

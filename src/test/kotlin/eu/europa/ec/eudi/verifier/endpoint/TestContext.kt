@@ -70,11 +70,14 @@ object TestContext {
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
         responseEncryptionOption = responseEncryptionOption,
         vpFormatsSupported = VpFormatsSupported(
-            VpFormat.SdJwtVc(
+            VpFormatsSupported.SdJwtVc(
                 nonEmptyListOf(JWSAlgorithm.ES256),
                 nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
             ),
-            VpFormat.MsoMdoc(nonEmptyListOf(JWSAlgorithm.ES256)),
+            VpFormatsSupported.MsoMdoc(
+                nonEmptyListOf(CoseAlgorithm(-7)),
+                nonEmptyListOf(CoseAlgorithm(-7)),
+            ),
         ),
     )
     private val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
