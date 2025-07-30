@@ -120,19 +120,18 @@ sealed interface VpFormat {
      */
     data class MsoMdoc(
         val issuerAuthAlg: NonEmptyList<CoseAlgorithm>,
-        val deviceAuthAlg: NonEmptyList<CoseAlgorithm>, // COSEAlgorithmIdentifier
+        val deviceAuthAlg: NonEmptyList<CoseAlgorithm>,
     ) : VpFormat {
-//        init {
-//            require(algorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
-//                "algorithms must contain asymmetric signature algorithms"
-//            }
-//        }
+        init {
+            require(issuerAuthAlg.isNotEmpty()) { "Issuer auth algorithms cannot be empty" }
+            require(deviceAuthAlg.isNotEmpty()) { "Device auth algorithms cannot be empty" }
+        }
     }
 
     @JvmInline
     value class CoseAlgorithm(val algorithm: Int) {
         init {
-//            require{algorithm }
+//            require{algorithm } // Algorithm check goes here
         }
     }
 }
@@ -140,7 +139,7 @@ sealed interface VpFormat {
 /**
  * Verifiable Presentation formats supported by Verifier Endpoint.
  */
-data class VpFormats(
+data class VpFormatsSupported(
     val sdJwtVc: VpFormat.SdJwtVc,
     val msoMdoc: VpFormat.MsoMdoc,
 )
@@ -156,7 +155,7 @@ data class ClientMetaData(
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
     val responseEncryptionOption: ResponseEncryptionOption,
-    val vpFormats: VpFormats,
+    val vpFormatsSupported: VpFormatsSupported,
 )
 
 /**

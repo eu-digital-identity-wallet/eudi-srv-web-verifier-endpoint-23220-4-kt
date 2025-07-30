@@ -80,4 +80,7 @@ object OpenId4VPSpec {
     val DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED: List<String> = listOf(CLIENT_ID_SCHEME_PRE_REGISTERED)
 
     const val ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED = "encrypted_response_enc_values_supported"
+
+    const val DEVICE_AUTH_ALG_VALUES = "deviceauth_alg_values"
+    const val ISSUER_AUTH_ALG_VALUES = "issuerauth_alg_values"
 }

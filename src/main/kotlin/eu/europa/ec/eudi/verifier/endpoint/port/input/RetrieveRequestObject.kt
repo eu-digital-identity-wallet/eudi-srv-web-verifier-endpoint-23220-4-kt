@@ -195,7 +195,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         val walletSupportedVpFormats = metadata.vpFormatsSupported.toVpFormats().getOrElse {
             raise(RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet metadata contains malformed VpFormats", it))
         }.groupBy { it::class }
-        val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormats
+        val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormatsSupported
         val queryRequiredVpFormats = when (val query = presentation.type.queryOrNull) {
             is DCQL -> query.vpFormats(verifierSupportedVpFormats)
             null -> emptyList()
@@ -374,7 +374,7 @@ private fun JsonObject.toVpFormats(): Either<Throwable, List<VpFormat>> =
         }.distinct()
     }
 
-private fun DCQL.vpFormats(supported: VpFormats): List<VpFormat> =
+private fun DCQL.vpFormats(supported: VpFormatsSupported): List<VpFormat> =
     credentials.value.mapNotNull {
         when (it.format.value) {
             SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> supported.sdJwtVc

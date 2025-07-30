@@ -84,7 +84,7 @@ sealed interface WalletResponseValidationError {
 private suspend fun AuthorisationResponseTO.toDomain(
     presentation: RequestObjectRetrieved,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
-    vpFormats: VpFormats,
+    vpFormatsSupported: VpFormatsSupported,
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
@@ -95,7 +95,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
             presentation.nonce,
             presentation.type.transactionDataOrNull,
             validateVerifiablePresentation,
-            vpFormats,
+            vpFormatsSupported,
             presentation.issuerChain,
         ).bind()
 
@@ -121,7 +121,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
     nonce: Nonce,
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
-    vpFormats: VpFormats,
+    vpFormatsSupported: VpFormatsSupported,
     issuerChain: NonEmptyList<X509Certificate>?,
 ): Either<WalletResponseValidationError, VerifiablePresentations> =
     either {
@@ -145,7 +145,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
-                val vpFormat = vpFormats.vpFormat(
+                val vpFormat = vpFormatsSupported.vpFormat(
                     format,
                     WalletResponseValidationError.InvalidVpToken(
                         "vp_token contains a Verifiable Presentation in an unsupported format",
@@ -209,7 +209,7 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
         }
     }
 
-private fun VpFormats.vpFormat(
+private fun VpFormatsSupported.vpFormat(
     format: Format,
     ifInvalid: WalletResponseValidationError,
 ): Either<WalletResponseValidationError, VpFormat> =
@@ -354,7 +354,7 @@ class PostWalletResponseLive(
         val walletResponse = responseObject.toDomain(
             presentation,
             validateVerifiablePresentation,
-            verifierConfig.clientMetaData.vpFormats,
+            verifierConfig.clientMetaData.vpFormatsSupported,
         ).bind()
 
         val responseCode = when (presentation.getWalletResponseMethod) {

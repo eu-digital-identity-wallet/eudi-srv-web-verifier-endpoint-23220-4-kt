@@ -69,7 +69,7 @@ object TestContext {
         idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
         responseEncryptionOption = responseEncryptionOption,
-        vpFormats = VpFormats(
+        vpFormatsSupported = VpFormatsSupported(
             VpFormat.SdJwtVc(
                 nonEmptyListOf(JWSAlgorithm.ES256),
                 nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),

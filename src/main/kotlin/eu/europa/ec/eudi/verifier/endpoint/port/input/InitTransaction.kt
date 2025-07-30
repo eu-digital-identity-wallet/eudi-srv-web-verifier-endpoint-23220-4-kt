@@ -232,7 +232,7 @@ class InitTransactionLive(
         // validate input
         val (nonce, type) = initTransactionTO.toDomain(
             verifierConfig.transactionDataHashAlgorithm,
-            verifierConfig.clientMetaData.vpFormats,
+            verifierConfig.clientMetaData.vpFormatsSupported,
         ).bind()
 
         // if response mode is direct post jwt then generate ephemeral key
@@ -394,7 +394,7 @@ class InitTransactionLive(
 
 internal fun InitTransactionTO.toDomain(
     transactionDataHashAlgorithm: HashAlgorithm,
-    vpFormats: VpFormats,
+    vpFormatsSupported: VpFormatsSupported,
 ): Either<ValidationError, Pair<Nonce, PresentationType>> = either {
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()

@@ -675,7 +675,7 @@ private fun Environment.clientMetaData(): ClientMetaData {
     val responseEncryptionOptionMethod =
         getProperty("verifier.clientMetadata.responseEncryption.method", EncryptionMethod.A128GCM.name)
 
-    val vpFormats = VpFormats(
+    val vpFormatsSupported = VpFormatsSupported(
         VpFormat.SdJwtVc(
             sdJwtAlgorithms = getOptionalList(
                 name = "verifier.clientMetadata.vpFormats.sdJwtVc.sdJwtAlgorithms",
@@ -687,17 +687,17 @@ private fun Environment.clientMetaData(): ClientMetaData {
                 filter = { it.isNotBlank() },
             )?.distinct()?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
         ),
-        // TODO: This has to change to two separate fields
         VpFormat.MsoMdoc(
             issuerAuthAlg = getOptionalList(
-                name = "verifier.clientMetadata.vpFormats.msoMdoc.algorithms",
+                name = "verifier.clientMetadata.vpFormats.msoMdoc.issuerAuth.algorithms",
                 filter = { it.isNotBlank() },
+                // TODO: dummy value change it to default
             )?.distinct()?.map { VpFormat.CoseAlgorithm(it.toInt()) } ?: nonEmptyListOf(VpFormat.CoseAlgorithm(3)),
             deviceAuthAlg = getOptionalList(
-                name = "verifier.clientMetadata.vpFormats.msoMdoc.algorithms",
+                name = "verifier.clientMetadata.vpFormats.msoMdoc.deviceAuth.algorithms",
                 filter = { it.isNotBlank() },
+                // TODO: dummy value change it to default
             )?.distinct()?.map { VpFormat.CoseAlgorithm(it.toInt()) } ?: nonEmptyListOf(VpFormat.CoseAlgorithm(3)),
-//                ?.map { JWSAlgorithm.parse(it) } ?: nonEmptyListOf(JWSAlgorithm.ES256),
         ),
     )
 
@@ -712,7 +712,7 @@ private fun Environment.clientMetaData(): ClientMetaData {
             algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
             encryptionMethod = EncryptionMethod.parse(responseEncryptionOptionMethod),
         ),
-        vpFormats = vpFormats,
+        vpFormatsSupported = vpFormatsSupported,
     )
 }
 

@@ -20,7 +20,7 @@ import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
 import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormat.CoseAlgorithm
-import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormats
+import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormatsSupported
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
@@ -76,13 +76,13 @@ internal data class SdJwtVcFormatTO(
 @Serializable
 internal data class MsoMdocFormatTO(
     @Required
-    @SerialName("issuerauth_alg_values")
+    @SerialName(OpenId4VPSpec.ISSUER_AUTH_ALG_VALUES)
     val issuerAuthAlgorithms: List<
         @Serializable(with = COSEAlgorithmStringSerializer::class)
         CoseAlgorithm,
         >,
     @Required
-    @SerialName("deviceauth_alg_values")
+    @SerialName(OpenId4VPSpec.DEVICE_AUTH_ALG_VALUES)
     val deviceAuthAlgorithms: List<
         @Serializable(with = COSEAlgorithmStringSerializer::class)
         CoseAlgorithm,
@@ -96,7 +96,7 @@ internal data class MsoMdocFormatTO(
 /**
  * Converts this collection of VpFormats to a JsonObject that can be embedded in OIDCClientMetadata.
  */
-internal fun VpFormats.toJsonObject(): JsonObject = buildJsonObject {
+internal fun VpFormatsSupported.toJsonObject(): JsonObject = buildJsonObject {
     val sdJwtVcFormatTO = jsonSupport.encodeToJsonElement(SdJwtVcFormatTO(sdJwtVc.sdJwtAlgorithms, sdJwtVc.kbJwtAlgorithms))
     put(SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT, sdJwtVcFormatTO)
 

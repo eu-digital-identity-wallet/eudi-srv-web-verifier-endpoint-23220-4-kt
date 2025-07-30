@@ -159,7 +159,7 @@ class CreateJarNimbus : CreateJar {
                 )
             }
 
-            setCustomField(OpenId4VPSpec.VP_FORMATS, c.vpFormats.toJsonObject().toJackson())
+            setCustomField(OpenId4VPSpec.VP_FORMATS_SUPPORTED, c.vpFormatsSupported.toJsonObject().toJackson())
         }
     }
 }
