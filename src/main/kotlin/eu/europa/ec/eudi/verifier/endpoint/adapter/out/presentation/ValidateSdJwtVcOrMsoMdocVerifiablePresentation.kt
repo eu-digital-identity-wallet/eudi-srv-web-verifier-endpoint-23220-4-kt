@@ -73,10 +73,9 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             }
 
             Format.MsoMdoc -> {
-                val vpFormatSupported = requireNotNull(vpFormatsSupported.msoMdoc)
+                requireNotNull(vpFormatsSupported.msoMdoc)
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
-                    vpFormatSupported,
                     verifiablePresentation,
                 ).bind()
             }
@@ -137,7 +136,6 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
-        vpFormatSupported: VpFormatsSupported.MsoMdoc,
         verifiablePresentation: VerifiablePresentation,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {
@@ -152,36 +150,10 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             .bind()
 
         documents.forEach { document ->
-            val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
+            ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
-            val algorithm = CoseAlgorithm(issuerAuth.algorithm)
-            if (null != vpFormatSupported.issuerAuthAlgorithms) {
-                ensure(algorithm in vpFormatSupported.issuerAuthAlgorithms) {
-                    WalletResponseValidationError.InvalidVpToken("MSO MDoc IssuerAuth is not signed with a supported algorithms")
-                }
-            }
-
-            val deviceAuth = document.deviceSigned?.deviceAuth
-            if (null != vpFormatSupported.deviceAuthAlgorithms && null != deviceAuth) {
-                val deviceMacHasSupportedAlgorithm = deviceAuth.deviceMac
-                    ?.let {
-                        val algorithm = CoseAlgorithm(it.algorithm)
-                        algorithm in vpFormatSupported.deviceAuthAlgorithms
-                    } ?: true
-
-                val deviceSignatureHasSupportedAlgorithm = deviceAuth.deviceSignature
-                    ?.let {
-                        val algorithm = CoseAlgorithm(it.algorithm)
-                        algorithm in vpFormatSupported.deviceAuthAlgorithms
-                    } ?: true
-
-                ensure(deviceMacHasSupportedAlgorithm || deviceSignatureHasSupportedAlgorithm) {
-                    WalletResponseValidationError.InvalidVpToken("MSO MDoc DeviceAuth is not signed with a supported algorithms")
-                }
-            }
         }
-
         verifiablePresentation
     }
 }

@@ -690,20 +690,9 @@ private fun Environment.clientMetaData(): ClientMetaData {
 
                 VpFormatsSupported.SdJwtVc(sdJwtAlgorithms = sdJwtAlgorithms, kbJwtAlgorithms = kbJwtAlgorithms)
             } else null
-
         val msoMdoc =
             if (getProperty<Boolean>("verifier.clientMetadata.vpFormats.msoMdoc.enabled") ?: true) {
-                val issuerAuthAlgorithms = getOptionalList(
-                    name = "verifier.clientMetadata.vpFormats.msoMdoc.issuerAuthAlgorithms",
-                    filter = { it.isNotBlank() },
-                )?.map { CoseAlgorithm(it.toInt()) }
-
-                val deviceAuthAlgorithms = getOptionalList(
-                    name = "verifier.clientMetadata.vpFormats.msoMdoc.deviceAuthAlgorithms",
-                    filter = { it.isNotBlank() },
-                )?.map { CoseAlgorithm(it.toInt()) }
-
-                VpFormatsSupported.MsoMdoc(issuerAuthAlgorithms = issuerAuthAlgorithms, deviceAuthAlgorithms = deviceAuthAlgorithms)
+                VpFormatsSupported.MsoMdoc(issuerAuthAlgorithms = null, deviceAuthAlgorithms = null)
             } else null
 
         VpFormatsSupported(sdJwtVc, msoMdoc)
