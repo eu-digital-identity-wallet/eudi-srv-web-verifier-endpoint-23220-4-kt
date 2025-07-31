@@ -77,15 +77,13 @@ object OpenId4VPSpec {
     const val WALLET_METADATA: String = "wallet_metadata"
     const val WALLET_NONCE: String = "wallet_nonce"
 
-    const val PRESENTATION_DEFINITION_URI_SUPPORTED: String = "presentation_definition_uri_supported"
-    const val CLIENT_ID_SCHEMES_SUPPORTED: String = "client_id_schemes_supported"
+    const val CLIENT_ID_PREFIXES_SUPPORTED = "client_id_prefixes_supported"
 
-    const val CLIENT_ID_SCHEME_PRE_REGISTERED: String = "pre-registered"
-    const val CLIENT_ID_SCHEME_X509_SAN_DNS: String = "x509_san_dns"
-    const val CLIENT_ID_SCHEME_X509_HASH: String = "x509_hash"
+    const val CLIENT_ID_PREFIX_PRE_REGISTERED: String = "pre-registered"
+    const val CLIENT_ID_PREFIX_X509_SAN_DNS: String = "x509_san_dns"
+    const val CLIENT_ID_PREFIX_X509_HASH: String = "x509_hash"
 
-    const val DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED: Boolean = true
-    val DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED: List<String> = listOf(CLIENT_ID_SCHEME_PRE_REGISTERED)
+    val DEFAULT_CLIENT_ID_PREFIXES_SUPPORTED: List<String> = listOf(CLIENT_ID_PREFIX_PRE_REGISTERED)
 
     const val ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED = "encrypted_response_enc_values_supported"
 }

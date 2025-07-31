@@ -217,7 +217,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
 
     private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsVerifierClientIdPrefix(metadata: WalletMetadataTO) {
         val clientIdPrefix = verifierConfig.verifierId.clientIdPrefix
-        val supportedClientPrefixes = metadata.clientIdPrefixesSupported ?: OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED
+        val supportedClientPrefixes = metadata.clientIdPrefixesSupported ?: OpenId4VPSpec.DEFAULT_CLIENT_ID_PREFIXES_SUPPORTED
         ensure(clientIdPrefix in supportedClientPrefixes) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Client Id Prefix '$clientIdPrefix'")
         }
@@ -281,15 +281,12 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
  */
 @Serializable
 private data class WalletMetadataTO(
-    @SerialName(OpenId4VPSpec.PRESENTATION_DEFINITION_URI_SUPPORTED)
-    val presentationDefinitionUriSupported: Boolean? = OpenId4VPSpec.DEFAULT_PRESENTATION_DEFINITION_URI_SUPPORTED,
-
     @Required
     @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED)
     val vpFormatsSupported: VpFormatsSupported,
 
-    @SerialName(OpenId4VPSpec.CLIENT_ID_SCHEMES_SUPPORTED)
-    val clientIdPrefixesSupported: List<String>? = OpenId4VPSpec.DEFAULT_CLIENT_ID_SCHEMES_SUPPORTED,
+    @SerialName(OpenId4VPSpec.CLIENT_ID_PREFIXES_SUPPORTED)
+    val clientIdPrefixesSupported: List<String>? = OpenId4VPSpec.DEFAULT_CLIENT_ID_PREFIXES_SUPPORTED,
 
     @SerialName(RFC8414.JWKS)
     val jwks: JsonObject? = null,
@@ -333,9 +330,9 @@ private val RetrieveRequestObjectMethod.walletNonceOrNull: String?
 
 private val VerifierId.clientIdPrefix: String
     get() = when (this) {
-        is VerifierId.PreRegistered -> OpenId4VPSpec.CLIENT_ID_SCHEME_PRE_REGISTERED
-        is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_DNS
-        is VerifierId.X509Hash -> OpenId4VPSpec.CLIENT_ID_SCHEME_X509_HASH
+        is VerifierId.PreRegistered -> OpenId4VPSpec.CLIENT_ID_PREFIX_PRE_REGISTERED
+        is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_SAN_DNS
+        is VerifierId.X509Hash -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_HASH
     }
 
 private val PresentationType.responseType: String
