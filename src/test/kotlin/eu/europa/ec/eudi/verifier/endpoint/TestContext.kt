@@ -71,12 +71,12 @@ object TestContext {
         responseEncryptionOption = responseEncryptionOption,
         vpFormatsSupported = VpFormatsSupported(
             VpFormatsSupported.SdJwtVc(
-                nonEmptyListOf(JWSAlgorithm.ES256),
-                nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
+                sdJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256),
+                kbJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
             ),
             VpFormatsSupported.MsoMdoc(
-                nonEmptyListOf(CoseAlgorithm(-7)),
-                nonEmptyListOf(CoseAlgorithm(-7)),
+                issuerAuthAlgorithms = null,
+                deviceAuthAlgorithms = null,
             ),
         ),
     )
