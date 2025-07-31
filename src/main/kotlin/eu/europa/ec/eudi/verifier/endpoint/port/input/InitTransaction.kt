@@ -23,7 +23,6 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import com.eygraber.uri.Uri
 import com.eygraber.uri.toURI
-import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -403,9 +402,8 @@ internal fun InitTransactionTO.toDomain(
         ensureNotNull(dcqlQuery) { ValidationError.MissingPresentationQuery }
         ensure(
             dcqlQuery.credentials.value.all {
-                val format = it.format.value
-                vpFormatsSupported.sdJwtVc?.let { format == SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT } ?: false ||
-                    vpFormatsSupported.msoMdoc?.let { format == OpenId4VPSpec.FORMAT_MSO_MDOC } ?: false
+                val format = it.format
+                vpFormatsSupported.isSupported(format)
             },
         ) { ValidationError.UnsupportedFormat }
 

@@ -365,5 +365,12 @@ data class KeyStoreConfig(
     val keystore: KeyStore,
 )
 
+internal fun VpFormatsSupported.isSupported(format: Format): Boolean =
+    when (format) {
+        Format.SdJwtVc -> null != sdJwtVc
+        Format.MsoMdoc -> null != msoMdoc
+        else -> false
+    }
+
 fun TrustSourcesConfig(trustedList: TrustedListConfig?, keystore: KeyStoreConfig?): Ior<TrustedListConfig, KeyStoreConfig> =
     Ior.fromNullables(trustedList, keystore) ?: error("Either trustedList or keystore must be provided")

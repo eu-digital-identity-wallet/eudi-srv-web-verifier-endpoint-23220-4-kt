@@ -204,13 +204,6 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
         }
     }
 
-private fun VpFormatsSupported.isSupported(format: Format): Boolean =
-    when (format) {
-        Format.SdJwtVc -> null != sdJwtVc
-        Format.MsoMdoc -> null != msoMdoc
-        else -> false
-    }
-
 @Serializable
 data class WalletResponseAcceptedTO(
     @SerialName("redirect_uri") val redirectUri: String,
