@@ -36,7 +36,11 @@ object OpenId4VPSpec {
     const val RESPONSE_MODE_DIRECT_POST: String = "direct_post"
     const val RESPONSE_MODE_DIRECT_POST_JWT: String = "direct_post.jwt"
 
-    const val VP_FORMATS: String = "vp_formats"
+    const val VP_FORMATS_SUPPORTED: String = "vp_formats_supported"
+    const val VP_FORMATS_SUPPORTS_SD_JWT_VC_SD_JWT_ALGORITHMS = "sd-jwt_alg_values"
+    const val VP_FORMATS_SUPPORTS_SD_JWT_VC_KB_JWT_ALGORITHMS = "kb-jwt_alg_values"
+    const val VP_FORMATS_SUPPORTED_MSO_MDOC_DEVICE_AUTH_ALGORITHMS = "deviceauth_alg_values"
+    const val VP_FORMATS_SUPPORTED_MSO_MDOC_ISSUER_AUTH_ALGORITHMS = "issuerauth_alg_values"
 
     const val FORMAT_MSO_MDOC: String = "mso_mdoc"
     const val FORMAT_SD_JWT_VC: String = "dc+sd-jwt"
@@ -69,7 +73,6 @@ object OpenId4VPSpec {
     const val WALLET_NONCE: String = "wallet_nonce"
 
     const val PRESENTATION_DEFINITION_URI_SUPPORTED: String = "presentation_definition_uri_supported"
-    const val VP_FORMATS_SUPPORTED: String = "vp_formats_supported"
     const val CLIENT_ID_SCHEMES_SUPPORTED: String = "client_id_schemes_supported"
 
     const val CLIENT_ID_SCHEME_PRE_REGISTERED: String = "pre-registered"

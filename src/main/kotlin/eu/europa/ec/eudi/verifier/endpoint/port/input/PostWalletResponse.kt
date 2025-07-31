@@ -23,7 +23,6 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.proc.BadJOSEException
-import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
@@ -41,7 +40,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import java.security.cert.X509Certificate
 import java.time.Clock
-import java.util.regex.Pattern
 
 /**
  * Represent the Authorization Response placed by wallet
@@ -84,7 +82,7 @@ sealed interface WalletResponseValidationError {
 private suspend fun AuthorisationResponseTO.toDomain(
     presentation: RequestObjectRetrieved,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
-    vpFormats: VpFormats,
+    vpFormatsSupported: VpFormatsSupported,
 ): Either<WalletResponseValidationError, WalletResponse> = either {
     fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
 
@@ -95,7 +93,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
             presentation.nonce,
             presentation.type.transactionDataOrNull,
             validateVerifiablePresentation,
-            vpFormats,
+            vpFormatsSupported,
             presentation.issuerChain,
         ).bind()
 
@@ -113,15 +111,13 @@ private suspend fun AuthorisationResponseTO.toDomain(
     }
 }
 
-private val jsonPathPattern = Pattern.compile("(^\\$$|^\\$\\[\\d+\\]$)")
-
 private suspend fun AuthorisationResponseTO.verifiablePresentations(
     query: DCQL,
     transactionId: TransactionId,
     nonce: Nonce,
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
-    vpFormats: VpFormats,
+    vpFormatsSupported: VpFormatsSupported,
     issuerChain: NonEmptyList<X509Certificate>?,
 ): Either<WalletResponseValidationError, VerifiablePresentations> =
     either {
@@ -145,18 +141,17 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
-                val vpFormat = vpFormats.vpFormat(
-                    format,
+                ensure(vpFormatsSupported.supports(format)) {
                     WalletResponseValidationError.InvalidVpToken(
                         "vp_token contains a Verifiable Presentation in an unsupported format",
                         null,
-                    ),
-                ).bind()
+                    )
+                }
                 unvalidatedVerifiablePresentations.map {
                     validateVerifiablePresentation(
                         transactionId,
                         it,
-                        vpFormat,
+                        vpFormatsSupported,
                         nonce,
                         applicableTransactionData,
                         issuerChain,
@@ -206,18 +201,6 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
             Format.MsoMdoc -> element.asString()
             Format.SdJwtVc -> element.asStringOrObject()
             else -> element.asStringOrObject()
-        }
-    }
-
-private fun VpFormats.vpFormat(
-    format: Format,
-    ifInvalid: WalletResponseValidationError,
-): Either<WalletResponseValidationError, VpFormat> =
-    either {
-        when (format.value) {
-            SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT -> sdJwtVc
-            OpenId4VPSpec.FORMAT_MSO_MDOC -> msoMdoc
-            else -> raise(ifInvalid)
         }
     }
 
@@ -354,7 +337,7 @@ class PostWalletResponseLive(
         val walletResponse = responseObject.toDomain(
             presentation,
             validateVerifiablePresentation,
-            verifierConfig.clientMetaData.vpFormats,
+            verifierConfig.clientMetaData.vpFormatsSupported,
         ).bind()
 
         val responseCode = when (presentation.getWalletResponseMethod) {

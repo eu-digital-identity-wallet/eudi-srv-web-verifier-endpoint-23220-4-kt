@@ -69,12 +69,15 @@ object TestContext {
         idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
         responseEncryptionOption = responseEncryptionOption,
-        vpFormats = VpFormats(
-            VpFormat.SdJwtVc(
-                nonEmptyListOf(JWSAlgorithm.ES256),
-                nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
+        vpFormatsSupported = VpFormatsSupported(
+            VpFormatsSupported.SdJwtVc(
+                sdJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256),
+                kbJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
             ),
-            VpFormat.MsoMdoc(nonEmptyListOf(JWSAlgorithm.ES256)),
+            VpFormatsSupported.MsoMdoc(
+                issuerAuthAlgorithms = null,
+                deviceAuthAlgorithms = null,
+            ),
         ),
     )
     private val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)

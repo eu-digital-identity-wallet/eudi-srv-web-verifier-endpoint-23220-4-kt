@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:UseSerializers(JWSAlgorithmStringSerializer::class, NonEmptyListSerializer::class)
+
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import arrow.core.Either
 import arrow.core.Ior
 import arrow.core.NonEmptyList
+import arrow.core.serialization.NonEmptyListSerializer
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
@@ -26,7 +29,11 @@ import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.JWSAlgorithmStringSerializer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import java.net.URL
 import java.security.KeyStore
 import java.security.cert.X509Certificate
@@ -93,24 +100,46 @@ data class ResponseEncryptionOption(
     }
 }
 
+@Serializable
+@JvmInline
+value class CoseAlgorithm(val value: Int)
+
 /**
  * Verifiable Presentation formats supported by Verifier Endpoint.
  */
-sealed interface VpFormat {
+@Serializable
+data class VpFormatsSupported(
+    @SerialName(OpenId4VPSpec.FORMAT_SD_JWT_VC) val sdJwtVc: SdJwtVc?,
+    @SerialName(OpenId4VPSpec.FORMAT_MSO_MDOC) val msoMdoc: MsoMdoc?,
+) {
+    init {
+        require(null != sdJwtVc || null != msoMdoc) {
+            "At least one format must be specified."
+        }
+    }
 
     /**
      * SD-JWT VC
      */
+    @Serializable
     data class SdJwtVc(
-        val sdJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
-        val kbJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
-    ) : VpFormat {
+        @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTS_SD_JWT_VC_SD_JWT_ALGORITHMS)
+        val sdJwtAlgorithms: NonEmptyList<JWSAlgorithm>?,
+
+        @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTS_SD_JWT_VC_KB_JWT_ALGORITHMS)
+        val kbJwtAlgorithms: NonEmptyList<JWSAlgorithm>?,
+    ) {
         init {
-            require(sdJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
-                "sdJwtAlgorithms must contain asymmetric signature algorithms"
+            if (null != sdJwtAlgorithms) {
+                require(sdJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
+                    "sdJwtAlgorithms must contain asymmetric signature algorithms"
+                }
             }
-            require(kbJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
-                "sdJwtAlgorithms must contain asymmetric signature algorithms"
+
+            if (null != kbJwtAlgorithms) {
+                require(kbJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
+                    "sdJwtAlgorithms must contain asymmetric signature algorithms"
+                }
             }
         }
     }
@@ -118,24 +147,15 @@ sealed interface VpFormat {
     /**
      * MSO MDoc
      */
+    @Serializable
     data class MsoMdoc(
-        val algorithms: NonEmptyList<JWSAlgorithm>,
-    ) : VpFormat {
-        init {
-            require(algorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
-                "algorithms must contain asymmetric signature algorithms"
-            }
-        }
-    }
-}
+        @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED_MSO_MDOC_ISSUER_AUTH_ALGORITHMS)
+        val issuerAuthAlgorithms: NonEmptyList<CoseAlgorithm>?,
 
-/**
- * Verifiable Presentation formats supported by Verifier Endpoint.
- */
-data class VpFormats(
-    val sdJwtVc: VpFormat.SdJwtVc,
-    val msoMdoc: VpFormat.MsoMdoc,
-)
+        @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED_MSO_MDOC_DEVICE_AUTH_ALGORITHMS)
+        val deviceAuthAlgorithms: NonEmptyList<CoseAlgorithm>?,
+    )
+}
 
 /**
  * By OpenID Connect Dynamic Client Registration specification
@@ -148,7 +168,7 @@ data class ClientMetaData(
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
     val responseEncryptionOption: ResponseEncryptionOption,
-    val vpFormats: VpFormats,
+    val vpFormatsSupported: VpFormatsSupported,
 )
 
 /**
@@ -344,6 +364,13 @@ data class KeyStoreConfig(
     val keystorePassword: CharArray? = "".toCharArray(),
     val keystore: KeyStore,
 )
+
+internal fun VpFormatsSupported.supports(format: Format): Boolean =
+    when (format) {
+        Format.SdJwtVc -> null != sdJwtVc
+        Format.MsoMdoc -> null != msoMdoc
+        else -> false
+    }
 
 fun TrustSourcesConfig(trustedList: TrustedListConfig?, keystore: KeyStoreConfig?): Ior<TrustedListConfig, KeyStoreConfig> =
     Ior.fromNullables(trustedList, keystore) ?: error("Either trustedList or keystore must be provided")

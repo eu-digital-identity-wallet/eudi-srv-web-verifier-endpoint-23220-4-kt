@@ -23,7 +23,6 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import com.eygraber.uri.Uri
 import com.eygraber.uri.toURI
-import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -232,7 +231,7 @@ class InitTransactionLive(
         // validate input
         val (nonce, type) = initTransactionTO.toDomain(
             verifierConfig.transactionDataHashAlgorithm,
-            verifierConfig.clientMetaData.vpFormats,
+            verifierConfig.clientMetaData.vpFormatsSupported,
         ).bind()
 
         // if response mode is direct post jwt then generate ephemeral key
@@ -394,7 +393,7 @@ class InitTransactionLive(
 
 internal fun InitTransactionTO.toDomain(
     transactionDataHashAlgorithm: HashAlgorithm,
-    vpFormats: VpFormats,
+    vpFormatsSupported: VpFormatsSupported,
 ): Either<ValidationError, Pair<Nonce, PresentationType>> = either {
     fun requiredIdTokenType() =
         idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
@@ -402,11 +401,12 @@ internal fun InitTransactionTO.toDomain(
     fun requiredQuery(): DCQL {
         ensureNotNull(dcqlQuery) { ValidationError.MissingPresentationQuery }
         ensure(
-            dcqlQuery.formatsAre(
-                SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
-                OpenId4VPSpec.FORMAT_MSO_MDOC,
-            ),
+            dcqlQuery.credentials.value.all {
+                val format = it.format
+                vpFormatsSupported.supports(format)
+            },
         ) { ValidationError.UnsupportedFormat }
+
         return dcqlQuery
     }
 
@@ -462,8 +462,6 @@ internal fun InitTransactionTO.toDomain(
 
     nonce to presentationType
 }
-
-private fun DCQL.formatsAre(vararg supportedFormats: String): Boolean = credentials.value.all { it.format.value in supportedFormats }
 
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
