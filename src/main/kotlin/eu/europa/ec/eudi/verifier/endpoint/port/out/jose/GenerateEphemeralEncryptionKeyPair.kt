@@ -16,14 +16,11 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
 
 import arrow.core.Either
-import eu.europa.ec.eudi.verifier.endpoint.domain.EphemeralEncryptionKeyPairJWK
-import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
+import com.nimbusds.jose.jwk.JWK
 
 /**
  * An out port that generates ephemeral key
  */
 fun interface GenerateEphemeralEncryptionKeyPair {
-    operator fun invoke(
-        encryptedResponse: JarmOption.Encrypted,
-    ): Either<Throwable, EphemeralEncryptionKeyPairJWK>
+    operator fun invoke(): Either<Throwable, JWK>
 }

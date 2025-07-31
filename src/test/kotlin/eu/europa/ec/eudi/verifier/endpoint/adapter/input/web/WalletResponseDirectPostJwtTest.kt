@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWEEncrypter
 import com.nimbusds.jose.JWEHeader
 import com.nimbusds.jose.crypto.ECDHEncrypter
@@ -22,11 +23,9 @@ import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusEnc
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.nimbusJWSAlgorithm
-import eu.europa.ec.eudi.verifier.endpoint.domain.JarmOption
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
@@ -55,9 +54,8 @@ import kotlin.test.*
     properties = [
         "verifier.maxAge=PT6400M",
         "verifier.response.mode=DirectPostJwt",
-        "verifier.clientMetadata.authorizationSignedResponseAlg=",
-        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
-        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A256GCM",
+        "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
+        "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",
     ],
 )
@@ -70,6 +68,9 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
     @Autowired
     private lateinit var client: WebTestClient
 
+    @Autowired
+    private lateinit var config: VerifierConfig
+
     @TestConfiguration
     internal class Config {
 
@@ -80,8 +81,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response, an idToken
      * - verifier to verifier backend, to get wallet response
      *
@@ -91,42 +91,43 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
     @Order(value = 1)
     fun `direct_post_jwt vp_token end to end`() = runTest {
         fun test(
-            presentationDefinition: String,
-            presentationSubmission: String,
+            query: String,
             vpToken: String,
             asserter: (WalletResponseTO) -> Unit,
         ) {
             // given
             val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
-            val initTransaction = VerifierApiClient.loadInitTransactionTO(presentationDefinition)
+            val initTransaction = VerifierApiClient.loadInitTransactionTO(query)
             val transactionInitialized =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
                     VerifierApiClient.initTransaction(client, initTransaction),
                 )
             val requestId =
                 RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
-            val requestObjectJsonResponse =
+            val requestObjectJsonResponse: JsonObject =
                 WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
             val transactionId = TransactionId(transactionInitialized.transactionId)
 
-            val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
+            val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
+            assertEquals(listOf(config.clientMetaData.responseEncryptionOption.encryptionMethod), supportedEncryptionMethods)
+
             val ecKey = requestObjectJsonResponse.ecKey()
-            assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
             assertNotNull(ecKey)
+            assertNotNull(ecKey.algorithm)
+            val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
+            assertEquals(config.clientMetaData.responseEncryptionOption.algorithm, supportedAlgorithm)
 
             // (wallet) generate JWT with claims
-            val pd: JsonElement = Json.decodeFromString(TestUtils.loadResource(presentationSubmission))
             val jwtClaims: JWTClaimsSet = buildJsonObject {
                 put("state", requestId.value)
                 put("id_token", idToken)
                 put("vp_token", Json.decodeFromString(TestUtils.loadResource(vpToken)))
-                put("presentation_submission", pd)
             }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
             log.info("plaintextJwtClaims: ${jwtClaims.toJSONObject()}")
 
             // Request JWT encrypted with ECDH-ES
-            val jweHeader = JWEHeader.Builder(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
+            val jweHeader = JWEHeader.Builder(supportedAlgorithm, supportedEncryptionMethods.first())
                 .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
                 .build()
             log.info("header = ${jweHeader.toJSONObject()}")
@@ -159,19 +160,25 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         }
 
         // Test with single Verifiable Presentation -- single JsonObject
-        test("02-presentationDefinition.json", "02-presentationSubmission.json", "02-vpToken.json") {
+        test("02-dcql.json", "02-vpToken.json") {
             val vpToken = assertNotNull(it.vpToken)
-            assertIs<JsonArray>(vpToken)
-            assertIs<JsonObject>(vpToken[0])
+
+            val waDriverLicence = assertIs<JsonArray>(vpToken["wa_driver_license"])
+            assertEquals(1, waDriverLicence.size)
+            assertIs<JsonObject>(waDriverLicence[0])
         }
 
         // Test with multiple Verifiable Presentation -- single JsonArray that contains one JsonPrimitive and one JsonObject
-        test("03-presentationDefinition.json", "03-presentationSubmission.json", "03-vpToken.json") {
+        test("03-dcql.json", "03-vpToken.json") {
             val vpToken = assertNotNull(it.vpToken)
-            assertIs<JsonArray>(vpToken)
-            assertEquals(2, vpToken.size)
-            assertIs<JsonPrimitive>(vpToken[0])
-            assertIs<JsonObject>(vpToken[1])
+
+            val employmentInput = assertIs<JsonArray>(vpToken["employment_input"])
+            assertEquals(1, employmentInput.size)
+            assertIs<JsonPrimitive>(employmentInput[0])
+
+            val employmentInput2 = assertIs<JsonArray>(vpToken["employment_input_2"])
+            assertEquals(1, employmentInput2.size)
+            assertIs<JsonObject>(employmentInput2[0])
         }
     }
 
@@ -184,7 +191,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         // given
         val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
         val initTransaction = VerifierApiClient.loadInitTransactionTO(
-            "02-presentationDefinition.json",
+            "02-dcql.json",
         ).copy(responseMode = ResponseModeTO.DirectPostJwt)
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
@@ -193,10 +200,13 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        val jarmOption = assertIs<JarmOption.Encrypted>(requestObjectJsonResponse.jarmOption())
+        val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
+        assertEquals(listOf(config.clientMetaData.responseEncryptionOption.encryptionMethod), supportedEncryptionMethods)
+
         val ecKey = requestObjectJsonResponse.ecKey()
-        assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
         assertNotNull(ecKey)
+        val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
+        assertEquals(config.clientMetaData.responseEncryptionOption.algorithm, supportedAlgorithm)
 
         // (wallet)
         // create a post form url encoded body
@@ -204,7 +214,6 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         formEncodedBody.add("state", requestId.value)
         formEncodedBody.add("id_token", idToken)
         formEncodedBody.add("vp_token", TestUtils.loadResource("02-vpToken.json"))
-        formEncodedBody.add("presentation_submission", TestUtils.loadResource("02-presentationSubmission.json"))
 
         // send the wallet response
         // we expect the response submission to fail
@@ -222,9 +231,8 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
     properties = [
         "verifier.maxAge=PT6400M",
         "verifier.response.mode=DirectPostJwt",
-        "verifier.clientMetadata.authorizationSignedResponseAlg=",
-        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
-        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A256GCM",
+        "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
+        "verifier.clientMetadata.responseEncryption.method=A128GCM",
         "verifier.jwk.embed=ByValue",
     ],
 )
@@ -234,29 +242,32 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
     @Autowired
     private lateinit var client: WebTestClient
 
+    @Autowired
+    private lateinit var config: VerifierConfig
+
     @Test
     fun `when wallet responds with a single device response that contains multiple documents, validations succeeds`() = runTest {
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-dcql.json")
         val transactionDetails =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
-        val requestObject = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
+        val requestObjectJsonResponse = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
 
-        val jarmOption = assertIs<JarmOption.Encrypted>(requestObject.jarmOption())
-        assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
-        val ecKey = assertNotNull(requestObject.ecKey())
+        val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
+        assertEquals(listOf(config.clientMetaData.responseEncryptionOption.encryptionMethod), supportedEncryptionMethods)
+
+        val ecKey = requestObjectJsonResponse.ecKey()
+        assertNotNull(ecKey)
+        assertNotNull(ecKey.algorithm)
+        val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
 
         val requestId = RequestId(transactionDetails.requestUri.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val encryptedJwt = run {
-            val presentationSubmission: JsonElement = Json.decodeFromString(
-                TestUtils.loadResource("06-pidPlusMdl-presentationSubmission.json"),
-            )
             val jwtClaims: JWTClaimsSet = buildJsonObject {
                 put("state", requestId.value)
                 put("vp_token", Json.decodeFromString(TestUtils.loadResource("06-pidPlusMdl-vpToken.json")))
-                put("presentation_submission", presentationSubmission)
             }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
-            val jweHeader = JWEHeader.Builder(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
+            val jweHeader = JWEHeader.Builder(supportedAlgorithm, supportedEncryptionMethods.first())
                 .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
                 .build()
 
@@ -267,38 +278,71 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
             .apply {
                 add("response", encryptedJwt.serialize())
             }
+
         WalletApiClient.directPostJwt(client, requestId, walletResponse)
 
         val transactionResponse =
             assertNotNull(VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
+
         val vpToken = assertNotNull(transactionResponse.vpToken)
-        assertIs<JsonArray>(vpToken)
-        assertIs<JsonPrimitive>(vpToken[0])
+        assertEquals(2, vpToken.size)
+
+        val pid = assertIs<JsonArray>(vpToken["eu_europa_ec_eudi_pid_1"])
+        assertEquals(1, pid.size)
+        assertIs<JsonPrimitive>(pid[0])
+
+        val mDL = assertIs<JsonArray>(vpToken["org_iso_18013_5_1_mDL"])
+        assertEquals(1, mDL.size)
+        assertIs<JsonPrimitive>(mDL[0])
+    }
+
+    @Test
+    fun `verifier accepts unencrypted error responses even when direct_post_jwt is expected`() = runTest {
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("06-pidPlusMdl-dcql.json")
+
+        val transactionDetails =
+            assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
+        WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
+
+        val requestId = RequestId(transactionDetails.requestUri!!.removePrefix("http://localhost:0/wallet/request.jwt/"))
+
+        val walletResponse = LinkedMultiValueMap<String, Any>()
+            .apply {
+                add("state", requestId.value)
+                add("error", "error")
+            }
+
+        WalletApiClient.directPost(client, requestId, walletResponse)
+
+        val expectedWalletResponseTO = WalletResponseTO(
+            error = "error",
+        )
+        assertEquals(expectedWalletResponseTO, VerifierApiClient.getWalletResponse(client, TransactionId(transactionDetails.transactionId)))
     }
 
     @Test
     fun `when wallet posts sd-jwt-vc with invalid status list details, post fails`() = runTest {
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("07-ehicSdJwtVc-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("07-ehicSdJwtVc-dcql.json")
         val transactionDetails =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
-        val requestObject = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
+        val requestObjectJsonResponse = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
 
-        val jarmOption = assertIs<JarmOption.Encrypted>(requestObject.jarmOption())
-        assertEquals(JarmOption.Encrypted("ECDH-ES", "A256GCM"), jarmOption)
-        val ecKey = assertNotNull(requestObject.ecKey())
+        val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
+        assertEquals(listOf(config.clientMetaData.responseEncryptionOption.encryptionMethod), supportedEncryptionMethods)
+
+        val ecKey = requestObjectJsonResponse.ecKey()
+        assertNotNull(ecKey)
+        assertNotNull(ecKey.algorithm)
+        val supportedAlgorithm = JWEAlgorithm.parse(ecKey.algorithm.name)
 
         val requestId = RequestId(transactionDetails.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val encryptedJwt = run {
-            val presentationSubmission: JsonElement = Json.decodeFromString(
-                TestUtils.loadResource("07-ehicSdJwtVc-presentationSubmission.json"),
-            )
             val jwtClaims: JWTClaimsSet = buildJsonObject {
                 put("state", requestId.value)
                 put("vp_token", Json.decodeFromString(TestUtils.loadResource("07-ehicSdJwtVc-vpToken.json")))
-                put("presentation_submission", presentationSubmission)
             }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
-            val jweHeader = JWEHeader.Builder(jarmOption.nimbusJWSAlgorithm(), jarmOption.nimbusEnc())
+            val jweHeader = JWEHeader.Builder(supportedAlgorithm, supportedEncryptionMethods.first())
                 .agreementPartyVInfo(Base64URL.encode(initTransaction.nonce!!))
                 .build()
 

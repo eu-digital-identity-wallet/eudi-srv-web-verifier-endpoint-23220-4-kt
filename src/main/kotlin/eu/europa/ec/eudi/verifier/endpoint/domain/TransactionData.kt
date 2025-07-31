@@ -13,10 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:UseSerializers(URLStringSerializer::class, NonEmptyListSerializer::class)
+
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.nonEmptyListOf
+import arrow.core.serialization.NonEmptyListSerializer
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
@@ -35,6 +39,8 @@ import kotlinx.serialization.json.*
 import java.net.URL
 import kotlin.contracts.contract
 
+typealias Base64UrlSafe = String
+
 /**
  * Wrapper for a JsonObject that contains Transaction Data.
  */
@@ -42,23 +48,15 @@ import kotlin.contracts.contract
 value class TransactionData private constructor(val value: JsonObject) {
 
     val type: String
-        get() = value["type"]!!.jsonPrimitive.content
+        get() = value[OpenId4VPSpec.TRANSACTION_DATA_TYPE]!!.jsonPrimitive.content
 
     val credentialIds: NonEmptyList<String>
-        get() = value["credential_ids"]!!
+        get() = value[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]!!
             .jsonArray
             .map { it.jsonPrimitive.content }
             .toNonEmptyListOrNull()!!
 
-    val hashAlgorithms: NonEmptyList<String>?
-        get() = value["transaction_data_hashes_alg"]
-            ?.jsonArray
-            ?.map { it.jsonPrimitive.content }
-            ?.let {
-                it.toNonEmptyListOrNull()!!
-            }
-
-    val base64Url: String
+    val base64Url: Base64UrlSafe
         get() {
             val serialized = jsonSupport.encodeToString(value)
             val decoded = serialized.encodeToByteString()
@@ -66,28 +64,17 @@ value class TransactionData private constructor(val value: JsonObject) {
             return encoded
         }
 
-    inline fun <reified T> decodeAs(
-        deserializer: DeserializationStrategy<T> = serializer(),
-        json: Json = Json.Default,
-    ): T = json.decodeFromJsonElement(deserializer, value)
-
     companion object {
 
         private fun validate(value: JsonObject): Either<Throwable, TransactionData> = Either.catch {
-            val type = value["type"]
+            val type = value[OpenId4VPSpec.TRANSACTION_DATA_TYPE]
             require(type.isNonEmptyString()) {
-                "'type' is required and must not be a non-empty string"
+                "'${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' is required and must not be a non-empty string"
             }
 
-            val credentialIds = value["credential_ids"]
+            val credentialIds = value[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]
             require(credentialIds.isNonEmptyArray() && credentialIds.all { it.isNonEmptyString() }) {
-                "'credential_ids' is required and must be a non-empty array of non-empty strings"
-            }
-
-            value["transaction_data_hashes_alg"]?.let { hashAlgorithms ->
-                require(hashAlgorithms.isNonEmptyArray() && hashAlgorithms.all { it.isNonEmptyString() }) {
-                    "'transaction_data_hashes_alg' if present must be a non-empty array of non-empty strings"
-                }
+                "'${OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS}' is required and must be a non-empty array of non-empty strings"
             }
 
             TransactionData(value)
@@ -96,20 +83,14 @@ value class TransactionData private constructor(val value: JsonObject) {
         operator fun invoke(
             type: String,
             credentialIds: NonEmptyList<String>,
-            hashAlgorithms: NonEmptyList<String>? = null,
             builder: JsonObjectBuilder.() -> Unit = {},
         ): Either<Throwable, TransactionData> {
             val value = buildJsonObject {
                 builder()
 
-                put("type", type)
-                putJsonArray("credential_ids") {
+                put(OpenId4VPSpec.TRANSACTION_DATA_TYPE, type)
+                putJsonArray(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS) {
                     addAll(credentialIds)
-                }
-                hashAlgorithms?.let { hashAlgorithms ->
-                    putJsonArray("transaction_data_hashes_alg") {
-                        addAll(hashAlgorithms)
-                    }
                 }
             }
             return validate(value)
@@ -121,7 +102,7 @@ value class TransactionData private constructor(val value: JsonObject) {
         ): Either<Throwable, TransactionData> = Either.catch {
             val transactionData = validate(unvalidated).getOrThrow()
             require(validCredentialIds.containsAll(transactionData.credentialIds)) {
-                "invalid 'credential_ids'"
+                "invalid '${OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS}'"
             }
             transactionData
         }
@@ -135,6 +116,13 @@ value class TransactionData private constructor(val value: JsonObject) {
             validate(json).getOrThrow()
         }
     }
+}
+
+internal interface SdJwtVcTransactionDataExtensions {
+    val hashAlgorithms: NonEmptyList<String>?
+
+    val hashAlgorithmsOrDefault: NonEmptyList<String>
+        get() = hashAlgorithms ?: nonEmptyListOf(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHM_DEFAULT)
 }
 
 /**
@@ -173,28 +161,28 @@ internal value class SignatureQualifier(val value: String) {
 
     companion object {
         val EuEidasQes: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_qes")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_QES)
 
         val EuEidasAes: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_aes")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_AES)
 
         val EuEidasAesQc: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_aesqc")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_AES_QC)
 
         val EuEidasQeSeal: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_qeseal")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_QE_SEAL)
 
         val EuEidasAeSeal: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_aeseal")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_AE_SEAL)
 
         val EuEidasAeSealQc: SignatureQualifier
-            get() = SignatureQualifier("eu_eidas_aesealqc")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_EU_EIDAS_AE_SEAL_QC)
 
         val ZaEctaAes: SignatureQualifier
-            get() = SignatureQualifier("za_ecta_aes")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_ZA_ECTA_AES)
 
         val ZaEctaOes: SignatureQualifier
-            get() = SignatureQualifier("za_ecta_oes")
+            get() = SignatureQualifier(RQES.SIGNATURE_QUALIFIER_ZA_ECTA_OES)
     }
 }
 
@@ -265,19 +253,19 @@ internal value class AccessMode(val value: String) {
 
     companion object {
         val Public: AccessMode
-            get() = AccessMode("public")
+            get() = AccessMode(RQES.ACCESS_MODE_PUBLIC)
 
         val OneTimePassword: AccessMode
-            get() = AccessMode("OTP")
+            get() = AccessMode(RQES.ACCESS_MODE_OTP)
 
         val BasicAuthentication: AccessMode
-            get() = AccessMode("Basic_Auth")
+            get() = AccessMode(RQES.ACCESS_MODE_BASIC_AUTHENTICATION)
 
         val DigestAuthentication: AccessMode
-            get() = AccessMode("Digest_Auth")
+            get() = AccessMode(RQES.ACCESS_MODE_DIGEST_AUTHENTICATION)
 
         val OAuth20: AccessMode
-            get() = AccessMode("OAuth_20")
+            get() = AccessMode(RQES.ACCESS_MODE_OAUTH20)
     }
 }
 
@@ -300,17 +288,21 @@ internal value class OneTimePassword(val value: String) {
 @Serializable
 internal data class DocumentAccessMethod(
 
-    @SerialName("document_access_mode")
+    @SerialName(RQES.DOCUMENT_ACCESS_METHOD_ACCESS_MODE)
     @Required
     val accessMode: AccessMode,
 
-    @SerialName("oneTimePassword")
+    @SerialName(RQES.DOCUMENT_ACCESS_METHOD_OTP)
     val oneTimePassword: OneTimePassword? = null,
 
 ) {
     init {
         if (AccessMode.OneTimePassword == accessMode) {
-            requireNotNull(oneTimePassword) { "'oneTimePassword' is required when 'document_access_mode' is 'OTP'." }
+            requireNotNull(oneTimePassword) {
+                "'${RQES.DOCUMENT_ACCESS_METHOD_OTP}' is required when " +
+                    "'${RQES.DOCUMENT_ACCESS_METHOD_ACCESS_MODE}' is " +
+                    "'${RQES.ACCESS_MODE_OTP}'."
+            }
         }
     }
 }
@@ -321,49 +313,50 @@ internal data class DocumentAccessMethod(
 @Serializable
 internal data class DocumentDigest(
 
-    @SerialName("label")
+    @SerialName(RQES.DOCUMENT_DIGEST_LABEL)
     @Required
     val label: Label,
 
-    @SerialName("hash")
+    @SerialName(RQES.DOCUMENT_DIGEST_HASH)
     val hash: String? = null,
 
-    @SerialName("hashAlgorithmOID")
+    @SerialName(RQES.DOCUMENT_DIGEST_HASH_ALGORITHM)
     val hashAlgorithm: HashAlgorithmOID? = null,
 
-    @SerialName("documentLocation_uri")
-    @Serializable(with = URLStringSerializer::class)
+    @SerialName(RQES.DOCUMENT_DIGEST_DOCUMENT_LOCATION_URI)
     val documentLocation: URL? = null,
 
-    @SerialName("documentLocation_method")
+    @SerialName(RQES.DOCUMENT_DIGEST_DOCUMENT_LOCATION_METHOD)
     val documentAccessMethod: DocumentAccessMethod? = null,
 
-    @SerialName("DTBS/R")
+    @SerialName(RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION)
     val dataToBeSignedRepresentation: String? = null,
 
-    @SerialName("DTBS/RHashAlgorithmOID")
+    @SerialName(RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION_HASH_ALGORITHM)
     val dataToBeSignedRepresentationHashAlgorithm: HashAlgorithmOID? = null,
 
 ) {
     init {
         require((null == hash && null == hashAlgorithm) || (null != hash && null != hashAlgorithm)) {
-            "either provide both 'hash' and 'hashAlgorithmOID', or none."
+            "either provide both '${RQES.DOCUMENT_DIGEST_HASH}' and '${RQES.DOCUMENT_DIGEST_HASH_ALGORITHM}', or none."
         }
         require(
             (null == dataToBeSignedRepresentation && null == dataToBeSignedRepresentationHashAlgorithm) ||
                 (null != dataToBeSignedRepresentation && null != dataToBeSignedRepresentationHashAlgorithm),
         ) {
-            "either provide both 'DTBS/R' and 'DTBS/RHashAlgorithmOID', or none."
+            "either provide both '${RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION}' and " +
+                "'${RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION_HASH_ALGORITHM}', or none."
         }
         require(
             (null == documentLocation && null == documentAccessMethod) ||
                 (null != documentLocation && null != documentAccessMethod),
         ) {
-            "either provide both 'documentLocation_uri' and 'documentLocation_method', or none."
+            "either provide both '${RQES.DOCUMENT_DIGEST_DOCUMENT_LOCATION_URI}' and " +
+                "'${RQES.DOCUMENT_DIGEST_DOCUMENT_LOCATION_METHOD}', or none."
         }
-        require(
-            null != hash || null != dataToBeSignedRepresentation,
-        ) { "either 'hash', or 'dataToBeSignedRepresentation' must be present." }
+        require(null != hash || null != dataToBeSignedRepresentation) {
+            "either '${RQES.DOCUMENT_DIGEST_HASH}', or '${RQES.DOCUMENT_DIGEST_DATA_TO_BE_SIGNED_REPRESENTATION}' must be present."
+        }
     }
 }
 
@@ -385,42 +378,41 @@ internal value class ProcessId(val value: String) {
  */
 @Serializable
 internal data class QesAuthorization(
-    @SerialName("type")
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
     @Required
     val type: String,
 
-    @SerialName("credential_ids")
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS)
     @Required
-    val credentialIds: List<String>,
+    val credentialIds: NonEmptyList<String>,
 
-    @SerialName("transaction_data_hashes_alg")
-    val hashAlgorithms: List<String>? = null,
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
+    override val hashAlgorithms: NonEmptyList<String>? = null,
 
-    @SerialName("signatureQualifier")
+    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER)
     val signatureQualifier: SignatureQualifier? = null,
 
-    @SerialName("credentialID")
+    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_CREDENTIAL_ID)
     val credentialId: CredentialId? = null,
 
-    @SerialName("documentDigests")
+    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_DOCUMENT_DIGESTS)
     @Required
-    val documentDigests: List<DocumentDigest>,
+    val documentDigests: NonEmptyList<DocumentDigest>,
 
-    @SerialName("processID")
+    @SerialName(RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_PROCESS_ID)
     val processId: ProcessId? = null,
 
-) {
+) : SdJwtVcTransactionDataExtensions {
     init {
-        require(TYPE == type) { "Expected 'type' to be '$TYPE'. Was: '$type'." }
-        require(credentialIds.isNotEmpty()) { "'credential_ids' must not be empty." }
+        require(TYPE == type) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '$type'." }
         require(null != credentialId || null != signatureQualifier) {
-            "either 'credentialID', or 'signatureQualifier' must be present."
+            "either '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_CREDENTIAL_ID}', " +
+                "or '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER}' must be present."
         }
-        require(documentDigests.isNotEmpty()) { "'documentDigests' must not be empty." }
     }
 
     companion object {
-        const val TYPE = "qes_authorization"
+        const val TYPE = RQES.TYPE_QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION
     }
 }
 
@@ -429,37 +421,35 @@ internal data class QesAuthorization(
  */
 @Serializable
 internal data class QCertCreationAcceptance(
-    @SerialName("type")
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
     @Required
     val type: String,
 
-    @SerialName("credential_ids")
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS)
     @Required
-    val credentialIds: List<String>,
+    val credentialIds: NonEmptyList<String>,
 
-    @SerialName("transaction_data_hashes_alg")
-    val hashAlgorithms: List<String>? = null,
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
+    override val hashAlgorithms: NonEmptyList<String>? = null,
 
-    @SerialName("QC_terms_conditions_uri")
+    @SerialName(RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_TERM_AND_CONDITIONS_URI)
     @Required
-    @Serializable(with = URLStringSerializer::class)
     val termsAndConditions: URL,
 
-    @SerialName("QC_hash")
+    @SerialName(RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_HASH)
     @Required
     val documentHash: String,
 
-    @SerialName("QC_hashAlgorithmOID")
+    @SerialName(RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_HASH_ALGORITHM)
     @Required
     val hashAlgorithm: HashAlgorithmOID,
 
-) {
+) : SdJwtVcTransactionDataExtensions {
     init {
-        require(TYPE == type) { "Expected 'type' to be '$TYPE'. Was: '$type'." }
-        require(credentialIds.isNotEmpty()) { "'credential_ids' must not be empty." }
+        require(TYPE == type) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '$type'." }
     }
 
     companion object {
-        const val TYPE = "qcert_creation_acceptance"
+        const val TYPE = RQES.TYPE_QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE
     }
 }
