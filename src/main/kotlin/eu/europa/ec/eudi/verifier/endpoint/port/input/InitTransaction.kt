@@ -402,11 +402,13 @@ internal fun InitTransactionTO.toDomain(
     fun requiredQuery(): DCQL {
         ensureNotNull(dcqlQuery) { ValidationError.MissingPresentationQuery }
         ensure(
-            dcqlQuery.formatsAre(
-                SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT,
-                OpenId4VPSpec.FORMAT_MSO_MDOC,
-            ),
+            dcqlQuery.credentials.value.all {
+                val format = it.format.value
+                vpFormatsSupported.sdJwtVc?.let { format == SdJwtVcSpec.MEDIA_SUBTYPE_DC_SD_JWT } ?: false ||
+                    vpFormatsSupported.msoMdoc?.let { format == OpenId4VPSpec.FORMAT_MSO_MDOC } ?: false
+            },
         ) { ValidationError.UnsupportedFormat }
+
         return dcqlQuery
     }
 
@@ -462,8 +464,6 @@ internal fun InitTransactionTO.toDomain(
 
     nonce to presentationType
 }
-
-private fun DCQL.formatsAre(vararg supportedFormats: String): Boolean = credentials.value.all { it.format.value in supportedFormats }
 
 private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
     IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
