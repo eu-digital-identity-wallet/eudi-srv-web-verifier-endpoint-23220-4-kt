@@ -61,7 +61,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
             Format.SdJwtVc -> {
-                val vpFormatSupported = requireNotNull(vpFormatsSupported.sdJwtVc)
+                val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
                 val validator = sdJwtVcValidatorFactory(issuerChain)
                 validator.validateSdJwtVcVerifiablePresentation(
                     vpFormatSupported,
@@ -73,7 +73,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             }
 
             Format.MsoMdoc -> {
-                requireNotNull(vpFormatsSupported.msoMdoc)
+                checkNotNull(vpFormatsSupported.msoMdoc)
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
                     verifiablePresentation,
