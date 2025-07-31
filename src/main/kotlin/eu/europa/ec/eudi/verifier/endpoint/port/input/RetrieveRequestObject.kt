@@ -202,9 +202,8 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
                 }
 
                 Format.MsoMdoc -> {
-                    val verifierSupported = checkNotNull(verifierSupportedVpFormats.msoMdoc)
-                    val walletSupported = walletSupportedVpFormats.msoMdoc
-                    null != walletSupported && commonGround(walletSupported = walletSupported, verifierSupported = verifierSupported)
+                    checkNotNull(verifierSupportedVpFormats.msoMdoc)
+                    null != walletSupportedVpFormats.msoMdoc
                 }
 
                 else -> false
@@ -368,17 +367,6 @@ private fun commonGround(
     val kbJwtAlgorithmCommonGround =
         commonGround(walletSupported = walletSupported.kbJwtAlgorithms, verifierSupported = verifierSupported.kbJwtAlgorithms)
     return sdJwtAlgorithmCommonGround && kbJwtAlgorithmCommonGround
-}
-
-private fun commonGround(
-    walletSupported: VpFormatsSupported.MsoMdoc,
-    verifierSupported: VpFormatsSupported.MsoMdoc,
-): Boolean {
-    val issuerAuthAlgorithmsCommonGround =
-        commonGround(walletSupported = walletSupported.issuerAuthAlgorithms, verifierSupported = verifierSupported.issuerAuthAlgorithms)
-    val deviceAuthAlgorithmsCommonGround =
-        commonGround(walletSupported = walletSupported.deviceAuthAlgorithms, verifierSupported = verifierSupported.deviceAuthAlgorithms)
-    return issuerAuthAlgorithmsCommonGround && deviceAuthAlgorithmsCommonGround
 }
 
 private fun JsonObject.toJwks(): Either<RetrieveRequestObjectError.InvalidWalletMetadata, JWKSet> =
