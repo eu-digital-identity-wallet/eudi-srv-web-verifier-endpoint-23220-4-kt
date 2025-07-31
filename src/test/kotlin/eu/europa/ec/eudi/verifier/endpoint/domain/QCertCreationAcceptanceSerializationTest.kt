@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
+import arrow.core.nonEmptyListOf
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -40,8 +41,8 @@ class QCertCreationAcceptanceSerializationTest {
         // Create a QCertCreationAcceptance instance
         val qCertCreationAcceptance = QCertCreationAcceptance(
             type = QCertCreationAcceptance.TYPE,
-            credentialIds = listOf("credential1", "credential2"),
-            hashAlgorithms = listOf("SHA-256", "SHA-512"),
+            credentialIds = nonEmptyListOf("credential1", "credential2"),
+            hashAlgorithms = nonEmptyListOf("SHA-256", "SHA-512"),
             termsAndConditions = URL("https://example.com/terms"),
             documentHash = "dGVzdEhhc2g", // "testHash" in Base64 without padding
             hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
@@ -56,7 +57,7 @@ class QCertCreationAcceptanceSerializationTest {
 
         // Verify JSON structure and values
         val jsonObject = jsonElement.jsonObject
-        assertEquals(QCertCreationAcceptance.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QCertCreationAcceptance.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Deserialize back to QCertCreationAcceptance
         val deserializedQCertCreationAcceptance = json.decodeFromString<QCertCreationAcceptance>(jsonString)
@@ -78,8 +79,8 @@ class QCertCreationAcceptanceSerializationTest {
         // Create a QCertCreationAcceptance instance
         val qCertCreationAcceptance = QCertCreationAcceptance(
             type = QCertCreationAcceptance.TYPE,
-            credentialIds = listOf("credential1", "credential2"),
-            hashAlgorithms = listOf("SHA-256", "SHA-512"),
+            credentialIds = nonEmptyListOf("credential1", "credential2"),
+            hashAlgorithms = nonEmptyListOf("SHA-256", "SHA-512"),
             termsAndConditions = URL("https://example.com/terms"),
             documentHash = "dGVzdEhhc2g", // "testHash" in Base64 without padding
             hashAlgorithm = HashAlgorithmOID("2.16.840.1.101.3.4.2.1"), // SHA-256 OID
@@ -92,32 +93,32 @@ class QCertCreationAcceptanceSerializationTest {
         val jsonObject = json.parseToJsonElement(jsonString).jsonObject
 
         // Verify all expected fields are present with correct values
-        assertEquals(QCertCreationAcceptance.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QCertCreationAcceptance.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Check credential_ids
-        val credentialIds = jsonObject["credential_ids"]
+        val credentialIds = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]
         assertNotNull(credentialIds)
         assertTrue(credentialIds.toString().contains("credential1"))
         assertTrue(credentialIds.toString().contains("credential2"))
 
         // Check transaction_data_hashes_alg
-        val hashAlgorithms = jsonObject["transaction_data_hashes_alg"]
+        val hashAlgorithms = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS]
         assertNotNull(hashAlgorithms)
         assertTrue(hashAlgorithms.toString().contains("SHA-256"))
         assertTrue(hashAlgorithms.toString().contains("SHA-512"))
 
         // Check QC_terms_conditions_uri
-        val termsAndConditions = jsonObject["QC_terms_conditions_uri"]
+        val termsAndConditions = jsonObject[RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_TERM_AND_CONDITIONS_URI]
         assertNotNull(termsAndConditions)
         assertEquals("\"https://example.com/terms\"", termsAndConditions.toString())
 
         // Check QC_hash
-        val documentHash = jsonObject["QC_hash"]
+        val documentHash = jsonObject[RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_HASH]
         assertNotNull(documentHash)
         assertEquals("\"dGVzdEhhc2g\"", documentHash.toString())
 
         // Check QC_hashAlgorithmOID
-        val hashAlgorithm = jsonObject["QC_hashAlgorithmOID"]
+        val hashAlgorithm = jsonObject[RQES.QUALIFIED_CERTIFICATE_CREATION_ACCEPTANCE_HASH_ALGORITHM]
         assertNotNull(hashAlgorithm)
         assertEquals("\"2.16.840.1.101.3.4.2.1\"", hashAlgorithm.toString())
     }
@@ -141,8 +142,8 @@ class QCertCreationAcceptanceSerializationTest {
 
         // Verify the deserialized object has the expected values
         assertEquals(QCertCreationAcceptance.TYPE, deserializedQCertCreationAcceptance.type)
-        assertEquals(listOf("credential3", "credential4"), deserializedQCertCreationAcceptance.credentialIds)
-        assertEquals(listOf("SHA-384", "SHA-512"), deserializedQCertCreationAcceptance.hashAlgorithms)
+        assertEquals(nonEmptyListOf("credential3", "credential4"), deserializedQCertCreationAcceptance.credentialIds)
+        assertEquals(nonEmptyListOf("SHA-384", "SHA-512"), deserializedQCertCreationAcceptance.hashAlgorithms)
         assertEquals("https://example.org/terms-and-conditions", deserializedQCertCreationAcceptance.termsAndConditions.toString())
         assertEquals("ZXhhbXBsZUhhc2g", deserializedQCertCreationAcceptance.documentHash)
         assertEquals("2.16.840.1.101.3.4.2.2", deserializedQCertCreationAcceptance.hashAlgorithm.value)

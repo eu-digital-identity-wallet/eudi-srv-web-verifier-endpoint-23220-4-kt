@@ -427,7 +427,7 @@ internal fun InitTransactionTO.toDomain(
         }
 
         return transactionData?.map {
-            TransactionData.validate(JsonObject(it + ("transaction_data_hashes_alg" to hashAlgorithms)), credentialIds)
+            TransactionData.validate(JsonObject(it + (OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS to hashAlgorithms)), credentialIds)
                 .flatMap { transactionData ->
                     Either.catch {
                         when (transactionData.type) {

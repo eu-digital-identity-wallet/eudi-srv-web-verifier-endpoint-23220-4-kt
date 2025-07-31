@@ -25,6 +25,11 @@ object OpenId4VPSpec {
 
     const val DCQL_QUERY: String = "dcql_query"
     const val TRANSACTION_DATA: String = "transaction_data"
+    const val TRANSACTION_DATA_TYPE: String = "type"
+    const val TRANSACTION_DATA_CREDENTIAL_IDS: String = "credential_ids"
+    const val TRANSACTION_DATA_HASH_ALGORITHMS: String = "transaction_data_hashes_alg"
+    const val TRANSACTION_DATA_HASH_ALGORITHM_DEFAULT: String = "sha-256"
+    const val TRANSACTION_DATA_HASHES: String = "transaction_data_hashes"
 
     const val CLIENT_ID: String = "client_id"
     const val REQUEST: String = "request"

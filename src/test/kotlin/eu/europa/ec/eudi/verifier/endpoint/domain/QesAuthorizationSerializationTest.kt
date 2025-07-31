@@ -15,7 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-import kotlinx.serialization.encodeToString
+import arrow.core.nonEmptyListOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -50,11 +50,11 @@ class QesAuthorizationSerializationTest {
         // Create a QesAuthorization instance
         val qesAuthorization = QesAuthorization(
             type = QesAuthorization.TYPE,
-            credentialIds = listOf("607510a9-c957-4095-906d-f99fd006c4ae"),
-            hashAlgorithms = listOf("SHA-256"),
+            credentialIds = nonEmptyListOf("607510a9-c957-4095-906d-f99fd006c4ae"),
+            hashAlgorithms = nonEmptyListOf("SHA-256"),
             signatureQualifier = SignatureQualifier.EuEidasQes,
             credentialId = null,
-            documentDigests = listOf(documentDigest),
+            documentDigests = nonEmptyListOf(documentDigest),
             processId = null,
         )
 
@@ -67,7 +67,7 @@ class QesAuthorizationSerializationTest {
 
         // Verify JSON structure and values
         val jsonObject = jsonElement.jsonObject
-        assertEquals(QesAuthorization.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QesAuthorization.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Deserialize back to QesAuthorization
         val deserializedQesAuthorization = json.decodeFromString<QesAuthorization>(jsonString)
@@ -105,11 +105,11 @@ class QesAuthorizationSerializationTest {
         // Create a QesAuthorization instance
         val qesAuthorization = QesAuthorization(
             type = QesAuthorization.TYPE,
-            credentialIds = listOf("607510a9-c957-4095-906d-f99fd006c4ae"),
-            hashAlgorithms = listOf("SHA-256"),
+            credentialIds = nonEmptyListOf("607510a9-c957-4095-906d-f99fd006c4ae"),
+            hashAlgorithms = nonEmptyListOf("SHA-256"),
             signatureQualifier = SignatureQualifier.EuEidasQes,
             credentialId = null,
-            documentDigests = listOf(documentDigest),
+            documentDigests = nonEmptyListOf(documentDigest),
             processId = null,
         )
 
@@ -120,25 +120,25 @@ class QesAuthorizationSerializationTest {
         val jsonObject = json.parseToJsonElement(jsonString).jsonObject
 
         // Verify all expected fields are present with correct values
-        assertEquals(QesAuthorization.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QesAuthorization.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Check credential_ids
-        val credentialIds = jsonObject["credential_ids"]
+        val credentialIds = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]
         assertNotNull(credentialIds)
         assertTrue(credentialIds.toString().contains("607510a9-c957-4095-906d-f99fd006c4ae"))
 
         // Check transaction_data_hashes_alg
-        val hashAlgorithms = jsonObject["transaction_data_hashes_alg"]
+        val hashAlgorithms = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS]
         assertNotNull(hashAlgorithms)
         assertTrue(hashAlgorithms.toString().contains("SHA-256"))
 
         // Check signatureQualifier
-        val signatureQualifier = jsonObject["signatureQualifier"]
+        val signatureQualifier = jsonObject[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER]
         assertNotNull(signatureQualifier)
         assertEquals("\"eu_eidas_qes\"", signatureQualifier.toString())
 
         // Check documentDigests
-        val documentDigests = jsonObject["documentDigests"]
+        val documentDigests = jsonObject[RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_DOCUMENT_DIGESTS]
         assertNotNull(documentDigests)
 
         // Verify the first document digest
