@@ -605,6 +605,10 @@ Description: Method that verifier is advertising and supports for authorization 
 Possible values: `A128CBC-HS256`, `A192CBC-HS384`, `A256CBC-HS512`, `A128GCM`, `A192GCM`, `256GCM`, `XC20P`  
 Default value: `A128GCM`  
 
+Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_SDJWTVC_ENABLED`  
+Description: Enables SD-JWT VC support for verifier's client metadata  
+Default value: `true`  
+
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_SDJWTVC_SDJWTALGORITHMS`  
 Description: Comma separated list of signature algorithms the Issuer Signed JWT of an SD-JWT VC can be signed with     
 Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
@@ -617,11 +621,21 @@ Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature
 https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms
 Default value: `ES256`
 
-Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_MSOMDOC_ALGORITHMS`  
-Description: Comma separated list of signature algorithms the `COSESign1` of an `IssuerSigned` in `MDoc` can be signed with        
-Possible values: Any `Algorithm Name` of an IANA registered asymmetric signature algorithm (i.e. Usage is `alg`):
-https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms
-Default value: `ES256`
+Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_MSOMDOC_ENABLED`  
+Description: Enable MDoc support for verifier's client metadata  
+Default value: `true`  
+
+Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_MSOMDOC_ISSUERAUTHALGORITHMS`  
+Description: Identifier of the COSE signature algorithm the verifier support for `issuerauth_alg_values` in `MDoc`  
+Possible values: Fully specify `COSE` algorithm identifier of an IANA registered asymmetric signature algorithm: 
+https://www.iana.org/assignments/cose/cose.xhtml#algorithms  
+Default value: `-7`  
+
+Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_MSOMDOC_DEVICEAUTHALGORITHSM`  
+Description: Identifier of the COSE signature algorithm the verifier support for `deviceauth_alg_values` in `MDoc`  
+Possible values: Fully specify `COSE` algorithm identifier of an IANA registered asymmetric signature algorithm:
+https://www.iana.org/assignments/cose/cose.xhtml#algorithms
+Default value: `-7`
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_STATUSCHECK_ENABLED`  
 Description: Enables status check validation for sd-jwt-vc attestations shared.  
