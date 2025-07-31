@@ -606,7 +606,7 @@ Possible values: `A128CBC-HS256`, `A192CBC-HS384`, `A256CBC-HS512`, `A128GCM`, `
 Default value: `A128GCM`  
 
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_SDJWTVC_ENABLED`  
-Description: Enables SD-JWT VC support for verifier's client metadata  
+Description: Enables support for SD-JWT VC   
 Default value: `true`  
 
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_SDJWTVC_SDJWTALGORITHMS`  
@@ -622,7 +622,7 @@ https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algori
 Default value: `ES256`
 
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_MSOMDOC_ENABLED`  
-Description: Enable MDoc support for verifier's client metadata  
+Description: Enable support for MSO MDoc    
 Default value: `true`  
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_STATUSCHECK_ENABLED`  
