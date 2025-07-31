@@ -365,7 +365,7 @@ data class KeyStoreConfig(
     val keystore: KeyStore,
 )
 
-internal fun VpFormatsSupported.isSupported(format: Format): Boolean =
+internal fun VpFormatsSupported.supports(format: Format): Boolean =
     when (format) {
         Format.SdJwtVc -> null != sdJwtVc
         Format.MsoMdoc -> null != msoMdoc

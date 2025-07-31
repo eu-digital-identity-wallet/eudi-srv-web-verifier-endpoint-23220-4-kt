@@ -141,7 +141,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                 val applicableTransactionData = transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
-                ensure(vpFormatsSupported.isSupported(format)) {
+                ensure(vpFormatsSupported.supports(format)) {
                     WalletResponseValidationError.InvalidVpToken(
                         "vp_token contains a Verifiable Presentation in an unsupported format",
                         null,

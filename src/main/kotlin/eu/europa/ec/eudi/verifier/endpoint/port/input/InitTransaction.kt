@@ -403,7 +403,7 @@ internal fun InitTransactionTO.toDomain(
         ensure(
             dcqlQuery.credentials.value.all {
                 val format = it.format
-                vpFormatsSupported.isSupported(format)
+                vpFormatsSupported.supports(format)
             },
         ) { ValidationError.UnsupportedFormat }
 
