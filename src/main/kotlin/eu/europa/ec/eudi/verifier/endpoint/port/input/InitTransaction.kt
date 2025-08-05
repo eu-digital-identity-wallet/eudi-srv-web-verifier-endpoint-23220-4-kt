@@ -117,7 +117,7 @@ enum class EmbedModeTO {
 @Serializable
 data class InitTransactionTO(
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE) val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
-    @SerialName(OpenId4VPSpec.ID_TOKEN) val idTokenType: IdTokenTypeTO? = null,
+    @SerialName(OpenId4VPSpec.ID_TOKEN_TYPE) val idTokenType: IdTokenTypeTO? = null,
     @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL? = null,
     @SerialName(OpenId4VPSpec.NONCE) val nonce: String? = null,
     @SerialName(OpenId4VPSpec.RESPONSE_MODE) val responseMode: ResponseModeTO? = null,
