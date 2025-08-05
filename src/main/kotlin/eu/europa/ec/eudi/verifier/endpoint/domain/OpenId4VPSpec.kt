@@ -23,40 +23,26 @@ object OpenId4VPSpec {
 
     const val RESPONSE_URI: String = "response_uri"
 
-    const val ID_TOKEN: String = "id_token"
     const val VP_TOKEN: String = "vp_token"
     const val VP_ID_TOKEN: String = "vp_token id_token"
 
-    const val ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN: String = "subject_signed_id_token"
-    const val ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN: String = "attester_signed_id_token"
-
-    const val EMBED_MODE_BY_VALUE: String = "by_value"
-    const val EMBED_MODE_BY_REFERENCE: String = "by_reference"
-
     const val NONCE: String = "nonce"
-    const val ID_TOKEN_TYPE: String = "id_token_type"
+
+    const val REDIRECT_URI: String = "redirect_uri"
 
     const val DCQL_QUERY: String = "dcql_query"
-    const val TRANSACTION_DATA: String = "transaction_data"
-    const val TRANSACTION_DATA_TYPE: String = "type"
+
     const val TRANSACTION_DATA_CREDENTIAL_IDS: String = "credential_ids"
     const val TRANSACTION_DATA_HASH_ALGORITHMS: String = "transaction_data_hashes_alg"
     const val TRANSACTION_DATA_HASH_ALGORITHM_DEFAULT: String = "sha-256"
     const val TRANSACTION_DATA_HASHES: String = "transaction_data_hashes"
 
-    const val TRANSACTION_ID: String = "transaction_id"
     const val REQUEST_URI_METHOD: String = "request_uri_method"
     const val REQUEST_URI_METHOD_GET: String = "get"
     const val REQUEST_URI_METHOD_POST: String = "post"
 
-    const val RESPONSE_MODE: String = "response_mode"
     const val RESPONSE_MODE_DIRECT_POST: String = "direct_post"
     const val RESPONSE_MODE_DIRECT_POST_JWT: String = "direct_post.jwt"
-
-    const val JAR_MODE: String = "jar_mode"
-
-    const val ISSUER_CHAIN: String = "issuer_chain"
-    const val AUTHORIZATION_REQUEST_SCHEME: String = "authorization_request_scheme"
 
     const val CLIENT_METADATA: String = "client_metadata"
 
@@ -97,7 +83,6 @@ object OpenId4VPSpec {
 
     const val WALLET_METADATA: String = "wallet_metadata"
     const val WALLET_NONCE: String = "wallet_nonce"
-    const val WALLET_RESPONSE_REDIRECT_URI_TEMPLATE: String = "wallet_response_redirect_uri_template"
 
     const val CLIENT_ID_PREFIXES_SUPPORTED = "client_id_prefixes_supported"
 

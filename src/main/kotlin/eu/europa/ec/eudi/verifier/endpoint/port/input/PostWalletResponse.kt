@@ -206,7 +206,7 @@ private fun JsonElement.toVerifiablePresentation(format: Format): Either<WalletR
 
 @Serializable
 data class WalletResponseAcceptedTO(
-    @SerialName("redirect_uri") val redirectUri: String,
+    @SerialName(OpenId4VPSpec.REDIRECT_URI) val redirectUri: String,
 )
 
 /**

@@ -16,15 +16,10 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 /**
- * [OAuth 2.0 Authorization Framework](https://www.rfc-editor.org/rfc/rfc6749.html)
+ * [Self-Issued OpenID Provider](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html)
  */
-object RFC6749 {
-    const val ID_TOKEN: String = "id_token"
-
-    const val CLIENT_ID: String = "client_id"
-    const val STATE: String = "state"
-    const val ERROR: String = "error"
-    const val ERROR_DESCRIPTION: String = "error_description"
-
-    const val RESPONSE_MODE: String = "response_mode"
+object SIOP {
+    const val ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN: String = "subject_signed_id_token"
+    const val ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN: String = "attester_signed_id_token"
+    const val ID_TOKEN_TYPE: String = "id_token_type"
 }

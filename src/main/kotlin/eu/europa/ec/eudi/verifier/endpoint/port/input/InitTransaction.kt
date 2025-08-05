@@ -56,7 +56,7 @@ import java.time.Clock
  */
 @Serializable
 enum class PresentationTypeTO {
-    @SerialName(OpenId4VPSpec.ID_TOKEN)
+    @SerialName(RFC6749.ID_TOKEN)
     IdTokenRequest,
 
     @SerialName(OpenId4VPSpec.VP_TOKEN)
@@ -71,10 +71,10 @@ enum class PresentationTypeTO {
  */
 @Serializable
 enum class IdTokenTypeTO {
-    @SerialName(OpenId4VPSpec.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN)
+    @SerialName(SIOP.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN)
     SubjectSigned,
 
-    @SerialName(OpenId4VPSpec.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN)
+    @SerialName(SIOP.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN)
     AttesterSigned,
 }
 
@@ -107,26 +107,26 @@ enum class ResponseModeTO {
  */
 @Serializable
 enum class EmbedModeTO {
-    @SerialName(OpenId4VPSpec.EMBED_MODE_BY_VALUE)
+    @SerialName("by_value")
     ByValue,
 
-    @SerialName(OpenId4VPSpec.EMBED_MODE_BY_REFERENCE)
+    @SerialName("by_reference")
     ByReference,
 }
 
 @Serializable
 data class InitTransactionTO(
-    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE) val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
-    @SerialName(OpenId4VPSpec.ID_TOKEN_TYPE) val idTokenType: IdTokenTypeTO? = null,
+    @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
+    @SerialName(SIOP.ID_TOKEN_TYPE) val idTokenType: IdTokenTypeTO? = null,
     @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL? = null,
     @SerialName(OpenId4VPSpec.NONCE) val nonce: String? = null,
-    @SerialName(OpenId4VPSpec.RESPONSE_MODE) val responseMode: ResponseModeTO? = null,
-    @SerialName(OpenId4VPSpec.JAR_MODE) val jarMode: EmbedModeTO? = null,
+    @SerialName(RFC6749.RESPONSE_MODE) val responseMode: ResponseModeTO? = null,
+    @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
     @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD) val requestUriMethod: RequestUriMethodTO? = null,
-    @SerialName(OpenId4VPSpec.WALLET_RESPONSE_REDIRECT_URI_TEMPLATE) val redirectUriTemplate: String? = null,
-    @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
-    @SerialName(OpenId4VPSpec.ISSUER_CHAIN) val issuerChain: String? = null,
-    @SerialName(OpenId4VPSpec.AUTHORIZATION_REQUEST_SCHEME) val authorizationRequestScheme: String? = null,
+    @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
+    @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
+    @SerialName("issuer_chain") val issuerChain: String? = null,
+    @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
     @Transient val output: Output = Output.Json,
 )
 
@@ -162,7 +162,7 @@ sealed interface InitTransactionResponse {
      */
     @Serializable
     data class JwtSecuredAuthorizationRequestTO(
-        @Required @SerialName(OpenId4VPSpec.TRANSACTION_ID) val transactionId: String,
+        @Required @SerialName("transaction_id") val transactionId: String,
         @Required @SerialName(RFC6749.CLIENT_ID) val clientId: ClientId,
         @SerialName(RFC9101.REQUEST) val request: String?,
         @SerialName(RFC9101.REQUEST_URI) val requestUri: String?,

@@ -48,7 +48,7 @@ typealias Base64UrlSafe = String
 value class TransactionData private constructor(val value: JsonObject) {
 
     val type: String
-        get() = value[OpenId4VPSpec.TRANSACTION_DATA_TYPE]!!.jsonPrimitive.content
+        get() = value["type"]!!.jsonPrimitive.content
 
     val credentialIds: NonEmptyList<String>
         get() = value[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]!!
@@ -67,9 +67,9 @@ value class TransactionData private constructor(val value: JsonObject) {
     companion object {
 
         private fun validate(value: JsonObject): Either<Throwable, TransactionData> = Either.catch {
-            val type = value[OpenId4VPSpec.TRANSACTION_DATA_TYPE]
+            val type = value["type"]
             require(type.isNonEmptyString()) {
-                "'${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' is required and must not be a non-empty string"
+                "'$type' is required and must not be a non-empty string"
             }
 
             val credentialIds = value[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]
@@ -88,7 +88,7 @@ value class TransactionData private constructor(val value: JsonObject) {
             val value = buildJsonObject {
                 builder()
 
-                put(OpenId4VPSpec.TRANSACTION_DATA_TYPE, type)
+                put("type", type)
                 putJsonArray(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS) {
                     addAll(credentialIds)
                 }
@@ -378,7 +378,7 @@ internal value class ProcessId(val value: String) {
  */
 @Serializable
 internal data class QesAuthorization(
-    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
+    @SerialName("type")
     @Required
     val type: String,
 
@@ -404,7 +404,7 @@ internal data class QesAuthorization(
 
 ) : SdJwtVcTransactionDataExtensions {
     init {
-        require(TYPE == type) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '$type'." }
+        require(TYPE == type) { "Expected '$type' to be '$TYPE'. Was: '$type'." }
         require(null != credentialId || null != signatureQualifier) {
             "either '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_CREDENTIAL_ID}', " +
                 "or '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER}' must be present."
@@ -421,7 +421,7 @@ internal data class QesAuthorization(
  */
 @Serializable
 internal data class QCertCreationAcceptance(
-    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
+    @SerialName("type")
     @Required
     val type: String,
 
@@ -446,7 +446,7 @@ internal data class QCertCreationAcceptance(
 
 ) : SdJwtVcTransactionDataExtensions {
     init {
-        require(TYPE == type) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '$type'." }
+        require(TYPE == type) { "Expected '$type' to be '$TYPE'. Was: '$type'." }
     }
 
     companion object {

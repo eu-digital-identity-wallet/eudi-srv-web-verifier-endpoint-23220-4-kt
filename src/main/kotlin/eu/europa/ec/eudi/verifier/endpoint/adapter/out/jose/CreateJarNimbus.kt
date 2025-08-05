@@ -126,7 +126,7 @@ class CreateJarNimbus : CreateJar {
             audience(r.aud)
             claim(OpenId4VPSpec.NONCE, r.nonce)
             optionalClaim(
-                OpenId4VPSpec.ID_TOKEN_TYPE,
+                SIOP.ID_TOKEN_TYPE,
                 if (r.idTokenType.isEmpty()) {
                     null
                 } else r.idTokenType.joinToString(" "),
@@ -134,7 +134,7 @@ class CreateJarNimbus : CreateJar {
             optionalClaim(OpenId4VPSpec.CLIENT_METADATA, clientMetaData?.toJSONObject())
             optionalClaim(OpenId4VPSpec.RESPONSE_URI, r.responseUri?.toExternalForm())
             optionalClaim(OpenId4VPSpec.DCQL_QUERY, r.dcqlQuery?.toJackson())
-            optionalClaim(OpenId4VPSpec.TRANSACTION_DATA, r.transactionData?.toJackson())
+            optionalClaim("transaction_data", r.transactionData?.toJackson())
             optionalClaim(OpenId4VPSpec.WALLET_NONCE, walletNonce)
             build()
         }
