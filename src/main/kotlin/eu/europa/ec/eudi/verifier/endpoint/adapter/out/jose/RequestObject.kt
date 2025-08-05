@@ -60,7 +60,7 @@ internal fun requestObjectFromDomain(
     val responseType = when (type) {
         is PresentationType.IdTokenRequest -> listOf(OpenId4VPSpec.ID_TOKEN)
         is PresentationType.VpTokenRequest -> listOf(OpenId4VPSpec.VP_TOKEN)
-        is PresentationType.IdAndVpToken -> listOf(OpenId4VPSpec.VP_ID_TOKEN)
+        is PresentationType.IdAndVpToken -> listOf(OpenId4VPSpec.VP_TOKEN, OpenId4VPSpec.ID_TOKEN)
     }
 
     val aud = when (type) {
