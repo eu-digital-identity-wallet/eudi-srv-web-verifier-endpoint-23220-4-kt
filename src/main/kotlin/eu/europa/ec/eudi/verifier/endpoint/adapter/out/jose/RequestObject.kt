@@ -52,15 +52,15 @@ internal fun requestObjectFromDomain(
         is PresentationType.IdAndVpToken -> type.idTokenType
     }.map {
         when (it) {
-            IdTokenType.AttesterSigned -> "attester_signed_id_token"
-            IdTokenType.SubjectSigned -> "subject_signed_id_token"
+            IdTokenType.AttesterSigned -> OpenId4VPSpec.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN
+            IdTokenType.SubjectSigned -> OpenId4VPSpec.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN
         }
     }
 
     val responseType = when (type) {
-        is PresentationType.IdTokenRequest -> listOf("id_token")
-        is PresentationType.VpTokenRequest -> listOf("vp_token")
-        is PresentationType.IdAndVpToken -> listOf("vp_token", "id_token")
+        is PresentationType.IdTokenRequest -> listOf(OpenId4VPSpec.ID_TOKEN)
+        is PresentationType.VpTokenRequest -> listOf(OpenId4VPSpec.VP_TOKEN)
+        is PresentationType.IdAndVpToken -> listOf(OpenId4VPSpec.VP_ID_TOKEN)
     }
 
     val aud = when (type) {

@@ -56,13 +56,13 @@ import java.time.Clock
  */
 @Serializable
 enum class PresentationTypeTO {
-    @SerialName("id_token")
+    @SerialName(OpenId4VPSpec.ID_TOKEN)
     IdTokenRequest,
 
-    @SerialName("vp_token")
+    @SerialName(OpenId4VPSpec.VP_TOKEN)
     VpTokenRequest,
 
-    @SerialName("vp_token id_token")
+    @SerialName(OpenId4VPSpec.VP_ID_TOKEN)
     IdAndVpTokenRequest,
 }
 
@@ -71,10 +71,10 @@ enum class PresentationTypeTO {
  */
 @Serializable
 enum class IdTokenTypeTO {
-    @SerialName("subject_signed_id_token")
+    @SerialName(OpenId4VPSpec.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN)
     SubjectSigned,
 
-    @SerialName("attester_signed_id_token")
+    @SerialName(OpenId4VPSpec.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN)
     AttesterSigned,
 }
 
@@ -107,26 +107,26 @@ enum class ResponseModeTO {
  */
 @Serializable
 enum class EmbedModeTO {
-    @SerialName("by_value")
+    @SerialName(OpenId4VPSpec.EMBED_MODE_BY_VALUE)
     ByValue,
 
-    @SerialName("by_reference")
+    @SerialName(OpenId4VPSpec.EMBED_MODE_BY_REFERENCE)
     ByReference,
 }
 
 @Serializable
 data class InitTransactionTO(
-    @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
-    @SerialName("id_token_type") val idTokenType: IdTokenTypeTO? = null,
-    @SerialName("dcql_query") val dcqlQuery: DCQL? = null,
-    @SerialName("nonce") val nonce: String? = null,
-    @SerialName("response_mode") val responseMode: ResponseModeTO? = null,
-    @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
-    @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO? = null,
-    @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
-    @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
-    @SerialName("issuer_chain") val issuerChain: String? = null,
-    @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE) val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
+    @SerialName(OpenId4VPSpec.ID_TOKEN) val idTokenType: IdTokenTypeTO? = null,
+    @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL? = null,
+    @SerialName(OpenId4VPSpec.NONCE) val nonce: String? = null,
+    @SerialName(OpenId4VPSpec.RESPONSE_MODE) val responseMode: ResponseModeTO? = null,
+    @SerialName(OpenId4VPSpec.JAR_MODE) val jarMode: EmbedModeTO? = null,
+    @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD) val requestUriMethod: RequestUriMethodTO? = null,
+    @SerialName(OpenId4VPSpec.WALLET_RESPONSE_REDIRECT_URI_TEMPLATE) val redirectUriTemplate: String? = null,
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
+    @SerialName(OpenId4VPSpec.ISSUER_CHAIN) val issuerChain: String? = null,
+    @SerialName(OpenId4VPSpec.AUTHORIZATION_REQUEST_SCHEME) val authorizationRequestScheme: String? = null,
     @Transient val output: Output = Output.Json,
 )
 
@@ -162,11 +162,11 @@ sealed interface InitTransactionResponse {
      */
     @Serializable
     data class JwtSecuredAuthorizationRequestTO(
-        @Required @SerialName("transaction_id") val transactionId: String,
-        @Required @SerialName("client_id") val clientId: ClientId,
-        @SerialName("request") val request: String?,
-        @SerialName("request_uri") val requestUri: String?,
-        @SerialName("request_uri_method") val requestUriMethod: RequestUriMethodTO?,
+        @Required @SerialName(OpenId4VPSpec.TRANSACTION_ID) val transactionId: String,
+        @Required @SerialName(RFC6749.CLIENT_ID) val clientId: ClientId,
+        @SerialName(RFC9101.REQUEST) val request: String?,
+        @SerialName(RFC9101.REQUEST_URI) val requestUri: String?,
+        @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD) val requestUriMethod: RequestUriMethodTO?,
     ) : InitTransactionResponse {
         companion object {
 
@@ -475,9 +475,9 @@ private fun createAuthorizationRequestUri(
     Uri.Builder().apply {
         scheme(scheme)
         authority("")
-        appendQueryParameter(OpenId4VPSpec.CLIENT_ID, authorizationRequest.clientId)
-        authorizationRequest.request?.let { appendQueryParameter(OpenId4VPSpec.REQUEST, it) }
-        authorizationRequest.requestUri?.let { appendQueryParameter(OpenId4VPSpec.REQUEST_URI, it) }
+        appendQueryParameter(RFC6749.CLIENT_ID, authorizationRequest.clientId)
+        authorizationRequest.request?.let { appendQueryParameter(RFC9101.REQUEST, it) }
+        authorizationRequest.requestUri?.let { appendQueryParameter(RFC9101.REQUEST_URI, it) }
         authorizationRequest.requestUriMethod?.let {
             val requestUriMethod = when (it) {
                 RequestUriMethodTO.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET

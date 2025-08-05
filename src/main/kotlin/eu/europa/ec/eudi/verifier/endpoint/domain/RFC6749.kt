@@ -15,15 +15,9 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-/**
- * [JWT-Secured Authorization Request (JAR)](https://www.rfc-editor.org/rfc/rfc9101.html)
- */
-object RFC9101 {
-    const val REQUEST: String = "request"
-    const val REQUEST_URI: String = "request_uri"
-
-    const val REQUEST_OBJECT_MEDIA_TYPE: String = "application/oauth-authz-req+jwt"
-    const val REQUEST_OBJECT_MEDIA_SUBTYPE: String = "oauth-authz-req+jwt"
-
-    const val REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED: String = "request_object_signing_alg_values_supported"
+object RFC6749 {
+    const val CLIENT_ID: String = "client_id"
+    const val STATE: String = "state"
+    const val ERROR: String = "error"
+    const val ERROR_DESCRIPTION: String = "error_description"
 }
