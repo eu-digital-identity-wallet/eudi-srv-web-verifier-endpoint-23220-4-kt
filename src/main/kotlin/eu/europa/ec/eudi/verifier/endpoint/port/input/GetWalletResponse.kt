@@ -31,10 +31,10 @@ import java.time.Clock
 @Serializable
 @SerialName("wallet_response")
 data class WalletResponseTO(
-    @SerialName("id_token") val idToken: String? = null,
-    @SerialName("vp_token") val vpToken: JsonObject? = null,
-    @SerialName("error") val error: String? = null,
-    @SerialName("error_description") val errorDescription: String? = null,
+    @SerialName(RFC6749.ID_TOKEN) val idToken: String? = null,
+    @SerialName(OpenId4VPSpec.VP_TOKEN) val vpToken: JsonObject? = null,
+    @SerialName(RFC6749.ERROR) val error: String? = null,
+    @SerialName(RFC6749.ERROR_DESCRIPTION) val errorDescription: String? = null,
 )
 
 internal fun WalletResponse.toTO(): WalletResponseTO {

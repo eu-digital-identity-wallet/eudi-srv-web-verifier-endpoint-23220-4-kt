@@ -26,9 +26,7 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.proc.JWTProcessor
-import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
-import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseEncryptionOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.AuthorisationResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.VerifyEncryptedResponse
 import kotlinx.serialization.json.Json
@@ -70,13 +68,13 @@ class VerifyEncryptedResponseWithNimbus(
     @Suppress("UNCHECKED_CAST")
     private fun JWTClaimsSet.mapToDomain(): AuthorisationResponseTO =
         AuthorisationResponseTO(
-            state = getClaim("state")?.toString(),
-            idToken = getClaim("id_token")?.toString(),
-            vpToken = getJSONObjectClaim("vp_token")
+            state = getClaim(RFC6749.STATE)?.toString(),
+            idToken = getClaim(RFC6749.ID_TOKEN)?.toString(),
+            vpToken = getJSONObjectClaim(OpenId4VPSpec.VP_TOKEN)
                 ?.let { vpToken ->
                     Json.decodeFromString<JsonObject>(JSONObjectUtils.toJSONString(vpToken))
                 },
-            error = getClaim("error")?.toString(),
-            errorDescription = getClaim("error_description")?.toString(),
+            error = getClaim(RFC6749.ERROR)?.toString(),
+            errorDescription = getClaim(RFC6749.ERROR_DESCRIPTION)?.toString(),
         )
 }

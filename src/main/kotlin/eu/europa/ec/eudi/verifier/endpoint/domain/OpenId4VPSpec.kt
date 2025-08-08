@@ -19,9 +19,16 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
  * [OpenID for Verifiable Presentations](https://openid.net/specs/openid-4-verifiable-presentations-1_0-23.html)
  */
 object OpenId4VPSpec {
-    const val VERSION: String = "draft 24"
+    const val VERSION: String = "1.0"
 
     const val RESPONSE_URI: String = "response_uri"
+
+    const val VP_TOKEN: String = "vp_token"
+    const val VP_ID_TOKEN: String = "vp_token id_token"
+
+    const val NONCE: String = "nonce"
+
+    const val REDIRECT_URI: String = "redirect_uri"
 
     const val DCQL_QUERY: String = "dcql_query"
     const val TRANSACTION_DATA: String = "transaction_data"
@@ -31,15 +38,14 @@ object OpenId4VPSpec {
     const val TRANSACTION_DATA_HASH_ALGORITHM_DEFAULT: String = "sha-256"
     const val TRANSACTION_DATA_HASHES: String = "transaction_data_hashes"
 
-    const val CLIENT_ID: String = "client_id"
-    const val REQUEST: String = "request"
-    const val REQUEST_URI: String = "request_uri"
     const val REQUEST_URI_METHOD: String = "request_uri_method"
     const val REQUEST_URI_METHOD_GET: String = "get"
     const val REQUEST_URI_METHOD_POST: String = "post"
 
     const val RESPONSE_MODE_DIRECT_POST: String = "direct_post"
     const val RESPONSE_MODE_DIRECT_POST_JWT: String = "direct_post.jwt"
+
+    const val CLIENT_METADATA: String = "client_metadata"
 
     const val VP_FORMATS_SUPPORTED: String = "vp_formats_supported"
     const val VP_FORMATS_SUPPORTS_SD_JWT_VC_SD_JWT_ALGORITHMS = "sd-jwt_alg_values"

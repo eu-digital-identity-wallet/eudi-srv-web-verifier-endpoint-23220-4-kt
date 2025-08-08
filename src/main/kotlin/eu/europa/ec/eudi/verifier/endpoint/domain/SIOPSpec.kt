@@ -16,14 +16,12 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 /**
- * [JWT-Secured Authorization Request (JAR)](https://www.rfc-editor.org/rfc/rfc9101.html)
+ * [Self-Issued OpenID Provider](https://openid.net/specs/openid-connect-self-issued-v2-1_0-13.html)
  */
-object RFC9101 {
-    const val REQUEST: String = "request"
-    const val REQUEST_URI: String = "request_uri"
+object SIOPSpec {
+    const val ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN: String = "subject_signed_id_token"
+    const val ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN: String = "attester_signed_id_token"
+    const val ID_TOKEN_TYPE: String = "id_token_type"
 
-    const val REQUEST_OBJECT_MEDIA_TYPE: String = "application/oauth-authz-req+jwt"
-    const val REQUEST_OBJECT_MEDIA_SUBTYPE: String = "oauth-authz-req+jwt"
-
-    const val REQUEST_OBJECT_SIGNING_ALGORITHMS_SUPPORTED: String = "request_object_signing_alg_values_supported"
+    const val SUBJECT_SYNTAX_TYPES_SUPPORTED: String = "subject_syntax_types_supported"
 }

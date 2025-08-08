@@ -16,7 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import arrow.core.nonEmptyListOf
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
