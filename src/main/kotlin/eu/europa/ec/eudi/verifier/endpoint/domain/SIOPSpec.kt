@@ -22,4 +22,6 @@ object SIOPSpec {
     const val ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN: String = "subject_signed_id_token"
     const val ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN: String = "attester_signed_id_token"
     const val ID_TOKEN_TYPE: String = "id_token_type"
+
+    const val SUBJECT_SYNTAX_TYPES_SUPPORTED: String = "subject_syntax_types_supported"
 }

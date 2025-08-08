@@ -47,8 +47,6 @@ object OpenId4VPSpec {
 
     const val CLIENT_METADATA: String = "client_metadata"
 
-    const val SUBJECT_SYNTAX_TYPES_SUPPORTED: String = "subject_syntax_types_supported"
-
     const val VP_FORMATS_SUPPORTED: String = "vp_formats_supported"
     const val VP_FORMATS_SUPPORTS_SD_JWT_VC_SD_JWT_ALGORITHMS = "sd-jwt_alg_values"
     const val VP_FORMATS_SUPPORTS_SD_JWT_VC_KB_JWT_ALGORITHMS = "kb-jwt_alg_values"

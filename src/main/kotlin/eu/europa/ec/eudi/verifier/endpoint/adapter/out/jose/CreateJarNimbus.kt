@@ -148,7 +148,7 @@ class CreateJarNimbus : CreateJar {
             idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
             idTokenJWEAlg = JWEAlgorithm.parse(c.idTokenEncryptedResponseAlg)
             idTokenJWEEnc = EncryptionMethod.parse(c.idTokenEncryptedResponseEnc)
-            setCustomField(OpenId4VPSpec.SUBJECT_SYNTAX_TYPES_SUPPORTED, c.subjectSyntaxTypesSupported)
+            setCustomField(SIOPSpec.SUBJECT_SYNTAX_TYPES_SUPPORTED, c.subjectSyntaxTypesSupported)
 
             if (responseMode is ResponseMode.DirectPostJwt) {
                 jwkSet = JWKSet(listOf(responseMode.ephemeralResponseEncryptionKey)).toPublicJWKSet()
