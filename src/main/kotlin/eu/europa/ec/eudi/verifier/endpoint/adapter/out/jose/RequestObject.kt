@@ -52,8 +52,8 @@ internal fun requestObjectFromDomain(
         is PresentationType.IdAndVpToken -> type.idTokenType
     }.map {
         when (it) {
-            IdTokenType.AttesterSigned -> SIOP.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN
-            IdTokenType.SubjectSigned -> SIOP.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN
+            IdTokenType.AttesterSigned -> SIOPSpec.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN
+            IdTokenType.SubjectSigned -> SIOPSpec.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN
         }
     }
 

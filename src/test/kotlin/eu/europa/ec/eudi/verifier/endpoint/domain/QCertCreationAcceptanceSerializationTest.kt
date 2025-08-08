@@ -56,7 +56,7 @@ class QCertCreationAcceptanceSerializationTest {
 
         // Verify JSON structure and values
         val jsonObject = jsonElement.jsonObject
-        assertEquals(QCertCreationAcceptance.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QCertCreationAcceptance.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Deserialize back to QCertCreationAcceptance
         val deserializedQCertCreationAcceptance = json.decodeFromString<QCertCreationAcceptance>(jsonString)
@@ -92,7 +92,7 @@ class QCertCreationAcceptanceSerializationTest {
         val jsonObject = json.parseToJsonElement(jsonString).jsonObject
 
         // Verify all expected fields are present with correct values
-        assertEquals(QCertCreationAcceptance.TYPE, jsonObject["type"]?.toString()?.trim('"'))
+        assertEquals(QCertCreationAcceptance.TYPE, jsonObject[OpenId4VPSpec.TRANSACTION_DATA_TYPE]?.toString()?.trim('"'))
 
         // Check credential_ids
         val credentialIds = jsonObject[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]

@@ -19,7 +19,7 @@ package eu.europa.ec.eudi.verifier.endpoint.domain
  * [OpenID for Verifiable Presentations](https://openid.net/specs/openid-4-verifiable-presentations-1_0-23.html)
  */
 object OpenId4VPSpec {
-    const val VERSION: String = "1"
+    const val VERSION: String = "1.0"
 
     const val RESPONSE_URI: String = "response_uri"
 
@@ -31,7 +31,8 @@ object OpenId4VPSpec {
     const val REDIRECT_URI: String = "redirect_uri"
 
     const val DCQL_QUERY: String = "dcql_query"
-
+    const val TRANSACTION_DATA: String = "transaction_data"
+    const val TRANSACTION_DATA_TYPE: String = "type"
     const val TRANSACTION_DATA_CREDENTIAL_IDS: String = "credential_ids"
     const val TRANSACTION_DATA_HASH_ALGORITHMS: String = "transaction_data_hashes_alg"
     const val TRANSACTION_DATA_HASH_ALGORITHM_DEFAULT: String = "sha-256"

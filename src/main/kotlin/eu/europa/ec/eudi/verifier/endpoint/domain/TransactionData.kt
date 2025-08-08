@@ -48,7 +48,7 @@ typealias Base64UrlSafe = String
 value class TransactionData private constructor(val value: JsonObject) {
 
     val type: String
-        get() = value["type"]!!.jsonPrimitive.content
+        get() = value[OpenId4VPSpec.TRANSACTION_DATA_TYPE]!!.jsonPrimitive.content
 
     val credentialIds: NonEmptyList<String>
         get() = value[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]!!
@@ -67,7 +67,7 @@ value class TransactionData private constructor(val value: JsonObject) {
     companion object {
 
         private fun validate(value: JsonObject): Either<Throwable, TransactionData> = Either.catch {
-            val type = value["type"]
+            val type = value[OpenId4VPSpec.TRANSACTION_DATA_TYPE]
             require(type.isNonEmptyString()) {
                 "'$type' is required and must not be a non-empty string"
             }
@@ -88,7 +88,7 @@ value class TransactionData private constructor(val value: JsonObject) {
             val value = buildJsonObject {
                 builder()
 
-                put("type", type)
+                put(OpenId4VPSpec.TRANSACTION_DATA_TYPE, type)
                 putJsonArray(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS) {
                     addAll(credentialIds)
                 }
@@ -378,7 +378,7 @@ internal value class ProcessId(val value: String) {
  */
 @Serializable
 internal data class QesAuthorization(
-    @SerialName("type")
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
     @Required
     val type: String,
 
@@ -421,7 +421,7 @@ internal data class QesAuthorization(
  */
 @Serializable
 internal data class QCertCreationAcceptance(
-    @SerialName("type")
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE)
     @Required
     val type: String,
 

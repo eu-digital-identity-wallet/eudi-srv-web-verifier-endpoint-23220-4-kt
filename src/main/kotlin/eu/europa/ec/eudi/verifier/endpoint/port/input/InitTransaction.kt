@@ -71,10 +71,10 @@ enum class PresentationTypeTO {
  */
 @Serializable
 enum class IdTokenTypeTO {
-    @SerialName(SIOP.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN)
+    @SerialName(SIOPSpec.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN)
     SubjectSigned,
 
-    @SerialName(SIOP.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN)
+    @SerialName(SIOPSpec.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN)
     AttesterSigned,
 }
 
@@ -116,15 +116,15 @@ enum class EmbedModeTO {
 
 @Serializable
 data class InitTransactionTO(
-    @SerialName("type") val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
-    @SerialName(SIOP.ID_TOKEN_TYPE) val idTokenType: IdTokenTypeTO? = null,
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE) val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
+    @SerialName(SIOPSpec.ID_TOKEN_TYPE) val idTokenType: IdTokenTypeTO? = null,
     @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL? = null,
     @SerialName(OpenId4VPSpec.NONCE) val nonce: String? = null,
     @SerialName(RFC6749.RESPONSE_MODE) val responseMode: ResponseModeTO? = null,
     @SerialName("jar_mode") val jarMode: EmbedModeTO? = null,
     @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD) val requestUriMethod: RequestUriMethodTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
-    @SerialName("transaction_data") val transactionData: List<JsonObject>? = null,
+    @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
     @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
     @Transient val output: Output = Output.Json,

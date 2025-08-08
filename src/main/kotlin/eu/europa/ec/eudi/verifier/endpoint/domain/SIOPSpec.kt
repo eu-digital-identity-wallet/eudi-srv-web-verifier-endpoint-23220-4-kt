@@ -16,9 +16,9 @@
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 /**
- * [Self-Issued OpenID Provider](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html)
+ * [Self-Issued OpenID Provider](https://openid.net/specs/openid-connect-self-issued-v2-1_0-13.html)
  */
-object SIOP {
+object SIOPSpec {
     const val ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN: String = "subject_signed_id_token"
     const val ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN: String = "attester_signed_id_token"
     const val ID_TOKEN_TYPE: String = "id_token_type"

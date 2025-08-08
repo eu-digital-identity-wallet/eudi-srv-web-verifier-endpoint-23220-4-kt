@@ -311,7 +311,7 @@ class InitTransactionTest {
 
         val withoutType = JsonObject(emptyMap())
         val withoutCredentialIds = buildJsonObject {
-            put("type", "foo.bar")
+            put(OpenId4VPSpec.TRANSACTION_DATA_TYPE, "foo.bar")
         }
 
         test(withoutType)
@@ -327,7 +327,7 @@ class InitTransactionTest {
 
         suspend fun test(baseInput: String, credentialId: String) {
             val transactionData = buildJsonObject {
-                put("type", "foo.bar")
+                put(OpenId4VPSpec.TRANSACTION_DATA_TYPE, "foo.bar")
                 putJsonArray(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS) {
                     add(credentialId)
                 }
@@ -354,7 +354,7 @@ class InitTransactionTest {
 
         suspend fun test(baseInput: String, credentialId: String) {
             val transactionData = buildJsonObject {
-                put("type", "foo.bar")
+                put(OpenId4VPSpec.TRANSACTION_DATA_TYPE, "foo.bar")
                 putJsonArray(OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS) {
                     add(credentialId)
                 }
@@ -370,7 +370,7 @@ class InitTransactionTest {
                 SignedJWT.parse(it).jwtClaimsSet
             }
             val jarTransactionData = run {
-                val jarTransactionDataList = assertNotNull(jar.getStringListClaim("transaction_data"))
+                val jarTransactionDataList = assertNotNull(jar.getStringListClaim(OpenId4VPSpec.TRANSACTION_DATA))
                 assertEquals(1, jarTransactionDataList.size)
                 val encodedJarTransactionData = jarTransactionDataList.first()
                 val decodedJarTransactionData = base64UrlNoPadding.decodeToByteString(encodedJarTransactionData)
