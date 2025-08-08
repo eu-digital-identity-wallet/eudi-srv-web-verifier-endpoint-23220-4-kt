@@ -69,7 +69,7 @@ value class TransactionData private constructor(val value: JsonObject) {
         private fun validate(value: JsonObject): Either<Throwable, TransactionData> = Either.catch {
             val type = value[OpenId4VPSpec.TRANSACTION_DATA_TYPE]
             require(type.isNonEmptyString()) {
-                "'$type' is required and must not be a non-empty string"
+                "'${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' is required and must not be a non-empty string"
             }
 
             val credentialIds = value[OpenId4VPSpec.TRANSACTION_DATA_CREDENTIAL_IDS]
@@ -404,7 +404,7 @@ internal data class QesAuthorization(
 
 ) : SdJwtVcTransactionDataExtensions {
     init {
-        require(TYPE == type) { "Expected '$type' to be '$TYPE'. Was: '$type'." }
+        require(TYPE == type) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '$type'." }
         require(null != credentialId || null != signatureQualifier) {
             "either '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_CREDENTIAL_ID}', " +
                 "or '${RQES.QUALIFIED_ELECTRONIC_SIGNATURE_AUTHORIZATION_SIGNATURE_QUALIFIER}' must be present."
@@ -446,7 +446,7 @@ internal data class QCertCreationAcceptance(
 
 ) : SdJwtVcTransactionDataExtensions {
     init {
-        require(TYPE == type) { "Expected '$type' to be '$TYPE'. Was: '$type'." }
+        require(TYPE == type) { "Expected '${OpenId4VPSpec.TRANSACTION_DATA_TYPE}' to be '$TYPE'. Was: '$type'." }
     }
 
     companion object {
