@@ -24,7 +24,6 @@ import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.RSAKey
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.ParseJarmOptionNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
@@ -63,15 +62,22 @@ object TestContext {
             RSAKey.load(keystore, "client-id", "".toCharArray())
         }
     }
+    private val responseEncryptionOption = ResponseEncryptionOption(JWEAlgorithm.ECDH_ES, EncryptionMethod.A256GCM)
     val clientMetaData = ClientMetaData(
         idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
         idTokenEncryptedResponseAlg = JWEAlgorithm.RSA_OAEP_256.name,
         idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,
         subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
-        jarmOption = ParseJarmOptionNimbus(null, JWEAlgorithm.ECDH_ES.name, "A256GCM")!!,
-        vpFormats = VpFormats(
-            VpFormat.SdJwtVc(nonEmptyListOf(JWSAlgorithm.ES256), nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256)),
-            VpFormat.MsoMdoc(nonEmptyListOf(JWSAlgorithm.ES256)),
+        responseEncryptionOption = responseEncryptionOption,
+        vpFormatsSupported = VpFormatsSupported(
+            VpFormatsSupported.SdJwtVc(
+                sdJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256),
+                kbJwtAlgorithms = nonEmptyListOf(JWSAlgorithm.ES256, JWSAlgorithm.RS256),
+            ),
+            VpFormatsSupported.MsoMdoc(
+                issuerAuthAlgorithms = null,
+                deviceAuthAlgorithms = null,
+            ),
         ),
     )
     private val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
@@ -81,13 +87,12 @@ object TestContext {
     private val repo = PresentationInMemoryRepo()
     val loadPresentationById = repo.loadPresentationById
     private val storePresentation = repo.storePresentation
-    private val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus
+    private val generateEphemeralKey = GenerateEphemeralEncryptionKeyPairNimbus(responseEncryptionOption)
     private val generateQrCode = GenerateQrCodeFromData
 
     fun initTransaction(
         verifierConfig: VerifierConfig,
         requestJarByReference: EmbedOption.ByReference<RequestId>,
-        presentationDefinitionByReference: EmbedOption.ByReference<RequestId>,
     ): InitTransaction =
         InitTransactionLive(
             generatedTransactionId,
@@ -98,7 +103,6 @@ object TestContext {
             testClock,
             generateEphemeralKey,
             requestJarByReference,
-            presentationDefinitionByReference,
             CreateQueryWalletResponseRedirectUri.Simple,
             repo.publishPresentationEvent,
             ParsePemEncodedX509CertificateChainWithNimbus,

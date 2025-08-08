@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 
 private val objectMapper: ObjectMapper by lazy { jacksonObjectMapper() }
@@ -28,6 +27,6 @@ private val objectMapper: ObjectMapper by lazy { jacksonObjectMapper() }
  * Converts a KotlinX Serialization serializable object to a Jackson JSON representation.
  */
 internal inline fun <reified T> T.toJackson(serializer: KSerializer<T> = serializer()): Any {
-    val serialized = Json.encodeToString(serializer, this)
+    val serialized = jsonSupport.encodeToString(serializer, this)
     return objectMapper.readValue<Any>(serialized)
 }

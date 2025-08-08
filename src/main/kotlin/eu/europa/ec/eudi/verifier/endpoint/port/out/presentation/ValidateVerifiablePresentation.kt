@@ -37,7 +37,7 @@ fun interface ValidateVerifiablePresentation {
     suspend operator fun invoke(
         transactionId: TransactionId?,
         verifiablePresentation: VerifiablePresentation,
-        vpFormat: VpFormat,
+        vpFormatsSupported: VpFormatsSupported,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         issuerChain: X5CShouldBe.Trusted?,
@@ -46,14 +46,14 @@ fun interface ValidateVerifiablePresentation {
     suspend operator fun invoke(
         transactionId: TransactionId?,
         verifiablePresentation: VerifiablePresentation,
-        vpFormat: VpFormat,
+        vpFormatsSupported: VpFormatsSupported,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         issuerChain: NonEmptyList<X509Certificate>?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = invoke(
         transactionId,
         verifiablePresentation,
-        vpFormat,
+        vpFormatsSupported,
         nonce,
         transactionData,
         issuerChain?.let {

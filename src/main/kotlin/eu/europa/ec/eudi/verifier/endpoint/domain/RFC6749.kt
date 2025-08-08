@@ -13,14 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
-
-import arrow.core.Either
-import com.nimbusds.jose.jwk.JWK
+package eu.europa.ec.eudi.verifier.endpoint.domain
 
 /**
- * An out port that generates ephemeral key
+ * [OAuth 2.0 Authorization Framework](https://www.rfc-editor.org/rfc/rfc6749.html)
  */
-fun interface GenerateEphemeralEncryptionKeyPair {
-    operator fun invoke(): Either<Throwable, JWK>
+object RFC6749 {
+    const val ID_TOKEN: String = "id_token"
+
+    const val CLIENT_ID: String = "client_id"
+    const val STATE: String = "state"
+    const val ERROR: String = "error"
+    const val ERROR_DESCRIPTION: String = "error_description"
+
+    const val RESPONSE_MODE: String = "response_mode"
 }

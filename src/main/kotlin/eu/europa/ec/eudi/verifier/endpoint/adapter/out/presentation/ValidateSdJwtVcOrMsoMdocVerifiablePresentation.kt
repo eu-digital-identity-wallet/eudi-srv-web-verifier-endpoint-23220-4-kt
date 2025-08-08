@@ -22,10 +22,8 @@ import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
-import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import eu.europa.ec.eudi.sdjwt.SdJwtVcSpec
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
@@ -56,17 +54,17 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     override suspend fun invoke(
         transactionId: TransactionId?,
         verifiablePresentation: VerifiablePresentation,
-        vpFormat: VpFormat,
+        vpFormatsSupported: VpFormatsSupported,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         issuerChain: X5CShouldBe.Trusted?,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
-            Format(SdJwtVcSpec.MEDIA_SUBTYPE_VC_SD_JWT), Format.SdJwtVc -> {
-                require(vpFormat is VpFormat.SdJwtVc)
+            Format.SdJwtVc -> {
+                val vpFormatSupported = checkNotNull(vpFormatsSupported.sdJwtVc)
                 val validator = sdJwtVcValidatorFactory(issuerChain)
                 validator.validateSdJwtVcVerifiablePresentation(
-                    vpFormat,
+                    vpFormatSupported,
                     verifiablePresentation,
                     nonce,
                     transactionData,
@@ -75,10 +73,9 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             }
 
             Format.MsoMdoc -> {
-                require(vpFormat is VpFormat.MsoMdoc)
+                checkNotNull(vpFormatsSupported.msoMdoc)
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
-                    vpFormat,
                     verifiablePresentation,
                 ).bind()
             }
@@ -89,7 +86,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 
     private suspend fun SdJwtVcValidator.validateSdJwtVcVerifiablePresentation(
-        vpFormat: VpFormat.SdJwtVc,
+        vpFormatSupported: VpFormatsSupported.SdJwtVc,
         verifiablePresentation: VerifiablePresentation,
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
@@ -116,15 +113,20 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         }.mapLeft { errors -> invalidVpToken(errors) }.bind()
 
         // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
-        ensure(sdJwt.jwt.header.algorithm in vpFormat.sdJwtAlgorithms) {
-            WalletResponseValidationError.InvalidVpToken("SD-JWT not signed with a supported algorithm")
-        }
-        // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
-        ensure(kbJwt.header.algorithm in vpFormat.kbJwtAlgorithms) {
-            WalletResponseValidationError.InvalidVpToken("Keybinding JWT not signed with a supported algorithm")
+        if (null != vpFormatSupported.sdJwtAlgorithms) {
+            ensure(sdJwt.jwt.header.algorithm in vpFormatSupported.sdJwtAlgorithms) {
+                WalletResponseValidationError.InvalidVpToken("SD-JWT not signed with a supported algorithm")
+            }
         }
 
-        transactionData?.let {
+        // Validate that the signing algorithm of key binding JWT matches the algorithm specified in the presentation query
+        if (null != vpFormatSupported.kbJwtAlgorithms) {
+            ensure(kbJwt.header.algorithm in vpFormatSupported.kbJwtAlgorithms) {
+                WalletResponseValidationError.InvalidVpToken("Keybinding JWT not signed with a supported algorithm")
+            }
+        }
+
+        if (null != transactionData) {
             ensureValidTransactionDataHashes(kbJwt, transactionData, config.transactionDataHashAlgorithm) { error ->
                 WalletResponseValidationError.InvalidVpToken(error)
             }
@@ -134,7 +136,6 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     }
 
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
-        vpFormat: VpFormat.MsoMdoc,
         verifiablePresentation: VerifiablePresentation,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {
@@ -149,12 +150,8 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             .bind()
 
         documents.forEach { document ->
-            val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
+            ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
-            }
-            val algorithm = issuerAuth.algorithm.toJwsAlgorithm().bind()
-            ensure(algorithm in vpFormat.algorithms) {
-                WalletResponseValidationError.InvalidVpToken("MSO MDoc is not signed with a supported algorithms")
             }
         }
         verifiablePresentation
@@ -177,21 +174,21 @@ private fun <Error> Raise<Error>.ensureValidTransactionDataHashes(
     hashAlgorithm: HashAlgorithm,
     convert: (String) -> Error,
 ) {
-    val actualHashAlgorithm = keyBindingJwt.jwtClaimsSet.stringClaim("transaction_data_hashes_alg")
+    val actualHashAlgorithm = keyBindingJwt.jwtClaimsSet.stringClaim(OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS)
         .getOrElse {
-            raise(convert(it.message ?: "'transaction_data_hashes_alg' claim is not a string"))
+            raise(convert(it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' claim is not a string"))
         }
     ensure(hashAlgorithm.ianaName == actualHashAlgorithm) {
-        convert("'transaction_data_hashes_alg' must be '${hashAlgorithm.ianaName}'")
+        convert("'${OpenId4VPSpec.TRANSACTION_DATA_HASH_ALGORITHMS}' must be '${hashAlgorithm.ianaName}'")
     }
 
     val expectedHashes = transactionData.map {
         val hash = hash(it.base64Url, hashAlgorithm)
         base64UrlNoPadding.encode(hash)
     }
-    val actualHashes = keyBindingJwt.jwtClaimsSet.stringListClaim("transaction_data_hashes")
+    val actualHashes = keyBindingJwt.jwtClaimsSet.stringListClaim(OpenId4VPSpec.TRANSACTION_DATA_HASHES)
         .getOrElse {
-            raise(convert(it.message ?: "'transaction_data_hashes_alg' claim is not a string list"))
+            raise(convert(it.message ?: "'${OpenId4VPSpec.TRANSACTION_DATA_HASHES}' claim is not a string list"))
         }
     ensure(actualHashes.isNotEmpty() && actualHashes.size <= expectedHashes.size && expectedHashes.containsAll(actualHashes)) {
         convert("hashes of transaction data do not match the expected values")
@@ -214,27 +211,6 @@ private fun DeviceResponseError.toWalletResponseValidationError(): WalletRespons
     }
 
     return WalletResponseValidationError.InvalidVpToken(error)
-}
-
-// Mappings taken from https://www.iana.org/assignments/cose/cose.xhtml#algorithms
-private fun Int.toJwsAlgorithm(): Either<WalletResponseValidationError, JWSAlgorithm> = either {
-    when (this@toJwsAlgorithm) {
-        5 -> JWSAlgorithm.HS256
-        6 -> JWSAlgorithm.HS384
-        7 -> JWSAlgorithm.HS512
-        -257 -> JWSAlgorithm.RS256
-        -258 -> JWSAlgorithm.RS384
-        -259 -> JWSAlgorithm.RS512
-        -7 -> JWSAlgorithm.ES256
-        -47 -> JWSAlgorithm.ES256K
-        -35 -> JWSAlgorithm.ES384
-        -36 -> JWSAlgorithm.ES512
-        -37 -> JWSAlgorithm.PS256
-        -38 -> JWSAlgorithm.PS384
-        -39 -> JWSAlgorithm.PS512
-        -8 -> JWSAlgorithm.EdDSA
-        else -> raise(WalletResponseValidationError.InvalidVpToken("Unknown AlgorithmID '${this@toJwsAlgorithm}'"))
-    }
 }
 
 private fun Collection<SdJwtVcValidationError>.toJson(): JsonArray =

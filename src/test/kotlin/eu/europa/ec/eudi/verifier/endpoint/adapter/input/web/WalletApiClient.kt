@@ -33,7 +33,7 @@ object WalletApiClient {
     private val log: Logger = LoggerFactory.getLogger(WalletApiClient::class.java)
 
     /**
-     * Wallet application to Verifier Backend, get presentation definition
+     * Wallet application to Verifier Backend, get DCQL query
      *
      * As per ISO 23220-4, Appendix B:
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
@@ -49,7 +49,7 @@ object WalletApiClient {
     }
 
     /**
-     * Wallet application to Verifier Backend, get presentation definition
+     * Wallet application to Verifier Backend, get DCQL query
      *
      * As per ISO 23220-4, Appendix B:
      * - (request) mDocApp to Internet Web Service, flow "6 HTTPs GET to request_uri"
@@ -71,7 +71,7 @@ object WalletApiClient {
         val relativeRequestUri = requestUri.removePrefix("http://localhost:0")
         log.info("relative request_uri: $relativeRequestUri")
 
-        // get the presentation definition
+        // get the DCQL query
         val getResponse = client.get()
             .uri(relativeRequestUri)
             .accept(MediaType.parseMediaType(RFC9101.REQUEST_OBJECT_MEDIA_TYPE))
