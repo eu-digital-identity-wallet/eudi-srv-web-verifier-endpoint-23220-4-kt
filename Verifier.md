@@ -70,7 +70,7 @@ Steps:
 
 ### Send Presentation (`direct-post.jwt protocol end-point)
 
-This is defined in OpenID4VP protocol and in [JARM](https://openid.net/specs/openid-financial-api-jarm.html)
+This is defined in OpenID4VP protocol.
 
 Actors: Wallet, Verifier (back-end)
 Intention: Wallet wants to send to the Verifier his response which include the Verifiable Presentations

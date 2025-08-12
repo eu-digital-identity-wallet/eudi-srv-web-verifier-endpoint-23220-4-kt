@@ -47,9 +47,8 @@ import kotlin.test.assertTrue
     properties = [
         "verifier.maxAge=PT6400M",
         "verifier.response.mode=DirectPost",
-        "verifier.clientMetadata.authorizationSignedResponseAlg=",
-        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
-        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
+        "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
+        "verifier.clientMetadata.responseEncryption.method=A128CBC-HS256",
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
@@ -63,15 +62,14 @@ internal class WalletResponseDirectPostWithIdTokenTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response
      */
     @Test
     @Order(value = 1)
     fun `post wallet response (only idToken) - confirm returns 200`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -88,8 +86,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response
      * - verifier to verifier backend, to get wallet response
      */
@@ -97,7 +94,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
     @Order(value = 2)
     fun `get authorisation response - confirm returns 200`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -126,7 +123,6 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         val initTransaction = InitTransactionTO(
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
-            null,
             null,
             "nonce",
             redirectUriTemplate =
@@ -163,7 +159,7 @@ internal class WalletResponseDirectPostWithIdTokenTest {
     @Order(value = 4)
     fun `when method to get wallet response does not require response_code and code is provided, BAD_REQUEST is responded`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("01-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         val requestId =
@@ -194,7 +190,6 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         val initTransaction = InitTransactionTO(
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
-            null,
             null,
             "nonce",
             redirectUriTemplate =
@@ -229,7 +224,6 @@ internal class WalletResponseDirectPostWithIdTokenTest {
         val initTransaction = InitTransactionTO(
             PresentationTypeTO.IdTokenRequest,
             IdTokenTypeTO.SubjectSigned,
-            null,
             null,
             "nonce",
             redirectUriTemplate =

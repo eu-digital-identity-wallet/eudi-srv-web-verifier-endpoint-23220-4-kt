@@ -15,7 +15,6 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
-import eu.europa.ec.eudi.prex.PresentationDefinition
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
 import java.time.Clock
@@ -24,8 +23,6 @@ import java.time.Instant
 internal data class RequestObject(
     val verifierId: VerifierId,
     val responseType: List<String>,
-    val presentationDefinitionUri: URL?,
-    val presentationDefinition: PresentationDefinition? = null,
     val dcqlQuery: DCQL? = null,
     val scope: List<String>,
     val idTokenType: List<String>,
@@ -55,27 +52,15 @@ internal fun requestObjectFromDomain(
         is PresentationType.IdAndVpToken -> type.idTokenType
     }.map {
         when (it) {
-            IdTokenType.AttesterSigned -> "attester_signed_id_token"
-            IdTokenType.SubjectSigned -> "subject_signed_id_token"
+            IdTokenType.AttesterSigned -> SIOPSpec.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN
+            IdTokenType.SubjectSigned -> SIOPSpec.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN
         }
     }
-    val maybePresentationDefinition = type.presentationDefinitionOrNull
-    val presentationDefinitionUri = maybePresentationDefinition?.let {
-        when (val option = presentation.presentationDefinitionMode) {
-            is EmbedOption.ByValue -> null
-            is EmbedOption.ByReference -> option.buildUrl(presentation.requestId)
-        }
-    }
-    val presentationDefinition = maybePresentationDefinition?.let { presentationDefinition ->
-        when (presentation.presentationDefinitionMode) {
-            is EmbedOption.ByValue -> presentationDefinition
-            is EmbedOption.ByReference -> null
-        }
-    }
+
     val responseType = when (type) {
-        is PresentationType.IdTokenRequest -> listOf("id_token")
-        is PresentationType.VpTokenRequest -> listOf("vp_token")
-        is PresentationType.IdAndVpToken -> listOf("vp_token", "id_token")
+        is PresentationType.IdTokenRequest -> listOf(RFC6749.ID_TOKEN)
+        is PresentationType.VpTokenRequest -> listOf(OpenId4VPSpec.VP_TOKEN)
+        is PresentationType.IdAndVpToken -> listOf(OpenId4VPSpec.VP_TOKEN, RFC6749.ID_TOKEN)
     }
 
     val aud = when (type) {
@@ -89,17 +74,15 @@ internal fun requestObjectFromDomain(
         verifierId = verifierConfig.verifierId,
         scope = scope,
         idTokenType = idTokenType,
-        presentationDefinitionUri = presentationDefinitionUri,
-        presentationDefinition = presentationDefinition,
-        dcqlQuery = type.dcqlQueryOrNull,
+        dcqlQuery = type.queryOrNull,
         responseType = responseType,
         aud = aud,
         nonce = presentation.nonce.value,
         state = presentation.requestId.value,
         responseMode = when (presentation.responseMode) {
-            ResponseModeOption.DirectPost -> "direct_post"
-            ResponseModeOption.DirectPostJwt -> "direct_post.jwt"
-        }, // or direct_post for direct submission
+            ResponseMode.DirectPost -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST
+            is ResponseMode.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
+        },
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
         issuedAt = clock.instant(),
         transactionData = transactionData,

@@ -13,15 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:UseSerializers(JWSAlgorithmStringSerializer::class, NonEmptyListSerializer::class)
+
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
 import arrow.core.Either
 import arrow.core.Ior
 import arrow.core.NonEmptyList
+import arrow.core.serialization.NonEmptyListSerializer
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.crypto.ECDHEncrypter
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory
 import com.nimbusds.jose.jwk.JWK
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.JWSAlgorithmStringSerializer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import java.net.URL
 import java.security.KeyStore
 import java.security.cert.X509Certificate
@@ -59,55 +71,75 @@ enum class ResponseModeOption {
     DirectPostJwt,
 }
 
-sealed interface JarmOption {
+sealed interface ResponseMode {
 
-    val jwsAlg: String?
-        get() = when (this) {
-            is Signed -> algorithm
-            is SignedAndEncrypted -> signed.algorithm
-            else -> null
+    data object DirectPost : ResponseMode
+
+    data class DirectPostJwt(
+        val ephemeralResponseEncryptionKey: JWK,
+    ) : ResponseMode {
+        init {
+            require(ephemeralResponseEncryptionKey.isPrivate)
         }
-
-    val jweAlg: String?
-        get() = when (this) {
-            is Encrypted -> algorithm
-            is SignedAndEncrypted -> encrypted.algorithm
-            else -> null
-        }
-
-    val encryptionMethod: String?
-        get() = when (this) {
-            is Encrypted -> encode
-            is SignedAndEncrypted -> encrypted.encode
-            else -> null
-        }
-
-    data class Signed(val algorithm: String) : JarmOption
-    data class Encrypted(val algorithm: String, val encode: String) : JarmOption
-    data class SignedAndEncrypted(
-        val signed: Signed,
-        val encrypted: Encrypted,
-    ) : JarmOption
+    }
 }
+
+val ResponseMode.option: ResponseModeOption
+    get() = when (this) {
+        ResponseMode.DirectPost -> ResponseModeOption.DirectPost
+        is ResponseMode.DirectPostJwt -> ResponseModeOption.DirectPostJwt
+    }
+
+data class ResponseEncryptionOption(
+    val algorithm: JWEAlgorithm,
+    val encryptionMethod: EncryptionMethod,
+) {
+    init {
+        require(algorithm in ECDHEncrypter.SUPPORTED_ALGORITHMS)
+        require(encryptionMethod in ECDHEncrypter.SUPPORTED_ENCRYPTION_METHODS)
+    }
+}
+
+@Serializable
+@JvmInline
+value class CoseAlgorithm(val value: Int)
 
 /**
  * Verifiable Presentation formats supported by Verifier Endpoint.
  */
-sealed interface VpFormat {
+@Serializable
+data class VpFormatsSupported(
+    @SerialName(OpenId4VPSpec.FORMAT_SD_JWT_VC) val sdJwtVc: SdJwtVc?,
+    @SerialName(OpenId4VPSpec.FORMAT_MSO_MDOC) val msoMdoc: MsoMdoc?,
+) {
+    init {
+        require(null != sdJwtVc || null != msoMdoc) {
+            "At least one format must be specified."
+        }
+    }
 
     /**
      * SD-JWT VC
      */
+    @Serializable
     data class SdJwtVc(
-        val sdJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
-        val kbJwtAlgorithms: NonEmptyList<JWSAlgorithm>,
-    ) : VpFormat {
+        @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTS_SD_JWT_VC_SD_JWT_ALGORITHMS)
+        val sdJwtAlgorithms: NonEmptyList<JWSAlgorithm>?,
+
+        @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTS_SD_JWT_VC_KB_JWT_ALGORITHMS)
+        val kbJwtAlgorithms: NonEmptyList<JWSAlgorithm>?,
+    ) {
         init {
-            require(sdJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
-                "sdJwtAlgorithms must contain asymmetric signature algorithms"
+            if (null != sdJwtAlgorithms) {
+                require(sdJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
+                    "sdJwtAlgorithms must contain asymmetric signature algorithms"
+                }
             }
-            require(kbJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
-                "sdJwtAlgorithms must contain asymmetric signature algorithms"
+
+            if (null != kbJwtAlgorithms) {
+                require(kbJwtAlgorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
+                    "sdJwtAlgorithms must contain asymmetric signature algorithms"
+                }
             }
         }
     }
@@ -115,24 +147,15 @@ sealed interface VpFormat {
     /**
      * MSO MDoc
      */
+    @Serializable
     data class MsoMdoc(
-        val algorithms: NonEmptyList<JWSAlgorithm>,
-    ) : VpFormat {
-        init {
-            require(algorithms.all { it in JWSAlgorithm.Family.SIGNATURE }) {
-                "algorithms must contain asymmetric signature algorithms"
-            }
-        }
-    }
-}
+        @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED_MSO_MDOC_ISSUER_AUTH_ALGORITHMS)
+        val issuerAuthAlgorithms: NonEmptyList<CoseAlgorithm>?,
 
-/**
- * Verifiable Presentation formats supported by Verifier Endpoint.
- */
-data class VpFormats(
-    val sdJwtVc: VpFormat.SdJwtVc,
-    val msoMdoc: VpFormat.MsoMdoc,
-)
+        @SerialName(OpenId4VPSpec.VP_FORMATS_SUPPORTED_MSO_MDOC_DEVICE_AUTH_ALGORITHMS)
+        val deviceAuthAlgorithms: NonEmptyList<CoseAlgorithm>?,
+    )
+}
 
 /**
  * By OpenID Connect Dynamic Client Registration specification
@@ -144,8 +167,8 @@ data class ClientMetaData(
     val idTokenEncryptedResponseAlg: String,
     val idTokenEncryptedResponseEnc: String,
     val subjectSyntaxTypesSupported: List<String>,
-    val jarmOption: JarmOption,
-    val vpFormats: VpFormats,
+    val responseEncryptionOption: ResponseEncryptionOption,
+    val vpFormatsSupported: VpFormatsSupported,
 )
 
 /**
@@ -198,7 +221,7 @@ sealed interface VerifierId {
     }
 
     /**
-     * When the Client Identifier Scheme is x509_san_dns, the Client Identifier
+     * When the Client Identifier Prefix is x509_san_dns, the Client Identifier
      * MUST be a DNS name and match a dNSName Subject Alternative Name (SAN) RFC5280
      * entry in the leaf certificate passed with the request
      */
@@ -212,25 +235,25 @@ sealed interface VerifierId {
             }
         }
 
-        override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_DNS}:$originalClientId"
+        override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_PREFIX_X509_SAN_DNS}:$originalClientId"
     }
 
     /**
-     * When the Client Identifier Scheme is x509_san_uri, the Client Identifier
-     * MUST be a URI and match a uniformResourceIdentifier Subject Alternative Name (SAN) RFC5280
-     * entry in the leaf certificate passed with the request
+     * When the Client Identifier Prefix is x509_hash, the Client Identifier
+     * MUST match the Base64 Url-Safe with no padding encoded SHA-256 hash of the DER
+     * encoded leaf certificate
      */
-    data class X509SanUri(
+    data class X509Hash(
         override val originalClientId: String,
         override val jarSigning: SigningConfig,
     ) : VerifierId {
         init {
-            require(jarSigning.certificate.containsSanUri(originalClientId)) {
-                "Original Client Id '$originalClientId' not contained in 'URI' Subject Alternative Names of JAR Signing Certificate."
+            require(jarSigning.certificate.encodedHashMatches(originalClientId)) {
+                "Original Client Id '$originalClientId' doesn't match the expected value"
             }
         }
 
-        override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_SCHEME_X509_SAN_URI}:$originalClientId"
+        override val clientId: ClientId = "${OpenId4VPSpec.CLIENT_ID_PREFIX_X509_HASH}:$originalClientId"
     }
 }
 
@@ -254,7 +277,6 @@ data class VerifierConfig(
     val verifierId: VerifierId,
     val requestJarOption: EmbedOption<RequestId>,
     val requestUriMethod: RequestUriMethod,
-    val presentationDefinitionEmbedOption: EmbedOption<RequestId>,
     val responseModeOption: ResponseModeOption,
     val responseUriBuilder: PresentationRelatedUrlBuilder<RequestId>,
     val maxAge: Duration,
@@ -275,6 +297,12 @@ private fun X509Certificate.containsSan(value: String, type: SanType) =
  */
 private fun X509Certificate.containsSanDns(value: String) =
     containsSan(value, SanType.DNS)
+
+private fun X509Certificate.encodedHashMatches(expected: String): Boolean {
+    val hash = hash(encoded, HashAlgorithm.SHA_256)
+    val encodedHash = base64UrlNoPadding.encode(hash)
+    return expected == encodedHash
+}
 
 /**
  * Checks if [value] is a 'URI' Subject Alternative Name in this [X509Certificate].
@@ -336,6 +364,13 @@ data class KeyStoreConfig(
     val keystorePassword: CharArray? = "".toCharArray(),
     val keystore: KeyStore,
 )
+
+internal fun VpFormatsSupported.supports(format: Format): Boolean =
+    when (format) {
+        Format.SdJwtVc -> null != sdJwtVc
+        Format.MsoMdoc -> null != msoMdoc
+        else -> false
+    }
 
 fun TrustSourcesConfig(trustedList: TrustedListConfig?, keystore: KeyStoreConfig?): Ior<TrustedListConfig, KeyStoreConfig> =
     Ior.fromNullables(trustedList, keystore) ?: error("Either trustedList or keystore must be provided")

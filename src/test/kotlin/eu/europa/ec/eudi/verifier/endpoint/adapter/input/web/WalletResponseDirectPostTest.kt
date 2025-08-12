@@ -31,16 +31,15 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 /**
- * when response mode is direct_post the ResponseObject must not contain JARM parameters
+ * when response mode is direct_post the RequestObject must not contain response encryption parameters
  */
 @VerifierApplicationTest
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
         "verifier.response.mode=DirectPost",
-        "verifier.clientMetadata.authorizationSignedResponseAlg=",
-        "verifier.clientMetadata.authorizationEncryptedResponseAlg=ECDH-ES",
-        "verifier.clientMetadata.authorizationEncryptedResponseEnc=A128CBC-HS256",
+        "verifier.clientMetadata.responseEncryption.algorithm=ECDH-ES",
+        "verifier.clientMetadata.responseEncryption.method=A128CBC-HS256",
     ],
 )
 @TestMethodOrder(OrderAnnotation::class)
@@ -52,8 +51,7 @@ internal class WalletResponseDirectPostTest {
 
     /**
      * Unit test of flow:
-     * - verifier to verifier backend, to post presentation definition
-     * - wallet to verifier backend, to get presentation definition
+     * - verifier to verifier backend, to post DCQL query
      * - wallet to verifier backend, to post wallet response, an idToken
      *
      * @see: <a href="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-response-mode-direct_postjw">OpenId4vp Response Mode "direct_post.jwt"</a>
@@ -62,14 +60,14 @@ internal class WalletResponseDirectPostTest {
     @Order(value = 1)
     fun `get request object when request mode is direct_post, confirm headers do not exist`() = runTest {
         // given
-        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-presentationDefinition.json")
+        val initTransaction = VerifierApiClient.loadInitTransactionTO("02-dcql.json")
         val transactionInitialized =
             assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(VerifierApiClient.initTransaction(client, initTransaction))
         RequestId(transactionInitialized.requestUri?.removePrefix("http://localhost:0/wallet/request.jwt/")!!)
         val requestObjectJsonResponse =
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
-        assertNull(requestObjectJsonResponse.jarmOption())
+        assertNull(requestObjectJsonResponse.supportedEncryptionMethods())
         assertNull(requestObjectJsonResponse.ecKey(), "jwks must not contain EC key")
     }
 }

@@ -92,18 +92,6 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
             put("cause", event.cause)
         }
 
-        is PresentationEvent.JarmJwkSetRetrieved -> {
-            put("jwk_set", event.jwkSet)
-        }
-
-        is PresentationEvent.FailedToRetrieveJarmJwkSet -> {
-            put("cause", event.cause)
-        }
-
-        is PresentationEvent.PresentationDefinitionRetrieved -> {
-            put("presentation_definition", event.presentationDefinition.json())
-        }
-
         is PresentationEvent.FailedToRetrievePresentationDefinition -> {
             put("cause", event.cause)
         }
@@ -149,9 +137,6 @@ private fun JsonObjectBuilder.putEventNameAndActor(e: PresentationEvent) {
         is PresentationEvent.TransactionInitialized -> "Transaction initialized" to Actor.Verifier
         is PresentationEvent.RequestObjectRetrieved -> "Request object retrieved" to Actor.Wallet
         is PresentationEvent.FailedToRetrieveRequestObject -> "FailedToRetrieve request" to Actor.Wallet
-        is PresentationEvent.JarmJwkSetRetrieved -> "JARM JWK set retrieved" to Actor.Wallet
-        is PresentationEvent.FailedToRetrieveJarmJwkSet -> "FailedToRetrieve JARM JWK set retrieved" to Actor.Wallet
-        is PresentationEvent.PresentationDefinitionRetrieved -> "Presentation definition retrieved" to Actor.Wallet
         is PresentationEvent.FailedToRetrievePresentationDefinition -> "Failed to retrieve presentation definition" to Actor.Wallet
         is PresentationEvent.WalletResponsePosted -> "Wallet response posted" to Actor.Wallet
         is PresentationEvent.WalletFailedToPostResponse -> "Wallet failed to post response" to Actor.Wallet
@@ -169,10 +154,7 @@ private fun WalletResponseValidationError.asText(): String =
     when (this) {
         WalletResponseValidationError.IncorrectState -> "Incorrect state"
         WalletResponseValidationError.MissingIdToken -> "Missing id_token"
-        WalletResponseValidationError.MissingState -> "Missing state from JARM"
         WalletResponseValidationError.MissingVpToken -> "Missing vp_token"
-        WalletResponseValidationError.MissingPresentationSubmission -> "Missing presentation_submission"
-        WalletResponseValidationError.PresentationSubmissionMustNotBePresent -> "presentation_submission must not be provided"
         is WalletResponseValidationError.InvalidVpToken -> "vp_token is not valid: ${message}${cause?.message?.let { ", $it"}}"
         is WalletResponseValidationError.PresentationNotFound -> "Presentation not found"
         is WalletResponseValidationError.PresentationNotInExpectedState -> "Presentation non in expected state"
@@ -180,7 +162,7 @@ private fun WalletResponseValidationError.asText(): String =
         WalletResponseValidationError.RequiredCredentialSetNotSatisfied ->
             "vp_token does not satisfy all the required credential sets of the query"
         WalletResponseValidationError.InvalidPresentationSubmission -> "Presentation submission is not valid"
-        is WalletResponseValidationError.InvalidJarm -> "JARM is not valid: '${error.message}'"
+        is WalletResponseValidationError.InvalidEncryptedResponse -> "Encrypted response is not valid: '${error.message}'"
     }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)
