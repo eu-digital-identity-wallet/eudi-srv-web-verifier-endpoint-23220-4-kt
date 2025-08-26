@@ -27,7 +27,6 @@ import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mso.ValidityInfo
-import kotlinx.datetime.toJavaInstant
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.time.Clock
@@ -84,8 +83,8 @@ private fun Raise<DocumentError>.ensureNotExpiredValidityInfo(
     validityInfoShouldBe: ValidityInfoShouldBe,
 ) {
     fun ValidityInfo.notExpired() {
-        val validFrom = validFrom.value.toJavaInstant()
-        val validTo = validUntil.value.toJavaInstant()
+        val validFrom = Instant.ofEpochSecond(validFrom.value.epochSeconds)
+        val validTo = Instant.ofEpochSecond(validUntil.value.epochSeconds)
         val now = clock.instant()
         ensure(now in validFrom..validTo) {
             DocumentError.ExpiredValidityInfo(validFrom, validTo)
