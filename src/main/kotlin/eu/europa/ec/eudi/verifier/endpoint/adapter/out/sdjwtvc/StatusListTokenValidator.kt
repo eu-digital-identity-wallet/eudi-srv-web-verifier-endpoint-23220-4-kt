@@ -26,10 +26,10 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.toKotlinInstant
 import kotlinx.serialization.json.JsonObject
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.time.toKotlinInstant
 
 internal data class StatusCheckException(val reason: String, val causedBy: Throwable) : Exception(reason, causedBy)
 
@@ -60,7 +60,7 @@ internal class StatusListTokenValidator(
         }
         val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
             clock = delegateClock,
-            httpClientFactory = httpClientFactory,
+            httpClient = httpClientFactory(),
             verifyStatusListTokenSignature = VerifyStatusListTokenSignature.Ignore,
         )
         return GetStatus(getStatusListToken)
