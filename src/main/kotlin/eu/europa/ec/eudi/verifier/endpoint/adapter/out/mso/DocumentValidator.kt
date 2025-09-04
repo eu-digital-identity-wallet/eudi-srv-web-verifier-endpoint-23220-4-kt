@@ -158,7 +158,9 @@ private fun Raise<DocumentError.InvalidIssuerSignedItems>.ensureDigestsOfIssuerS
     IssuerSignedItemsShouldBe.Verified ->
         ensure(document.verifyIssuerSignedItems()) { DocumentError.InvalidIssuerSignedItems }
 
-    IssuerSignedItemsShouldBe.Ignored -> {}
+    IssuerSignedItemsShouldBe.Ignored -> {
+        // Do nothing
+    }
 }
 
 private fun Raise<Nel<DocumentError.X5CNotTrusted>>.ensureTrustedChain(
