@@ -22,7 +22,7 @@ import java.security.cert.X509Certificate
 /**
  * Interface for fetching LOTL certificates
  */
-interface FetchLOTLCertificates {
+fun interface FetchLOTLCertificates {
     /**
      * Fetch certificates from a LOTL URL
      * @param trustedListConfig Configuration for the trusted list
