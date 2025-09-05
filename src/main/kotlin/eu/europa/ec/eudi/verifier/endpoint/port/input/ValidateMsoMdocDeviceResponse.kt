@@ -28,7 +28,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Cert
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
-import kotlinx.datetime.Instant
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toKotlinTimeZone
 import kotlinx.serialization.Serializable
@@ -199,39 +198,27 @@ private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(
 @OptIn(ExperimentalEncodingApi::class)
 private val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL)
 
-private fun Instant.toJsonPrimitive(): JsonPrimitive {
-    val epoch = toEpochMilliseconds()
-    return JsonPrimitive(epoch)
-}
+private fun Boolean.toJsonPrimitive() = JsonPrimitive(this)
+private fun Number.toJsonPrimitive() = JsonPrimitive(this)
+private fun String.toJsonPrimitive() = JsonPrimitive(this)
+private fun List<JsonElement>.toJsonArray() = JsonArray(this)
+private fun Map<String, JsonElement>.toJsonObject() = JsonObject(this)
 
 @OptIn(ExperimentalEncodingApi::class)
 private fun DataElement.toJsonElement(clock: Clock): JsonElement =
     when (this) {
-        is BooleanElement -> JsonPrimitive(value)
-        is ByteStringElement -> JsonPrimitive(base64.encode(value))
-        is DateTimeElement -> value.toJsonPrimitive()
-
-        is EncodedCBORElement -> JsonPrimitive(base64.encode(value))
-        is FullDateElement -> {
-            val epoch = value.atStartOfDayIn(clock.zone.toKotlinTimeZone()).toEpochMilliseconds()
-            JsonPrimitive(epoch)
-        }
-
-        is ListElement -> {
-            val values = value.map { it.toJsonElement(clock) }
-            JsonArray(values)
-        }
-
-        is MapElement -> {
-            val values = value.mapKeys { (key, _) -> key.str }.mapValues { (_, value) -> value.toJsonElement(clock) }
-            JsonObject(values)
-        }
-
+        is BooleanElement -> value.toJsonPrimitive()
+        is ByteStringElement -> base64.encode(value).toJsonPrimitive()
+        is DateTimeElement -> value.toEpochMilliseconds().toJsonPrimitive()
+        is EncodedCBORElement -> base64.encode(value).toJsonPrimitive()
+        is FullDateElement -> value.atStartOfDayIn(clock.zone.toKotlinTimeZone()).toEpochMilliseconds().toJsonPrimitive()
+        is ListElement -> value.map { it.toJsonElement(clock) }.toJsonArray()
+        is MapElement -> value.mapKeys { (key, _) -> key.str }.mapValues { (_, value) -> value.toJsonElement(clock) }.toJsonObject()
         is NullElement -> JsonNull
-        is NumberElement -> JsonPrimitive(value)
-        is StringElement -> JsonPrimitive(value)
-        is TDateElement -> value.toJsonPrimitive()
+        is NumberElement -> value.toJsonPrimitive()
+        is StringElement -> value.toJsonPrimitive()
+        is TDateElement -> value.toEpochMilliseconds().toJsonPrimitive()
 
         // Other unsupported DataElements
-        else -> JsonPrimitive(this::class.java.simpleName)
+        else -> this::class.java.simpleName.toJsonPrimitive()
     }
