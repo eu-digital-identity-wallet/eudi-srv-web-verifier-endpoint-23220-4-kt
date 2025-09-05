@@ -144,7 +144,7 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token having a single document skipping chain validation should be valid`() = runTest {
         val validDocuments = run {
-            val docV = DocumentValidator(provideTrustSource = ProvideTrustSource.Ignored)
+            val docV = DocumentValidator(provideTrustSource = ProvideTrustSource.Ignored, clock = clock)
             val vpValidator = DeviceResponseValidator(docV)
             val validated = vpValidator.ensureValid(Data.MdlVP)
             assertNotNull(validated.getOrNull())
