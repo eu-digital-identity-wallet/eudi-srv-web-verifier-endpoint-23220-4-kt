@@ -89,7 +89,7 @@ private fun SignedJWT.statusReference(): StatusReference? {
     }
 
     val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX]?.decodeAs<Int>()?.getOrThrow()!!)
-    val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()!!.getOrThrow()!!
+    val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()!!.getOrThrow()
 
     return StatusReference(index, uri)
 }

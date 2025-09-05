@@ -22,30 +22,26 @@ import com.google.zxing.client.j2se.MatrixToImageConfig
 import com.google.zxing.client.j2se.MatrixToImageWriter
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
-import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Dimensions
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
-import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.PNGImage
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels
 import java.io.ByteArrayOutputStream
 
-object GenerateQrCodeFromData : GenerateQrCode {
-    override suspend fun invoke(data: String, size: Dimensions): Either<Throwable, PNGImage> {
-        return Either.catch {
-            val writer = QRCodeWriter()
-            val matrix = writer.encode(
-                data,
-                BarcodeFormat.QR_CODE,
-                size.width.toInt(),
-                size.height.toInt(),
-                mapOf(
-                    EncodeHintType.CHARACTER_SET to Charsets.UTF_8.name(),
-                    EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
-                ),
-            )
-            ByteArrayOutputStream().use {
-                MatrixToImageWriter.writeToStream(matrix, "PNG", it, MatrixToImageConfig())
-                it.toByteArray()
-            }
+val GenerateQrCodeFromData = GenerateQrCode { data, size ->
+    Either.catch {
+        val writer = QRCodeWriter()
+        val matrix = writer.encode(
+            data,
+            BarcodeFormat.QR_CODE,
+            size.width.toInt(),
+            size.height.toInt(),
+            mapOf(
+                EncodeHintType.CHARACTER_SET to Charsets.UTF_8.name(),
+                EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
+            ),
+        )
+        ByteArrayOutputStream().use {
+            MatrixToImageWriter.writeToStream(matrix, "PNG", it, MatrixToImageConfig())
+            it.toByteArray()
         }
     }
 }

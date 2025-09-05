@@ -29,13 +29,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import com.networknt.schema.JsonSchema as ExternalJsonSchema
 
-object ValidateJsonSchema : JsonSchemaValidator {
-    override suspend fun validate(
-        unvalidated: JsonObject,
-        schema: JsonSchema,
-    ): List<JsonSchemaViolation> {
-        return JsonSchemaConverter.convert(schema = schema).validate(unvalidated)
-    }
+val ValidateJsonSchema = JsonSchemaValidator { unvalidated, schema ->
+    JsonSchemaConverter.convert(schema = schema).validate(unvalidated)
 }
 
 private object JsonSchemaConverter {

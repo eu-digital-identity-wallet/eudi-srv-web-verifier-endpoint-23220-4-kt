@@ -154,11 +154,10 @@ private val ECKey.coseAlgorithmID: AlgorithmID
 private fun Raise<DocumentError.InvalidIssuerSignedItems>.ensureDigestsOfIssuerSignedItems(
     document: MDoc,
     issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe,
-) = when (issuerSignedItemsShouldBe) {
-    IssuerSignedItemsShouldBe.Verified ->
+) {
+    if (issuerSignedItemsShouldBe == IssuerSignedItemsShouldBe.Verified) {
         ensure(document.verifyIssuerSignedItems()) { DocumentError.InvalidIssuerSignedItems }
-
-    IssuerSignedItemsShouldBe.Ignored -> {}
+    }
 }
 
 private fun Raise<Nel<DocumentError.X5CNotTrusted>>.ensureTrustedChain(

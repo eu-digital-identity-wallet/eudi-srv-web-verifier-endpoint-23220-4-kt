@@ -112,6 +112,7 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
         }
 
         is PresentationEvent.PresentationExpired -> {
+            // No extra information to add
         }
 
         is PresentationEvent.AttestationStatusCheckSuccessful -> {
