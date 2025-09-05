@@ -44,6 +44,7 @@ typealias Base64UrlSafe = String
 /**
  * Wrapper for a JsonObject that contains Transaction Data.
  */
+@Suppress("kotlin:S6611")
 @JvmInline
 value class TransactionData private constructor(val value: JsonObject) {
 
