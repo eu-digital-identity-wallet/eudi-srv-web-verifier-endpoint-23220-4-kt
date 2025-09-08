@@ -61,7 +61,9 @@ internal class StatusListTokenValidator(
         val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
             clock = delegateClock,
             httpClient = httpClientFactory(),
-            verifyStatusListTokenSignature = VerifyStatusListTokenSignature.Ignore,
+            verifyStatusListTokenSignature = { _, _ ->
+                Result.success(Unit)
+            },
         )
         return GetStatus(getStatusListToken)
     }
