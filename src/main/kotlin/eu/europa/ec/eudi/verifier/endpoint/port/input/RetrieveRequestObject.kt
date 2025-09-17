@@ -167,7 +167,7 @@ class RetrieveRequestObjectLive(
 /**
  * Validator for Wallet Metadata.
  */
-private class WalletMetadataValidator(private val verifierConfig: VerifierConfig, private val clientFactory: HttpClient) {
+private class WalletMetadataValidator(private val verifierConfig: VerifierConfig, private val httpClient: HttpClient) {
 
     suspend fun validate(
         metadata: WalletMetadataTO,
@@ -259,7 +259,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
             )
         }
 
-        val jwks = metadata.jwks?.toJwks()?.bind() ?: metadata.jwksUri?.let { clientFactory.use { client -> client.getJwks(it).bind() } }
+        val jwks = metadata.jwks?.toJwks()?.bind() ?: metadata.jwksUri?.let { httpClient.getJwks(it).bind() }
         return if (null == jwks) {
             EncryptionRequirement.NotRequired
         } else {
