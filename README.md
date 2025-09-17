@@ -744,7 +744,11 @@ Default value: `not_used`
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY_REQUIREDFOR`  
 Description: Comma separated list of VCTs for which Type Metadata are required for. Required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY` is set to `required_for`  
-Example: `urn:eudi:pid:1`
+Example: `urn:eudi:pid:1` 
+
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_INTEGRITYCHECK_ENABLED`  
+Description: Enables integrity check validation for SD-JWT VC Type Metadata.  
+Default value: `false`
 
 #### SD-JWT-VC Type Metadata resolution
 

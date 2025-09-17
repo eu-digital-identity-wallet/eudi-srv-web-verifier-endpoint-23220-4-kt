@@ -287,6 +287,7 @@ internal fun beans(clock: Clock) = beans {
                 LookupJsonSchemaUsingKtor(ref()),
             )
 
+            val enabledIntegrityCheck = env.getProperty<Boolean>("verifier.validation.sdJwtVc.typeMetadata.integrityCheck.enabled", false)
             return object : ResolveTypeMetadata by delegate {
                 override suspend fun invoke(
                     vct: Vct,
@@ -294,7 +295,10 @@ internal fun beans(clock: Clock) = beans {
                 ): Result<ResolvedTypeMetadata> =
                     runCatching {
                         cache.get(vct) {
-                            super.invoke(vct, null).getOrThrow()
+                            if (enabledIntegrityCheck)
+                                super.invoke(vct, expectedIntegrity).getOrThrow()
+                            else
+                                super.invoke(vct, null).getOrThrow()
                         }
                     }
             }
