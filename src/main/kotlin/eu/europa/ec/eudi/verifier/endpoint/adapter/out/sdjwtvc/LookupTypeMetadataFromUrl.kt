@@ -39,27 +39,25 @@ class LookupTypeMetadataFromUrl(
     override suspend fun invoke(vct: Vct, expectedIntegrity: DocumentIntegrity?): Result<SdJwtVcTypeMetadata?> =
         Either.catch {
             vcts[vct]?.let { url ->
-                httpClient.use { httpClient ->
-                    val response = httpClient.get(url) {
-                        expectSuccess = false
-                    }
+                val response = httpClient.get(url) {
+                    expectSuccess = false
+                }
 
-                    when (response.status) {
-                        HttpStatusCode.OK -> {
-                            val body = response.body<ByteArray>()
-                            if (null != expectedIntegrity && null != sriValidator) {
-                                check(sriValidator.isValid(expectedIntegrity, body)) {
-                                    "sub-resource integrity validation fails"
-                                }
-                            }
-
-                            ByteArrayInputStream(body).use {
-                                jsonSupport.decodeFromStream<SdJwtVcTypeMetadata>(it)
+                when (response.status) {
+                    HttpStatusCode.OK -> {
+                        val body = response.body<ByteArray>()
+                        if (null != expectedIntegrity && null != sriValidator) {
+                            check(sriValidator.isValid(expectedIntegrity, body)) {
+                                "sub-resource integrity validation fails"
                             }
                         }
-                        HttpStatusCode.NotFound -> null
-                        else -> throw ResponseException(response, "Failed to retrieve type metadata")
+
+                        ByteArrayInputStream(body).use {
+                            jsonSupport.decodeFromStream<SdJwtVcTypeMetadata>(it)
+                        }
                     }
+                    HttpStatusCode.NotFound -> null
+                    else -> throw ResponseException(response, "Failed to retrieve type metadata")
                 }
             }
         }.toResult()
