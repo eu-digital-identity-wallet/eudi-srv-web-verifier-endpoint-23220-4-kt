@@ -748,7 +748,7 @@ Example: `urn:eudi:pid:1`
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_INTEGRITYCHECK_ENABLED`  
 Description: Enables integrity check validation for SD-JWT VC Type Metadata.  
-Default value: `false`
+Default value: `false` 
 
 #### SD-JWT-VC Type Metadata resolution
 
