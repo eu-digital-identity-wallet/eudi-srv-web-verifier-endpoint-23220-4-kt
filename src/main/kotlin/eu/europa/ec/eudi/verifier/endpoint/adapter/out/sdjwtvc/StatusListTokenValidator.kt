@@ -18,7 +18,6 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 import arrow.core.Either
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
-import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.statium.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
@@ -26,6 +25,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
+import io.ktor.client.HttpClient
 import kotlinx.serialization.json.JsonObject
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -34,7 +34,7 @@ import kotlin.time.toKotlinInstant
 internal data class StatusCheckException(val reason: String, val causedBy: Throwable) : Exception(reason, causedBy)
 
 internal class StatusListTokenValidator(
-    private val httpClientFactory: KtorHttpClientFactory,
+    private val httpClient: HttpClient,
     private val clock: java.time.Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
 ) {
@@ -60,7 +60,7 @@ internal class StatusListTokenValidator(
         }
         val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
             clock = delegateClock,
-            httpClient = httpClientFactory(),
+            httpClient = httpClient,
             verifyStatusListTokenSignature = { _, _ ->
                 Result.success(Unit)
             },

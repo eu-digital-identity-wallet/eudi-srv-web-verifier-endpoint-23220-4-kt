@@ -13,7 +13,7 @@ arrow = "2.0.1"
 dependencycheck = "12.1.1"
 swaggerUi = "5.20.1"
 waltid = "0.11.0"
-sdJwt = "0.14.3"
+sdJwt = "0.17.0"
 ktor = "3.2.3"
 jsonpathkt = "2.0.1"
 tink = "1.17.0"
@@ -37,6 +37,8 @@ swagger-ui = { module = "org.webjars:swagger-ui", version.ref = "swaggerUi" }
 waltid-mdoc-credentials = { module = "id.walt.mdoc-credentials:waltid-mdoc-credentials-jvm", version.ref = "waltid" }
 sd-jwt = { module = "eu.europa.ec.eudi:eudi-lib-jvm-sdjwt-kt", version.ref = "sdJwt" }
 ktor-client-apache = { module = "io.ktor:ktor-client-apache", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-serialization = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 jsonpathkt = { module = "com.nfeld.jsonpathkt:jsonpathkt", version.ref = "jsonpathkt" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "statium" }

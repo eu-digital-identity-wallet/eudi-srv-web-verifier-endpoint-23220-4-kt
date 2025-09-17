@@ -744,7 +744,7 @@ Default value: `not_used`
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY_REQUIREDFOR`  
 Description: Comma separated list of VCTs for which Type Metadata are required for. Required when `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_POLICY` is set to `required_for`  
-Example: `urn:eudi:pid:1`
+Example: `urn:eudi:pid:1`  
 
 #### SD-JWT-VC Type Metadata resolution
 
@@ -766,6 +766,15 @@ Default value: `PT1H`
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_CACHE_MAXENTRIES`  
 Description: Cache maximum entries for resolved Type Metadata  
 Default value: `10`  
+
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_INTEGRITY_ENABLED`  
+Description: Enables sub-resource integrity validation for SD-JWT VC Type Metadata and JSON schemas  
+Default value: `false`
+
+Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_RESOLUTION_INTEGRITY_ALLOWEDALGORITHMS`    
+Description: Comma-separated list of allowed sub-resource integrity hash algorithms  
+Allowed values: `sha256`, `sha384`, `sha512`  
+Default value: `sha256,sha384,sha512`  
 
 Variable: `VERIFIER_VALIDATION_SDJWTVC_TYPEMETADATA_JSONSCHEMA_VALIDATION_ENABLED`  
 Description: Whether Json Schema validation should be enabled or not    

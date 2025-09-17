@@ -135,17 +135,13 @@ internal fun beans(clock: Clock) = beans {
 
     profile("self-signed") {
         log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification with proxy")
-        bean<KtorHttpClientFactory> {
-            {
-                createHttpClient(trustSelfSigned = true, httpProxy = proxy)
-            }
+        bean<HttpClient> {
+            createHttpClient(trustSelfSigned = true, httpProxy = proxy)
         }
     }
     profile("!self-signed") {
-        bean<KtorHttpClientFactory> {
-            {
-                createHttpClient(httpProxy = proxy)
-            }
+        bean<HttpClient> {
+            createHttpClient(httpProxy = proxy)
         }
     }
 
@@ -200,12 +196,12 @@ internal fun beans(clock: Clock) = beans {
         log.info("Enabling Status List Token validations")
         bean<StatusListTokenValidator> {
             val selfSignedProfileActive = env.activeProfiles.contains("self-signed")
-            val httpClientFactory = if (selfSignedProfileActive) {
-                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true, httpProxy = proxy) }
+            val httpClient = if (selfSignedProfileActive) {
+                createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true, httpProxy = proxy)
             } else {
-                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy) }
+                createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy)
             }
-            StatusListTokenValidator(httpClientFactory, clock, ref())
+            StatusListTokenValidator(httpClient, clock, ref())
         }
     }
 
@@ -263,8 +259,8 @@ internal fun beans(clock: Clock) = beans {
     //
     bean<TypeMetadataPolicy> {
         fun resolveTypeMetadata(): ResolveTypeMetadata {
-            val vcts = ref<TypeMetadataResolutionProperties>()
-                .vcts
+            val typeMetadataResolutionProperties = ref<TypeMetadataResolutionProperties>()
+            val vcts = typeMetadataResolutionProperties.vcts
                 .associateBy { Vct(it.vct) }.mapValues { Url(it.value.url) }
             require(vcts.isNotEmpty()) {
                 "verifier.validation.sdJwtVc.typeMetadata.resolution.vcts must be set"
@@ -283,20 +279,28 @@ internal fun beans(clock: Clock) = beans {
                 .maximumSize(cacheSize)
                 .asCache<Vct, ResolvedTypeMetadata>()
 
+            val sriValidator =
+                if (!typeMetadataResolutionProperties.integrity.enabled) {
+                    null
+                } else {
+                    SRIValidator(
+                        requireNotNull(typeMetadataResolutionProperties.integrity.allowedAlgorithms.toNonEmptySetOrNull()) {
+                            "verifier.validation.sdJwtVc.typeMetadata.resolution.integrity.allowedAlgorithms cannot be empty"
+                        },
+                    )
+                }
             val delegate = ResolveTypeMetadata(
-                LookupTypeMetadataFromUrl(
-                    ref(),
-                    vcts,
-                ),
-                LookupJsonSchemaUsingKtor(ref()),
+                LookupTypeMetadataFromUrl(ref(), vcts, sriValidator),
+                LookupJsonSchemaUsingKtor(ref(), sriValidator),
             )
 
             return object : ResolveTypeMetadata by delegate {
-                override suspend fun invoke(vct: Vct): Result<ResolvedTypeMetadata> =
+                override suspend fun invoke(
+                    vct: Vct,
+                    expectedIntegrity: DocumentIntegrity?,
+                ): Result<ResolvedTypeMetadata> =
                     runCatching {
-                        cache.get(vct) {
-                            super.invoke(vct).getOrThrow()
-                        }
+                        cache.get(vct) { super.invoke(vct, expectedIntegrity).getOrThrow() }
                     }
             }
         }
@@ -826,9 +830,15 @@ private enum class TypeMetadataPolicyEnum {
 @ConfigurationProperties("verifier.validation.sd-jwt-vc.type-metadata.resolution")
 internal data class TypeMetadataResolutionProperties(
     val vcts: List<VctProperties> = emptyList(),
+    val integrity: IntegrityProperties = IntegrityProperties(),
 ) {
     data class VctProperties(
         val vct: String,
         val url: String,
+    )
+
+    data class IntegrityProperties(
+        val enabled: Boolean = false,
+        val allowedAlgorithms: Set<IntegrityAlgorithm> = IntegrityAlgorithm.entries.toSet(),
     )
 }

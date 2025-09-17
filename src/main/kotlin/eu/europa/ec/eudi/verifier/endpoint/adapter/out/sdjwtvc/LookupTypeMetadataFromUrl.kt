@@ -16,33 +16,48 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
 import arrow.core.Either
-import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
+import eu.europa.ec.eudi.sdjwt.vc.DocumentIntegrity
 import eu.europa.ec.eudi.sdjwt.vc.LookupTypeMetadata
+import eu.europa.ec.eudi.sdjwt.vc.SRIValidator
 import eu.europa.ec.eudi.sdjwt.vc.SdJwtVcTypeMetadata
 import eu.europa.ec.eudi.sdjwt.vc.Vct
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.toResult
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import kotlinx.serialization.json.decodeFromStream
+import java.io.ByteArrayInputStream
 
 class LookupTypeMetadataFromUrl(
-    private val httpClientFactory: KtorHttpClientFactory,
+    private val httpClient: HttpClient,
     private val vcts: Map<Vct, Url>,
+    private val sriValidator: SRIValidator?,
 ) : LookupTypeMetadata {
-    override suspend fun invoke(vct: Vct): Result<SdJwtVcTypeMetadata?> =
+    override suspend fun invoke(vct: Vct, expectedIntegrity: DocumentIntegrity?): Result<SdJwtVcTypeMetadata?> =
         Either.catch {
             vcts[vct]?.let { url ->
-                httpClientFactory().use { httpClient ->
-                    val response = httpClient.get(url) {
-                        expectSuccess = false
-                    }
+                val response = httpClient.get(url) {
+                    expectSuccess = false
+                }
 
-                    when (response.status) {
-                        HttpStatusCode.OK -> response.body<SdJwtVcTypeMetadata>()
-                        HttpStatusCode.NotFound -> null
-                        else -> throw ResponseException(response, "Failed to retrieve type metadata")
+                when (response.status) {
+                    HttpStatusCode.OK -> {
+                        val body = response.body<ByteArray>()
+                        if (null != expectedIntegrity && null != sriValidator) {
+                            check(sriValidator.isValid(expectedIntegrity, body)) {
+                                "sub-resource integrity validation fails"
+                            }
+                        }
+
+                        ByteArrayInputStream(body).use {
+                            jsonSupport.decodeFromStream<SdJwtVcTypeMetadata>(it)
+                        }
                     }
+                    HttpStatusCode.NotFound -> null
+                    else -> throw ResponseException(response, "Failed to retrieve type metadata")
                 }
             }
         }.toResult()
