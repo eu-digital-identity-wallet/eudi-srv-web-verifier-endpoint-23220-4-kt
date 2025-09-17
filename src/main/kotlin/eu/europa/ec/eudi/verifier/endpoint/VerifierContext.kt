@@ -135,17 +135,13 @@ internal fun beans(clock: Clock) = beans {
 
     profile("self-signed") {
         log.warn("Using Ktor HttpClients that trust self-signed certificates and perform no hostname verification with proxy")
-        bean<KtorHttpClientFactory> {
-            {
-                createHttpClient(trustSelfSigned = true, httpProxy = proxy)
-            }
+        bean<HttpClient> {
+            createHttpClient(trustSelfSigned = true, httpProxy = proxy)
         }
     }
     profile("!self-signed") {
-        bean<KtorHttpClientFactory> {
-            {
-                createHttpClient(httpProxy = proxy)
-            }
+        bean<HttpClient> {
+            createHttpClient(httpProxy = proxy)
         }
     }
 
@@ -201,9 +197,9 @@ internal fun beans(clock: Clock) = beans {
         bean<StatusListTokenValidator> {
             val selfSignedProfileActive = env.activeProfiles.contains("self-signed")
             val httpClientFactory = if (selfSignedProfileActive) {
-                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true, httpProxy = proxy) }
+                createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = true, httpProxy = proxy)
             } else {
-                { createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy) }
+                createHttpClient(withJsonContentNegotiation = false, trustSelfSigned = false, httpProxy = proxy)
             }
             StatusListTokenValidator(httpClientFactory, clock, ref())
         }
@@ -292,10 +288,13 @@ internal fun beans(clock: Clock) = beans {
             )
 
             return object : ResolveTypeMetadata by delegate {
-                override suspend fun invoke(vct: Vct): Result<ResolvedTypeMetadata> =
+                override suspend fun invoke(
+                    vct: Vct,
+                    expectedIntegrity: DocumentIntegrity?,
+                ): Result<ResolvedTypeMetadata> =
                     runCatching {
                         cache.get(vct) {
-                            super.invoke(vct).getOrThrow()
+                            super.invoke(vct, null).getOrThrow()
                         }
                     }
             }

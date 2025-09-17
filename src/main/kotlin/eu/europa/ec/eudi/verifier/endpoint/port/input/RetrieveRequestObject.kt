@@ -23,7 +23,6 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
-import eu.europa.ec.eudi.sdjwt.vc.KtorHttpClientFactory
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -83,10 +82,10 @@ class RetrieveRequestObjectLive(
     private val verifierConfig: VerifierConfig,
     private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
-    private val clientFactory: KtorHttpClientFactory,
+    httpClient: HttpClient,
 ) : RetrieveRequestObject {
 
-    private val walletMetadataValidator = WalletMetadataValidator(verifierConfig, clientFactory)
+    private val walletMetadataValidator = WalletMetadataValidator(verifierConfig, httpClient)
 
     override suspend operator fun invoke(
         requestId: RequestId,
@@ -168,7 +167,7 @@ class RetrieveRequestObjectLive(
 /**
  * Validator for Wallet Metadata.
  */
-private class WalletMetadataValidator(private val verifierConfig: VerifierConfig, private val clientFactory: KtorHttpClientFactory) {
+private class WalletMetadataValidator(private val verifierConfig: VerifierConfig, private val clientFactory: HttpClient) {
 
     suspend fun validate(
         metadata: WalletMetadataTO,
@@ -260,7 +259,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
             )
         }
 
-        val jwks = metadata.jwks?.toJwks()?.bind() ?: metadata.jwksUri?.let { clientFactory().use { client -> client.getJwks(it).bind() } }
+        val jwks = metadata.jwks?.toJwks()?.bind() ?: metadata.jwksUri?.let { clientFactory.use { client -> client.getJwks(it).bind() } }
         return if (null == jwks) {
             EncryptionRequirement.NotRequired
         } else {

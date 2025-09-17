@@ -58,6 +58,12 @@ dependencies {
     implementation(libs.ktor.client.apache) {
         because("ktor client engine to use (required by SdJwtVcVerifier)")
     }
+    implementation(libs.ktor.client.content.negotiation) {
+        because("ktor client content negotiation (required by http client for SD-JWT)")
+    }
+    implementation(libs.ktor.client.serialization) {
+        because("ktor client serialization (required by http client for SD-JWT)")
+    }
     implementation(libs.jsonpathkt) {
         because("Evaluate JsonPaths on vp_token")
     }
