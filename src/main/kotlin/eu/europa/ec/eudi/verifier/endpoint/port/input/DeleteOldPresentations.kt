@@ -15,10 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.DeletePresentationsInitiatedBefore
-import java.time.Clock
-import java.time.Duration
+import kotlin.time.Duration
 
 fun interface DeleteOldPresentations {
 
@@ -34,5 +34,5 @@ internal class DeleteOldPresentationsLive(
     private val deletePresentationsInitiatedBefore: DeletePresentationsInitiatedBefore,
 ) : DeleteOldPresentations {
 
-    override suspend fun invoke(): List<TransactionId> = deletePresentationsInitiatedBefore(clock.instant() - maxAge)
+    override suspend fun invoke(): List<TransactionId> = deletePresentationsInitiatedBefore(clock.now() - maxAge)
 }
