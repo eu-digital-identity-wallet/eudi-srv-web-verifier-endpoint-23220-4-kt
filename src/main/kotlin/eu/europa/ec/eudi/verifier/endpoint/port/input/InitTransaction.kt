@@ -46,7 +46,6 @@ import kotlinx.serialization.json.buildJsonArray
 import java.net.URI
 import java.net.URL
 import java.security.cert.X509Certificate
-import java.time.Clock
 
 /**
  * Represent the kind of [Presentation] process
@@ -243,7 +242,7 @@ class InitTransactionLive(
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
             id = generateTransactionId(),
-            initiatedAt = clock.instant(),
+            initiatedAt = clock.now(),
             requestId = generateRequestId(),
             type = type,
             nonce = nonce,

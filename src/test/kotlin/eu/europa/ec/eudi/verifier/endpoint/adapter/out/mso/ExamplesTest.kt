@@ -18,18 +18,20 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 import arrow.core.getOrElse
 import cbor.Cbor
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import id.walt.mdoc.dataelement.toDataElement
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.issuersigned.IssuerSigned
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.toKotlinTimeZone
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
-import java.time.Clock
 import java.time.ZonedDateTime
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.fail
+import kotlin.time.toKotlinInstant
 
 /**
  * This is from
@@ -61,7 +63,7 @@ class ExamplesTest {
         val issuedAt = ZonedDateTime.parse("2023-08-02T16:22:19.252519705Z")
 
         val documentValidator = DocumentValidator(
-            clock = Clock.fixed(issuedAt.toInstant(), issuedAt.zone),
+            clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
             provideTrustSource = ProvideTrustSource.Ignored,
         )
         val document = MDoc.fromCBORHex(waltIdExample)
@@ -81,7 +83,7 @@ class ExamplesTest {
         val issuedAt = ZonedDateTime.parse("2024-08-02T16:22:19.252519705Z")
         val document = issuerSigned().asMDocWithDocType("org.iso.18013.5.1.mDL")
         val documentValidator = DocumentValidator(
-            clock = Clock.fixed(issuedAt.toInstant(), issuedAt.zone),
+            clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
             provideTrustSource = trustSources::invoke,
         )
         documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
