@@ -33,6 +33,9 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateTransactionId
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.annotation.Configuration
@@ -42,14 +45,11 @@ import org.springframework.core.annotation.AliasFor
 import org.springframework.core.io.ClassPathResource
 import org.springframework.test.context.ContextConfiguration
 import java.security.KeyStore
-import java.time.Clock
-import java.time.LocalDate
-import java.time.ZoneOffset
 import kotlin.reflect.KClass
 
 object TestContext {
-    private val testDate = LocalDate.of(1974, 11, 2).atTime(10, 5, 33)
-    val testClock: Clock = Clock.fixed(testDate.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
+    private val testDate = LocalDateTime(1974, 11, 2, 10, 5, 33)
+    val testClock: Clock = Clock.fixed(testDate.toInstant(TimeZone.UTC), TimeZone.UTC) // How does this make sense?
     val testTransactionId = TransactionId("SampleTxId")
     private val generatedTransactionId = GenerateTransactionId.fixed(testTransactionId)
     val testRequestId = RequestId("SampleRequestId")
@@ -132,6 +132,6 @@ internal annotation class VerifierApplicationTest(
  */
 internal class BeansDslApplicationContextInitializer : ApplicationContextInitializer<GenericApplicationContext> {
     override fun initialize(applicationContext: GenericApplicationContext) {
-        beans(Clock.systemDefaultZone()).initializer().initialize(applicationContext)
+        beans(Clock.System).initializer().initialize(applicationContext)
     }
 }

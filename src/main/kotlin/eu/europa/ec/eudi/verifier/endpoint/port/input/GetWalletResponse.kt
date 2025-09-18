@@ -23,7 +23,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentat
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import java.time.Clock
 
 /**
  * Represent the [WalletResponse] as returned by the wallet
@@ -125,7 +124,7 @@ class GetWalletResponseLive(
         presentation: Presentation.Submitted,
         walletResponse: WalletResponseTO,
     ) {
-        val event = PresentationEvent.VerifierGotWalletResponse(presentation.id, clock.instant(), walletResponse)
+        val event = PresentationEvent.VerifierGotWalletResponse(presentation.id, clock.now(), walletResponse)
         publishPresentationEvent(event)
     }
 
@@ -133,7 +132,7 @@ class GetWalletResponseLive(
         presentation: Presentation,
         cause: String,
     ) {
-        val event = PresentationEvent.VerifierFailedToGetWalletResponse(presentation.id, clock.instant(), cause)
+        val event = PresentationEvent.VerifierFailedToGetWalletResponse(presentation.id, clock.now(), cause)
         publishPresentationEvent(event)
     }
 }

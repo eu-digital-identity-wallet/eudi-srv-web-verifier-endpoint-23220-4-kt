@@ -22,7 +22,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseAcceptedTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
-import java.time.Instant
+import kotlin.time.Instant
 
 sealed interface PresentationEvent {
     val transactionId: TransactionId

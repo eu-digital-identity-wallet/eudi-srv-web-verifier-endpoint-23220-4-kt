@@ -15,13 +15,13 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.support.BeanDefinitionDsl
 import org.springframework.context.support.GenericApplicationContext
-import java.time.Clock
 
 @SpringBootApplication
 @EnableConfigurationProperties(TypeMetadataResolutionProperties::class)
@@ -32,6 +32,6 @@ internal fun BeanDefinitionDsl.initializer(): ApplicationContextInitializer<Gene
 
 fun main(args: Array<String>) {
     runApplication<VerifierApplication>(*args) {
-        addInitializers(beans(Clock.systemDefaultZone()).initializer())
+        addInitializers(beans(Clock.System).initializer())
     }
 }

@@ -61,7 +61,7 @@ class CreateJarNimbusTest {
             responseUri = URL("https://foo"),
             state = TestContext.testRequestId.value,
             aud = emptyList(),
-            issuedAt = TestContext.testClock.instant(),
+            issuedAt = TestContext.testClock.now(),
         )
 
         // responseMode is direct_post.jwt, so we need to generate an ephemeral key

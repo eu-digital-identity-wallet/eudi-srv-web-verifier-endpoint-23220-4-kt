@@ -19,8 +19,7 @@ import arrow.core.Either
 import arrow.core.NonEmptyList
 import kotlinx.serialization.json.JsonObject
 import java.security.cert.X509Certificate
-import java.time.Clock
-import java.time.Instant
+import kotlin.time.Instant
 
 @JvmInline
 value class TransactionId(val value: String) {
@@ -146,7 +145,7 @@ sealed interface Presentation {
         val issuerChain: NonEmptyList<X509Certificate>?,
     ) : Presentation {
         init {
-            require(initiatedAt.isBefore(requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
+            require((initiatedAt < requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
         }
 
         companion object {
@@ -183,7 +182,7 @@ sealed interface Presentation {
     ) : Presentation {
 
         init {
-            require(initiatedAt.isBefore(Instant.now()))
+            require(initiatedAt < Clock.System.now()) // Question here
         }
 
         companion object {
@@ -218,12 +217,12 @@ sealed interface Presentation {
     ) : Presentation {
         companion object {
             fun timeOut(presentation: Requested, at: Instant): Either<Throwable, TimedOut> = Either.catch {
-                require(presentation.initiatedAt.isBefore(at))
+                require(presentation.initiatedAt < at)
                 TimedOut(presentation.id, presentation.initiatedAt, null, null, at)
             }
 
             fun timeOut(presentation: RequestObjectRetrieved, at: Instant): Either<Throwable, TimedOut> = Either.catch {
-                require(presentation.initiatedAt.isBefore(at))
+                require(presentation.initiatedAt < at)
                 TimedOut(
                     presentation.id,
                     presentation.initiatedAt,
@@ -234,7 +233,7 @@ sealed interface Presentation {
             }
 
             fun timeOut(presentation: Submitted, at: Instant): Either<Throwable, TimedOut> = Either.catch {
-                require(presentation.initiatedAt.isBefore(at))
+                require(presentation.initiatedAt < at)
                 TimedOut(
                     presentation.id,
                     presentation.initiatedAt,
@@ -248,7 +247,7 @@ sealed interface Presentation {
 }
 
 fun Presentation.isExpired(at: Instant): Boolean {
-    fun Instant.isBeforeOrEqual(at: Instant) = isBefore(at) || this == at
+    fun Instant.isBeforeOrEqual(at: Instant) = (this < at) || this == at
     return when (this) {
         is Presentation.Requested -> initiatedAt.isBeforeOrEqual(at)
         is Presentation.RequestObjectRetrieved -> requestObjectRetrievedAt.isBeforeOrEqual(at)
@@ -258,20 +257,20 @@ fun Presentation.isExpired(at: Instant): Boolean {
 }
 
 fun Presentation.Requested.retrieveRequestObject(clock: Clock): Either<Throwable, Presentation.RequestObjectRetrieved> =
-    Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, clock.instant())
+    Presentation.RequestObjectRetrieved.requestObjectRetrieved(this, clock.now())
 
 fun Presentation.Requested.timedOut(clock: Clock): Either<Throwable, Presentation.TimedOut> =
-    Presentation.TimedOut.timeOut(this, clock.instant())
+    Presentation.TimedOut.timeOut(this, clock.now())
 
 fun Presentation.RequestObjectRetrieved.timedOut(clock: Clock): Either<Throwable, Presentation.TimedOut> =
-    Presentation.TimedOut.timeOut(this, clock.instant())
+    Presentation.TimedOut.timeOut(this, clock.now())
 
 fun Presentation.RequestObjectRetrieved.submit(
     clock: Clock,
     walletResponse: WalletResponse,
     responseCode: ResponseCode?,
 ): Either<Throwable, Presentation.Submitted> =
-    Presentation.Submitted.submitted(this, clock.instant(), walletResponse, responseCode)
+    Presentation.Submitted.submitted(this, clock.now(), walletResponse, responseCode)
 
 fun Presentation.Submitted.timedOut(clock: Clock): Either<Throwable, Presentation.TimedOut> =
-    Presentation.TimedOut.timeOut(this, clock.instant())
+    Presentation.TimedOut.timeOut(this, clock.now())

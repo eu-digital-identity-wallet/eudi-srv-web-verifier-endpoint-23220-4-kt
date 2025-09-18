@@ -23,14 +23,14 @@ import com.nimbusds.jose.jwk.ECKey
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mso.ValidityInfo
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.time.Clock
-import java.time.Instant
+import kotlin.time.Instant
 
 enum class ValidityInfoShouldBe {
     NotExpired,
@@ -55,7 +55,7 @@ sealed interface DocumentError {
 }
 
 class DocumentValidator(
-    private val clock: Clock = Clock.systemDefaultZone(),
+    private val clock: Clock = Clock.System, // Why did we create here a new clock?
     private val validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
     private val issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
     private val provideTrustSource: ProvideTrustSource,
@@ -83,9 +83,9 @@ private fun Raise<DocumentError>.ensureNotExpiredValidityInfo(
     validityInfoShouldBe: ValidityInfoShouldBe,
 ) {
     fun ValidityInfo.notExpired() {
-        val validFrom = Instant.ofEpochSecond(validFrom.value.epochSeconds)
-        val validTo = Instant.ofEpochSecond(validUntil.value.epochSeconds)
-        val now = clock.instant()
+        val validFrom = Instant.fromEpochSeconds(validFrom.value.epochSeconds)
+        val validTo = Instant.fromEpochSeconds(validUntil.value.epochSeconds)
+        val now = clock.now()
         ensure(now in validFrom..validTo) {
             DocumentError.ExpiredValidityInfo(validFrom, validTo)
         }

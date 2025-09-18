@@ -30,8 +30,8 @@ import kotlinx.io.bytestring.decodeToByteString
 import kotlinx.io.bytestring.decodeToString
 import kotlinx.serialization.json.*
 import java.net.URL
-import java.time.Duration
 import kotlin.test.*
+import kotlin.time.Duration.Companion.days
 
 class InitTransactionTest {
 
@@ -43,7 +43,7 @@ class InitTransactionTest {
         requestJarOption = EmbedOption.ByValue,
         responseUriBuilder = { _ -> uri },
         responseModeOption = ResponseModeOption.DirectPostJwt,
-        maxAge = Duration.ofDays(3),
+        maxAge = 3.days,
         clientMetaData = TestContext.clientMetaData,
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
         requestUriMethod = RequestUriMethod.Get,
@@ -83,7 +83,7 @@ class InitTransactionTest {
                 requestJarOption = EmbedOption.ByReference { _ -> uri },
                 responseUriBuilder = { _ -> URL("https://foo") },
                 responseModeOption = ResponseModeOption.DirectPostJwt,
-                maxAge = Duration.ofDays(3),
+                maxAge = 3.days,
                 clientMetaData = TestContext.clientMetaData,
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                 requestUriMethod = RequestUriMethod.Get,

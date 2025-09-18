@@ -46,7 +46,6 @@ import kotlinx.serialization.json.buildJsonArray
 import java.net.URI
 import java.net.URL
 import java.security.cert.X509Certificate
-import java.time.Clock
 
 /**
  * Specifies request_uri_method for a request
@@ -210,7 +209,7 @@ class InitTransactionLive(
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
             id = generateTransactionId(),
-            initiatedAt = clock.instant(),
+            initiatedAt = clock.now(),
             query = type.query,
             transactionData = type.transactionData,
             requestId = generateRequestId(),
