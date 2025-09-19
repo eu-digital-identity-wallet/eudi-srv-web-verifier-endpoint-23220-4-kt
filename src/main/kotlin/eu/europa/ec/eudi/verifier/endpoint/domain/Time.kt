@@ -45,10 +45,6 @@ interface Clock {
 
         fun fixed(now: Instant, timeZone: TimeZone): Clock = object : Clock {
             override fun now(): Instant = now
-
-            // Maybe this should be getting timezone from now instead of timezone again
-            // because if u want to create a fixed time in period Instant needs to specify
-            // the timezone
             override fun timeZone(): TimeZone = timeZone
         }
 

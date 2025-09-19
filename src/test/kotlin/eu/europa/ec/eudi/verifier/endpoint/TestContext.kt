@@ -48,8 +48,8 @@ import java.security.KeyStore
 import kotlin.reflect.KClass
 
 object TestContext {
-    private val testDate = LocalDateTime(1974, 11, 2, 10, 5, 33)
-    val testClock: Clock = Clock.fixed(testDate.toInstant(TimeZone.UTC), TimeZone.UTC) // How does this make sense?
+    private val testDate = LocalDateTime(1974, 11, 2, 10, 5, 33).toInstant(TimeZone.UTC)
+    val testClock: Clock = Clock.fixed(testDate, TimeZone.UTC)
     val testTransactionId = TransactionId("SampleTxId")
     private val generatedTransactionId = GenerateTransactionId.fixed(testTransactionId)
     val testRequestId = RequestId("SampleRequestId")
