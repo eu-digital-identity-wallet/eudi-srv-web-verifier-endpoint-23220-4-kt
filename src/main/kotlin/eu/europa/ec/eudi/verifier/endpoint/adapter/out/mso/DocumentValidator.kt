@@ -55,7 +55,7 @@ sealed interface DocumentError {
 }
 
 class DocumentValidator(
-    private val clock: Clock = Clock.System, // Why did we create here a new clock?
+    private val clock: Clock = Clock.System,
     private val validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
     private val issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
     private val provideTrustSource: ProvideTrustSource,
