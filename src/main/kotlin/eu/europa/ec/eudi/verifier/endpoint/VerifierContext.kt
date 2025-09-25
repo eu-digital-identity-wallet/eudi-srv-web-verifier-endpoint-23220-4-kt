@@ -567,9 +567,8 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         environment.getProperty("verifier.response.mode", ResponseModeOption::class.java)
             ?: ResponseModeOption.DirectPostJwt
 
-//    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: 5.minutes
     val maxAge = environment.getProperty("verifier.maxAge")?.let { Duration.parse(it) } ?: 5.minutes
-//    Duration.parse()
+
     val transactionDataHashAlgorithm = environment.getProperty("verifier.transactionData.hashAlgorithm", "sha-256")
         .let { configured ->
             val hashAlgorithm = HashAlgorithm.entries.firstOrNull { supported -> supported.ianaName == configured }
