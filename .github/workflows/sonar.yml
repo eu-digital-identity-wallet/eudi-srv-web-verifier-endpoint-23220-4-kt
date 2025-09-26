@@ -37,7 +37,7 @@ jobs:
       - uses: gradle/actions/wrapper-validation@v4
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew clean test koverXmlReport
-      - uses: sonarsource/sonarqube-scan-action@v5.3.1
+      - uses: sonarsource/sonarqube-scan-action@v6.0.0
         if: (github.event_name == 'push'|| github.event_name == 'workflow_dispatch')
         with:
           projectBaseDir: ${{ github.workspace }}
@@ -52,7 +52,7 @@ jobs:
             -Dsonar.tests=src/test
             -Dsonar.java.binaries=build/classes/kotlin/
             -Dsonar.kotlin.binaries=build/classes/kotlin/
-      - uses: sonarsource/sonarqube-scan-action@v5.3.1
+      - uses: sonarsource/sonarqube-scan-action@v6.0.0
         if: (github.event_name == 'pull_request_target')
         with:
           projectBaseDir: ${{ github.workspace }}
