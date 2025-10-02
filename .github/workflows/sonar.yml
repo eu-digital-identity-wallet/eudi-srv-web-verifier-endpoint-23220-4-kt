@@ -34,8 +34,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/wrapper-validation@v4
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/wrapper-validation@v5
+      - uses: gradle/actions/setup-gradle@v5
       - run: ./gradlew clean test koverXmlReport
       - uses: sonarsource/sonarqube-scan-action@v6.0.0
         if: (github.event_name == 'push'|| github.event_name == 'workflow_dispatch')
@@ -70,7 +70,7 @@ jobs:
             -Dsonar.tests=src/test
             -Dsonar.java.binaries=build/classes/kotlin/
             -Dsonar.kotlin.binaries=build/classes/kotlin/
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: (github.repository_owner == 'eu-digital-identity-wallet' && github.ref_name == 'main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
         with:
           node-version: 18
