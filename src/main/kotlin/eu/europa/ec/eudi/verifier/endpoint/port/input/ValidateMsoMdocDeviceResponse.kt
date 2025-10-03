@@ -24,16 +24,15 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidat
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
 import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.toKotlinTimeZone
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
-import java.time.Clock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -211,7 +210,7 @@ private fun DataElement.toJsonElement(clock: Clock): JsonElement =
         is ByteStringElement -> base64.encode(value).toJsonPrimitive()
         is DateTimeElement -> value.toEpochMilliseconds().toJsonPrimitive()
         is EncodedCBORElement -> base64.encode(value).toJsonPrimitive()
-        is FullDateElement -> value.atStartOfDayIn(clock.zone.toKotlinTimeZone()).toEpochMilliseconds().toJsonPrimitive()
+        is FullDateElement -> value.atStartOfDayIn(clock.timeZone()).toEpochMilliseconds().toJsonPrimitive()
         is ListElement -> value.map { it.toJsonElement(clock) }.toJsonArray()
         is MapElement -> value.mapKeys { (key, _) -> key.str }.mapValues { (_, value) -> value.toJsonElement(clock) }.toJsonObject()
         is NullElement -> JsonNull
