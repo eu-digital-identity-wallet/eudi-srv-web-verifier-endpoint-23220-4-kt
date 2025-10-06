@@ -54,7 +54,7 @@ internal class StatusListTokenValidator(
 
     private fun getStatus(): GetStatus {
         val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
-            clock = clock as kotlin.time.Clock, // Question here too
+            clock = clock,
             httpClient = httpClient,
             verifyStatusListTokenSignature = { _, _ ->
                 Result.success(Unit)
