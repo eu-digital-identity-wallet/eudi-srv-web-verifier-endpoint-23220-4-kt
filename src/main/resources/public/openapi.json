@@ -83,6 +83,12 @@
         "responses": {
           "200": {
             "description": "Ok",
+            "headers": {
+              "Transaction-Id": {
+                "description": "The Transaction id of the created Transaction.",
+                "schema": { "type": "string" }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
