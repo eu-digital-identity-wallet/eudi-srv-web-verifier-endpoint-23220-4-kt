@@ -85,8 +85,7 @@
             "description": "Ok",
             "headers": {
               "Transaction-Id": {
-                "description": "The Transaction id of the created Transaction.",
-                "schema": { "type": "string" }
+                "$ref": "#/components/headers/TransactionId"
               }
             },
             "content": {
@@ -105,7 +104,7 @@
               },
               "image/png": {
                 "schema": {
-                  "type" : "object"
+                  "$ref": "#/components/schemas/qr_code"
                 }
               }
             }
@@ -915,6 +914,10 @@
           }
         ]
       },
+      "qr_code": {
+        "type": "string",
+        "format": "binary"
+      },
       "ValidationError": {
         "type": "string",
         "nullable": false,
@@ -1467,6 +1470,9 @@
           "UnexpectedError",
           "InvalidIssuerChain"
         ]
+      },
+      "TransactionIdHeader": {
+        "type": "string"
       }
     },
     "examples": {
@@ -2024,6 +2030,14 @@
           "administrative_number": "888adb27-d4d5-4004-8c71-97f61273c203",
           "given_name": "Tyler",
           "issuing_jurisdiction": "GR-I"
+        }
+      }
+    },
+    "headers": {
+      "TransactionId": {
+        "description": "The Transaction id of the created Transaction.",
+        "schema": {
+          "$ref" : "#/components/schemas/TransactionIdHeader"
         }
       }
     }
