@@ -15,6 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi.Companion.TRANSACTION_ID_HEADER
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
@@ -61,11 +62,14 @@ object VerifierApiClient {
                     .returnResult()
                     .responseBody!!
             Output.QrCode -> {
-                val qrCode = responseSpec.expectStatus().isOk()
+                val response = responseSpec.expectStatus().isOk()
                     .expectBody<ByteArray>()
                     .returnResult()
-                    .responseBody!!
-                InitTransactionResponse.QrCode(qrCode)
+
+                val qrCode = checkNotNull(response.responseBody)
+                val transactionId = checkNotNull(response.responseHeaders.getFirst(TRANSACTION_ID_HEADER))
+
+                InitTransactionResponse.QrCode(qrCode, transactionId)
             }
         }
     }

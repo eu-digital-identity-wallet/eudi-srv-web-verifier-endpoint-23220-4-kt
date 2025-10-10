@@ -60,11 +60,15 @@ internal class VerifierApi(
                 when (it) {
                     is InitTransactionResponse.JwtSecuredAuthorizationRequestTO -> {
                         logger.info("Initiated transaction tx ${it.transactionId}")
-                        ok().json().bodyValueAndAwait(it)
+                        ok().json()
+                            .header(TRANSACTION_ID_HEADER, it.transactionId)
+                            .bodyValueAndAwait(it)
                     }
                     is InitTransactionResponse.QrCode -> {
                         logger.info("Initiated transaction with qr image")
-                        ok().contentType(IMAGE_PNG).bodyValueAndAwait(it.qrCode)
+                        ok().contentType(IMAGE_PNG)
+                            .header(TRANSACTION_ID_HEADER, it.transactionId)
+                            .bodyValueAndAwait(it.qrCode)
                     }
                 }
             },
@@ -114,6 +118,8 @@ internal class VerifierApi(
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
+
+        const val TRANSACTION_ID_HEADER = "Transaction-Id"
 
         /**
          * Extracts from the request the [RequestId]

@@ -153,8 +153,7 @@ sealed interface InitTransactionResponse {
      * The return value of successfully [initializing][InitTransaction] a [Presentation] as a QR Code
      *
      */
-    @JvmInline
-    value class QrCode(val qrCode: ByteArray) : InitTransactionResponse
+    data class QrCode(val qrCode: ByteArray, val transactionId: String) : InitTransactionResponse
 
     /**
      * The return value of successfully [initializing][InitTransaction] a [Presentation] as a JSON
@@ -263,6 +262,7 @@ class InitTransactionLive(
                 val authorizationRequest = createAuthorizationRequestUri(scheme, request)
                 InitTransactionResponse.QrCode(
                     generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrThrow(),
+                    request.transactionId,
                 )
             }
         }

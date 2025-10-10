@@ -83,6 +83,11 @@
         "responses": {
           "200": {
             "description": "Ok",
+            "headers": {
+              "Transaction-Id": {
+                "$ref": "#/components/headers/Transaction-Id"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -99,7 +104,7 @@
               },
               "image/png": {
                 "schema": {
-                  "type" : "object"
+                  "$ref": "#/components/schemas/QRCode"
                 }
               }
             }
@@ -908,6 +913,10 @@
             "$ref": "#/components/schemas/TransactionByReference"
           }
         ]
+      },
+      "QRCode": {
+        "type": "string",
+        "format": "binary"
       },
       "ValidationError": {
         "type": "string",
@@ -2018,6 +2027,14 @@
           "administrative_number": "888adb27-d4d5-4004-8c71-97f61273c203",
           "given_name": "Tyler",
           "issuing_jurisdiction": "GR-I"
+        }
+      }
+    },
+    "headers": {
+      "Transaction-Id": {
+        "description": "The Id of the initialized Transaction.",
+        "schema": {
+          "$ref" : "#/components/schemas/TransactionId"
         }
       }
     }
