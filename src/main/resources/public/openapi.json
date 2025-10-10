@@ -2032,7 +2032,7 @@
     },
     "headers": {
       "Transaction-Id": {
-        "description": "The Transaction id of the created Transaction.",
+        "description": "The Id of the initialized Transaction.",
         "schema": {
           "$ref" : "#/components/schemas/TransactionId"
         }
