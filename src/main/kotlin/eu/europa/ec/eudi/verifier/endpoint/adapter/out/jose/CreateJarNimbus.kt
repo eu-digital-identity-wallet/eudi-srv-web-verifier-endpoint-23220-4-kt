@@ -113,7 +113,7 @@ class CreateJarNimbus : CreateJar {
 
         val authorizationRequestClaims = with(AuthorizationRequest.Builder(responseType, clientId)) {
             state(state)
-            if(scope.isNotEmpty()) {
+            if (scope.isNotEmpty()) {
                 scope(scope)
             }
             responseMode(NimbusResponseMode(r.responseMode))
