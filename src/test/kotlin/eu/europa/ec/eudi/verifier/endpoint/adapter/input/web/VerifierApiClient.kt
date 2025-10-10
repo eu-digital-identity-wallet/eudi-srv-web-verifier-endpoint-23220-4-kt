@@ -66,8 +66,8 @@ object VerifierApiClient {
                     .expectBody<ByteArray>()
                     .returnResult()
 
-                val qrCode = response.responseBody!!
-                val transactionId = response.responseHeaders.getFirst(TRANSACTION_ID_HEADER)!!
+                val qrCode = checkNotNull(response.responseBody)
+                val transactionId = checkNotNull(response.responseHeaders.getFirst(TRANSACTION_ID_HEADER))
 
                 InitTransactionResponse.QrCode(qrCode, transactionId)
             }
