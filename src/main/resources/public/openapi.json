@@ -85,7 +85,7 @@
             "description": "Ok",
             "headers": {
               "Transaction-Id": {
-                "$ref": "#/components/headers/TransactionId"
+                "$ref": "#/components/headers/Transaction-Id"
               }
             },
             "content": {
@@ -104,7 +104,7 @@
               },
               "image/png": {
                 "schema": {
-                  "$ref": "#/components/schemas/qr_code"
+                  "$ref": "#/components/schemas/QRCode"
                 }
               }
             }
@@ -914,7 +914,7 @@
           }
         ]
       },
-      "qr_code": {
+      "QRCode": {
         "type": "string",
         "format": "binary"
       },
@@ -1470,9 +1470,6 @@
           "UnexpectedError",
           "InvalidIssuerChain"
         ]
-      },
-      "TransactionIdHeader": {
-        "type": "string"
       }
     },
     "examples": {
@@ -2034,10 +2031,10 @@
       }
     },
     "headers": {
-      "TransactionId": {
+      "Transaction-Id": {
         "description": "The Transaction id of the created Transaction.",
         "schema": {
-          "$ref" : "#/components/schemas/TransactionIdHeader"
+          "$ref" : "#/components/schemas/TransactionId"
         }
       }
     }
