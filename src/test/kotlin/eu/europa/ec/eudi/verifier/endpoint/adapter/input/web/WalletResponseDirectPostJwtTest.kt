@@ -96,7 +96,6 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
             asserter: (WalletResponseTO) -> Unit,
         ) {
             // given
-            val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
             val initTransaction = VerifierApiClient.loadInitTransactionTO(query)
             val transactionInitialized =
                 assertIs<InitTransactionResponse.JwtSecuredAuthorizationRequestTO>(
@@ -120,7 +119,6 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
             // (wallet) generate JWT with claims
             val jwtClaims: JWTClaimsSet = buildJsonObject {
                 put("state", requestId.value)
-                put("id_token", idToken)
                 put("vp_token", Json.decodeFromString(TestUtils.loadResource(vpToken)))
             }.run { JWTClaimsSet.parse(Json.encodeToString(this)) }
 
@@ -189,7 +187,6 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
     @Order(value = 2)
     fun `with response_mode direct_post_jwt, direct_post wallet responses are rejected`(): Unit = runBlocking {
         // given
-        val idToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJzdWIiOiJib2IiLCJpc3MiOiJtZSIsImF1ZCI6InlvdSIs"
         val initTransaction = VerifierApiClient.loadInitTransactionTO(
             "02-dcql.json",
         ).copy(responseMode = ResponseModeTO.DirectPostJwt)
@@ -212,7 +209,6 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
         // create a post form url encoded body
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
-        formEncodedBody.add("id_token", idToken)
         formEncodedBody.add("vp_token", TestUtils.loadResource("02-vpToken.json"))
 
         // send the wallet response

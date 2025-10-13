@@ -49,36 +49,6 @@ import java.security.cert.X509Certificate
 import java.time.Clock
 
 /**
- * Represent the kind of [Presentation] process
- * a caller wants to initiate
- * It could be either a request (to the wallet) to present
- * an id_token, a vp_token or both
- */
-@Serializable
-enum class PresentationTypeTO {
-    @SerialName(RFC6749.ID_TOKEN)
-    IdTokenRequest,
-
-    @SerialName(OpenId4VPSpec.VP_TOKEN)
-    VpTokenRequest,
-
-    @SerialName(OpenId4VPSpec.VP_ID_TOKEN)
-    IdAndVpTokenRequest,
-}
-
-/**
- * Specifies what kind of id_token to request
- */
-@Serializable
-enum class IdTokenTypeTO {
-    @SerialName(SIOPSpec.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN)
-    SubjectSigned,
-
-    @SerialName(SIOPSpec.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN)
-    AttesterSigned,
-}
-
-/**
  * Specifies request_uri_method for a request
  */
 @Serializable
@@ -116,8 +86,6 @@ enum class EmbedModeTO {
 
 @Serializable
 data class InitTransactionTO(
-    @SerialName(OpenId4VPSpec.TRANSACTION_DATA_TYPE) val type: PresentationTypeTO = PresentationTypeTO.IdAndVpTokenRequest,
-    @SerialName(SIOPSpec.ID_TOKEN_TYPE) val idTokenType: IdTokenTypeTO? = null,
     @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL? = null,
     @SerialName(OpenId4VPSpec.NONCE) val nonce: String? = null,
     @SerialName(RFC6749.RESPONSE_MODE) val responseMode: ResponseModeTO? = null,
@@ -243,8 +211,9 @@ class InitTransactionLive(
         val requestedPresentation = Presentation.Requested(
             id = generateTransactionId(),
             initiatedAt = clock.instant(),
+            query = type.query,
+            transactionData = type.transactionData,
             requestId = generateRequestId(),
-            type = type,
             nonce = nonce,
             responseMode = responseMode,
             getWalletResponseMethod = getWalletResponseMethod,
@@ -394,10 +363,7 @@ class InitTransactionLive(
 internal fun InitTransactionTO.toDomain(
     transactionDataHashAlgorithm: HashAlgorithm,
     vpFormatsSupported: VpFormatsSupported,
-): Either<ValidationError, Pair<Nonce, PresentationType>> = either {
-    fun requiredIdTokenType() =
-        idTokenType?.toDomain()?.let { listOf(it) } ?: emptyList()
-
+): Either<ValidationError, Pair<Nonce, VpTokenRequest>> = either {
     fun requiredQuery(): DCQL {
         ensureNotNull(dcqlQuery) { ValidationError.MissingPresentationQuery }
         ensure(
@@ -442,30 +408,11 @@ internal fun InitTransactionTO.toDomain(
         }?.toNonEmptyListOrNull()
     }
 
-    val presentationType = when (type) {
-        PresentationTypeTO.IdTokenRequest ->
-            PresentationType.IdTokenRequest(requiredIdTokenType())
-
-        PresentationTypeTO.VpTokenRequest -> {
-            val query = requiredQuery()
-            PresentationType.VpTokenRequest(query, optionalTransactionData(query))
-        }
-
-        PresentationTypeTO.IdAndVpTokenRequest -> {
-            val idTokenTypes = requiredIdTokenType()
-            val query = requiredQuery()
-            PresentationType.IdAndVpToken(idTokenTypes, query, optionalTransactionData(query))
-        }
-    }
-
+    val query = requiredQuery()
+    val presentationType = VpTokenRequest(query, optionalTransactionData(query))
     val nonce = requiredNonce()
 
     nonce to presentationType
-}
-
-private fun IdTokenTypeTO.toDomain(): IdTokenType = when (this) {
-    IdTokenTypeTO.SubjectSigned -> IdTokenType.SubjectSigned
-    IdTokenTypeTO.AttesterSigned -> IdTokenType.AttesterSigned
 }
 
 private fun createAuthorizationRequestUri(

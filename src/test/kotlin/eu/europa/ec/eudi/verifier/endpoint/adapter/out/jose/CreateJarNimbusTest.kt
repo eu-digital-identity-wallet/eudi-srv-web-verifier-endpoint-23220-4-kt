@@ -53,10 +53,9 @@ class CreateJarNimbusTest {
         val query = Json.decodeFromString<InitTransactionTO>(TestUtils.loadResource("02-dcql.json")).dcqlQuery
         val requestObject = RequestObject(
             verifierId = verifierId,
-            responseType = listOf("vp_token", "id_token"),
+            responseType = listOf("vp_token"),
             dcqlQuery = query,
             scope = listOf("openid"),
-            idTokenType = listOf("subject_signed_id_token"),
             nonce = UUID.randomUUID().toString(),
             responseMode = "direct_post.jwt",
             responseUri = URL("https://foo"),
@@ -103,7 +102,6 @@ class CreateJarNimbusTest {
             c.getJSONObjectClaim(OpenId4VPSpec.DCQL_QUERY).toJsonObject().decodeAs<DCQL>().getOrThrow(),
         )
         assertEquals(r.scope.joinToString(separator = " "), c.getStringClaim("scope"))
-        assertEquals(r.idTokenType.joinToString(separator = " "), c.getStringClaim("id_token_type"))
         assertEquals(r.nonce, c.getStringClaim("nonce"))
         assertEquals(r.responseMode, c.getStringClaim("response_mode"))
         assertEquals(r.responseUri?.toExternalForm(), c.getStringClaim(OpenId4VPSpec.RESPONSE_URI))

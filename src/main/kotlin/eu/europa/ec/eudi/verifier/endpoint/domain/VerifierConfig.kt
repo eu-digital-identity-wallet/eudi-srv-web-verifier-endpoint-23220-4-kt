@@ -163,10 +163,6 @@ data class VpFormatsSupported(
  * @see <a href="https://openid.net/specs/openid-connect-registration-1_0.html">OpenID Connect Dynamic Client Registration specification</a>
  */
 data class ClientMetaData(
-    val idTokenSignedResponseAlg: String,
-    val idTokenEncryptedResponseAlg: String,
-    val idTokenEncryptedResponseEnc: String,
-    val subjectSyntaxTypesSupported: List<String>,
     val responseEncryptionOption: ResponseEncryptionOption,
     val vpFormatsSupported: VpFormatsSupported,
 )

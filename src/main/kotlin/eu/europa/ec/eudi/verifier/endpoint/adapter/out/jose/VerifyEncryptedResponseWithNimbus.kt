@@ -69,7 +69,6 @@ class VerifyEncryptedResponseWithNimbus(
     private fun JWTClaimsSet.mapToDomain(): AuthorisationResponseTO =
         AuthorisationResponseTO(
             state = getClaim(RFC6749.STATE)?.toString(),
-            idToken = getClaim(RFC6749.ID_TOKEN)?.toString(),
             vpToken = getJSONObjectClaim(OpenId4VPSpec.VP_TOKEN)
                 ?.let { vpToken ->
                     Json.decodeFromString<JsonObject>(JSONObjectUtils.toJSONString(vpToken))

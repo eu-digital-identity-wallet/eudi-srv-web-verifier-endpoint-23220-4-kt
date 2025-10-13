@@ -31,7 +31,6 @@ import java.time.Clock
 @Serializable
 @SerialName("wallet_response")
 data class WalletResponseTO(
-    @SerialName(RFC6749.ID_TOKEN) val idToken: String? = null,
     @SerialName(OpenId4VPSpec.VP_TOKEN) val vpToken: JsonObject? = null,
     @SerialName(RFC6749.ERROR) val error: String? = null,
     @SerialName(RFC6749.ERROR_DESCRIPTION) val errorDescription: String? = null,
@@ -55,13 +54,7 @@ internal fun WalletResponse.toTO(): WalletResponseTO {
     }
 
     return when (this) {
-        is WalletResponse.IdToken -> WalletResponseTO(idToken = idToken)
         is WalletResponse.VpToken -> WalletResponseTO(
-            vpToken = verifiablePresentations.toJsonObject(),
-        )
-
-        is WalletResponse.IdAndVpToken -> WalletResponseTO(
-            idToken = idToken,
             vpToken = verifiablePresentations.toJsonObject(),
         )
 

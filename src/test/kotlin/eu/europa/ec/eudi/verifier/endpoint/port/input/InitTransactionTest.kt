@@ -55,9 +55,7 @@ class InitTransactionTest {
     fun `when request option is embed by value, request should be present and presentation should be RequestObjectRetrieved`() =
         runTest {
             val input = InitTransactionTO(
-                PresentationTypeTO.IdTokenRequest,
-                IdTokenTypeTO.SubjectSigned,
-                null,
+                dcqlQuery(),
                 "nonce",
             )
 
@@ -94,9 +92,7 @@ class InitTransactionTest {
             )
 
             val input = InitTransactionTO(
-                PresentationTypeTO.IdTokenRequest,
-                IdTokenTypeTO.SubjectSigned,
-                null,
+                dcqlQuery(),
                 "nonce",
             )
 
@@ -120,8 +116,6 @@ class InitTransactionTest {
         // Input is invalid.
         //  Misses DCQL
         val input = InitTransactionTO(
-            type = PresentationTypeTO.VpTokenRequest,
-            idTokenType = null,
             dcqlQuery = null,
             nonce = "nonce",
         )
@@ -131,10 +125,8 @@ class InitTransactionTest {
     @Test
     fun `when input misses nonce validation error is raised`() = runTest {
         // Input is invalid.
-        //  Misses DCQL query
         val input = InitTransactionTO(
-            type = PresentationTypeTO.IdTokenRequest,
-            idTokenType = IdTokenTypeTO.SubjectSigned,
+            dcqlQuery(),
             nonce = null,
         )
         testWithInvalidInput(input, ValidationError.MissingNonce)
@@ -147,8 +139,7 @@ class InitTransactionTest {
     fun `when response_mode is provided this must take precedence over what is configured in VerifierConfig`() =
         runTest {
             val input = InitTransactionTO(
-                type = PresentationTypeTO.IdTokenRequest,
-                idTokenType = IdTokenTypeTO.SubjectSigned,
+                dcqlQuery(),
                 nonce = "nonce",
                 responseMode = ResponseModeTO.DirectPost,
             )
@@ -175,8 +166,7 @@ class InitTransactionTest {
     fun `when jar_mode is provided this must take precedence over what is configured in VerifierConfig`() =
         runTest {
             val input = InitTransactionTO(
-                type = PresentationTypeTO.IdTokenRequest,
-                idTokenType = IdTokenTypeTO.SubjectSigned,
+                dcqlQuery = dcqlQuery(),
                 nonce = "nonce",
                 jarMode = EmbedModeTO.ByReference,
             )
@@ -196,7 +186,6 @@ class InitTransactionTest {
             assertNotNull(jwtSecuredAuthorizationRequest.requestUri)
             val presentation = loadPresentationById(testTransactionId)
             assertIs<Presentation.Requested>(presentation)
-            Unit
         }
 
     @Test
@@ -208,9 +197,7 @@ class InitTransactionTest {
             )
 
             val invalidPlaceHolderInput = InitTransactionTO(
-                PresentationTypeTO.IdTokenRequest,
-                IdTokenTypeTO.SubjectSigned,
-                null,
+                dcqlQuery = dcqlQuery(),
                 "nonce",
                 redirectUriTemplate = "https://client.example.org/cb#response_code=#CODE#",
             )
@@ -226,9 +213,7 @@ class InitTransactionTest {
                 }
 
             val invalidUrlInput = InitTransactionTO(
-                PresentationTypeTO.IdTokenRequest,
-                IdTokenTypeTO.SubjectSigned,
-                null,
+                dcqlQuery = dcqlQuery(),
                 "nonce",
                 redirectUriTemplate =
                     "hts:/client.example.org/cb%response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -249,9 +234,7 @@ class InitTransactionTest {
     fun `when wallet_response_redirect_uri_template is valid, then get wallet response method should be REDIRECT`() =
         runTest {
             val input = InitTransactionTO(
-                PresentationTypeTO.IdTokenRequest,
-                IdTokenTypeTO.SubjectSigned,
-                null,
+                dcqlQuery(),
                 "nonce",
                 redirectUriTemplate =
                     "https://client.example.org/cb#response_code=${CreateQueryWalletResponseRedirectUri.RESPONSE_CODE_PLACE_HOLDER}",
@@ -274,9 +257,7 @@ class InitTransactionTest {
     fun `when wallet_response_redirect_uri_template is not passed, then get wallet response method should be POLL`() =
         runTest {
             val input = InitTransactionTO(
-                PresentationTypeTO.IdTokenRequest,
-                IdTokenTypeTO.SubjectSigned,
-                null,
+                dcqlQuery(),
                 "nonce",
             )
 
@@ -396,4 +377,6 @@ class InitTransactionTest {
         )
 
     private suspend fun loadPresentationById(id: TransactionId) = TestContext.loadPresentationById(id)
+
+    private fun dcqlQuery() = VerifierApiClient.loadInitTransactionTO("00-dcql.json").dcqlQuery!!
 }

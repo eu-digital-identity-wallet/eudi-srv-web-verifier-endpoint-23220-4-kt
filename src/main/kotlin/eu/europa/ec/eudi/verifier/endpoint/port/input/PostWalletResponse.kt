@@ -48,7 +48,6 @@ data class AuthorisationResponseTO(
     val state: String?, // this is the request_id
     val error: String? = null,
     val errorDescription: String? = null,
-    val idToken: String? = null,
     val vpToken: JsonObject? = null,
 )
 
@@ -71,7 +70,6 @@ sealed interface WalletResponseValidationError {
     data object PresentationNotInExpectedState : WalletResponseValidationError
 
     data object IncorrectState : WalletResponseValidationError
-    data object MissingIdToken : WalletResponseValidationError
     data class InvalidVpToken(val message: String, val cause: Throwable? = null) : WalletResponseValidationError
     data object MissingVpToken : WalletResponseValidationError
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
@@ -84,31 +82,19 @@ private suspend fun AuthorisationResponseTO.toDomain(
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormatsSupported: VpFormatsSupported,
 ): Either<WalletResponseValidationError, WalletResponse> = either {
-    fun requiredIdToken(): Jwt = ensureNotNull(idToken) { WalletResponseValidationError.MissingIdToken }
-
     suspend fun requiredVerifiablePresentations(query: DCQL): VerifiablePresentations =
         verifiablePresentations(
             query,
             presentation.id,
             presentation.nonce,
-            presentation.type.transactionDataOrNull,
+            presentation.transactionData,
             validateVerifiablePresentation,
             vpFormatsSupported,
             presentation.issuerChain,
         ).bind()
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
-    maybeError ?: when (val type = presentation.type) {
-        is PresentationType.IdTokenRequest -> WalletResponse.IdToken(requiredIdToken())
-        is PresentationType.VpTokenRequest -> WalletResponse.VpToken(
-            requiredVerifiablePresentations(type.query),
-        )
-
-        is PresentationType.IdAndVpToken -> WalletResponse.IdAndVpToken(
-            requiredIdToken(),
-            requiredVerifiablePresentations(type.query),
-        )
-    }
+    maybeError ?: WalletResponse.VpToken(requiredVerifiablePresentations(presentation.query))
 }
 
 private suspend fun AuthorisationResponseTO.verifiablePresentations(
