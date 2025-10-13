@@ -254,8 +254,7 @@ This endpoint can produce either JSON or a QR code depending on the Accept heade
 **Usage:**
 
 ```bash
-curl -X POST -H "Content-type: application/json" -d '{
-  "type": "vp_token",  
+curl -X POST -H "Content-type: application/json" -d '{  
   "dcql_query": {
     "credentials": [
       {
@@ -304,7 +303,6 @@ To generate a qr code use the following example:
 
 ```bash
 curl -X POST -H "Content-type: application/json" -H "Accept: image/png" -d '{
-  "type": "vp_token",  
   "dcql_query": {
     "credentials": [
       {
@@ -392,7 +390,7 @@ _**response_mode = direct_post**_
 
 A form post (application/x-www-form-urlencoded encoding) with the following form parameters:
 - `state`: The state claim included in the authorization request JWT. Its value matches the authorization request identifier.
-- `vp_token`: The requested vp_token if authorization request 'response_type' attribute contains `vp_token`.
+- `vp_token`: The requested vp_token.
 
 _**response_mode = direct_post.jwt**_
 
