@@ -24,7 +24,6 @@ object OpenId4VPSpec {
     const val RESPONSE_URI: String = "response_uri"
 
     const val VP_TOKEN: String = "vp_token"
-    const val VP_ID_TOKEN: String = "vp_token id_token"
 
     const val NONCE: String = "nonce"
 

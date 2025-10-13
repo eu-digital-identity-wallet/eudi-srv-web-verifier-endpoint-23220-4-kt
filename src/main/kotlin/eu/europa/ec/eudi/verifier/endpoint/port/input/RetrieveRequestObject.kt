@@ -176,7 +176,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         ensureWalletSupportsRequiredVpFormats(metadata, presentation)
         ensureWalletSupportsVerifierClientIdPrefix(metadata)
         ensureVerifierSupportsWalletJarSigningAlgorithms(metadata)
-        ensureWalletSupportsRequiredResponseType(metadata, presentation)
+        ensureWalletSupportsRequiredResponseType(metadata)
         ensureWalletSupportsRequiredResponseMode(metadata, presentation)
         encryptionRequirement(metadata)
     }
@@ -186,10 +186,7 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
         presentation: Presentation.Requested,
     ) {
         val walletSupportedVpFormats = metadata.vpFormatsSupported
-        val queryRequiredFormats = when (val query = presentation.type.queryOrNull) {
-            is DCQL -> query.credentials.value.map { it.format }.toSet()
-            null -> emptySet()
-        }
+        val queryRequiredFormats = presentation.query.credentials.value.map { it.format }.toSet()
 
         val verifierSupportedVpFormats = verifierConfig.clientMetaData.vpFormatsSupported
         val walletSupportsAllRequiredVpFormats = queryRequiredFormats.map { requiredFormat ->
@@ -233,9 +230,8 @@ private class WalletMetadataValidator(private val verifierConfig: VerifierConfig
 
     private fun Raise<RetrieveRequestObjectError>.ensureWalletSupportsRequiredResponseType(
         metadata: WalletMetadataTO,
-        presentation: Presentation.Requested,
     ) {
-        val responseType = presentation.type.responseType
+        val responseType = OpenId4VPSpec.VP_TOKEN
         ensure(responseType in metadata.responseTypesSupported) {
             RetrieveRequestObjectError.UnsupportedWalletMetadata("Wallet does not support Response Type '$responseType'")
         }
@@ -332,13 +328,6 @@ private val VerifierId.clientIdPrefix: String
         is VerifierId.PreRegistered -> OpenId4VPSpec.CLIENT_ID_PREFIX_PRE_REGISTERED
         is VerifierId.X509SanDns -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_SAN_DNS
         is VerifierId.X509Hash -> OpenId4VPSpec.CLIENT_ID_PREFIX_X509_HASH
-    }
-
-private val PresentationType.responseType: String
-    get() = when (this) {
-        is PresentationType.IdTokenRequest -> "id_token"
-        is PresentationType.VpTokenRequest -> "vp_token"
-        is PresentationType.IdAndVpToken -> "vp_token id_token"
     }
 
 private fun ResponseModeOption.name(): String =

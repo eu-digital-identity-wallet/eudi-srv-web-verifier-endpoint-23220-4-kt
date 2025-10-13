@@ -25,7 +25,6 @@ internal data class RequestObject(
     val responseType: List<String>,
     val dcqlQuery: DCQL? = null,
     val scope: List<String>,
-    val idTokenType: List<String>,
     val nonce: String,
     val responseMode: String,
     val responseUri: URL?,
@@ -40,41 +39,15 @@ internal fun requestObjectFromDomain(
     clock: Clock,
     presentation: Presentation.Requested,
 ): RequestObject {
-    val type = presentation.type
-    val scope = when (type) {
-        is PresentationType.IdTokenRequest -> listOf("openid")
-        is PresentationType.VpTokenRequest -> emptyList()
-        is PresentationType.IdAndVpToken -> listOf("openid")
-    }
-    val idTokenType = when (type) {
-        is PresentationType.IdTokenRequest -> type.idTokenType
-        is PresentationType.VpTokenRequest -> emptyList()
-        is PresentationType.IdAndVpToken -> type.idTokenType
-    }.map {
-        when (it) {
-            IdTokenType.AttesterSigned -> SIOPSpec.ID_TOKEN_TYPE_ATTESTER_SIGNED_ID_TOKEN
-            IdTokenType.SubjectSigned -> SIOPSpec.ID_TOKEN_TYPE_SUBJECT_SIGNED_ID_TOKEN
-        }
-    }
-
-    val responseType = when (type) {
-        is PresentationType.IdTokenRequest -> listOf(RFC6749.ID_TOKEN)
-        is PresentationType.VpTokenRequest -> listOf(OpenId4VPSpec.VP_TOKEN)
-        is PresentationType.IdAndVpToken -> listOf(OpenId4VPSpec.VP_TOKEN, RFC6749.ID_TOKEN)
-    }
-
-    val aud = when (type) {
-        is PresentationType.IdTokenRequest -> emptyList()
-        else -> listOf("https://self-issued.me/v2")
-    }
-
-    val transactionData = type.transactionDataOrNull?.map { it.base64Url }
+    val scope = emptyList<String>()
+    val responseType = listOf(OpenId4VPSpec.VP_TOKEN)
+    val aud = listOf("https://self-issued.me/v2")
+    val transactionData = presentation.transactionData?.map { it.base64Url }
 
     return RequestObject(
         verifierId = verifierConfig.verifierId,
         scope = scope,
-        idTokenType = idTokenType,
-        dcqlQuery = type.queryOrNull,
+        dcqlQuery = presentation.query,
         responseType = responseType,
         aud = aud,
         nonce = presentation.nonce.value,

@@ -31,7 +31,7 @@ Application exposes two APIs
 
 The Verifier API, supports two operations:
 * [Initialize Transaction](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/InitTransaction.kt), where Verifier may define whether it wants to request a SIOP or OpenID4VP or combined request
-* [Get Wallet response](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetWalletResponse.kt), where Verifier receives depending on the request an `id_token`, `vp_token`, or an error  
+* [Get Wallet response](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/port/input/GetWalletResponse.kt), where Verifier receives a `vp_token`, or an error  
 
 An Open API v3 specification of these operations is available [here](src/main/resources/public/openapi.json).
 
@@ -236,9 +236,7 @@ This identifier is used in the [WalletApi](src/main/kotlin/eu/europa/ec/eudi/ver
 - _Actor_: [Verifier](src/main/kotlin/eu/europa/ec/eudi/verifier/endpoint/adapter/input/web/VerifierApi.kt)
 
 An endpoint to control the content of the authorization request that will be prepared from the verifier backend service. Payload of this request is a json object with the following acceptable attributes:
-- `type`: The type of the response to the authorization request. Allowed values are one of: `id_token`, `vp_token` or `vp_token id_token`.
-- `id_token_type`: In case type is `id_token` controls the type of id_token that will be requested from wallet. Allowed values are one of `subject_signed_id_token` or `attester_signed_id_token`. 
-- `dcql_query`: A json object depicting the query, expressed using DCQL, to be included in the OpenId4VP authorization request in case `type` is 'vp_token', or 'vp_token id_token'. 
+- `dcql_query`: A json object depicting the query, expressed using DCQL, to be included in the OpenId4VP authorization request.
 - `nonce`: Nonce value to be included in the OpenId4VP authorization request.
 - `response_mode`: Controls the `response_mode` attribute of the OpenId4VP authorization request. Allowed values are one of `direct_post` or `direct_post.jwt`.  
 - `jar_mode`: Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if `by_reference` a `request_uri` url will be returned.
@@ -393,8 +391,7 @@ accept 2 type of payloads:
 _**response_mode = direct_post**_
 
 A form post (application/x-www-form-urlencoded encoding) with the following form parameters:
-- `state`: The state claim included in the authorization request JWT. Its value matches the authorization request identifier.  
-- `id_token`: The requested id_token if authorization request 'response_type' attribute contains `id_token`.
+- `state`: The state claim included in the authorization request JWT. Its value matches the authorization request identifier.
 - `vp_token`: The requested vp_token if authorization request 'response_type' attribute contains `vp_token`.
 
 _**response_mode = direct_post.jwt**_

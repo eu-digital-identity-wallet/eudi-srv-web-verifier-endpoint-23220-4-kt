@@ -86,7 +86,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
-        formEncodedBody.add("id_token", "value 1")
         formEncodedBody.add("vp_token", TestUtils.loadResource("02-vpToken.json"))
 
         // when
@@ -123,7 +122,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
             val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
             formEncodedBody.add("state", requestId.value)
-            formEncodedBody.add("id_token", "value 1")
             formEncodedBody.add("vp_token", TestUtils.loadResource(vpToken))
 
             WalletApiClient.directPost(client, requestId, formEncodedBody)
@@ -201,7 +199,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
-        formEncodedBody.add("id_token", "value 1")
         formEncodedBody.add("vp_token", TestUtils.loadResource("04-vpToken.json"))
 
         WalletApiClient.directPost(client, requestId, formEncodedBody)
@@ -231,7 +228,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
-        formEncodedBody.add("id_token", "value 1")
         formEncodedBody.add("vp_token", TestUtils.loadResource("04-vpToken.json"))
 
         try {
@@ -254,7 +250,6 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
 
         val formEncodedBody: MultiValueMap<String, Any> = LinkedMultiValueMap()
         formEncodedBody.add("state", requestId.value)
-        formEncodedBody.add("id_token", "value 1")
         formEncodedBody.add("vp_token", TestUtils.loadResource("05-vpToken.json"))
 
         WalletApiClient.directPost(client, requestId, formEncodedBody)
