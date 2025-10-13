@@ -703,9 +703,6 @@ private fun Environment.clientMetaData(): ClientMetaData {
     }
 
     return ClientMetaData(
-        subjectSyntaxTypesSupported = listOf(
-            "urn:ietf:params:oauth:jwk-thumbprint",
-        ),
         responseEncryptionOption = ResponseEncryptionOption(
             algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
             encryptionMethod = EncryptionMethod.parse(responseEncryptionOptionMethod),

@@ -64,7 +64,6 @@ object TestContext {
     }
     private val responseEncryptionOption = ResponseEncryptionOption(JWEAlgorithm.ECDH_ES, EncryptionMethod.A256GCM)
     val clientMetaData = ClientMetaData(
-        subjectSyntaxTypesSupported = listOf("urn:ietf:params:oauth:jwk-thumbprint", "did:example", "did:key"),
         responseEncryptionOption = responseEncryptionOption,
         vpFormatsSupported = VpFormatsSupported(
             VpFormatsSupported.SdJwtVc(
