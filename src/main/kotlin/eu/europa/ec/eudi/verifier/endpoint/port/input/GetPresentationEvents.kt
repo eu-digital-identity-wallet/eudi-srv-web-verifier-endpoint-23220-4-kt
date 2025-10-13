@@ -26,7 +26,7 @@ import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import java.time.Instant
+import kotlin.time.Instant
 
 @Serializable
 data class PresentationEventsTO(
@@ -69,7 +69,7 @@ private operator fun PresentationEventsTO.Companion.invoke(
 ) =
     PresentationEventsTO(
         transactionId = transactionId.value,
-        lastUpdated = lastUpdated.toEpochMilli(),
+        lastUpdated = lastUpdated.toEpochMilliseconds(),
         events = events.map { event ->
             require(event.transactionId == transactionId)
             toTransferObject(event)
@@ -77,7 +77,7 @@ private operator fun PresentationEventsTO.Companion.invoke(
     )
 
 private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
-    put("timestamp", event.timestamp.toEpochMilli())
+    put("timestamp", event.timestamp.toEpochMilliseconds())
     putEventNameAndActor(event)
     when (event) {
         is PresentationEvent.TransactionInitialized -> {
