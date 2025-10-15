@@ -585,10 +585,10 @@ Notes: Provide a value using Java Duration syntax
 Example: `P10D`  
 Default value: `P10D`
 
-Variable: `VERIFIER_AUTHORIZATIONREQUESTSCHEME`  
-Description: The Authorization Request Scheme to be used for the QR code generation process.      
-Example: `eudi-openid4vp`  
-Default value: `eudi-openid4vp`
+Variable: `VERIFIER_AUTHORIZATIONREQUESTURI`  
+Description: The Authorization Request Uri to be used when generating an Authorization Request.      
+Example: `eudi-openid4vp://`  
+Default value: `eudi-openid4vp://`
 
 Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_ALGORITHM`  
 Description: Algorithm that verifier is advertising and supports for authorization response encryption    

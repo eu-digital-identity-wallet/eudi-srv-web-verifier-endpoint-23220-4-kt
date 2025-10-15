@@ -94,6 +94,7 @@ data class InitTransactionTO(
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
+    @SerialName("authorization_request_uri") val authorizationRequestUri: String? = null,
     @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
     @Transient val output: Output = Output.Json,
 )
@@ -108,7 +109,7 @@ enum class ValidationError {
     InvalidTransactionData,
     UnsupportedFormat,
     InvalidIssuerChain,
-    InvalidAuthorizationRequestScheme,
+    InvalidAuthorizationRequestUri,
 }
 
 enum class Output {
@@ -121,7 +122,11 @@ sealed interface InitTransactionResponse {
      * The return value of successfully [initializing][InitTransaction] a [Presentation] as a QR Code
      *
      */
-    data class QrCode(val qrCode: ByteArray, val transactionId: String) : InitTransactionResponse
+    data class QrCode(
+        val qrCode: ByteArray,
+        val transactionId: String,
+        val authorizationRequestUri: String,
+    ) : InitTransactionResponse
 
     /**
      * The return value of successfully [initializing][InitTransaction] a [Presentation] as a JSON
@@ -134,6 +139,7 @@ sealed interface InitTransactionResponse {
         @SerialName(RFC9101.REQUEST) val request: String?,
         @SerialName(RFC9101.REQUEST_URI) val requestUri: String?,
         @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD) val requestUriMethod: RequestUriMethodTO?,
+        @SerialName("authorization_request_uri") val authorizationRequestUri: String,
     ) : InitTransactionResponse {
         companion object {
 
@@ -141,19 +147,29 @@ sealed interface InitTransactionResponse {
                 transactionId: String,
                 clientId: ClientId,
                 request: String,
-            ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(transactionId, clientId, request, null, null)
+                authorizationRequestUri: URI,
+            ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(
+                transactionId,
+                clientId,
+                request,
+                null,
+                null,
+                authorizationRequestUri.toString(),
+            )
 
             fun byReference(
                 transactionId: String,
                 clientId: ClientId,
                 requestUri: URL,
                 requestUriMethod: RequestUriMethodTO,
+                authorizationRequestUri: URI,
             ): JwtSecuredAuthorizationRequestTO = JwtSecuredAuthorizationRequestTO(
                 transactionId,
                 clientId,
                 null,
                 requestUri.toExternalForm(),
                 requestUriMethod,
+                authorizationRequestUri.toString(),
             )
         }
     }
@@ -222,16 +238,19 @@ class InitTransactionLive(
         )
 
         // create the request, which may update the presentation
-        val (updatedPresentation, request) = createRequest(requestedPresentation, jarMode(initTransactionTO))
+        val (updatedPresentation, request) = createRequest(
+            requestedPresentation,
+            jarMode(initTransactionTO),
+            authorizationRequestUri(initTransactionTO).bind(),
+        )
 
         val response = when (initTransactionTO.output) {
             Output.Json -> request
             Output.QrCode -> {
-                val scheme = authorizationRequestScheme(initTransactionTO).bind()
-                val authorizationRequest = createAuthorizationRequestUri(scheme, request)
                 InitTransactionResponse.QrCode(
-                    generateQrCode(authorizationRequest.toString(), size = (250.pixels by 250.pixels)).getOrThrow(),
+                    generateQrCode(request.authorizationRequestUri, size = (250.pixels by 250.pixels)).getOrThrow(),
                     request.transactionId,
+                    request.authorizationRequestUri,
                 )
             }
         }
@@ -253,6 +272,7 @@ class InitTransactionLive(
     private fun createRequest(
         requestedPresentation: Presentation.Requested,
         requestJarOption: EmbedOption<RequestId>,
+        authorizationRequestUri: Uri,
     ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
@@ -269,6 +289,11 @@ class InitTransactionLive(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
                     jwt,
+                    createAuthorizationRequestUri(
+                        authorizationRequestUri,
+                        verifierConfig.verifierId.clientId,
+                        request = jwt,
+                    ),
                 )
             }
 
@@ -283,6 +308,12 @@ class InitTransactionLive(
                     verifierConfig.verifierId.clientId,
                     requestUri,
                     requestUriMethod,
+                    createAuthorizationRequestUri(
+                        authorizationRequestUri,
+                        verifierConfig.verifierId.clientId,
+                        requestUri = requestUri,
+                        requestUriMethod = requestUriMethod,
+                    ),
                 )
             }
         }
@@ -349,15 +380,15 @@ class InitTransactionLive(
         }.mapLeft { ValidationError.InvalidIssuerChain }
 
     /**
-     * Gets a [String] containing the authorization Request Scheme for the provided [InitTransactionTO].
-     * If none has been provided, falls back to [VerifierConfig.authorizationRequestScheme].
+     * Gets a [Uri] containing the authorization Request Uri for the provided [InitTransactionTO].
+     * If none has been provided, falls back to [VerifierConfig.authorizationRequestUri].
      */
-    private fun authorizationRequestScheme(initTransaction: InitTransactionTO): Either<ValidationError, String> = either {
-        val scheme = initTransaction.authorizationRequestScheme
-            .takeUnless { it.isNullOrBlank() } ?: verifierConfig.authorizationRequestScheme
-        ensure(!scheme.endsWith("://")) { ValidationError.InvalidAuthorizationRequestScheme }
-        scheme
-    }
+    private fun authorizationRequestUri(initTransaction: InitTransactionTO): Either<ValidationError, Uri> =
+        either {
+            initTransaction.authorizationRequestUri?.let {
+                runCatching { Uri.parse(it) }.getOrElse { raise(ValidationError.InvalidAuthorizationRequestUri) }
+            } ?: verifierConfig.authorizationRequestUri
+        }
 }
 
 internal fun InitTransactionTO.toDomain(
@@ -416,16 +447,17 @@ internal fun InitTransactionTO.toDomain(
 }
 
 private fun createAuthorizationRequestUri(
-    scheme: String,
-    authorizationRequest: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
+    authorizationRequestUri: Uri,
+    clientId: ClientId,
+    request: Jwt? = null,
+    requestUri: URL? = null,
+    requestUriMethod: RequestUriMethodTO? = null,
 ): URI =
-    Uri.Builder().apply {
-        scheme(scheme)
-        authority("")
-        appendQueryParameter(RFC6749.CLIENT_ID, authorizationRequest.clientId)
-        authorizationRequest.request?.let { appendQueryParameter(RFC9101.REQUEST, it) }
-        authorizationRequest.requestUri?.let { appendQueryParameter(RFC9101.REQUEST_URI, it) }
-        authorizationRequest.requestUriMethod?.let {
+    authorizationRequestUri.buildUpon().apply {
+        appendQueryParameter(RFC6749.CLIENT_ID, clientId)
+        request?.let { appendQueryParameter(RFC9101.REQUEST, it) }
+        requestUri?.let { appendQueryParameter(RFC9101.REQUEST_URI, it.toExternalForm()) }
+        requestUriMethod?.let {
             val requestUriMethod = when (it) {
                 RequestUriMethodTO.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
                 RequestUriMethodTO.Post -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
