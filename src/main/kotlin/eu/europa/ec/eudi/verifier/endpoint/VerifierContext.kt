@@ -16,6 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint
 
 import arrow.core.*
+import com.eygraber.uri.Uri
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
@@ -577,9 +578,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             }
         }
 
-    val authorizationRequestScheme = environment.getProperty("verifier.authorizationRequestScheme", "eudi-openid4vp").also {
-        require(!it.endsWith("://") && it.isNotBlank()) { "'verifier.authorizationRequestScheme' must not contain '://' or be blank." }
-    }
+    val authorizationRequestUri = Uri.parse(environment.getProperty("verifier.authorizationRequestUri", "eudi-openid4vp://"))
 
     return VerifierConfig(
         verifierId = verifierId,
@@ -590,7 +589,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         maxAge = maxAge,
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
-        authorizationRequestScheme = authorizationRequestScheme,
+        authorizationRequestUri = authorizationRequestUri,
         trustSourcesConfig = environment.trustSources(),
     )
 }

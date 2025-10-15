@@ -62,12 +62,14 @@ internal class VerifierApi(
                         logger.info("Initiated transaction tx ${it.transactionId}")
                         ok().json()
                             .header(TRANSACTION_ID_HEADER, it.transactionId)
+                            .header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
                             .bodyValueAndAwait(it)
                     }
                     is InitTransactionResponse.QrCode -> {
                         logger.info("Initiated transaction with qr image")
                         ok().contentType(IMAGE_PNG)
                             .header(TRANSACTION_ID_HEADER, it.transactionId)
+                            .header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
                             .bodyValueAndAwait(it.qrCode)
                     }
                 }
@@ -120,6 +122,7 @@ internal class VerifierApi(
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
 
         const val TRANSACTION_ID_HEADER = "Transaction-Id"
+        const val AUTHORIZATION_REQUEST_URI_HEADER = "Authorization-Request-Uri"
 
         /**
          * Extracts from the request the [RequestId]
