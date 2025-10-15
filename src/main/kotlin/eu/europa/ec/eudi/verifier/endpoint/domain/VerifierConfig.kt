@@ -31,6 +31,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.JWSAlgorithmStringSerializer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -58,6 +59,7 @@ sealed interface EmbedOption<in ID> {
 /**
  * Configuration option for `request_uri_method`
  */
+@Serializable
 enum class RequestUriMethod {
     Get,
     Post,
@@ -66,16 +68,21 @@ enum class RequestUriMethod {
 /**
  * Configuration option for response mode
  */
+@Serializable
 enum class ResponseModeOption {
     DirectPost,
     DirectPostJwt,
 }
 
+@Serializable
 sealed interface ResponseMode {
 
+    @Serializable
     data object DirectPost : ResponseMode
 
+    @Serializable
     data class DirectPostJwt(
+        @Contextual
         val ephemeralResponseEncryptionKey: JWK,
     ) : ResponseMode {
         init {
@@ -363,7 +370,29 @@ data class KeyStoreConfig(
     val keystoreType: String? = "JKS",
     val keystorePassword: CharArray? = "".toCharArray(),
     val keystore: KeyStore,
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as KeyStoreConfig
+
+        if (keystorePath != other.keystorePath) return false
+        if (keystoreType != other.keystoreType) return false
+        if (!keystorePassword.contentEquals(other.keystorePassword)) return false
+        if (keystore != other.keystore) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = keystorePath.hashCode()
+        result = 31 * result + (keystoreType?.hashCode() ?: 0)
+        result = 31 * result + (keystorePassword?.contentHashCode() ?: 0)
+        result = 31 * result + keystore.hashCode()
+        return result
+    }
+}
 
 internal fun VpFormatsSupported.supports(format: Format): Boolean =
     when (format) {

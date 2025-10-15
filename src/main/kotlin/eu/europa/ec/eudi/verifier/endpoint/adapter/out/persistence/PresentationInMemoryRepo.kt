@@ -15,38 +15,32 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence
 
-import arrow.core.NonEmptyList
 import arrow.core.nonEmptyListOf
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.isExpired
-import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.*
-import org.slf4j.LoggerFactory
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.DeletePresentationsInitiatedBefore
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadIncompletePresentationsOlderThan
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationById
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationByRequestId
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.LoadPresentationEvents
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
+import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentation
 import java.util.concurrent.ConcurrentHashMap
-
-data class PresentationStoredEntry(
-    val presentation: Presentation,
-    val events: NonEmptyList<PresentationEvent>?,
-)
 
 /**
  * An input-memory repository for storing [presentations][Presentation]
  */
 class PresentationInMemoryRepo(
     private val presentations: ConcurrentHashMap<TransactionId, PresentationStoredEntry> = ConcurrentHashMap(),
-) {
+    private val eventLogger: PresentationEventLogger = PresentationEventLogger()
+) : PresentationCache {
 
-    val loadPresentationById: LoadPresentationById by lazy {
+    override val loadPresentationById: LoadPresentationById by lazy {
         LoadPresentationById { presentationId -> presentations[presentationId]?.presentation }
     }
 
-    val loadPresentationByRequestId: LoadPresentationByRequestId by lazy {
-        fun requestId(p: Presentation) = when (p) {
-            is Presentation.Requested -> p.requestId
-            is Presentation.RequestObjectRetrieved -> p.requestId
-            is Presentation.Submitted -> p.requestId
-            is Presentation.TimedOut -> null
-        }
+    override val loadPresentationByRequestId: LoadPresentationByRequestId by lazy {
         LoadPresentationByRequestId { requestId ->
             presentations.values.map { it.presentation }.firstOrNull {
                 requestId(it) == requestId
@@ -54,13 +48,13 @@ class PresentationInMemoryRepo(
         }
     }
 
-    val loadIncompletePresentationsOlderThan: LoadIncompletePresentationsOlderThan by lazy {
+    override val loadIncompletePresentationsOlderThan: LoadIncompletePresentationsOlderThan by lazy {
         LoadIncompletePresentationsOlderThan { at ->
             presentations.values.map { it.presentation }.toList().filter { it.isExpired(at) }
         }
     }
 
-    val storePresentation: StorePresentation by lazy {
+    override val storePresentation: StorePresentation by lazy {
         StorePresentation { presentation ->
             val existing = presentations[presentation.id]
             presentations[presentation.id] =
@@ -68,7 +62,7 @@ class PresentationInMemoryRepo(
         }
     }
 
-    val loadPresentationEvents: LoadPresentationEvents by lazy {
+    override val loadPresentationEvents: LoadPresentationEvents by lazy {
         LoadPresentationEvents { transactionId ->
             val p = presentations[transactionId]
             if (p == null) null
@@ -78,9 +72,9 @@ class PresentationInMemoryRepo(
         }
     }
 
-    val publishPresentationEvent: PublishPresentationEvent by lazy {
+    override val publishPresentationEvent: PublishPresentationEvent by lazy {
         PublishPresentationEvent { event ->
-            log(event)
+            eventLogger.log(event)
             val transactionId = event.transactionId
             val presentationAndEvent = checkNotNull(presentations[transactionId]) {
                 "Cannot publish event without a presentation"
@@ -93,34 +87,12 @@ class PresentationInMemoryRepo(
         }
     }
 
-    val deletePresentationsInitiatedBefore: DeletePresentationsInitiatedBefore by lazy {
+    override val deletePresentationsInitiatedBefore: DeletePresentationsInitiatedBefore by lazy {
         DeletePresentationsInitiatedBefore { at ->
             presentations.filter { (_, presentationAndEvents) -> presentationAndEvents.presentation.initiatedAt < at }
                 .keys
                 .onEach { presentations.remove(it) }
                 .toList()
         }
-    }
-}
-
-private val logger = LoggerFactory.getLogger("EVENTS")
-private fun log(e: PresentationEvent) {
-    fun txt(s: String) = "$s - tx: ${e.transactionId.value}"
-    fun warn(s: String) = logger.warn(txt(s))
-    fun info(s: String) = logger.info(txt(s))
-    when (e) {
-        is PresentationEvent.VerifierFailedToGetWalletResponse -> warn("Verifier failed to retrieve wallet response. Cause ${e.cause}")
-        is PresentationEvent.FailedToRetrievePresentationDefinition -> warn(
-            "Wallet failed to retrieve presentation definition. Cause ${e.cause}",
-        )
-        is PresentationEvent.WalletFailedToPostResponse -> warn("Wallet failed to post response. Cause ${e.cause}")
-        is PresentationEvent.FailedToRetrieveRequestObject -> warn("Wallet failed to retrieve request object. Cause ${e.cause}")
-        is PresentationEvent.PresentationExpired -> info("Presentation expired")
-        is PresentationEvent.RequestObjectRetrieved -> info("Wallet retrieved Request Object")
-        is PresentationEvent.TransactionInitialized -> info("Verifier initialized transaction")
-        is PresentationEvent.VerifierGotWalletResponse -> info("Verifier retrieved wallet response")
-        is PresentationEvent.WalletResponsePosted -> info("Wallet posted response")
-        is PresentationEvent.AttestationStatusCheckSuccessful -> info("Attestation status check successful")
-        is PresentationEvent.AttestationStatusCheckFailed -> warn("Attestation status check failed")
     }
 }
