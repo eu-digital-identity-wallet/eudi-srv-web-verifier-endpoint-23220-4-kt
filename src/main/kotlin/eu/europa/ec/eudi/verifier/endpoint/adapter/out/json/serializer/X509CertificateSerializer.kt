@@ -23,6 +23,7 @@ object X509CertificateSerializer : KSerializer<X509Certificate> {
     override fun deserialize(decoder: Decoder): X509Certificate {
         val encoded = decoder.decodeString()
         val decoded = Base64.decode(encoded)
-        return CertificateFactory.getInstance("X.509").generateCertificate(decoded.inputStream()) as X509Certificate
+        return CertificateFactory.getInstance("X.509")
+            .generateCertificate(decoded.inputStream()) as X509Certificate
     }
 }
