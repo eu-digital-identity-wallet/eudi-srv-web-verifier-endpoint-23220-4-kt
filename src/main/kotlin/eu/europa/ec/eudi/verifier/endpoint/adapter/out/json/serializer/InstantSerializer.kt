@@ -13,11 +13,11 @@ object InstantSerializer : KSerializer<Instant> {
         PrimitiveSerialDescriptor("Instant", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: Instant) {
-        encoder.encodeString(value.toString()) // ISO-8601 format
+        encoder.encodeLong(value.toEpochMilli())
     }
 
     override fun deserialize(decoder: Decoder): Instant {
-        return Instant.parse(decoder.decodeString()) // Parse ISO-8601 string
+        return Instant.ofEpochMilli(decoder.decodeLong())
     }
 }
 
