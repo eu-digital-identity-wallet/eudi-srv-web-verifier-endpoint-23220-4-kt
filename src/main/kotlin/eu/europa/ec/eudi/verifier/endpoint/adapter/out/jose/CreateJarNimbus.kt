@@ -113,7 +113,9 @@ class CreateJarNimbus : CreateJar {
 
         val authorizationRequestClaims = with(AuthorizationRequest.Builder(responseType, clientId)) {
             state(state)
-            scope(scope)
+            if (scope.isNotEmpty()) {
+                scope(scope)
+            }
             responseMode(NimbusResponseMode(r.responseMode))
             build()
         }.toJWTClaimsSet()
@@ -125,12 +127,6 @@ class CreateJarNimbus : CreateJar {
             issueTime(Date.from(r.issuedAt))
             audience(r.aud)
             claim(OpenId4VPSpec.NONCE, r.nonce)
-            optionalClaim(
-                SIOPSpec.ID_TOKEN_TYPE,
-                if (r.idTokenType.isEmpty()) {
-                    null
-                } else r.idTokenType.joinToString(" "),
-            )
             optionalClaim(OpenId4VPSpec.CLIENT_METADATA, clientMetaData?.toJSONObject())
             optionalClaim(OpenId4VPSpec.RESPONSE_URI, r.responseUri?.toExternalForm())
             optionalClaim(OpenId4VPSpec.DCQL_QUERY, r.dcqlQuery?.toJackson())
@@ -145,11 +141,6 @@ class CreateJarNimbus : CreateJar {
         responseMode: ResponseMode,
     ): OIDCClientMetadata {
         return OIDCClientMetadata().apply {
-            idTokenJWSAlg = JWSAlgorithm.parse(c.idTokenSignedResponseAlg)
-            idTokenJWEAlg = JWEAlgorithm.parse(c.idTokenEncryptedResponseAlg)
-            idTokenJWEEnc = EncryptionMethod.parse(c.idTokenEncryptedResponseEnc)
-            setCustomField(SIOPSpec.SUBJECT_SYNTAX_TYPES_SUPPORTED, c.subjectSyntaxTypesSupported)
-
             if (responseMode is ResponseMode.DirectPostJwt) {
                 jwkSet = JWKSet(listOf(responseMode.ephemeralResponseEncryptionKey)).toPublicJWKSet()
                 setCustomField(

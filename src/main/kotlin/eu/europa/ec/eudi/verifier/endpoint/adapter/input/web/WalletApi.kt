@@ -101,7 +101,7 @@ class WalletApi(
 
     /**
      * Handles a POST request placed by the wallet, input order to submit
-     * the [AuthorisationResponse], containing the id_token, presentation_submission
+     * the [AuthorisationResponse], containing the presentation_submission
      * and the verifiableCredentials
      */
     private suspend fun handlePostWalletResponse(req: ServerRequest): ServerResponse = try {
@@ -163,7 +163,6 @@ class WalletApi(
 
                 return AuthorisationResponseTO(
                     state = getFirst("state"),
-                    idToken = getFirst("id_token"),
                     vpToken = getFirst("vp_token")?.toJsonObject(),
                     error = getFirst("error"),
                     errorDescription = getFirst("error_description"),
@@ -223,10 +222,6 @@ class WalletApi(
                     put("error", "InvalidVpToken")
                     put("description", this@toJson.message)
                     this@toJson.cause?.let { put("cause", message) }
-                }
-                WalletResponseValidationError.MissingIdToken -> {
-                    put("error", "MissingIdToken")
-                    put("description", "Expected an id_token to be presented but was not.")
                 }
                 WalletResponseValidationError.MissingVpToken -> {
                     put("error", "MissingVpToken")

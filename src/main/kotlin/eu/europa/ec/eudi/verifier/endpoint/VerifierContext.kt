@@ -777,12 +777,6 @@ private fun Environment.clientMetaData(): ClientMetaData {
     }
 
     return ClientMetaData(
-        idTokenSignedResponseAlg = JWSAlgorithm.RS256.name,
-        idTokenEncryptedResponseAlg = JWEAlgorithm.RSA_OAEP_256.name,
-        idTokenEncryptedResponseEnc = EncryptionMethod.A128CBC_HS256.name,
-        subjectSyntaxTypesSupported = listOf(
-            "urn:ietf:params:oauth:jwk-thumbprint",
-        ),
         responseEncryptionOption = ResponseEncryptionOption(
             algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
             encryptionMethod = EncryptionMethod.parse(responseEncryptionOptionMethod),

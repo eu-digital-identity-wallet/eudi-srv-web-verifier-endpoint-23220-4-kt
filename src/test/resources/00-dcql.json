@@ -1,6 +1,4 @@
 {
-  "type": "vp_token id_token",
-  "id_token_type": "subject_signed_id_token",
   "dcql_query": {
     "credentials": [
       {
