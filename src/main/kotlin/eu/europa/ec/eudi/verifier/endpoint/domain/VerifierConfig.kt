@@ -21,6 +21,7 @@ import arrow.core.Either
 import arrow.core.Ior
 import arrow.core.NonEmptyList
 import arrow.core.serialization.NonEmptyListSerializer
+import com.eygraber.uri.Uri
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
@@ -278,7 +279,7 @@ data class VerifierConfig(
     val maxAge: Duration,
     val clientMetaData: ClientMetaData,
     val transactionDataHashAlgorithm: HashAlgorithm,
-    val authorizationRequestScheme: String,
+    val authorizationRequestUri: Uri,
     val trustSourcesConfig: Map<Regex, TrustSourceConfig>?,
 )
 
