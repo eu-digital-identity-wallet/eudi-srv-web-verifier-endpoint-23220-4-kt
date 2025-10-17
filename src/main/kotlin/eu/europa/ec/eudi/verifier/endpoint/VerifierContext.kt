@@ -578,7 +578,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             }
         }
 
-    val authorizationRequestUri = Uri.parse(environment.getProperty("verifier.authorizationRequestUri", "eudi-openid4vp://"))
+    val authorizationRequestUri = Uri.parse(environment.getProperty("verifier.authorizationRequestUri", "haip-vp://"))
 
     return VerifierConfig(
         verifierId = verifierId,

@@ -48,7 +48,7 @@ class InitTransactionTest {
         clientMetaData = TestContext.clientMetaData,
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
         requestUriMethod = RequestUriMethod.Get,
-        authorizationRequestUri = Uri.parse("eudi-openid4vp://"),
+        authorizationRequestUri = Uri.parse("haip-vp://"),
         trustSourcesConfig = mapOf(),
     )
 
@@ -88,7 +88,7 @@ class InitTransactionTest {
                 clientMetaData = TestContext.clientMetaData,
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                 requestUriMethod = RequestUriMethod.Get,
-                authorizationRequestUri = Uri.parse("eudi-openid4vp://"),
+                authorizationRequestUri = Uri.parse("haip-vp://"),
                 trustSourcesConfig = mapOf(),
             )
 

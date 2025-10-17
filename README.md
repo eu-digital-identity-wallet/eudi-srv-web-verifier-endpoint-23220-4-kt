@@ -587,8 +587,8 @@ Default value: `P10D`
 
 Variable: `VERIFIER_AUTHORIZATIONREQUESTURI`  
 Description: The Authorization Request Uri to be used when generating an Authorization Request.      
-Example: `eudi-openid4vp://`  
-Default value: `eudi-openid4vp://`
+Example: `haip-vp://`  
+Default value: `haip-vp://`
 
 Variable: `VERIFIER_ALLOWEDREDIRECTURISCHEMES`  
 Description: Comma-separated list of schemes allowed to be used in the `wallet_response_redirect_uri_template`. 
