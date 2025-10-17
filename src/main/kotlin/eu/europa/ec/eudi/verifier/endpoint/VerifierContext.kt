@@ -15,23 +15,45 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint
 
-import arrow.core.*
+import arrow.core.Either
+import arrow.core.NonEmptyList
+import arrow.core.recover
+import arrow.core.some
+import arrow.core.toNonEmptyListOrNull
+import arrow.core.toNonEmptySetOrNull
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.jwk.*
+import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.ECKey
+import com.nimbusds.jose.jwk.JWK
+import com.nimbusds.jose.jwk.KeyUse
+import com.nimbusds.jose.jwk.OctetKeyPair
+import com.nimbusds.jose.jwk.OctetSequenceKey
+import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
 import com.sksamuel.aedile.core.asCache
 import com.sksamuel.aedile.core.expireAfterWrite
-import eu.europa.ec.eudi.sdjwt.vc.*
+import eu.europa.ec.eudi.sdjwt.vc.DocumentIntegrity
+import eu.europa.ec.eudi.sdjwt.vc.IntegrityAlgorithm
+import eu.europa.ec.eudi.sdjwt.vc.LookupJsonSchemaUsingKtor
+import eu.europa.ec.eudi.sdjwt.vc.ResolveTypeMetadata
+import eu.europa.ec.eudi.sdjwt.vc.ResolvedTypeMetadata
+import eu.europa.ec.eudi.sdjwt.vc.SRIValidator
+import eu.europa.ec.eudi.sdjwt.vc.TypeMetadataPolicy
+import eu.europa.ec.eudi.sdjwt.vc.Vct
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.StaticContent
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.SwaggerUi
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.UtilityApi
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApi
+import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.WalletApi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
@@ -46,6 +68,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.ValidityInfoShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationRedisRepo
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.redis.KotlinJsonRedisSerializer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.presentation.ValidateSdJwtVcOrMsoMdocVerifiablePresentation
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadataFromUrl
@@ -53,18 +77,41 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
-import eu.europa.ec.eudi.verifier.endpoint.domain.*
-import eu.europa.ec.eudi.verifier.endpoint.port.input.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.ClientMetaData
+import eu.europa.ec.eudi.verifier.endpoint.domain.EmbedOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.HashAlgorithm
+import eu.europa.ec.eudi.verifier.endpoint.domain.KeyStoreConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.ProviderKind
+import eu.europa.ec.eudi.verifier.endpoint.domain.RequestUriMethod
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseEncryptionOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseModeOption
+import eu.europa.ec.eudi.verifier.endpoint.domain.SigningConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourceConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.TrustSourcesConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.TrustedListConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
+import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierId
+import eu.europa.ec.eudi.verifier.endpoint.domain.VpFormatsSupported
+import eu.europa.ec.eudi.verifier.endpoint.port.input.DeleteOldPresentationsLive
+import eu.europa.ec.eudi.verifier.endpoint.port.input.GetPresentationEventsLive
+import eu.europa.ec.eudi.verifier.endpoint.port.input.GetWalletResponseLive
+import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionLive
+import eu.europa.ec.eudi.verifier.endpoint.port.input.PostWalletResponseLive
+import eu.europa.ec.eudi.verifier.endpoint.port.input.RetrieveRequestObjectLive
+import eu.europa.ec.eudi.verifier.endpoint.port.input.TimeoutPresentationsLive
+import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateMsoMdocDeviceResponse
+import eu.europa.ec.eudi.verifier.endpoint.port.input.ValidateSdJwtVc
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
-import io.ktor.client.*
-import io.ktor.client.engine.*
-import io.ktor.client.engine.apache.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.ProxyBuilder
+import io.ktor.client.engine.apache.Apache
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
+import io.ktor.http.Url
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import org.apache.http.conn.ssl.NoopHostnameVerifier
@@ -79,6 +126,9 @@ import org.springframework.core.env.Environment
 import org.springframework.core.env.getProperty
 import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.core.io.FileSystemResource
+import org.springframework.data.redis.connection.RedisConnectionFactory
+import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.data.redis.serializer.StringRedisSerializer
 import org.springframework.http.codec.json.KotlinSerializationJsonDecoder
 import org.springframework.http.codec.json.KotlinSerializationJsonEncoder
 import org.springframework.security.config.web.server.ServerHttpSecurity
@@ -90,7 +140,8 @@ import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.Clock
 import java.time.Duration
-import java.util.*
+import java.util.Date
+import java.util.UUID
 import kotlin.time.toKotlinDuration
 
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
@@ -110,15 +161,38 @@ internal fun beans(clock: Clock) = beans {
     //
     bean { GenerateTransactionIdNimbus(64) }
     bean { GenerateRequestIdNimbus(64) }
-    with(PresentationInMemoryRepo()) {
-        bean { loadPresentationById }
-        bean { loadPresentationByRequestId }
-        bean { storePresentation }
-        bean { loadIncompletePresentationsOlderThan }
-        bean { loadPresentationEvents }
-        bean { publishPresentationEvent }
-        bean { deletePresentationsInitiatedBefore }
+
+    bean {
+        val persistenceType = env.getProperty("verifier.presentation.persistence.type", "in-mem")
+
+        val persistenceReceiver = if ("redis" == persistenceType) {
+            val maxAge = Duration.parse(env.getProperty("verifier.presentations.cleanup.maxAge", "P10D"))
+
+            val redisTemplate = RedisTemplate<String, Any?>().apply {
+                connectionFactory = ref<RedisConnectionFactory>()
+                keySerializer = StringRedisSerializer.UTF_8
+                valueSerializer = KotlinJsonRedisSerializer()
+            }
+            redisTemplate.afterPropertiesSet()
+            PresentationRedisRepo(
+                template = redisTemplate,
+                maxAge
+            )
+        } else {
+            PresentationInMemoryRepo()
+        }
+
+        with(persistenceReceiver) {
+            bean { loadPresentationById }
+            bean { loadPresentationByRequestId }
+            bean { storePresentation }
+            bean { loadIncompletePresentationsOlderThan }
+            bean { loadPresentationEvents }
+            bean { publishPresentationEvent }
+            bean { deletePresentationsInitiatedBefore }
+        }
     }
+
 
     bean { CreateQueryWalletResponseRedirectUri.Simple }
 

@@ -45,6 +45,7 @@ typealias Base64UrlSafe = String
  * Wrapper for a JsonObject that contains Transaction Data.
  */
 @JvmInline
+@Serializable
 value class TransactionData private constructor(val value: JsonObject) {
 
     val type: String
