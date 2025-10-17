@@ -587,8 +587,8 @@ Default value: `P10D`
 
 Variable: `VERIFIER_AUTHORIZATIONREQUESTURI`  
 Description: The Authorization Request Uri to be used when generating an Authorization Request.      
-Example: `eudi-openid4vp://`  
-Default value: `eudi-openid4vp://`
+Example: `haip-vp://`  
+Default value: `haip-vp://`
 
 Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_ALGORITHM`  
 Description: Algorithm that verifier is advertising and supports for authorization response encryption    
