@@ -7,7 +7,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      VERIFIER_PUBLICURL: "https://10.240.174.10"
+      VERIFIER_PUBLICURL: "https://0.0.0.0"
       VERIFIER_RESPONSE_MODE: "DirectPost"
 
   verifier-ui:
@@ -17,7 +17,7 @@ services:
       - "4300:4300"
     environment:
       - DOMAIN_NAME=""
-      - HOST_API="https://10.240.174.10"
+      - HOST_API="https://0.0.0.0"
 
   haproxy:
     image: haproxy:2.7.2
