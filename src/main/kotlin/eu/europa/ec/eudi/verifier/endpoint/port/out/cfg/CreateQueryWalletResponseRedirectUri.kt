@@ -39,9 +39,9 @@ interface CreateQueryWalletResponseRedirectUri {
             object : CreateQueryWalletResponseRedirectUri {
                 override fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URI> =
                     Either.catch {
-                        require(
-                            template.contains(RESPONSE_CODE_PLACE_HOLDER),
-                        ) { "Expected response_code place holder not found in template" }
+                        require(template.contains(RESPONSE_CODE_PLACE_HOLDER)) {
+                            "Expected response_code place holder not found in template"
+                        }
                         val uri = URI.create(template.replace(RESPONSE_CODE_PLACE_HOLDER, responseCode.value))
                         require(uri.scheme in allowedSchemes) {
                             "Disallowed scheme '${uri.scheme}' found in template. Allowed schemes: '${allowedSchemes.joinToString()}'."
