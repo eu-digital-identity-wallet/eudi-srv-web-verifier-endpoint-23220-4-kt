@@ -590,6 +590,12 @@ Description: The Authorization Request Scheme to be used for the QR code generat
 Example: `eudi-openid4vp`  
 Default value: `eudi-openid4vp`
 
+Variable: `VERIFIER_ALLOWEDREDIRECTURISCHEMES`  
+Description: Comma-separated list of schemes allowed to be used in the `wallet_response_redirect_uri_template`. 
+When Verifier Endpoint is used by a native mobile application, `wallet_response_redirect_uri_template` might contain a URI with a custom scheme (i.e., a deep-link). 
+In such cases the custom scheme must be added to `VERIFIER_ALLOWEDREDIRECTURISCHEMES`.  
+Default value: `https`
+
 Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_ALGORITHM`  
 Description: Algorithm that verifier is advertising and supports for authorization response encryption    
 Possible values: `ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A192KW`, `ECDH-ES+A256KW`  

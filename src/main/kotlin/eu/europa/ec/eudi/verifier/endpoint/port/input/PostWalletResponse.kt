@@ -256,7 +256,7 @@ class PostWalletResponseLive(
                     with(createQueryWalletResponseRedirectUri) {
                         requireNotNull(submitted.responseCode) { "ResponseCode expected in Submitted state but not found" }
                         val redirectUri = getWalletResponseMethod.redirectUri(submitted.responseCode)
-                        WalletResponseAcceptedTO(redirectUri.toExternalForm())
+                        WalletResponseAcceptedTO(redirectUri.toString())
                     }
 
                 GetWalletResponseMethod.Poll -> null

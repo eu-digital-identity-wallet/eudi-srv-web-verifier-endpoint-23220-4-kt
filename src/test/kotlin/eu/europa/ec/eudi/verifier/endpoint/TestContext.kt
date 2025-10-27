@@ -99,7 +99,7 @@ object TestContext {
             testClock,
             generateEphemeralKey,
             requestJarByReference,
-            CreateQueryWalletResponseRedirectUri.Simple,
+            CreateQueryWalletResponseRedirectUri.simple("https"),
             repo.publishPresentationEvent,
             ParsePemEncodedX509CertificateChainWithNimbus,
             generateQrCode,
