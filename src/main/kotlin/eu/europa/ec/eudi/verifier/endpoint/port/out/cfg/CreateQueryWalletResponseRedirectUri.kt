@@ -23,7 +23,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.GetWalletResponseMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import java.net.URI
 
-interface CreateQueryWalletResponseRedirectUri {
+fun interface CreateQueryWalletResponseRedirectUri {
 
     fun GetWalletResponseMethod.Redirect.redirectUri(responseCode: ResponseCode): URI =
         redirectUri(redirectUriTemplate, responseCode).getOrThrow()
@@ -36,18 +36,17 @@ interface CreateQueryWalletResponseRedirectUri {
         const val RESPONSE_CODE_PLACE_HOLDER = "{RESPONSE_CODE}"
 
         fun simple(allowedSchemes: NonEmptySet<String>): CreateQueryWalletResponseRedirectUri =
-            object : CreateQueryWalletResponseRedirectUri {
-                override fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URI> =
-                    Either.catch {
-                        require(template.contains(RESPONSE_CODE_PLACE_HOLDER)) {
-                            "Expected response_code place holder not found in template"
-                        }
-                        val uri = URI.create(template.replace(RESPONSE_CODE_PLACE_HOLDER, responseCode.value))
-                        require(uri.scheme in allowedSchemes) {
-                            "Disallowed scheme '${uri.scheme}' found in template. Allowed schemes: '${allowedSchemes.joinToString()}'."
-                        }
-                        uri
+            CreateQueryWalletResponseRedirectUri { template, responseCode ->
+                Either.catch {
+                    require(template.contains(RESPONSE_CODE_PLACE_HOLDER)) {
+                        "Expected response_code place holder not found in template"
                     }
+                    val uri = URI.create(template.replace(RESPONSE_CODE_PLACE_HOLDER, responseCode.value))
+                    require(uri.scheme in allowedSchemes) {
+                        "Disallowed scheme '${uri.scheme}' found in template. Allowed schemes: '${allowedSchemes.joinToString()}'."
+                    }
+                    uri
+                }
             }
 
         fun simple(first: String, vararg remaining: String): CreateQueryWalletResponseRedirectUri = simple(nonEmptySetOf(first, *remaining))
