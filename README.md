@@ -591,7 +591,7 @@ Example: `eudi-openid4vp`
 Default value: `eudi-openid4vp`
 
 Variable: `VERIFIER_ALLOWEDREDIRECTURISCHEMES`  
-Description: Schemes allowed to be used in the `wallet_response_redirect_uri_template`.
+Description: Comma-separated list of schemes allowed to be used in the `wallet_response_redirect_uri_template`.
 Default value: `https`
 
 Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_ALGORITHM`  
