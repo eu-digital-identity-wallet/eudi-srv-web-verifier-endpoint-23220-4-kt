@@ -120,7 +120,15 @@ internal fun beans(clock: Clock) = beans {
         bean { deletePresentationsInitiatedBefore }
     }
 
-    bean { CreateQueryWalletResponseRedirectUri.Simple }
+    bean {
+        val allowedRedirectUriSchemes = env.getOptionalList(
+            name = "verifier.allowedRedirectUriSchemes",
+            filter = String::isNotBlank,
+            transform = String::trim,
+        )?.toNonEmptySet() ?: nonEmptySetOf("https")
+
+        CreateQueryWalletResponseRedirectUri.simple(allowedRedirectUriSchemes)
+    }
 
     //
     // Ktor

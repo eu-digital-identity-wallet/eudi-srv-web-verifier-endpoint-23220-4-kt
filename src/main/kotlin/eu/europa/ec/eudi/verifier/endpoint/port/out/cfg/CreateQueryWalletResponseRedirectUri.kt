@@ -16,28 +16,40 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.cfg
 
 import arrow.core.Either
+import arrow.core.NonEmptySet
+import arrow.core.nonEmptySetOf
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.GetWalletResponseMethod
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
-import java.net.URL
+import java.net.URI
 
 interface CreateQueryWalletResponseRedirectUri {
 
-    fun GetWalletResponseMethod.Redirect.redirectUri(responseCode: ResponseCode): URL =
+    fun GetWalletResponseMethod.Redirect.redirectUri(responseCode: ResponseCode): URI =
         redirectUri(redirectUriTemplate, responseCode).getOrThrow()
 
-    fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URL>
+    fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URI>
 
     fun String.validTemplate(): Boolean = redirectUri(this, ResponseCode("test")).isRight()
 
     companion object {
         const val RESPONSE_CODE_PLACE_HOLDER = "{RESPONSE_CODE}"
-        val Simple: CreateQueryWalletResponseRedirectUri = object : CreateQueryWalletResponseRedirectUri {
-            override fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URL> = Either.catch {
-                require(template.contains(RESPONSE_CODE_PLACE_HOLDER)) { "Expected response_code place holder not found in template" }
-                val url = template.replace(RESPONSE_CODE_PLACE_HOLDER, responseCode.value)
-                URL(url)
+
+        fun simple(allowedSchemes: NonEmptySet<String>): CreateQueryWalletResponseRedirectUri =
+            object : CreateQueryWalletResponseRedirectUri {
+                override fun redirectUri(template: String, responseCode: ResponseCode): Either<Throwable, URI> =
+                    Either.catch {
+                        require(
+                            template.contains(RESPONSE_CODE_PLACE_HOLDER),
+                        ) { "Expected response_code place holder not found in template" }
+                        val uri = URI.create(template.replace(RESPONSE_CODE_PLACE_HOLDER, responseCode.value))
+                        require(uri.scheme in allowedSchemes) {
+                            "Disallowed scheme '${uri.scheme}' found in template. Allowed schemes: '${allowedSchemes.joinToString()}'."
+                        }
+                        uri
+                    }
             }
-        }
+
+        fun simple(first: String, vararg remaining: String): CreateQueryWalletResponseRedirectUri = simple(nonEmptySetOf(first, *remaining))
     }
 }
