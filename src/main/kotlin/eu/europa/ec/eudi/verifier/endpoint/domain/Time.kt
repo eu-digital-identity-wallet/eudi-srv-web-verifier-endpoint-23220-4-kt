@@ -28,8 +28,8 @@ import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 
-interface Clock : kotlin.time.Clock {
-    override fun now(): Instant
+interface Clock {
+    fun now(): Instant
     fun timeZone(): TimeZone
 
     fun Instant.toLocalDateTime(): LocalDateTime = toLocalDateTime(timeZone())
@@ -49,6 +49,11 @@ interface Clock : kotlin.time.Clock {
         }
 
         fun fixed(now: ZonedDateTime): Clock = fixed(now.toInstant().toKotlinInstant(), now.zone.toKotlinTimeZone())
+
+        internal fun Clock.asKotlinClock(): kotlin.time.Clock =
+            object : kotlin.time.Clock {
+                override fun now(): Instant = this@asKotlinClock.now()
+            }
     }
 }
 

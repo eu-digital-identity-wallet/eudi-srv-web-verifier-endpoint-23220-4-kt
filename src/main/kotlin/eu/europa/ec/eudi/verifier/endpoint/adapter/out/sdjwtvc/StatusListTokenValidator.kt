@@ -23,6 +23,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock.Companion.asKotlinClock
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
@@ -54,7 +55,7 @@ internal class StatusListTokenValidator(
 
     private fun getStatus(): GetStatus {
         val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
-            clock = clock,
+            clock = clock.asKotlinClock(),
             httpClient = httpClient,
             verifyStatusListTokenSignature = { _, _ ->
                 Result.success(Unit)
