@@ -19,16 +19,15 @@ import arrow.core.NonEmptyList
 import arrow.core.toNonEmptyListOrNull
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
+import eu.europa.ec.eudi.verifier.endpoint.domain.toJavaDate
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toInstant
 import org.springframework.core.io.DefaultResourceLoader
 import java.io.InputStream
 import java.security.KeyStore
 import java.security.cert.X509Certificate
-import java.time.Clock
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZonedDateTime
-import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -72,12 +71,11 @@ object Data {
 class DeviceResponseValidatorTest {
 
     private val clock = run {
-        val instant = ZonedDateTime.of(
-            LocalDate.of(2024, 11, 1),
-            LocalTime.MIDNIGHT,
-            TimeZone.getTimeZone("Europe/Athens").toZoneId(),
+        val testDate = LocalDateTime(2024, 11, 1, 0, 0)
+        Clock.fixed(
+            testDate.toInstant(kotlinx.datetime.TimeZone.of("Europe/Athens")),
+            kotlinx.datetime.TimeZone.of("Europe/Athens"),
         )
-        Clock.fixed(instant.toInstant(), instant.zone)
     }
 
     @Test
@@ -106,7 +104,7 @@ class DeviceResponseValidatorTest {
             val trustSources = ProvideTrustSource.forAll(
                 X5CShouldBe.Trusted(Data.caCerts) {
                     isRevocationEnabled = false
-                    date = Date.from(clock.instant())
+                    date = clock.now().toJavaDate()
                 },
             )
 
@@ -157,7 +155,7 @@ class DeviceResponseValidatorTest {
 private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, clock: Clock): DeviceResponseValidator {
     val x5CShouldBe = X5CShouldBe.Trusted(Data.caCerts) {
         isRevocationEnabled = false
-        date = Date.from(clock.instant())
+        date = clock.now().toJavaDate()
     }
     val documentValidator = DocumentValidator(
         clock,

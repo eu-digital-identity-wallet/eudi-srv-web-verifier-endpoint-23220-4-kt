@@ -37,7 +37,7 @@ import kotlinx.serialization.UseSerializers
 import java.net.URL
 import java.security.KeyStore
 import java.security.cert.X509Certificate
-import java.time.Duration
+import kotlin.time.Duration
 
 typealias PresentationRelatedUrlBuilder<ID> = (ID) -> URL
 

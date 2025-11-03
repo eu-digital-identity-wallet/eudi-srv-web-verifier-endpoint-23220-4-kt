@@ -39,7 +39,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import java.security.cert.X509Certificate
-import java.time.Clock
 
 /**
  * Represent the Authorization Response placed by wallet
@@ -340,7 +339,7 @@ class PostWalletResponseLive(
     }
 
     private suspend fun logFailure(p: Presentation, cause: WalletResponseValidationError) {
-        val event = PresentationEvent.WalletFailedToPostResponse(p.id, clock.instant(), cause)
+        val event = PresentationEvent.WalletFailedToPostResponse(p.id, clock.now(), cause)
         publishPresentationEvent(event)
     }
 }

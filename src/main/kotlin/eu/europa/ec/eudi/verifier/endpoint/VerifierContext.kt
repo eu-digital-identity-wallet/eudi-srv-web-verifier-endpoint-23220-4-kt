@@ -88,10 +88,9 @@ import org.springframework.web.cors.reactive.CorsConfigurationSource
 import java.net.URI
 import java.security.KeyStore
 import java.security.cert.X509Certificate
-import java.time.Clock
-import java.time.Duration
 import java.util.*
-import kotlin.time.toKotlinDuration
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 private val log = LoggerFactory.getLogger(VerifierApplication::class.java)
 
@@ -189,7 +188,7 @@ internal fun beans(clock: Clock) = beans {
     }
     bean {
         val maxAge = Duration.parse(env.getProperty("verifier.presentations.cleanup.maxAge", "P10D"))
-        require(!maxAge.isZero && !maxAge.isNegative) { "'verifier.presentations.cleanup.maxAge' cannot be zero or negative" }
+        require(maxAge.isPositive()) { "'verifier.presentations.cleanup.maxAge' cannot be zero or negative" }
 
         DeleteOldPresentationsLive(ref(), maxAge, ref())
     }
@@ -276,7 +275,7 @@ internal fun beans(clock: Clock) = beans {
 
             val cacheTtl = Duration.parse(
                 env.getProperty("verifier.validation.sdJwtVc.typeMetadata.resolution.cache.ttl", "PT1H"),
-            ).toKotlinDuration()
+            )
             val cacheSize = env.getProperty(
                 "verifier.validation.sdJwtVc.typeMetadata.resolution.cache.maxEntries",
                 10,
@@ -527,7 +526,7 @@ private fun jarSigningConfig(environment: Environment, clock: Clock): SigningCon
             ECKeyGenerator(Curve.P_256)
                 .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
                 .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-                .issueTime(Date.from(clock.instant())) // issued-at timestamp (optional)
+                .issueTime(clock.now().toJavaDate()) // issued-at timestamp (optional)
                 .generate()
 
         when (environment.getProperty("verifier.jar.signing.key", SigningKeyEnum::class.java)) {
@@ -568,7 +567,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         environment.getProperty("verifier.response.mode", ResponseModeOption::class.java)
             ?: ResponseModeOption.DirectPostJwt
 
-    val maxAge = environment.getProperty("verifier.maxAge", Duration::class.java) ?: Duration.ofMinutes(5)
+    val maxAge = environment.getProperty("verifier.maxAge")?.let { Duration.parse(it) } ?: 5.minutes
 
     val transactionDataHashAlgorithm = environment.getProperty("verifier.transactionData.hashAlgorithm", "sha-256")
         .let { configured ->

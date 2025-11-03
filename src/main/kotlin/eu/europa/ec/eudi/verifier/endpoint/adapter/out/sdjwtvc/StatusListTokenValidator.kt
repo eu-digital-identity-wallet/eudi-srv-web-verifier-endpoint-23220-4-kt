@@ -22,20 +22,19 @@ import eu.europa.ec.eudi.statium.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock.Companion.asKotlinClock
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
-import io.ktor.client.HttpClient
+import io.ktor.client.*
 import kotlinx.serialization.json.JsonObject
-import kotlin.time.Clock
-import kotlin.time.Instant
-import kotlin.time.toKotlinInstant
 
 internal data class StatusCheckException(val reason: String, val causedBy: Throwable) : Exception(reason, causedBy)
 
 internal class StatusListTokenValidator(
     private val httpClient: HttpClient,
-    private val clock: java.time.Clock,
+    private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
 ) {
 
@@ -55,11 +54,8 @@ internal class StatusListTokenValidator(
     }
 
     private fun getStatus(): GetStatus {
-        val delegateClock = object : Clock {
-            override fun now(): Instant = clock.instant().toKotlinInstant()
-        }
         val getStatusListToken: GetStatusListToken = GetStatusListToken.usingJwt(
-            clock = delegateClock,
+            clock = clock.asKotlinClock(),
             httpClient = httpClient,
             verifyStatusListTokenSignature = { _, _ ->
                 Result.success(Unit)
@@ -69,12 +65,12 @@ internal class StatusListTokenValidator(
     }
 
     private suspend fun logStatusCheckSuccess(transactionId: TransactionId, statusReference: StatusReference) {
-        val event = PresentationEvent.AttestationStatusCheckSuccessful(transactionId, clock.instant(), statusReference)
+        val event = PresentationEvent.AttestationStatusCheckSuccessful(transactionId, clock.now(), statusReference)
         publishPresentationEvent(event)
     }
 
     private suspend fun logStatusCheckFailed(transactionId: TransactionId, statusReference: StatusReference, error: Throwable) {
-        val event = PresentationEvent.AttestationStatusCheckFailed(transactionId, clock.instant(), statusReference, error.message)
+        val event = PresentationEvent.AttestationStatusCheckFailed(transactionId, clock.now(), statusReference, error.message)
         publishPresentationEvent(event)
     }
 }

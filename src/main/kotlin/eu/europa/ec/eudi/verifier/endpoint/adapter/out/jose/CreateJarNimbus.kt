@@ -37,8 +37,6 @@ import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
-import java.time.Clock
-import java.util.*
 import com.nimbusds.oauth2.sdk.ResponseMode as NimbusResponseMode
 
 /**
@@ -124,7 +122,7 @@ class CreateJarNimbus : CreateJar {
             fun optionalClaim(c: String, v: Any?) {
                 v?.let { claim(c, it) }
             }
-            issueTime(Date.from(r.issuedAt))
+            issueTime(r.issuedAt.toJavaDate())
             audience(r.aud)
             claim(OpenId4VPSpec.NONCE, r.nonce)
             optionalClaim(OpenId4VPSpec.CLIENT_METADATA, clientMetaData?.toJSONObject())

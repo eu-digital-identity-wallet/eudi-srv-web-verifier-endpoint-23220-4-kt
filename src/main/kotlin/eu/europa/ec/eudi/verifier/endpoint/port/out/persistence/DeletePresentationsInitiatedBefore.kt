@@ -17,7 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.out.persistence
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
-import java.time.Instant
+import kotlin.time.Instant
 
 fun interface DeletePresentationsInitiatedBefore {
 

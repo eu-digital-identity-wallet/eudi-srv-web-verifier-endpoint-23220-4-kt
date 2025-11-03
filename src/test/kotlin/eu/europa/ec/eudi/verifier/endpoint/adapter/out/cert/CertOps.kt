@@ -15,6 +15,8 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
+import eu.europa.ec.eudi.verifier.endpoint.domain.toJavaDate
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
@@ -29,15 +31,14 @@ import java.math.BigInteger
 import java.security.*
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.time.Clock
-import java.time.Instant
 import java.util.*
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 internal object CertOps {
     private val Ctx = SecCtx(null)
 
-    private val clock = Clock.systemDefaultZone()
+    private val clock = Clock.System
 
     private var serialNumberBase: Long = System.currentTimeMillis()
 
@@ -50,7 +51,7 @@ internal object CertOps {
     }
 
     private fun notBefore(d: Duration = Duration.ZERO): Instant =
-        clock.instant().plusSeconds(d.inWholeSeconds)
+        (clock.now() + d)
 
     fun genTrustAnchor(
         sigAlg: String,
@@ -97,7 +98,7 @@ internal object CertOps {
         return JcaX509v1CertificateBuilder(
             name,
             calculateSerialNumber(),
-            Date.from(notBefore()),
+            notBefore().toJavaDate(),
             calculateDate(24 * 31),
             name,
             keyPair.public,
@@ -123,7 +124,7 @@ internal object CertOps {
         JcaX509v3CertificateBuilder(
             signerCert.subject,
             calculateSerialNumber(),
-            Date.from(notBefore()),
+            notBefore().toJavaDate(),
             calculateDate(24 * 31),
             subject,
             certKey,
@@ -144,7 +145,7 @@ internal object CertOps {
         JcaX509v3CertificateBuilder(
             signerCert.subject,
             calculateSerialNumber(),
-            Date.from(notBefore()),
+            notBefore().toJavaDate(),
             calculateDate(24 * 31),
             subject,
             certKey,

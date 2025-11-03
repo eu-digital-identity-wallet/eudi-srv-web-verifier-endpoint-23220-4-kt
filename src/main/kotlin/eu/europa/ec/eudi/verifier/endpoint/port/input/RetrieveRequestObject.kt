@@ -38,7 +38,6 @@ import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
-import java.time.Clock
 import kotlin.reflect.KClass
 
 /**
@@ -153,7 +152,7 @@ class RetrieveRequestObjectLive(
             }
 
             cause?.let {
-                val event = PresentationEvent.FailedToRetrieveRequestObject(presentation.id, clock.instant(), it)
+                val event = PresentationEvent.FailedToRetrieveRequestObject(presentation.id, clock.now(), it)
                 publishPresentationEvent(event)
             }
         }

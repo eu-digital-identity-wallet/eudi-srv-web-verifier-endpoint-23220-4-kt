@@ -17,8 +17,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import java.net.URL
-import java.time.Clock
-import java.time.Instant
+import kotlin.time.Instant
 
 internal data class RequestObject(
     val verifierId: VerifierId,
@@ -57,7 +56,7 @@ internal fun requestObjectFromDomain(
             is ResponseMode.DirectPostJwt -> OpenId4VPSpec.RESPONSE_MODE_DIRECT_POST_JWT
         },
         responseUri = verifierConfig.responseUriBuilder(presentation.requestId),
-        issuedAt = clock.instant(),
+        issuedAt = clock.now(),
         transactionData = transactionData,
     )
 }
