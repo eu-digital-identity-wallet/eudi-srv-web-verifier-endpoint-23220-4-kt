@@ -504,6 +504,16 @@
               }
             ]
           },
+          "authorization_request_scheme" : {
+            "allOf": [
+              {
+                "description": "Scheme to be used to construct the Authorization Request Uri."
+              },
+              {
+                "$ref": "#/components/schemas/AuthorizationRequestScheme"
+              }
+            ]
+          },
           "authorization_request_uri": {
             "allOf": [
               {
@@ -680,7 +690,9 @@
           "InvalidTransactionData",
           "UnsupportedFormat",
           "InvalidIssuerChain",
-          "InvalidAuthorizationRequestUri"
+          "ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme",
+          "InvalidAuthorizationRequestUri",
+          "InvalidAuthorizationRequestScheme"
         ]
       },
       "InitTransactionError": {

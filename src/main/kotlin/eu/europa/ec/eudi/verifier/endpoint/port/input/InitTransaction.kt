@@ -93,8 +93,8 @@ data class InitTransactionTO(
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
     @SerialName("issuer_chain") val issuerChain: String? = null,
-    @SerialName("authorization_request_uri") val authorizationRequestUri: String? = null,
     @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
+    @SerialName("authorization_request_uri") val authorizationRequestUri: String? = null,
     @Transient val output: Output = Output.Json,
 )
 
@@ -108,7 +108,9 @@ enum class ValidationError {
     InvalidTransactionData,
     UnsupportedFormat,
     InvalidIssuerChain,
+    ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme,
     InvalidAuthorizationRequestUri,
+    InvalidAuthorizationRequestScheme,
 }
 
 enum class Output {
@@ -381,11 +383,35 @@ class InitTransactionLive(
     /**
      * Gets a [Uri] containing the authorization Request Uri for the provided [InitTransactionTO].
      * If none has been provided, falls back to [VerifierConfig.authorizationRequestUri].
+     *
+     * This method considers both [InitTransactionTO.authorizationRequestUri] and [InitTransactionTO.authorizationRequestScheme].
      */
     private fun authorizationRequestUri(initTransaction: InitTransactionTO): Either<ValidationError, Uri> =
         either {
-            initTransaction.authorizationRequestUri?.let {
-                runCatching { Uri.parse(it) }.getOrElse { raise(ValidationError.InvalidAuthorizationRequestUri) }
+            when {
+                null != initTransaction.authorizationRequestUri && null != initTransaction.authorizationRequestScheme ->
+                    raise(ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme)
+
+                null != initTransaction.authorizationRequestUri -> {
+                    ensure(initTransaction.authorizationRequestUri.isNotBlank()) {
+                        ValidationError.InvalidAuthorizationRequestUri
+                    }
+                    runCatching { Uri.parse(initTransaction.authorizationRequestUri) }.getOrElse {
+                        raise(ValidationError.InvalidAuthorizationRequestUri)
+                    }
+                }
+
+                null != initTransaction.authorizationRequestScheme -> {
+                    ensure(initTransaction.authorizationRequestScheme.isNotBlank()) {
+                        ValidationError.InvalidAuthorizationRequestScheme
+                    }
+                    ensure(!initTransaction.authorizationRequestScheme.endsWith("://")) {
+                        ValidationError.InvalidAuthorizationRequestScheme
+                    }
+                    Uri.parse("${initTransaction.authorizationRequestScheme}://")
+                }
+
+                else -> null
             } ?: verifierConfig.authorizationRequestUri
         }
 }
