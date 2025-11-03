@@ -180,11 +180,6 @@ sealed interface Presentation {
         val nonce: Nonce,
         val responseCode: ResponseCode?,
     ) : Presentation {
-
-        init {
-            require(initiatedAt < Clock.System.now()) // Question here
-        }
-
         companion object {
             fun submitted(
                 requestObjectRetrieved: RequestObjectRetrieved,

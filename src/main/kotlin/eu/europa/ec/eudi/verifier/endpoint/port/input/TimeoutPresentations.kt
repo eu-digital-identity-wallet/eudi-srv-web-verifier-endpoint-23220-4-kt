@@ -38,7 +38,7 @@ class TimeoutPresentationsLive(
     private val publishPresentationEvent: PublishPresentationEvent,
 ) : TimeoutPresentations {
     override suspend operator fun invoke(): List<TransactionId> {
-        val expireBefore = clock.now().minus(maxAge)
+        val expireBefore = clock.now() - maxAge
         return loadIncompletePresentationsOlderThan(expireBefore).mapNotNull { timeout(it)?.id }
     }
 
