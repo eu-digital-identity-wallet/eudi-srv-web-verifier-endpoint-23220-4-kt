@@ -145,7 +145,7 @@ sealed interface Presentation {
         val issuerChain: NonEmptyList<X509Certificate>?,
     ) : Presentation {
         init {
-            require((initiatedAt < requestObjectRetrievedAt) || initiatedAt == requestObjectRetrievedAt)
+            require(initiatedAt <= requestObjectRetrievedAt)
         }
 
         companion object {
@@ -242,7 +242,7 @@ sealed interface Presentation {
 }
 
 fun Presentation.isExpired(at: Instant): Boolean {
-    fun Instant.isBeforeOrEqual(at: Instant) = (this < at) || this == at
+    fun Instant.isBeforeOrEqual(at: Instant) = this <= at
     return when (this) {
         is Presentation.Requested -> initiatedAt.isBeforeOrEqual(at)
         is Presentation.RequestObjectRetrieved -> requestObjectRetrievedAt.isBeforeOrEqual(at)
