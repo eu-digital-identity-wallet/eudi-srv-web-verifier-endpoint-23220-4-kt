@@ -49,7 +49,7 @@ object VerifierApiClient {
             Output.QrCode -> MediaType.IMAGE_PNG
         }
 
-        val responseSpec = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
+        val responseSpec = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH_V2)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(accept)
             .bodyValue(initTransactionTO)
