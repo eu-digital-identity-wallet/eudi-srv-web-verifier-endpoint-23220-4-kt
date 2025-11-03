@@ -411,8 +411,8 @@ class InitTransactionLive(
                     Uri.parse("${initTransaction.authorizationRequestScheme}://")
                 }
 
-                else -> null
-            } ?: verifierConfig.authorizationRequestUri
+                else -> verifierConfig.authorizationRequestUri
+            }
         }
 }
 
