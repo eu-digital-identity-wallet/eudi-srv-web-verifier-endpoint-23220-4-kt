@@ -408,7 +408,9 @@ class InitTransactionLive(
                     ensure(!initTransaction.authorizationRequestScheme.endsWith("://")) {
                         ValidationError.InvalidAuthorizationRequestScheme
                     }
-                    Uri.parse("${initTransaction.authorizationRequestScheme}://")
+                    runCatching { Uri.parse("${initTransaction.authorizationRequestScheme}://") }.getOrElse {
+                        raise(ValidationError.InvalidAuthorizationRequestScheme)
+                    }
                 }
 
                 else -> verifierConfig.authorizationRequestUri
