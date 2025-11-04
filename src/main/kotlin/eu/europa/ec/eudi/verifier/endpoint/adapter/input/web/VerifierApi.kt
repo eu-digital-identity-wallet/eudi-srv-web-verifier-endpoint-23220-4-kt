@@ -15,10 +15,17 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
+import eu.europa.ec.eudi.verifier.endpoint.domain.ClientId
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.RFC6749
+import eu.europa.ec.eudi.verifier.endpoint.domain.RFC9101
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
+import kotlinx.serialization.Required
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -36,23 +43,26 @@ internal class VerifierApi(
 
     private val logger: Logger = LoggerFactory.getLogger(VerifierApi::class.java)
     val route = coRouter {
-
         POST(
             INIT_TRANSACTION_PATH,
             contentType(APPLICATION_JSON) and accept(APPLICATION_JSON, IMAGE_PNG),
-            ::handleInitTransaction,
-        )
+        ) { request -> handleInitTransaction(request, VerifierApiVersion.V1) }
+        POST(
+            INIT_TRANSACTION_PATH_V2,
+            contentType(APPLICATION_JSON) and accept(APPLICATION_JSON, IMAGE_PNG),
+        ) { request -> handleInitTransaction(request, VerifierApiVersion.V2) }
+
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
         GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
     }
 
-    private suspend fun handleInitTransaction(req: ServerRequest): ServerResponse = try {
-        val accept = req.headers().accept()
+    private suspend fun handleInitTransaction(request: ServerRequest, version: VerifierApiVersion): ServerResponse = try {
+        val accept = request.headers().accept()
         val output = when {
             IMAGE_PNG in accept -> Output.QrCode
             else -> Output.Json
         }
-        val input = req.awaitBody<InitTransactionTO>().copy(output = output)
+        val input = request.awaitBody<InitTransactionTO>().copy(output = output)
 
         logger.info("Handling InitTransaction nonce=${input.nonce} ... ")
         initTransaction(input).fold(
@@ -60,14 +70,24 @@ internal class VerifierApi(
                 when (it) {
                     is InitTransactionResponse.JwtSecuredAuthorizationRequestTO -> {
                         logger.info("Initiated transaction tx ${it.transactionId}")
+                        val response = when (version) {
+                            VerifierApiVersion.V1 -> JwtSecuredAuthorizationRequestV1TO.from(it)
+                            VerifierApiVersion.V2 -> it
+                        }
                         ok().json()
                             .header(TRANSACTION_ID_HEADER, it.transactionId)
-                            .bodyValueAndAwait(it)
+                            .apply {
+                                if (VerifierApiVersion.V2 == version) {
+                                    header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
+                                }
+                            }
+                            .bodyValueAndAwait(response)
                     }
                     is InitTransactionResponse.QrCode -> {
                         logger.info("Initiated transaction with qr image")
                         ok().contentType(IMAGE_PNG)
                             .header(TRANSACTION_ID_HEADER, it.transactionId)
+                            .header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
                             .bodyValueAndAwait(it.qrCode)
                     }
                 }
@@ -116,10 +136,12 @@ internal class VerifierApi(
 
     companion object {
         const val INIT_TRANSACTION_PATH = "/ui/presentations"
+        const val INIT_TRANSACTION_PATH_V2 = "/ui/presentations/v2"
         const val WALLET_RESPONSE_PATH = "/ui/presentations/{transactionId}"
         const val EVENTS_RESPONSE_PATH = "/ui/presentations/{transactionId}/events"
 
         const val TRANSACTION_ID_HEADER = "Transaction-Id"
+        const val AUTHORIZATION_REQUEST_URI_HEADER = "Authorization-Request-Uri"
 
         /**
          * Extracts from the request the [RequestId]
@@ -127,5 +149,29 @@ internal class VerifierApi(
         private fun ServerRequest.transactionId() = TransactionId(pathVariable("transactionId"))
         private suspend fun ValidationError.asBadRequest() =
             badRequest().json().bodyValueAndAwait(mapOf("error" to this))
+    }
+}
+
+private enum class VerifierApiVersion {
+    V1,
+    V2,
+}
+
+@Serializable
+private data class JwtSecuredAuthorizationRequestV1TO(
+    @Required @SerialName("transaction_id") val transactionId: String,
+    @Required @SerialName(RFC6749.CLIENT_ID) val clientId: ClientId,
+    @SerialName(RFC9101.REQUEST) val request: String?,
+    @SerialName(RFC9101.REQUEST_URI) val requestUri: String?,
+    @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD) val requestUriMethod: RequestUriMethodTO?,
+) {
+    companion object {
+        fun from(to: InitTransactionResponse.JwtSecuredAuthorizationRequestTO) = JwtSecuredAuthorizationRequestV1TO(
+            transactionId = to.transactionId,
+            clientId = to.clientId,
+            request = to.request,
+            requestUri = to.requestUri,
+            requestUriMethod = to.requestUriMethod,
+        )
     }
 }

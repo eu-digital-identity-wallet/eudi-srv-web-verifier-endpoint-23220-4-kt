@@ -49,7 +49,7 @@ object VerifierApiClient {
             Output.QrCode -> MediaType.IMAGE_PNG
         }
 
-        val responseSpec = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH)
+        val responseSpec = client.post().uri(VerifierApi.INIT_TRANSACTION_PATH_V2)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(accept)
             .bodyValue(initTransactionTO)
@@ -68,8 +68,9 @@ object VerifierApiClient {
 
                 val qrCode = checkNotNull(response.responseBody)
                 val transactionId = checkNotNull(response.responseHeaders.getFirst(TRANSACTION_ID_HEADER))
+                val authorizationRequestUri = checkNotNull(response.responseHeaders.getFirst(VerifierApi.AUTHORIZATION_REQUEST_URI_HEADER))
 
-                InitTransactionResponse.QrCode(qrCode, transactionId)
+                InitTransactionResponse.QrCode(qrCode, transactionId, authorizationRequestUri)
             }
         }
     }
