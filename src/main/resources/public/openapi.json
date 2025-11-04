@@ -62,9 +62,6 @@
             "headers": {
               "Transaction-Id": {
                 "$ref": "#/components/headers/Transaction-Id"
-              },
-              "Authorization-Request-Uri": {
-                "$ref": "#/components/headers/Authorization-Request-Uri"
               }
             },
             "content": {
