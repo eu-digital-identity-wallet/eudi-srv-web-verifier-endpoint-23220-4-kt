@@ -56,10 +56,7 @@ internal class VerifierApi(
         GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
     }
 
-    private suspend fun handleInitTransaction(
-        request: ServerRequest,
-        version: VerifierApiVersion = VerifierApiVersion.V1,
-    ): ServerResponse = try {
+    private suspend fun handleInitTransaction(request: ServerRequest, version: VerifierApiVersion): ServerResponse = try {
         val accept = request.headers().accept()
         val output = when {
             IMAGE_PNG in accept -> Output.QrCode
