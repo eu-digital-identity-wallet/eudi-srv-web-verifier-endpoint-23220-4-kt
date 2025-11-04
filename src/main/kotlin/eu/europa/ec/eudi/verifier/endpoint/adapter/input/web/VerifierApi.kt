@@ -46,11 +46,11 @@ internal class VerifierApi(
         POST(
             INIT_TRANSACTION_PATH,
             contentType(APPLICATION_JSON) and accept(APPLICATION_JSON, IMAGE_PNG),
-        ) { request -> handleInitTransaction(request, InitTransactionApiVersion.V1) }
+        ) { request -> handleInitTransaction(request, VerifierApiVersion.V1) }
         POST(
             INIT_TRANSACTION_PATH_V2,
             contentType(APPLICATION_JSON) and accept(APPLICATION_JSON, IMAGE_PNG),
-        ) { request -> handleInitTransaction(request, InitTransactionApiVersion.V2) }
+        ) { request -> handleInitTransaction(request, VerifierApiVersion.V2) }
 
         GET(WALLET_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetWalletResponse)
         GET(EVENTS_RESPONSE_PATH, accept(APPLICATION_JSON), this@VerifierApi::handleGetPresentationEvents)
@@ -58,7 +58,7 @@ internal class VerifierApi(
 
     private suspend fun handleInitTransaction(
         request: ServerRequest,
-        version: InitTransactionApiVersion = InitTransactionApiVersion.V1,
+        version: VerifierApiVersion = VerifierApiVersion.V1,
     ): ServerResponse = try {
         val accept = request.headers().accept()
         val output = when {
@@ -74,13 +74,13 @@ internal class VerifierApi(
                     is InitTransactionResponse.JwtSecuredAuthorizationRequestTO -> {
                         logger.info("Initiated transaction tx ${it.transactionId}")
                         val response = when (version) {
-                            InitTransactionApiVersion.V1 -> JwtSecuredAuthorizationRequestV1TO.from(it)
-                            InitTransactionApiVersion.V2 -> it
+                            VerifierApiVersion.V1 -> JwtSecuredAuthorizationRequestV1TO.from(it)
+                            VerifierApiVersion.V2 -> it
                         }
                         ok().json()
                             .header(TRANSACTION_ID_HEADER, it.transactionId)
                             .apply {
-                                if (InitTransactionApiVersion.V2 == version) {
+                                if (VerifierApiVersion.V2 == version) {
                                     header(AUTHORIZATION_REQUEST_URI_HEADER, it.authorizationRequestUri)
                                 }
                             }
@@ -155,7 +155,7 @@ internal class VerifierApi(
     }
 }
 
-private enum class InitTransactionApiVersion {
+private enum class VerifierApiVersion {
     V1,
     V2,
 }
