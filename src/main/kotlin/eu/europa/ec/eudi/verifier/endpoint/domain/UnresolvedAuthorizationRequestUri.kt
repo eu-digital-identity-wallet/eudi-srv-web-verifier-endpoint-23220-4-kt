@@ -53,7 +53,7 @@ value class UnresolvedAuthorizationRequestUri private constructor(val value: Uri
         }
 
         fun fromScheme(scheme: String): Result<UnresolvedAuthorizationRequestUri> = runCatching {
-            require(scheme.matches("^([A-Za-z]([A-Za-z0-9]|\\+|-|\\.)*)$".toRegex())) {
+            require(scheme.matches("^[A-Za-z][A-Za-z0-9+-.]*$".toRegex())) {
                 "'$scheme' is not a valid URI scheme"
             }
             fromUri("$scheme://").getOrThrow()
