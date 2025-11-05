@@ -19,7 +19,6 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.getOrElse
 import arrow.core.left
-import com.eygraber.uri.Uri
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.verifier.endpoint.TestContext
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.VerifierApiClient
@@ -48,7 +47,7 @@ class InitTransactionTest {
         clientMetaData = TestContext.clientMetaData,
         transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
         requestUriMethod = RequestUriMethod.Get,
-        authorizationRequestUri = Uri.parse("haip-vp://"),
+        authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
         trustSourcesConfig = mapOf(),
     )
 
@@ -88,7 +87,7 @@ class InitTransactionTest {
                 clientMetaData = TestContext.clientMetaData,
                 transactionDataHashAlgorithm = HashAlgorithm.SHA_256,
                 requestUriMethod = RequestUriMethod.Get,
-                authorizationRequestUri = Uri.parse("haip-vp://"),
+                authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri("haip-vp://").getOrThrow(),
                 trustSourcesConfig = mapOf(),
             )
 

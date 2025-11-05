@@ -16,7 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint
 
 import arrow.core.*
-import com.eygraber.uri.Uri
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
@@ -578,7 +577,9 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
             }
         }
 
-    val authorizationRequestUri = Uri.parse(environment.getProperty("verifier.authorizationRequestUri", "haip-vp://"))
+    val authorizationRequestUri = UnresolvedAuthorizationRequestUri.fromUri(
+        environment.getProperty("verifier.authorizationRequestUri", "haip-vp://"),
+    ).getOrThrow()
 
     return VerifierConfig(
         verifierId = verifierId,

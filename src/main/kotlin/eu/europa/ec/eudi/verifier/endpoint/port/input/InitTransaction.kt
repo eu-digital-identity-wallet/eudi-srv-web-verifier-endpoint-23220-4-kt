@@ -273,7 +273,7 @@ class InitTransactionLive(
     private fun createRequest(
         requestedPresentation: Presentation.Requested,
         requestJarOption: EmbedOption<RequestId>,
-        authorizationRequestUri: Uri,
+        authorizationRequestUri: UnresolvedAuthorizationRequestUri,
     ): Pair<Presentation, InitTransactionResponse.JwtSecuredAuthorizationRequestTO> =
         when (requestJarOption) {
             is EmbedOption.ByValue -> {
@@ -290,31 +290,22 @@ class InitTransactionLive(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
                     jwt,
-                    createAuthorizationRequestUri(
-                        authorizationRequestUri,
-                        verifierConfig.verifierId.clientId,
-                        request = jwt,
-                    ),
+                    authorizationRequestUri.resolve(verifierConfig.verifierId, jwt).toURI(),
                 )
             }
 
             is EmbedOption.ByReference -> {
                 val requestUri = requestJarOption.buildUrl(requestedPresentation.requestId)
-                val requestUriMethod = when (requestedPresentation.requestUriMethod) {
-                    RequestUriMethod.Get -> RequestUriMethodTO.Get
-                    RequestUriMethod.Post -> RequestUriMethodTO.Post
-                }
                 requestedPresentation to InitTransactionResponse.JwtSecuredAuthorizationRequestTO.byReference(
                     requestedPresentation.id.value,
                     verifierConfig.verifierId.clientId,
                     requestUri,
-                    requestUriMethod,
-                    createAuthorizationRequestUri(
-                        authorizationRequestUri,
-                        verifierConfig.verifierId.clientId,
-                        requestUri = requestUri,
-                        requestUriMethod = requestUriMethod,
-                    ),
+                    requestedPresentation.requestUriMethod.toTO(),
+                    authorizationRequestUri.resolve(
+                        verifierConfig.verifierId,
+                        Uri.parse(requestUri.toString()),
+                        requestedPresentation.requestUriMethod,
+                    ).toURI(),
                 )
             }
         }
@@ -381,37 +372,26 @@ class InitTransactionLive(
         }.mapLeft { ValidationError.InvalidIssuerChain }
 
     /**
-     * Gets a [Uri] containing the authorization Request Uri for the provided [InitTransactionTO].
+     * Gets the [UnresolvedAuthorizationRequestUri] for the provided [InitTransactionTO].
      * If none has been provided, falls back to [VerifierConfig.authorizationRequestUri].
      *
      * This method considers both [InitTransactionTO.authorizationRequestUri] and [InitTransactionTO.authorizationRequestScheme].
      */
-    private fun authorizationRequestUri(initTransaction: InitTransactionTO): Either<ValidationError, Uri> =
+    private fun authorizationRequestUri(initTransaction: InitTransactionTO): Either<ValidationError, UnresolvedAuthorizationRequestUri> =
         either {
             when {
                 null != initTransaction.authorizationRequestUri && null != initTransaction.authorizationRequestScheme ->
                     raise(ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme)
 
-                null != initTransaction.authorizationRequestUri -> {
-                    ensure(initTransaction.authorizationRequestUri.isNotBlank()) {
-                        ValidationError.InvalidAuthorizationRequestUri
-                    }
-                    runCatching { Uri.parse(initTransaction.authorizationRequestUri) }.getOrElse {
+                null != initTransaction.authorizationRequestUri ->
+                    UnresolvedAuthorizationRequestUri.fromUri(initTransaction.authorizationRequestUri).getOrElse {
                         raise(ValidationError.InvalidAuthorizationRequestUri)
                     }
-                }
 
-                null != initTransaction.authorizationRequestScheme -> {
-                    ensure(initTransaction.authorizationRequestScheme.isNotBlank()) {
-                        ValidationError.InvalidAuthorizationRequestScheme
-                    }
-                    ensure(!initTransaction.authorizationRequestScheme.endsWith("://")) {
-                        ValidationError.InvalidAuthorizationRequestScheme
-                    }
-                    runCatching { Uri.parse("${initTransaction.authorizationRequestScheme}://") }.getOrElse {
+                null != initTransaction.authorizationRequestScheme ->
+                    UnresolvedAuthorizationRequestUri.fromScheme(initTransaction.authorizationRequestScheme).getOrElse {
                         raise(ValidationError.InvalidAuthorizationRequestScheme)
                     }
-                }
 
                 else -> verifierConfig.authorizationRequestUri
             }
@@ -473,22 +453,8 @@ internal fun InitTransactionTO.toDomain(
     nonce to presentationType
 }
 
-private fun createAuthorizationRequestUri(
-    authorizationRequestUri: Uri,
-    clientId: ClientId,
-    request: Jwt? = null,
-    requestUri: URL? = null,
-    requestUriMethod: RequestUriMethodTO? = null,
-): URI =
-    authorizationRequestUri.buildUpon().apply {
-        appendQueryParameter(RFC6749.CLIENT_ID, clientId)
-        request?.let { appendQueryParameter(RFC9101.REQUEST, it) }
-        requestUri?.let { appendQueryParameter(RFC9101.REQUEST_URI, it.toExternalForm()) }
-        requestUriMethod?.let {
-            val requestUriMethod = when (it) {
-                RequestUriMethodTO.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
-                RequestUriMethodTO.Post -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
-            }
-            appendQueryParameter(OpenId4VPSpec.REQUEST_URI_METHOD, requestUriMethod)
-        }
-    }.build().toURI()
+private fun RequestUriMethod.toTO(): RequestUriMethodTO =
+    when (this) {
+        RequestUriMethod.Get -> RequestUriMethodTO.Get
+        RequestUriMethod.Post -> RequestUriMethodTO.Post
+    }
