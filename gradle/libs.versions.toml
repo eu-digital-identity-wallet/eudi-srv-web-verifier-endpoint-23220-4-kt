@@ -21,7 +21,6 @@ statium = "0.4.0"
 kover = "0.9.1"
 zxing = "3.5.3"
 uri = "0.0.19"
-dss = "6.2"
 jsonValidator = "1.5.7"
 joni = "2.2.6"
 aedile = "2.1.2"
@@ -44,10 +43,6 @@ tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 statium = { module = "eu.europa.ec.eudi:eudi-lib-kmp-statium", version.ref = "statium" }
 zxing = { module = "com.google.zxing:javase", version.ref = "zxing" }
 uri = { module = "com.eygraber:uri-kmp", version.ref = "uri" }
-dss-service = { module = "eu.europa.ec.joinup.sd-dss:dss-service", version.ref = "dss" }
-dss-validation = { module = "eu.europa.ec.joinup.sd-dss:dss-validation", version.ref = "dss" }
-dss-tsl-validation = { module = "eu.europa.ec.joinup.sd-dss:dss-tsl-validation", version.ref = "dss" }
-dss-utils-apache-commons = { module = "eu.europa.ec.joinup.sd-dss:dss-utils-apache-commons", version.ref = "dss" }
 json-schema-validator = { module = "com.networknt:json-schema-validator", version.ref = "jsonValidator" }
 joni = { module = "org.jruby.joni:joni", version.ref = "joni" }
 aedile = { module = "com.sksamuel.aedile:aedile-core", version.ref = "aedile" }
