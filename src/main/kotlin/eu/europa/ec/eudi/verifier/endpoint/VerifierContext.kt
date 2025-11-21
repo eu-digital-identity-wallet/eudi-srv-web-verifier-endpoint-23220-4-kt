@@ -213,7 +213,6 @@ internal fun beans(clock: Clock) = beans {
             ref(),
             Url(env.getRequiredProperty("verifier.trustService.url")),
             emptyMap(),
-            emptyMap(),
             ServiceType.EAAProvider,
         )
     }
