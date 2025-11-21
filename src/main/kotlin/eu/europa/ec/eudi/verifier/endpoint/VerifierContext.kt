@@ -209,21 +209,22 @@ internal fun beans(clock: Clock) = beans {
 
     // Default ValidateAttestationIssuerTrust
     bean(isLazyInit = true) {
+        val config = ref<AttestationTrustProperties>()
         ValidateAttestationIssuerTrust.usingTrustService(
             ref(),
-            Url(env.getRequiredProperty("verifier.trustService.url")),
-            emptyMap(),
-            ServiceType.EAAProvider,
+            Url(config.serviceUrl),
+            config.attestations.associate { it.attestationType to it.serviceType },
+            config.defaultServiceType,
         )
     }
 
     // Default DeviceResponseValidator
-    bean(isLazyInit = true) { deviceResponseValidator(ref()) }
+    bean { deviceResponseValidator(ref()) }
 
     // Default SdJwtVcValidator
-    bean(isLazyInit = true) { sdJwtVcValidator(ref()) }
+    bean { sdJwtVcValidator(ref()) }
 
-    bean(isLazyInit = true) {
+    bean {
         ValidateMsoMdocDeviceResponse(
             ref(),
             ref(),
@@ -235,7 +236,7 @@ internal fun beans(clock: Clock) = beans {
             },
         )
     }
-    bean(isLazyInit = true) {
+    bean {
         ValidateSdJwtVc(
             sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = ref<SdJwtVcValidator>()
@@ -247,7 +248,7 @@ internal fun beans(clock: Clock) = beans {
         )
     }
 
-    bean(isLazyInit = true) {
+    bean {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             config = ref(),
             sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
@@ -683,5 +684,17 @@ internal data class TypeMetadataResolutionProperties(
     data class IntegrityProperties(
         val enabled: Boolean = false,
         val allowedAlgorithms: Set<IntegrityAlgorithm> = IntegrityAlgorithm.entries.toSet(),
+    )
+}
+
+@ConfigurationProperties("verifier.trust")
+internal data class AttestationTrustProperties(
+    val serviceUrl: String,
+    val attestations: List<AttestationProperties>,
+    val defaultServiceType: ServiceType = ServiceType.EAAProvider,
+) {
+    data class AttestationProperties(
+        val attestationType: String,
+        val serviceType: ServiceType,
     )
 }
