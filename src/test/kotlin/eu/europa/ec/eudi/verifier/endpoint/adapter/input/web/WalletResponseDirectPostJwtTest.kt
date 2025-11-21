@@ -23,6 +23,7 @@ import com.nimbusds.jose.util.Base64URL
 import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
 import eu.europa.ec.eudi.verifier.endpoint.VerifierApplicationTest
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.Ignored
 import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.domain.VerifierConfig
@@ -30,6 +31,7 @@ import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
 import eu.europa.ec.eudi.verifier.endpoint.port.input.ResponseModeTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.*
@@ -222,7 +224,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
     }
 }
 
-@VerifierApplicationTest
+@VerifierApplicationTest([WalletResponseDirectPostJwtValidationsEnabledTest.Config::class])
 @TestPropertySource(
     properties = [
         "verifier.maxAge=PT6400M",
@@ -234,6 +236,14 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
 )
 @AutoConfigureWebTestClient(timeout = Integer.MAX_VALUE.toString())
 internal class WalletResponseDirectPostJwtValidationsEnabledTest {
+
+    @TestConfiguration
+    internal class Config {
+
+        @Bean
+        @Primary
+        fun validateAttestationIssuerTrust(): ValidateAttestationIssuerTrust = ValidateAttestationIssuerTrust.Ignored
+    }
 
     @Autowired
     private lateinit var client: WebTestClient
