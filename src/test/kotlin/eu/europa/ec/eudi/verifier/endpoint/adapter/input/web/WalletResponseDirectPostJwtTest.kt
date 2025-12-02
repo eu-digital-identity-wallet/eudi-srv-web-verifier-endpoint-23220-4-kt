@@ -108,7 +108,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
             val transactionId = TransactionId(transactionInitialized.transactionId)
 
             val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
-            assertEquals(listOf(config.clientMetaData.responseEncryptionOption.encryptionMethod), supportedEncryptionMethods)
+            assertEquals(config.clientMetaData.responseEncryptionOption.encryptionMethods, supportedEncryptionMethods)
 
             val ecKey = requestObjectJsonResponse.ecKey()
             assertNotNull(ecKey)
@@ -198,7 +198,7 @@ internal class WalletResponseDirectPostJwtValidationsDisabledTest {
             WalletApiClient.getRequestObjectJsonResponse(client, transactionInitialized.requestUri!!)
 
         val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
-        assertEquals(listOf(config.clientMetaData.responseEncryptionOption.encryptionMethod), supportedEncryptionMethods)
+        assertEquals(config.clientMetaData.responseEncryptionOption.encryptionMethods, supportedEncryptionMethods)
 
         val ecKey = requestObjectJsonResponse.ecKey()
         assertNotNull(ecKey)
@@ -249,7 +249,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         val requestObjectJsonResponse = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
 
         val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
-        assertEquals(listOf(config.clientMetaData.responseEncryptionOption.encryptionMethod), supportedEncryptionMethods)
+        assertEquals(config.clientMetaData.responseEncryptionOption.encryptionMethods, supportedEncryptionMethods)
 
         val ecKey = requestObjectJsonResponse.ecKey()
         assertNotNull(ecKey)
@@ -324,7 +324,7 @@ internal class WalletResponseDirectPostJwtValidationsEnabledTest {
         val requestObjectJsonResponse = WalletApiClient.getRequestObjectJsonResponse(client, transactionDetails.requestUri!!)
 
         val supportedEncryptionMethods = assertNotNull(requestObjectJsonResponse.supportedEncryptionMethods())
-        assertEquals(listOf(config.clientMetaData.responseEncryptionOption.encryptionMethod), supportedEncryptionMethods)
+        assertEquals(config.clientMetaData.responseEncryptionOption.encryptionMethods, supportedEncryptionMethods)
 
         val ecKey = requestObjectJsonResponse.ecKey()
         assertNotNull(ecKey)

@@ -683,8 +683,9 @@ private fun Environment.clientMetaData(): ClientMetaData {
     val responseEncryptionOptionAlgorithm =
         getProperty("verifier.clientMetadata.responseEncryption.algorithm", JWEAlgorithm.ECDH_ES.name)
 
-    val responseEncryptionOptionMethod =
-        getProperty("verifier.clientMetadata.responseEncryption.method", EncryptionMethod.A128GCM.name)
+    val responseEncryptionOptionMethods =
+        getOptionalList("verifier.clientMetadata.responseEncryption.methods")
+            ?: nonEmptyListOf(EncryptionMethod.A128GCM.name, EncryptionMethod.A256GCM.name)
 
     val vpFormatsSupportedSupported = run {
         val sdJwtVc =
@@ -712,7 +713,7 @@ private fun Environment.clientMetaData(): ClientMetaData {
     return ClientMetaData(
         responseEncryptionOption = ResponseEncryptionOption(
             algorithm = JWEAlgorithm.parse(responseEncryptionOptionAlgorithm),
-            encryptionMethod = EncryptionMethod.parse(responseEncryptionOptionMethod),
+            encryptionMethods = responseEncryptionOptionMethods.map { EncryptionMethod.parse(it) },
         ),
         vpFormatsSupported = vpFormatsSupportedSupported,
     )

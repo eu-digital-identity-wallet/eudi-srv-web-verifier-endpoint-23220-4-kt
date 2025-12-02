@@ -601,10 +601,10 @@ Description: Algorithm that verifier is advertising and supports for authorizati
 Possible values: `ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A192KW`, `ECDH-ES+A256KW`  
 Default value: `ECDH-ES`
 
-Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_METHOD`  
-Description: Method that verifier is advertising and supports for authorization response encryption   
-Possible values: `A128CBC-HS256`, `A192CBC-HS384`, `A256CBC-HS512`, `A128GCM`, `A192GCM`, `256GCM`, `XC20P`  
-Default value: `A128GCM`  
+Variable: `VERIFIER_CLIENTMETADATA_RESPONSEENCRYPTION_METHODS`  
+Description: Comma-separated list of methods that verifier is advertising and supports for authorization response encryption   
+Possible values: `A128CBC-HS256`, `A192CBC-HS384`, `A256CBC-HS512`, `A128GCM`, `A192GCM`, `A256GCM`, `XC20P`  
+Default value: `A128GCM,A256GCM`  
 
 Variable: `VERIFIER_CLIENTMETADATA_VPFORMATS_SDJWTVC_ENABLED`  
 Description: Enables support for SD-JWT VC   

@@ -62,7 +62,8 @@ object TestContext {
             RSAKey.load(keystore, "client-id", "".toCharArray())
         }
     }
-    private val responseEncryptionOption = ResponseEncryptionOption(JWEAlgorithm.ECDH_ES, EncryptionMethod.A256GCM)
+    private val responseEncryptionOption =
+        ResponseEncryptionOption(JWEAlgorithm.ECDH_ES, nonEmptyListOf(EncryptionMethod.A128GCM, EncryptionMethod.A256GCM))
     val clientMetaData = ClientMetaData(
         responseEncryptionOption = responseEncryptionOption,
         vpFormatsSupported = VpFormatsSupported(

@@ -92,11 +92,11 @@ val ResponseMode.option: ResponseModeOption
 
 data class ResponseEncryptionOption(
     val algorithm: JWEAlgorithm,
-    val encryptionMethod: EncryptionMethod,
+    val encryptionMethods: NonEmptyList<EncryptionMethod>,
 ) {
     init {
         require(algorithm in ECDHEncrypter.SUPPORTED_ALGORITHMS)
-        require(encryptionMethod in ECDHEncrypter.SUPPORTED_ENCRYPTION_METHODS)
+        require(ECDHEncrypter.SUPPORTED_ENCRYPTION_METHODS.containsAll(encryptionMethods))
     }
 }
 
