@@ -143,7 +143,7 @@ class CreateJarNimbus : CreateJar {
                 jwkSet = JWKSet(listOf(responseMode.ephemeralResponseEncryptionKey)).toPublicJWKSet()
                 setCustomField(
                     OpenId4VPSpec.ENCRYPTED_RESPONSE_ENC_VALUES_SUPPORTED,
-                    listOf(c.responseEncryptionOption.encryptionMethod.name),
+                    c.responseEncryptionOption.encryptionMethods.map { it.name }.toList(),
                 )
             }
 

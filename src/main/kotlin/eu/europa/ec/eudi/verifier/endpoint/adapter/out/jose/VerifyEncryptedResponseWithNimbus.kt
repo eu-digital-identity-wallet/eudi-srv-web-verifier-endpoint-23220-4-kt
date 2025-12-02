@@ -16,14 +16,16 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose
 
 import arrow.core.Either
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.proc.JWEDecryptionKeySelector
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jose.util.JSONObjectUtils
+import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWTClaimsSet
-import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import com.nimbusds.jwt.proc.JWTProcessor
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
@@ -48,19 +50,32 @@ class VerifyEncryptedResponseWithNimbus(
         encryptedResponse: Jwt,
         apv: Nonce,
     ): Either<Throwable, AuthorisationResponseTO> = Either.catch {
-        val processor = encryptedProcessor(responseEncryptionOption, ephemeralResponseEncryptionKey)
-        val jwt = JWTParser.parse(encryptedResponse)
-        val claimSet = processor.process(jwt, null)
+        val encryptedJwt = EncryptedJWT.parse(encryptedResponse)
+        val processor =
+            with(encryptedJwt.header) {
+                require(algorithm == responseEncryptionOption.algorithm) {
+                    "Encrypted response uses an unsupported JWE Algorithm: ${algorithm.name}, " +
+                        "expected: ${responseEncryptionOption.algorithm.name}"
+                }
+                require(encryptionMethod in responseEncryptionOption.encryptionMethods) {
+                    "Encrypted response uses an unsupported JWE Encryption Method: ${encryptionMethod.name}, " +
+                        "expected one of: ${responseEncryptionOption.encryptionMethods.joinToString { it.name }}"
+                }
+
+                encryptedProcessor(algorithm, encryptionMethod, ephemeralResponseEncryptionKey)
+            }
+        val claimSet = processor.process(encryptedJwt, null)
         claimSet.mapToDomain()
     }
 
     private fun encryptedProcessor(
-        encrypt: ResponseEncryptionOption,
+        algorithm: JWEAlgorithm,
+        method: EncryptionMethod,
         ephemeralResponseEncryptionKey: JWK,
     ): JWTProcessor<SecurityContext> = DefaultJWTProcessor<SecurityContext>().apply {
         jweKeySelector = JWEDecryptionKeySelector(
-            encrypt.algorithm,
-            encrypt.encryptionMethod,
+            algorithm,
+            method,
             ImmutableJWKSet(JWKSet(ephemeralResponseEncryptionKey)),
         )
     }
