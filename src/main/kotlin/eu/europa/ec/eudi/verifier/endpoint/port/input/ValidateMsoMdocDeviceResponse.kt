@@ -25,7 +25,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.InvalidDocument
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
 import id.walt.mdoc.dataelement.*
 import id.walt.mdoc.doc.MDoc
@@ -46,7 +46,7 @@ internal enum class ValidationFailureErrorTypeTO {
     CannotBeDecoded,
     NotOkDeviceResponseStatus,
     InvalidDocuments,
-    InvalidIssuerChain,
+    InvalidRootCACertificates,
 }
 
 /**
@@ -74,8 +74,8 @@ internal data class ValidationErrorTO(
                 invalidDocuments = invalidDocuments,
             )
 
-        fun invalidIssuerChain(): ValidationErrorTO =
-            ValidationErrorTO(type = ValidationFailureErrorTypeTO.InvalidIssuerChain)
+        fun invalidRootCACertificates(): ValidationErrorTO =
+            ValidationErrorTO(type = ValidationFailureErrorTypeTO.InvalidRootCACertificates)
     }
 }
 
@@ -91,7 +91,6 @@ internal enum class DocumentErrorTO {
     X5CNotTrusted,
     DocumentTypeNotMatching,
     InvalidIssuerSignedItems,
-    NoMatchingX5CValidator,
 }
 
 /**
@@ -126,13 +125,13 @@ internal sealed interface DeviceResponseValidationResult {
  */
 internal class ValidateMsoMdocDeviceResponse(
     private val clock: Clock,
-    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
-    private val deviceResponseValidatorFactory: (X5CShouldBe?) -> DeviceResponseValidator,
+    private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
+    private val deviceResponseValidatorFactory: (X5CShouldBe.Trusted?) -> DeviceResponseValidator,
 ) {
-    suspend operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult {
-        val validator = deviceResponseValidator(issuerChain)
+    suspend operator fun invoke(deviceResponse: String, rootCACertificates: String?): DeviceResponseValidationResult {
+        val validator = deviceResponseValidator(rootCACertificates)
             .getOrElse {
-                return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidIssuerChain())
+                return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidRootCACertificates())
             }
 
         return validator.ensureValid(deviceResponse)
@@ -154,9 +153,9 @@ internal class ValidateMsoMdocDeviceResponse(
             )
     }
 
-    private fun deviceResponseValidator(issuerChainInPem: String?): Either<Throwable, DeviceResponseValidator> = Either.catch {
-        val x5cShouldBe = issuerChainInPem
-            ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrThrow() }
+    private fun deviceResponseValidator(rootCACertificatesInPem: String?): Either<Throwable, DeviceResponseValidator> = Either.catch {
+        val x5cShouldBe = rootCACertificatesInPem
+            ?.let { parsePemEncodedX509Certificates.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         deviceResponseValidatorFactory(x5cShouldBe)
     }
 }
@@ -180,7 +179,6 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         is DocumentError.X5CNotTrusted -> DocumentErrorTO.X5CNotTrusted
         DocumentError.DocumentTypeNotMatching -> DocumentErrorTO.DocumentTypeNotMatching
         DocumentError.InvalidIssuerSignedItems -> DocumentErrorTO.InvalidIssuerSignedItems
-        DocumentError.NoMatchingX5CShouldBe -> DocumentErrorTO.NoMatchingX5CValidator
     }
 
 private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(

@@ -37,9 +37,10 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.StorePresentatio
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.GenerateQrCode
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.Pixels.Companion.pixels
 import eu.europa.ec.eudi.verifier.endpoint.port.out.qrcode.by
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import kotlinx.serialization.*
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNames
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -92,7 +93,7 @@ data class InitTransactionTO(
     @SerialName(OpenId4VPSpec.REQUEST_URI_METHOD) val requestUriMethod: RequestUriMethodTO? = null,
     @SerialName("wallet_response_redirect_uri_template") val redirectUriTemplate: String? = null,
     @SerialName(OpenId4VPSpec.TRANSACTION_DATA) val transactionData: List<JsonObject>? = null,
-    @SerialName("issuer_chain") val issuerChain: String? = null,
+    @JsonNames("root_ca_certificates", "issuer_chain") @SerialName("root_ca_certificates") val rootCACertificates: String? = null,
     @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
     @SerialName("authorization_request_uri") val authorizationRequestUri: String? = null,
     @Transient val output: Output = Output.Json,
@@ -107,7 +108,7 @@ enum class ValidationError {
     InvalidWalletResponseTemplate,
     InvalidTransactionData,
     UnsupportedFormat,
-    InvalidIssuerChain,
+    InvalidRootCACertificates,
     ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme,
     InvalidAuthorizationRequestUri,
     InvalidAuthorizationRequestScheme,
@@ -205,7 +206,7 @@ class InitTransactionLive(
     private val requestJarByReference: EmbedOption.ByReference<RequestId>,
     private val createQueryWalletResponseRedirectUri: CreateQueryWalletResponseRedirectUri,
     private val publishPresentationEvent: PublishPresentationEvent,
-    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
+    private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
     private val generateQrCode: GenerateQrCode,
 ) : InitTransaction {
 
@@ -222,7 +223,7 @@ class InitTransactionLive(
         val responseMode = responseMode(initTransactionTO)
 
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
-        val issuerChain = issuerChain(initTransactionTO).bind()
+        val rootCACertificates = rootCACertificates(initTransactionTO).bind()
 
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
@@ -235,7 +236,7 @@ class InitTransactionLive(
             responseMode = responseMode,
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
-            issuerChain = issuerChain,
+            rootCACertificates = rootCACertificates,
         )
 
         // create the request, which may update the presentation
@@ -366,10 +367,10 @@ class InitTransactionLive(
         publishPresentationEvent(event)
     }
 
-    private fun issuerChain(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
+    private fun rootCACertificates(initTransaction: InitTransactionTO): Either<ValidationError, NonEmptyList<X509Certificate>?> =
         Either.catch {
-            initTransaction.issuerChain?.let { parsePemEncodedX509CertificateChain(it).getOrThrow() }
-        }.mapLeft { ValidationError.InvalidIssuerChain }
+            initTransaction.rootCACertificates?.let { parsePemEncodedX509Certificates(it).getOrThrow() }
+        }.mapLeft { ValidationError.InvalidRootCACertificates }
 
     /**
      * Gets the [UnresolvedAuthorizationRequestUri] for the provided [InitTransactionTO].

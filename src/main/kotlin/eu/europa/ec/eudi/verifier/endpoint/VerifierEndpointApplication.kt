@@ -24,7 +24,7 @@ import org.springframework.context.support.BeanDefinitionDsl
 import org.springframework.context.support.GenericApplicationContext
 
 @SpringBootApplication
-@EnableConfigurationProperties(TypeMetadataResolutionProperties::class)
+@EnableConfigurationProperties(TypeMetadataResolutionProperties::class, AttestationTrustProperties::class)
 class VerifierApplication
 
 internal fun BeanDefinitionDsl.initializer(): ApplicationContextInitializer<GenericApplicationContext> =

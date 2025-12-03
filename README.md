@@ -242,7 +242,7 @@ An endpoint to control the content of the authorization request that will be pre
 - `jar_mode`: Controls the way the generated authorization request will be passed. If 'by_value' the request will be passed inline to the wallet upon request, if `by_reference` a `request_uri` url will be returned.
 - `request_uri_method`: Optional. When `post`, `request_uri_method` for the Transaction is `post`, when `get` `request_uri_method` for the Transaction is `get`. Applicable only when `jar_mode` is `by_reference`. If omitted, defaults to `VERIFIER_REQUESTJWT_REQUESTURIMETHOD`  
 - `wallet_response_redirect_uri_template`: If provided will be used to construct the response to wallet, when it posts its response to the authorization request.   
-- `issuer_chain`: If provided, a PEM encoded X509 Certificate chain (including start and end markers) of a Verifiable Credential Issuer trusted during this Transaction.
+- `root_ca_certificates`: If provided, the PEM encoded X509 Certificates (including start and end markers) of the Root CAs trusted during this Transaction.
 - `authorization_request_scheme`: If provided, it will be used as the scheme part of the URI contained inside the QR code
 
 This endpoint can produce either JSON or a QR code depending on the Accept header received. It can either:
@@ -284,7 +284,7 @@ curl -X POST -H "Content-type: application/json" -d '{
   "nonce": "nonce",
   "jar_mode": "by_reference",
   "request_uri_method": "post",
-  "issuer_chain": "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
+  "root_ca_certificates": "-----BEGIN CERTIFICATE-----\nMIIDHTCCAqOgAwIBAgIUVqjgtJqf4hUYJkqdYzi+0xwhwFYwCgYIKoZIzj0EAwMw\nXDEeMBwGA1UEAwwVUElEIElzc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJ\nIFdhbGxldCBSZWZlcmVuY2UgSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMB4X\nDTIzMDkwMTE4MzQxN1oXDTMyMTEyNzE4MzQxNlowXDEeMBwGA1UEAwwVUElEIElz\nc3VlciBDQSAtIFVUIDAxMS0wKwYDVQQKDCRFVURJIFdhbGxldCBSZWZlcmVuY2Ug\nSW1wbGVtZW50YXRpb24xCzAJBgNVBAYTAlVUMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAEFg5Shfsxp5R/UFIEKS3L27dwnFhnjSgUh2btKOQEnfb3doyeqMAvBtUMlClh\nsF3uefKinCw08NB31rwC+dtj6X/LE3n2C9jROIUN8PrnlLS5Qs4Rs4ZU5OIgztoa\nO8G9o4IBJDCCASAwEgYDVR0TAQH/BAgwBgEB/wIBADAfBgNVHSMEGDAWgBSzbLiR\nFxzXpBpmMYdC4YvAQMyVGzAWBgNVHSUBAf8EDDAKBggrgQICAAABBzBDBgNVHR8E\nPDA6MDigNqA0hjJodHRwczovL3ByZXByb2QucGtpLmV1ZGl3LmRldi9jcmwvcGlk\nX0NBX1VUXzAxLmNybDAdBgNVHQ4EFgQUs2y4kRcc16QaZjGHQuGLwEDMlRswDgYD\nVR0PAQH/BAQDAgEGMF0GA1UdEgRWMFSGUmh0dHBzOi8vZ2l0aHViLmNvbS9ldS1k\naWdpdGFsLWlkZW50aXR5LXdhbGxldC9hcmNoaXRlY3R1cmUtYW5kLXJlZmVyZW5j\nZS1mcmFtZXdvcmswCgYIKoZIzj0EAwMDaAAwZQIwaXUA3j++xl/tdD76tXEWCikf\nM1CaRz4vzBC7NS0wCdItKiz6HZeV8EPtNCnsfKpNAjEAqrdeKDnr5Kwf8BA7tATe\nhxNlOV4Hnc10XO1XULtigCwb49RpkqlS2Hul+DpqObUs\n-----END CERTIFICATE-----"
 }' 'http://localhost:8080/ui/presentations'
 ```
 
@@ -678,49 +678,27 @@ Description: Alias of the Key to use for JAR signing, in the configured Keystore
 Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
 Description: Password of the Key to use for JAR signing, in the configured Keystore
 
-### Configuring trust sources
+### Configuring the trust service
 
-The verifier supports the configuration of multiple trust sources, that will be used to trust the issuers of presented credentials.  
-Each trust source is associated with a regex pattern, that will be used to match the trust source to an issuer, based on a credential's docType/vct.
-Each trust source can be configured with a List of Trusted Lists, a Keystore or both.
-The trust sources are configured using the environment variable `VERIFIER_TRUSTSOURCES` and are indexed starting from `0`. You can define multiple trust sources by incrementing the index (e.g., VERIFIER_TRUSTSOURCES_0_*, VERIFIER_TRUSTSOURCES_1_*, etc.)
+Verifier Endpoint verifies whether the Issuer of a Verifiable Credential is trusted or not using an external Trust Service.
+To configure the Trust Service, use the following environment variables:
 
-Variable: `VERIFIER_TRUSTSOURCES_0_PATTERN`
-Description: The regex pattern used to match the trust source to an issuer, based on a credential's docType/vct
-Example: `eu.europa.ec.eudi.pid.*|urn:eu.europa.ec.eudi:pid:.*`
+Variable: `VERIFIER_TRUST_SERVICEURL`  
+Description: The URL of the Trust Service.   
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_LOCATION`
-Description: If present, the URL of the List of Trusted Lists from which to load the X509 Certificates for this trust source
+Variable: `VERIFIER_TRUST_ATTESTATIONS_XX_ATTESTATIONTYPE`  
+Description: The type (`vct` or `docType`) of the Attestation.  
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_REFRESHINTERVAL`
-Description: If present, a cron expression with the refresh interval of the List of Trusted Lists in seconds. If not present, the default value is `0 0 * * * * ` (every hour)
-Example: `0 0 */4 * * *`
+Variable: `VERIFIER_TRUST_ATTESTATIONS_XX_SERVICETYPE`  
+Description: The Service Type the Issuer of the Attestation with type `VERIFIER_TRUST_ATTESTATIONS_XX_ATTESTATIONTYPE`.  
+Possible values: `pidprovider`, `eaaprovider`, `qeaaprovider`, `pubeaaprovider`, `walletprovider`   
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_SERVICETYPEFILTER`
-Description: If present, the service type filter to be used when loading the List of Trusted Lists. If not present, all service types are loaded. Valid values are `PIDProvider`, `QEEAProvider` and `PubEAAProvider`.
-Example: `PIDProvider`
+Variable: `VERIFIER_TRUST_DEFAULTSERVICETYPE`  
+Description: The Service Type of Issuers of Attestations with no explicit configuration.  
+Possible values: `pidprovider`, `eaaprovider`, `qeaaprovider`, `pubeaaprovider`, `walletprovider`  
+Default value: `eaaprovider`  
 
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_PATH`
-Description: If present, the URL of the Keystore which contains the public key that was used to sign the List of Trusted Lists
-Examples: `classpath:lotl-key.jks`, `file:///lotl-key.jks`
-
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_TYPE`
-Description: Type of the Keystore which contains the public key that was used to sign the List of Trusted Lists
-Examples: `jks`, `pkcs12`
-
-Variable: `VERIFIER_TRUSTSOURCES_0_LOTL_KEYSTORE_PASSWORD`
-Description: If present and non-blank, the password of the Keystore which contains the public key that was used to sign the List of Trusted Lists
-
-Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_PATH`
-Description: If present, the URL of the Keystore from which to load the X509 Certificates for this trust source 
-Examples: `classpath:trusted-issuers.jks`, `file:///trusted-issuers.jks`
-
-Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_TYPE`
-Description: Type of the Keystore from which to load the X509 Certificates for this trust source
-Examples: `jks`, `pkcs12`
-
-Variable: `VERIFIER_TRUSTSOURCES_0_KEYSTORE_PASSWORD`
-Description: If present and non-blank, the password of the Keystore from which to load the X509 Certificates for this trust source
+By default the Attestations with type `urn:eudi:pid:1`, and `eu.europa.ec.eudi.pid.1`, use the Service Type `pidprovider`.
 
 ### Proxy configuration  
 

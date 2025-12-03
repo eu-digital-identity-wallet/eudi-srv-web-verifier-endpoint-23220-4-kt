@@ -123,7 +123,7 @@ sealed interface Presentation {
         val nonce: Nonce,
         val responseMode: ResponseMode,
         val getWalletResponseMethod: GetWalletResponseMethod,
-        val issuerChain: NonEmptyList<X509Certificate>?,
+        val rootCACertificates: NonEmptyList<X509Certificate>?,
     ) : Presentation
 
     /**
@@ -142,7 +142,7 @@ sealed interface Presentation {
         val nonce: Nonce,
         val responseMode: ResponseMode,
         val getWalletResponseMethod: GetWalletResponseMethod,
-        val issuerChain: NonEmptyList<X509Certificate>?,
+        val rootCACertificates: NonEmptyList<X509Certificate>?,
     ) : Presentation {
         init {
             require(initiatedAt <= requestObjectRetrievedAt)
@@ -161,7 +161,7 @@ sealed interface Presentation {
                         requested.nonce,
                         requested.responseMode,
                         requested.getWalletResponseMethod,
-                        requested.issuerChain,
+                        requested.rootCACertificates,
                     )
                 }
         }

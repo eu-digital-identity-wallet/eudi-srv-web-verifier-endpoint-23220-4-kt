@@ -28,19 +28,15 @@ import com.sksamuel.aedile.core.expireAfterWrite
 import eu.europa.ec.eudi.sdjwt.vc.*
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByReference
 import eu.europa.ec.eudi.verifier.endpoint.EmbedOptionEnum.ByValue
-import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.RefreshTrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleDeleteOldPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.timer.ScheduleTimeoutPresentations
 import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.TrustSources
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateRequestIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cfg.GenerateTransactionIdNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyEncryptedResponseWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl.FetchLOTLCertificatesDSS
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.IssuerSignedItemsShouldBe
@@ -52,11 +48,15 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadat
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificatesWithNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ServiceType
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingRootCACertificates
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingTrustService
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateResponseCode
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ValidateAttestationIssuerTrust
 import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.client.engine.apache.*
@@ -85,7 +85,6 @@ import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.config.web.server.invoke
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
-import java.net.URI
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.util.*
@@ -153,7 +152,7 @@ internal fun beans(clock: Clock) = beans {
     }
 
     // X509
-    bean { ParsePemEncodedX509CertificateChainWithNimbus }
+    bean { ParsePemEncodedX509CertificatesWithNimbus }
 
     //
     // Use cases
@@ -212,34 +211,42 @@ internal fun beans(clock: Clock) = beans {
         }
     }
 
-    // Default DeviceResponseValidator
-    bean { TrustSources(revocationEnabled = false) }
-    bean<DeviceResponseValidator> {
-        val trustSources = ref<TrustSources>()
-        deviceResponseValidator(trustSources::invoke)
+    // Default ValidateAttestationIssuerTrust
+    bean(isLazyInit = true) {
+        val config = ref<AttestationTrustProperties>()
+        ValidateAttestationIssuerTrust.usingTrustService(
+            ref(),
+            Url(config.serviceUrl),
+            config.attestations.associate { it.attestationType to it.serviceType },
+            config.defaultServiceType,
+        )
     }
 
+    // Default DeviceResponseValidator
+    bean { deviceResponseValidator(ref()) }
+
     // Default SdJwtVcValidator
-    bean<SdJwtVcValidator> {
-        val trustSources = ref<TrustSources>()
-        sdJwtVcValidator(trustSources::invoke)
-    }
+    bean { sdJwtVcValidator(ref()) }
 
     bean {
         ValidateMsoMdocDeviceResponse(
             ref(),
             ref(),
-            deviceResponseValidatorFactory = { userProvided ->
+            deviceResponseValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = ref<DeviceResponseValidator>()
-                userProvided?.let { deviceResponseValidator { userProvided } } ?: appDefault
+                userProvidedRootCACertificates?.let {
+                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                } ?: appDefault
             },
         )
     }
     bean {
         ValidateSdJwtVc(
-            sdJwtVcValidatorFactory = { userProvided ->
+            sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = ref<SdJwtVcValidator>()
-                userProvided?.let { sdJwtVcValidator { userProvided } } ?: appDefault
+                userProvidedRootCACertificates?.let {
+                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                } ?: appDefault
             },
             ref(),
         )
@@ -248,18 +255,20 @@ internal fun beans(clock: Clock) = beans {
     bean {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             config = ref(),
-            sdJwtVcValidatorFactory = { userProvided ->
+            sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = ref<SdJwtVcValidator>()
-                userProvided?.let { sdJwtVcValidator { userProvided } } ?: appDefault
+                userProvidedRootCACertificates?.let {
+                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                } ?: appDefault
             },
-            deviceResponseValidatorFactory = { userProvided ->
+            deviceResponseValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = ref<DeviceResponseValidator>()
-                userProvided?.let { deviceResponseValidator { userProvided } } ?: appDefault
+                userProvidedRootCACertificates?.let {
+                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                } ?: appDefault
             },
         )
     }
-
-    bean { FetchLOTLCertificatesDSS() }
 
     //
     // Type metadata policy
@@ -351,7 +360,6 @@ internal fun beans(clock: Clock) = beans {
     //
     bean(::ScheduleTimeoutPresentations)
     bean(::ScheduleDeleteOldPresentations)
-    bean { RefreshTrustSources(ref(), ref(), ref()) }
 
     //
     // Config
@@ -435,13 +443,13 @@ internal fun beans(clock: Clock) = beans {
 }
 
 private fun BeanSupplierContext.deviceResponseValidator(
-    provideTrustSource: ProvideTrustSource,
+    validateAttestationIssuerTrust: ValidateAttestationIssuerTrust,
 ): DeviceResponseValidator {
     val docValidator = DocumentValidator(
         clock = ref(),
         issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
         validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
-        provideTrustSource = provideTrustSource,
+        validateAttestationIssuerTrust = validateAttestationIssuerTrust,
     )
     log.info(
         "Created DocumentValidator using: \n\t" +
@@ -452,12 +460,12 @@ private fun BeanSupplierContext.deviceResponseValidator(
 }
 
 private fun BeanSupplierContext.sdJwtVcValidator(
-    provideTrustSource: ProvideTrustSource,
+    validateAttestationIssuerTrust: ValidateAttestationIssuerTrust,
 ): SdJwtVcValidator = SdJwtVcValidator(
-    provideTrustSource = provideTrustSource,
-    audience = ref<VerifierConfig>().verifierId,
+    validateAttestationIssuerTrust,
+    ref<VerifierConfig>().verifierId,
     provider<StatusListTokenValidator>().ifAvailable,
-    typeMetadataPolicy = ref<TypeMetadataPolicy>(),
+    ref<TypeMetadataPolicy>(),
 )
 
 private enum class EmbedOptionEnum {
@@ -591,92 +599,7 @@ private fun verifierConfig(environment: Environment, clock: Clock): VerifierConf
         clientMetaData = environment.clientMetaData(),
         transactionDataHashAlgorithm = transactionDataHashAlgorithm,
         authorizationRequestUri = authorizationRequestUri,
-        trustSourcesConfig = environment.trustSources(),
     )
-}
-
-/**
- * Parses the trust sources configuration from the environment.
- * Handles array-like property names: verifier.trustSources[0].pattern, etc.
- */
-private fun Environment.trustSources(): Map<Regex, TrustSourceConfig>? {
-    val trustSourcesConfigMap = mutableMapOf<Regex, TrustSourceConfig>()
-    val prefix = "verifier.trustSources"
-
-    var index = 0
-    while (true) {
-        val indexPrefix = "$prefix[$index]"
-        val patternStr = getPropertyOrEnvVariable("$indexPrefix.pattern") ?: break
-        val pattern = patternStr.toRegex()
-
-        // Parse LOTL configuration if present
-        val lotlSourceConfig = getPropertyOrEnvVariable("$indexPrefix.lotl.location")?.takeIf { it.isNotBlank() }?.let { lotlLocation ->
-            val location = URI(lotlLocation).toURL()
-            val serviceTypeFilter = getPropertyOrEnvVariable<ProviderKind>("$indexPrefix.lotl.serviceTypeFilter")
-            val refreshInterval = getPropertyOrEnvVariable("$indexPrefix.lotl.refreshInterval", "0 0 * * * *")
-
-            val lotlKeystoreConfig = parseKeyStoreConfig("$indexPrefix.lotl.keystore")
-
-            TrustedListConfig(location, serviceTypeFilter, refreshInterval, lotlKeystoreConfig)
-        }
-
-        // Parse keystore configuration if present
-        val keystoreConfig = parseKeyStoreConfig("$indexPrefix.keystore")
-
-        trustSourcesConfigMap[pattern] = TrustSourcesConfig(lotlSourceConfig, keystoreConfig)
-
-        index++
-    }
-
-    return trustSourcesConfigMap.ifEmpty {
-        fallbackTrustSources()
-    }
-}
-
-private fun Environment.getPropertyOrEnvVariable(property: String): String? {
-    return getProperty(property) ?: getProperty(toEnvironmentVariable(property))
-}
-
-private fun Environment.getPropertyOrEnvVariable(property: String, defaultValue: String): String {
-    return getProperty(property) ?: getProperty(toEnvironmentVariable(property)) ?: defaultValue
-}
-
-private inline fun <reified T> Environment.getPropertyOrEnvVariable(property: String): T? {
-    return getProperty(property, T::class.java) ?: getProperty(toEnvironmentVariable(property), T::class.java)
-}
-
-private fun toEnvironmentVariable(property: String): String {
-    return property.replace(".", "_")
-        .replace("[", "_")
-        .replace("]", "")
-        .replace("-", "")
-        .uppercase()
-}
-
-private fun Environment.fallbackTrustSources(): Map<Regex, TrustSourceConfig>? =
-    parseKeyStoreConfig("trustedIssuers.keystore")?.let {
-        mapOf(".*".toRegex() to TrustSourcesConfig(null, it))
-    }
-
-private fun Environment.parseKeyStoreConfig(propertyPrefix: String): KeyStoreConfig? = getPropertyOrEnvVariable(
-    "$propertyPrefix.path",
-)?.let { keystorePath ->
-    val keystoreType = getPropertyOrEnvVariable("$propertyPrefix.type") ?: "JKS"
-    val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "").toCharArray()
-    loadKeystore(keystorePath, keystoreType, keystorePassword)
-        .onLeft { log.warn("Failed to load keystore from '$keystorePath'", it) }
-        .map { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
-        .getOrNull()
-}
-
-private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: CharArray) = Either.catch {
-    DefaultResourceLoader().getResource(keystorePath)
-        .inputStream
-        .use {
-            KeyStore.getInstance(keystoreType).apply {
-                load(it, keystorePassword)
-            }
-        }
 }
 
 private fun Environment.clientMetaData(): ClientMetaData {
@@ -842,5 +765,17 @@ internal data class TypeMetadataResolutionProperties(
     data class IntegrityProperties(
         val enabled: Boolean = false,
         val allowedAlgorithms: Set<IntegrityAlgorithm> = IntegrityAlgorithm.entries.toSet(),
+    )
+}
+
+@ConfigurationProperties("verifier.trust")
+internal data class AttestationTrustProperties(
+    val serviceUrl: String,
+    val attestations: List<AttestationProperties>,
+    val defaultServiceType: ServiceType = ServiceType.EAAProvider,
+) {
+    data class AttestationProperties(
+        val attestationType: String,
+        val serviceType: ServiceType,
     )
 }

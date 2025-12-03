@@ -23,6 +23,7 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.toNonEmptyListOrNull
 import com.nimbusds.jose.proc.BadJOSEException
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.Presentation.RequestObjectRetrieved
@@ -89,7 +90,7 @@ private suspend fun AuthorisationResponseTO.toDomain(
             presentation.transactionData,
             validateVerifiablePresentation,
             vpFormatsSupported,
-            presentation.issuerChain,
+            presentation.rootCACertificates,
         ).bind()
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
@@ -103,7 +104,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
     transactionData: NonEmptyList<TransactionData>?,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormatsSupported: VpFormatsSupported,
-    issuerChain: NonEmptyList<X509Certificate>?,
+    rootCACertificates: NonEmptyList<X509Certificate>?,
 ): Either<WalletResponseValidationError, VerifiablePresentations> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -139,7 +140,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                         vpFormatsSupported,
                         nonce,
                         applicableTransactionData,
-                        issuerChain,
+                        rootCACertificates?.let { rootCACertificates -> X5CShouldBe.Trusted(rootCACertificates = rootCACertificates) },
                     ).bind()
                 }
             }
