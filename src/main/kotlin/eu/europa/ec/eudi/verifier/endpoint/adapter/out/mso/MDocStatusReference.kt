@@ -22,7 +22,7 @@ import id.walt.mdoc.dataelement.MapKey
 import id.walt.mdoc.doc.MDoc
 
 fun MDoc.statusReference(): StatusReference? =
-    decodeMsoAs<MapElement>()
+    issuerAuthPayloadAs<MapElement>()
         ?.value[MapKey(TokenStatusListSpec.STATUS)]
         ?.let { it as MapElement }
         ?.value[MapKey(TokenStatusListSpec.STATUS_LIST)]
