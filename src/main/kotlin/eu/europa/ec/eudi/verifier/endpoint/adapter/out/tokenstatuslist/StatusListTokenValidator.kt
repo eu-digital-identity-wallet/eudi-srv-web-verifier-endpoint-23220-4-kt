@@ -18,22 +18,19 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist
 import arrow.core.raise.catch
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
-import eu.europa.ec.eudi.statium.*
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.decodeAs
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.decodeMsoAs
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import eu.europa.ec.eudi.statium.GetStatus
+import eu.europa.ec.eudi.statium.GetStatusListToken
+import eu.europa.ec.eudi.statium.Status
+import eu.europa.ec.eudi.statium.StatusReference
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.statusReference
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.statusReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock.Companion.asKotlinClock
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
-import id.walt.mdoc.dataelement.MapElement
-import id.walt.mdoc.dataelement.MapKey
 import id.walt.mdoc.doc.MDoc
 import io.ktor.client.*
-import kotlinx.serialization.json.JsonObject
 
 data class StatusCheckException(val reason: String, val causedBy: Throwable) : Exception(reason, causedBy)
 
@@ -44,7 +41,7 @@ class StatusListTokenValidator(
 ) {
 
     suspend fun validate(sdJwtVc: SdJwtAndKbJwt<SignedJWT>, transactionId: TransactionId?) =
-        sdJwtVc.sdJwt.jwt.statusReference()?.validate(transactionId)
+        sdJwtVc.statusReference()?.validate(transactionId)
 
     suspend fun validate(mdoc: MDoc, transactionId: TransactionId?) =
         mdoc.statusReference()?.validate(transactionId)
@@ -80,27 +77,4 @@ class StatusListTokenValidator(
         val event = PresentationEvent.AttestationStatusCheckFailed(transactionId, clock.now(), statusReference, error.message)
         publishPresentationEvent(event)
     }
-}
-
-private fun SignedJWT.statusReference(): StatusReference? {
-    val statusElement = jwtClaimsSet.getJSONObjectClaim(TokenStatusListSpec.STATUS) ?: return null
-    val statusJsonObject = statusElement.toJsonObject()
-    val statusListElement = statusJsonObject[TokenStatusListSpec.STATUS_LIST]
-    requireNotNull(statusListElement) {
-        "Expected status_list element but not found"
-    }
-    require(statusListElement is JsonObject) {
-        "Malformed status_list element"
-    }
-
-    val index = StatusIndex(statusListElement[TokenStatusListSpec.IDX]?.decodeAs<Int>()?.getOrThrow()!!)
-    val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()!!.getOrThrow()
-
-    return StatusReference(index, uri)
-}
-
-private fun MDoc.statusReference(): StatusReference? {
-    val mso = decodeMsoAs<MapElement>() ?: return null
-    val status = mso.value[MapKey(TokenStatusListSpec.STATUS)]?.let { it as MapElement } ?: return null
-    return status.value[MapKey(TokenStatusListSpec.STATUS_LIST)]?.decodeAs<StatusReference>()
 }

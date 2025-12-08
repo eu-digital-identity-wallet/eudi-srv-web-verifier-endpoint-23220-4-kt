@@ -15,15 +15,10 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.domain
 
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.*
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.toJavaZoneId
-import kotlinx.datetime.toKotlinTimeZone
-import kotlinx.datetime.toLocalDateTime
 import java.time.ZonedDateTime
-import java.util.Date
+import java.util.*
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant

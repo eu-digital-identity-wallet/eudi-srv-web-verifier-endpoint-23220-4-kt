@@ -33,7 +33,9 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.input.web.TestUtils
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
-import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.verifier.endpoint.domain.DCQL
+import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
+import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseMode
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionTO
 import kotlinx.serialization.json.Json
 import net.minidev.json.JSONObject

@@ -15,13 +15,7 @@
  */
 package eu.europa.ec.eudi.verifier.endpoint.adapter.input.web
 
-import eu.europa.ec.eudi.verifier.endpoint.domain.ClientId
-import eu.europa.ec.eudi.verifier.endpoint.domain.OpenId4VPSpec
-import eu.europa.ec.eudi.verifier.endpoint.domain.RFC6749
-import eu.europa.ec.eudi.verifier.endpoint.domain.RFC9101
-import eu.europa.ec.eudi.verifier.endpoint.domain.RequestId
-import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
-import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
+import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName

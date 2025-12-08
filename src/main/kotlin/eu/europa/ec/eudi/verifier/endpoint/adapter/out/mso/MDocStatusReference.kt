@@ -13,20 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.port.out.jose
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
-import arrow.core.Either
-import eu.europa.ec.eudi.verifier.endpoint.domain.*
+import eu.europa.ec.eudi.statium.StatusReference
+import eu.europa.ec.eudi.statium.TokenStatusListSpec
+import id.walt.mdoc.dataelement.MapElement
+import id.walt.mdoc.dataelement.MapKey
+import id.walt.mdoc.doc.MDoc
 
-/**
- * An out port that signs and encrypts a [Presentation.Requested]
- */
-fun interface CreateJar {
-    operator fun invoke(
-        verifierConfig: VerifierConfig,
-        clock: Clock,
-        presentation: Presentation.Requested,
-        walletNonce: String?,
-        walletJarEncryptionRequirement: EncryptionRequirement,
-    ): Either<Throwable, Jwt>
-}
+fun MDoc.statusReference(): StatusReference? =
+    decodeMsoAs<MapElement>()
+        ?.value[MapKey(TokenStatusListSpec.STATUS)]
+        ?.let { it as MapElement }
+        ?.value[MapKey(TokenStatusListSpec.STATUS_LIST)]
+        ?.decodeAs<StatusReference>()
