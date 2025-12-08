@@ -44,7 +44,7 @@ class StatusListTokenValidator(
         sdJwtVc.statusReference()?.validate(transactionId)
 
     suspend fun validate(mdoc: MDoc, transactionId: TransactionId?) =
-        mdoc.statusReference()?.validate(transactionId)
+        mdoc.issuerSigned.issuerAuth?.statusReference()?.validate(transactionId)
 
     private suspend fun StatusReference.validate(transactionId: TransactionId?) {
         catch({

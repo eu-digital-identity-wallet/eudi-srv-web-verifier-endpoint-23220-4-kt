@@ -17,20 +17,21 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import eu.europa.ec.eudi.statium.StatusReference
 import eu.europa.ec.eudi.statium.TokenStatusListSpec
+import id.walt.mdoc.cose.COSESign1
 import id.walt.mdoc.dataelement.EncodedCBORElement
 import id.walt.mdoc.dataelement.MapElement
 import id.walt.mdoc.dataelement.MapKey
-import id.walt.mdoc.doc.MDoc
 import kotlinx.serialization.decodeFromByteArray
 
-fun MDoc.statusReference(): StatusReference? =
-    issuerSigned.issuerAuth
-        ?.payload
-        ?.let { issuerAuthPayload ->
-            val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(issuerAuthPayload)
-            cbor.decodeFromByteArray<MapElement>(encoded.value)
-        }
-        ?.value[MapKey(TokenStatusListSpec.STATUS)]
-        ?.let { it as MapElement }
-        ?.value[MapKey(TokenStatusListSpec.STATUS_LIST)]
-        ?.decodeAs<StatusReference>()
+fun COSESign1.statusReference(): StatusReference? =
+    runCatching {
+        payload
+            ?.let { payload ->
+                val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(payload)
+                cbor.decodeFromByteArray<MapElement>(encoded.value)
+            }
+            ?.value[MapKey(TokenStatusListSpec.STATUS)]
+            ?.let { it as MapElement }
+            ?.value[MapKey(TokenStatusListSpec.STATUS_LIST)]
+            ?.decodeAs<StatusReference>()
+    }.getOrNull()
