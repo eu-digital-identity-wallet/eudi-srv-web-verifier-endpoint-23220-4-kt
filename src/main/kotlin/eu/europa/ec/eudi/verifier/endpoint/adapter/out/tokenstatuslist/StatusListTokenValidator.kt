@@ -13,43 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
+package eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist
 
-import arrow.core.Either
+import arrow.core.raise.catch
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.statium.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJsonObject
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.decodeAs
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.decodeMsoAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock.Companion.asKotlinClock
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PresentationEvent
 import eu.europa.ec.eudi.verifier.endpoint.port.out.persistence.PublishPresentationEvent
+import id.walt.mdoc.dataelement.MapElement
+import id.walt.mdoc.dataelement.MapKey
+import id.walt.mdoc.doc.MDoc
 import io.ktor.client.*
 import kotlinx.serialization.json.JsonObject
 
-internal data class StatusCheckException(val reason: String, val causedBy: Throwable) : Exception(reason, causedBy)
+data class StatusCheckException(val reason: String, val causedBy: Throwable) : Exception(reason, causedBy)
 
-internal class StatusListTokenValidator(
+class StatusListTokenValidator(
     private val httpClient: HttpClient,
     private val clock: Clock,
     private val publishPresentationEvent: PublishPresentationEvent,
 ) {
 
-    suspend fun validate(sdJwtVc: SdJwtAndKbJwt<SignedJWT>, transactionId: TransactionId? = null) {
-        sdJwtVc.sdJwt.jwt.statusReference()?.let { statusReference ->
-            Either.catch {
-                with(getStatus()) {
-                    statusReference.currentStatus().getOrThrow()
-                }.also {
-                    require(it == Status.Valid) { "Attestation status expected to be VALID but is $it" }
-                }
-            }
-                .onLeft { error -> transactionId?.let { logStatusCheckFailed(it, statusReference, error) } }
-                .onRight { transactionId?.let { logStatusCheckSuccess(it, statusReference) } }
-                .getOrThrow { StatusCheckException("Attestation status check failed, ${it.message}", it) }
+    suspend fun validate(sdJwtVc: SdJwtAndKbJwt<SignedJWT>, transactionId: TransactionId?) =
+        sdJwtVc.sdJwt.jwt.statusReference()?.validate(transactionId)
+
+    suspend fun validate(mdoc: MDoc, transactionId: TransactionId?) =
+        mdoc.statusReference()?.validate(transactionId)
+
+    private suspend fun StatusReference.validate(transactionId: TransactionId?) {
+        catch({
+            val currentStatus = with(getStatus()) { currentStatus().getOrThrow() }
+            require(currentStatus == Status.Valid) { "Attestation status expected to be VALID but is $currentStatus" }
+            transactionId?.let { logStatusCheckSuccess(it, this) }
+        }) { error ->
+            transactionId?.let { logStatusCheckFailed(it, this, error) }
+            throw StatusCheckException("Attestation status check failed, ${error.message}", error)
         }
     }
 
@@ -90,4 +97,10 @@ private fun SignedJWT.statusReference(): StatusReference? {
     val uri = statusListElement[TokenStatusListSpec.URI]?.decodeAs<String>()!!.getOrThrow()
 
     return StatusReference(index, uri)
+}
+
+private fun MDoc.statusReference(): StatusReference? {
+    val mso = decodeMsoAs<MapElement>() ?: return null
+    val status = mso.value[MapKey(TokenStatusListSpec.STATUS)]?.let { it as MapElement } ?: return null
+    return status.value[MapKey(TokenStatusListSpec.STATUS_LIST)]?.decodeAs<StatusReference>()
 }

@@ -93,6 +93,7 @@ internal enum class DocumentErrorTO {
     DocumentTypeNotMatching,
     InvalidIssuerSignedItems,
     NoMatchingX5CValidator,
+    DocumentHasBeenRevoked,
 }
 
 /**
@@ -137,7 +138,7 @@ internal class ValidateMsoMdocDeviceResponse(
                     raise(ValidationErrorTO.invalidIssuerChain())
                 }
 
-            val documents = validator.ensureValid(deviceResponse)
+            val documents = validator.ensureValid(deviceResponse, null)
                 .mapLeft { it.toValidationFailureTO() }
                 .bind()
                 .map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }
@@ -176,6 +177,7 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         DocumentError.DocumentTypeNotMatching -> DocumentErrorTO.DocumentTypeNotMatching
         DocumentError.InvalidIssuerSignedItems -> DocumentErrorTO.InvalidIssuerSignedItems
         DocumentError.NoMatchingX5CShouldBe -> DocumentErrorTO.NoMatchingX5CValidator
+        DocumentError.DocumentHasBeenRevoked -> DocumentErrorTO.DocumentHasBeenRevoked
     }
 
 private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(

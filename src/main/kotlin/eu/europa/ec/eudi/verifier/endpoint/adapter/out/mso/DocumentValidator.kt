@@ -23,7 +23,9 @@ import com.nimbusds.jose.jwk.ECKey
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.ProvideTrustSource
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.doc.MDoc
@@ -53,6 +55,7 @@ sealed interface DocumentError {
     data object DocumentTypeNotMatching : DocumentError
     data object InvalidIssuerSignedItems : DocumentError
     data object NoMatchingX5CShouldBe : DocumentError
+    data object DocumentHasBeenRevoked : DocumentError
 }
 
 class DocumentValidator(
@@ -60,9 +63,10 @@ class DocumentValidator(
     private val validityInfoShouldBe: ValidityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
     private val issuerSignedItemsShouldBe: IssuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
     private val provideTrustSource: ProvideTrustSource,
+    private val statusListTokenValidator: StatusListTokenValidator?,
 ) {
 
-    suspend fun ensureValid(document: MDoc): EitherNel<DocumentError, MDoc> =
+    suspend fun ensureValid(document: MDoc, transactionId: TransactionId?): EitherNel<DocumentError, MDoc> =
         either {
             document.decodeMso()
 
@@ -74,7 +78,8 @@ class DocumentValidator(
                 { ensureMatchingDocumentType(document) },
                 { ensureDigestsOfIssuerSignedItems(document, issuerSignedItemsShouldBe) },
                 { ensureValidIssuerSignature(document, issuerChain, x5CShouldBe.caCertificates()) },
-            ) { _, _, _, _ -> document }
+                { ensureNotRevoked(document, statusListTokenValidator, transactionId) },
+            ) { _, _, _, _, _ -> document }
         }
 }
 
@@ -203,3 +208,17 @@ private suspend fun Raise<Nel<DocumentError.NoMatchingX5CShouldBe>>.ensureMatchi
     document: MDoc,
     trustSourceProvider: ProvideTrustSource,
 ): X5CShouldBe = trustSourceProvider(document.docType.value) ?: raise(DocumentError.NoMatchingX5CShouldBe.nel())
+
+private suspend fun Raise<DocumentError.DocumentHasBeenRevoked>.ensureNotRevoked(
+    document: MDoc,
+    statusListTokenValidator: StatusListTokenValidator?,
+    transactionId: TransactionId?,
+) {
+    if (null != statusListTokenValidator) {
+        catch({
+            statusListTokenValidator.validate(document, transactionId)
+        }) {
+            raise(DocumentError.DocumentHasBeenRevoked)
+        }
+    }
+}

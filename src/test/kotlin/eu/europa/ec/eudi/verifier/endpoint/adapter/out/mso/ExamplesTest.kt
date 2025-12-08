@@ -65,9 +65,10 @@ class ExamplesTest {
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
             provideTrustSource = ProvideTrustSource.Ignored,
+            statusListTokenValidator = null,
         )
         val document = MDoc.fromCBORHex(waltIdExample)
-        documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
+        documentValidator.ensureValid(document, null).getOrElse { fail(it.toString()) }
     }
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalSerializationApi::class)
@@ -85,8 +86,9 @@ class ExamplesTest {
         val documentValidator = DocumentValidator(
             clock = Clock.fixed(issuedAt.toInstant().toKotlinInstant(), issuedAt.zone.toKotlinTimeZone()),
             provideTrustSource = trustSources::invoke,
+            statusListTokenValidator = null,
         )
-        documentValidator.ensureValid(document).getOrElse { fail(it.toString()) }
+        documentValidator.ensureValid(document, null).getOrElse { fail(it.toString()) }
     }
 }
 

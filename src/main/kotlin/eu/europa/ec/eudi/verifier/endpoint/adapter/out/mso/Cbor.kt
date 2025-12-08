@@ -16,20 +16,22 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso
 
 import cbor.Cbor
+import id.walt.mdoc.dataelement.DataElement
 import id.walt.mdoc.dataelement.EncodedCBORElement
 import id.walt.mdoc.dataretrieval.DeviceResponse
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.mso.MSO
 import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToByteArray
 import kotlin.io.encoding.Base64
 
-private val cbor: Cbor by lazy {
+val cbor: Cbor by lazy {
     Cbor {
         ignoreUnknownKeys = true
     }
 }
 
-private val base64UrlNoPadding: Base64 by lazy {
+val base64UrlNoPadding: Base64 by lazy {
     Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
 }
 
@@ -58,3 +60,11 @@ fun MDoc.decodeMso() {
         }
     }
 }
+
+inline fun <reified T> MDoc.decodeMsoAs(): T? =
+    issuerSigned.issuerAuth?.payload?.let { data ->
+        val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(data)
+        cbor.decodeFromByteArray<T>(encoded.value)
+    }
+
+inline fun <reified T> DataElement.decodeAs(): T = cbor.decodeFromByteArray(cbor.encodeToByteArray(this))

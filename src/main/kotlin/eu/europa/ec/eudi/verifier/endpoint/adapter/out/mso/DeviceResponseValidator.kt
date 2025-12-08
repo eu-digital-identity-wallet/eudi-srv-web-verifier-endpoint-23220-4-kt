@@ -21,6 +21,7 @@ import arrow.core.mapOrAccumulate
 import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
+import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import id.walt.mdoc.dataretrieval.DeviceResponse
 import id.walt.mdoc.dataretrieval.DeviceResponseStatus
 import id.walt.mdoc.doc.MDoc
@@ -62,17 +63,17 @@ class DeviceResponseValidator(
      * Validates the given verifier presentation
      * It could a vp_token or an element of an array vp_token
      */
-    suspend fun ensureValid(vp: String): Either<DeviceResponseError, List<MDoc>> =
+    suspend fun ensureValid(vp: String, transactionId: TransactionId?): Either<DeviceResponseError, List<MDoc>> =
         either {
             val deviceResponse = ensureCanBeDecoded(vp)
-            val validDocuments = ensureValid(deviceResponse).bind()
+            val validDocuments = ensureValid(deviceResponse, transactionId).bind()
             validDocuments
         }
 
-    suspend fun ensureValid(deviceResponse: DeviceResponse): Either<DeviceResponseError, List<MDoc>> =
+    suspend fun ensureValid(deviceResponse: DeviceResponse, transactionId: TransactionId?): Either<DeviceResponseError, List<MDoc>> =
         either {
             ensureStatusIsOk(deviceResponse)
-            ensureValidDocuments(deviceResponse, documentValidator)
+            ensureValidDocuments(deviceResponse, documentValidator, transactionId)
         }
 }
 
@@ -93,10 +94,11 @@ private fun Raise<DeviceResponseError.NotOkDeviceResponseStatus>.ensureStatusIsO
 private suspend fun Raise<DeviceResponseError.InvalidDocuments>.ensureValidDocuments(
     deviceResponse: DeviceResponse,
     documentValidator: DocumentValidator,
+    transactionId: TransactionId?,
 ): List<MDoc> =
     deviceResponse.documents.withIndex().mapOrAccumulate { (index, document) ->
         documentValidator
-            .ensureValid(document)
+            .ensureValid(document, transactionId)
             .mapLeft { documentErrors -> InvalidDocument(index, document.docType.value, documentErrors) }
             .bind()
     }.mapLeft(DeviceResponseError::InvalidDocuments).bind()

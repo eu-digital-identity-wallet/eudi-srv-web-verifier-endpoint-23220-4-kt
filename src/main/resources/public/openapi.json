@@ -1192,7 +1192,9 @@
           "InvalidIssuerSignature",
           "X5CNotTrusted",
           "DocumentTypeNotMatching",
-          "InvalidIssuerSignedItems"
+          "InvalidIssuerSignedItems",
+          "NoMatchingX5CValidator",
+          "DocumentHasBeenRevoked"
         ]
       },
       "MsoMdocInvalidDocument": {
