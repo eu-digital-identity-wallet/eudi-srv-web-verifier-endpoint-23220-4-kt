@@ -33,8 +33,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
@@ -77,6 +77,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 val validator = deviceResponseValidatorFactory(issuerChain)
                 validator.validateMsoMdocVerifiablePresentation(
                     verifiablePresentation,
+                    transactionId,
                 ).bind()
             }
 
@@ -137,12 +138,13 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
 
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
         verifiablePresentation: VerifiablePresentation,
+        transactionId: TransactionId?,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {
             WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
         }
 
-        val documents = ensureValid(verifiablePresentation.value)
+        val documents = ensureValid(verifiablePresentation.value, transactionId)
             .mapLeft { error ->
                 log.warn("Failed to validate MsoMdoc VC. Reason: '$error'")
                 error.toWalletResponseValidationError()

@@ -16,7 +16,7 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.out.cfg
 
 import eu.europa.ec.eudi.verifier.endpoint.domain.ResponseCode
-import java.util.UUID
+import java.util.*
 
 /**
  * A port for generating [ResponseCode]

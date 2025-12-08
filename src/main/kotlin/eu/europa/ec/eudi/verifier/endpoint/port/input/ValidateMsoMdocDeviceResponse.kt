@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.port.input
 import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.getOrElse
+import arrow.core.raise.either
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
@@ -92,6 +93,7 @@ internal enum class DocumentErrorTO {
     DocumentTypeNotMatching,
     InvalidIssuerSignedItems,
     NoMatchingX5CValidator,
+    DocumentHasBeenRevoked,
 }
 
 /**
@@ -129,30 +131,24 @@ internal class ValidateMsoMdocDeviceResponse(
     private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
     private val deviceResponseValidatorFactory: (X5CShouldBe?) -> DeviceResponseValidator,
 ) {
-    suspend operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult {
-        val validator = deviceResponseValidator(issuerChain)
-            .getOrElse {
-                return DeviceResponseValidationResult.Invalid(ValidationErrorTO.invalidIssuerChain())
-            }
+    suspend operator fun invoke(deviceResponse: String, issuerChain: String?): DeviceResponseValidationResult =
+        either {
+            val validator = deviceResponseValidator(issuerChain)
+                .getOrElse {
+                    raise(ValidationErrorTO.invalidIssuerChain())
+                }
 
-        return validator.ensureValid(deviceResponse)
-            .fold(
-                ifRight = { documents ->
-                    DeviceResponseValidationResult.Valid(
-                        JsonArray(
-                            documents.map {
-                                Json.encodeToJsonElement(
-                                    it.toDocumentTO(
-                                        clock,
-                                    ),
-                                )
-                            },
-                        ),
-                    )
-                },
-                ifLeft = { DeviceResponseValidationResult.Invalid(it.toValidationFailureTO()) },
-            )
-    }
+            val documents = validator.ensureValid(deviceResponse, null)
+                .mapLeft { it.toValidationFailureTO() }
+                .bind()
+                .map { Json.encodeToJsonElement(it.toDocumentTO(clock)) }
+                .let { JsonArray(it) }
+
+            documents
+        }.fold(
+            ifLeft = { DeviceResponseValidationResult.Invalid(it) },
+            ifRight = { DeviceResponseValidationResult.Valid(it) },
+        )
 
     private fun deviceResponseValidator(issuerChainInPem: String?): Either<Throwable, DeviceResponseValidator> = Either.catch {
         val x5cShouldBe = issuerChainInPem
@@ -181,6 +177,7 @@ private fun DocumentError.toDocumentErrorTO(): DocumentErrorTO =
         DocumentError.DocumentTypeNotMatching -> DocumentErrorTO.DocumentTypeNotMatching
         DocumentError.InvalidIssuerSignedItems -> DocumentErrorTO.InvalidIssuerSignedItems
         DocumentError.NoMatchingX5CShouldBe -> DocumentErrorTO.NoMatchingX5CValidator
+        DocumentError.DocumentHasBeenRevoked -> DocumentErrorTO.DocumentHasBeenRevoked
     }
 
 private fun MDoc.toDocumentTO(clock: Clock): DocumentTO = DocumentTO(

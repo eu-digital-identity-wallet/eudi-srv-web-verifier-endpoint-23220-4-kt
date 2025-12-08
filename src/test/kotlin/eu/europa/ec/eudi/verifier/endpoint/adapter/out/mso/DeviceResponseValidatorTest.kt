@@ -82,7 +82,7 @@ class DeviceResponseValidatorTest {
     fun `a vp_token where the 3d document has an invalid validity info should fail`() = runTest {
         val invalidDocument = run {
             val validator = deviceResponseValidator(Data.caCerts, clock)
-            val validated = validator.ensureValid(Data.ThreeDocumentVP)
+            val validated = validator.ensureValid(Data.ThreeDocumentVP, null)
             val invalidDocuments =
                 assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                     .invalidDocuments
@@ -112,9 +112,10 @@ class DeviceResponseValidatorTest {
                 clock = clock,
                 validityInfoShouldBe = ValidityInfoShouldBe.Ignored,
                 provideTrustSource = trustSources,
+                statusListTokenValidator = null,
             )
             val vpValidator = DeviceResponseValidator(docV)
-            val validated = vpValidator.ensureValid(Data.ThreeDocumentVP)
+            val validated = vpValidator.ensureValid(Data.ThreeDocumentVP, null)
             assertNotNull(validated.getOrNull())
         }
 
@@ -124,7 +125,7 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token having a single document with invalid chain should fail`() = runTest {
         val invalidDocument = run {
-            val validated = deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP)
+            val validated = deviceResponseValidator(Data.caCerts, clock).ensureValid(Data.MdlVP, null)
             val invalidDocuments =
                 assertIs<DeviceResponseError.InvalidDocuments>(validated.leftOrNull())
                     .invalidDocuments
@@ -142,9 +143,9 @@ class DeviceResponseValidatorTest {
     @Test
     fun `a vp_token having a single document skipping chain validation should be valid`() = runTest {
         val validDocuments = run {
-            val docV = DocumentValidator(provideTrustSource = ProvideTrustSource.Ignored, clock = clock)
+            val docV = DocumentValidator(provideTrustSource = ProvideTrustSource.Ignored, clock = clock, statusListTokenValidator = null)
             val vpValidator = DeviceResponseValidator(docV)
-            val validated = vpValidator.ensureValid(Data.MdlVP)
+            val validated = vpValidator.ensureValid(Data.MdlVP, null)
             assertNotNull(validated.getOrNull())
         }
 
@@ -162,6 +163,7 @@ private fun deviceResponseValidator(caCerts: NonEmptyList<X509Certificate>, cloc
         ValidityInfoShouldBe.NotExpired,
         IssuerSignedItemsShouldBe.Verified,
         provideTrustSource = ProvideTrustSource.forAll(x5CShouldBe),
+        statusListTokenValidator = null,
     )
     return DeviceResponseValidator(documentValidator)
 }
