@@ -61,10 +61,4 @@ fun MDoc.decodeMso() {
     }
 }
 
-inline fun <reified T> MDoc.issuerAuthPayloadAs(): T? =
-    issuerSigned.issuerAuth?.payload?.let { data ->
-        val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(data)
-        cbor.decodeFromByteArray<T>(encoded.value)
-    }
-
 inline fun <reified T> DataElement.decodeAs(): T = cbor.decodeFromByteArray(cbor.encodeToByteArray(this))
