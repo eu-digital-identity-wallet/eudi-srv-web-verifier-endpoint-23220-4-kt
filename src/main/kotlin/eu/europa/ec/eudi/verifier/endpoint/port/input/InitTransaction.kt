@@ -127,23 +127,26 @@ private val InitTransactionTO.profileOrDefault: ProfileTO
 /**
  * Possible validation errors of caller's input
  */
-enum class ValidationError {
-    MissingPresentationQuery,
-    MissingNonce,
-    InvalidWalletResponseTemplate,
-    InvalidTransactionData,
-    UnsupportedFormat,
-    InvalidIssuerChain,
-    ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme,
-    InvalidAuthorizationRequestUri,
-    InvalidAuthorizationRequestScheme,
-    SdJwtVcOrMsoMdocMustBeSupported,
-    JwsAlgorithmES256MustBeSupported,
-    ClientIdPrefixX509HashMustBeUsed,
-    EncryptionAlgorithmECDHESMustBeSupported,
-    EncryptionMethodsA128GCMAndA256GCMMustBeSupported,
-    ResponseModeDirectPostJwtMustBeUsed,
-    AuthorizationRequestMustBeProvidedByReference,
+sealed interface ValidationError {
+    data object MissingPresentationQuery : ValidationError
+    data object MissingNonce : ValidationError
+    data object InvalidWalletResponseTemplate : ValidationError
+    data object InvalidTransactionData : ValidationError
+    data object UnsupportedFormat : ValidationError
+    data object InvalidIssuerChain : ValidationError
+    data object ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme : ValidationError
+    data object InvalidAuthorizationRequestUri : ValidationError
+    data object InvalidAuthorizationRequestScheme : ValidationError
+
+    sealed interface HaipNotSupported : ValidationError {
+        data object SdJwtVcOrMsoMdocMustBeSupported : HaipNotSupported
+        data object JwsAlgorithmES256MustBeSupported : HaipNotSupported
+        data object ClientIdPrefixX509HashMustBeUsed : HaipNotSupported
+        data object EncryptionAlgorithmECDHESMustBeSupported : HaipNotSupported
+        data object EncryptionMethodsA128GCMAndA256GCMMustBeSupported : HaipNotSupported
+        data object ResponseModeDirectPostJwtMustBeUsed : HaipNotSupported
+        data object AuthorizationRequestMustBeProvidedByReference : HaipNotSupported
+    }
 }
 
 enum class Output {
@@ -524,15 +527,15 @@ private fun interface ProfileValidator {
         val HAIP = ProfileValidator { config, presentation, jarMode ->
             with(config.clientMetaData.vpFormatsSupported) {
                 ensure(null != sdJwtVc || null != msoMdoc) {
-                    ValidationError.SdJwtVcOrMsoMdocMustBeSupported
+                    ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported
                 }
 
                 if (null != sdJwtVc) {
                     ensure(null == sdJwtVc.sdJwtAlgorithms || JWSAlgorithm.ES256 in sdJwtVc.sdJwtAlgorithms) {
-                        ValidationError.JwsAlgorithmES256MustBeSupported
+                        ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported
                     }
                     ensure(null == sdJwtVc.kbJwtAlgorithms || JWSAlgorithm.ES256 in sdJwtVc.kbJwtAlgorithms) {
-                        ValidationError.JwsAlgorithmES256MustBeSupported
+                        ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported
                     }
                 }
 
@@ -541,38 +544,38 @@ private fun interface ProfileValidator {
                         null == msoMdoc.issuerAuthAlgorithms ||
                             msoMdoc.issuerAuthAlgorithms.containsAny(CoseAlgorithm(-7), CoseAlgorithm(-9)),
                     ) {
-                        ValidationError.JwsAlgorithmES256MustBeSupported
+                        ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported
                     }
 
                     ensure(
                         null == msoMdoc.deviceAuthAlgorithms ||
                             msoMdoc.deviceAuthAlgorithms.containsAny(CoseAlgorithm(-7), CoseAlgorithm(-9)),
                     ) {
-                        ValidationError.JwsAlgorithmES256MustBeSupported
+                        ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported
                     }
                 }
             }
 
             with(config.clientMetaData.responseEncryptionOption) {
                 ensure(JWEAlgorithm.ECDH_ES == algorithm) {
-                    ValidationError.EncryptionAlgorithmECDHESMustBeSupported
+                    ValidationError.HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported
                 }
 
                 ensure(encryptionMethods.containsAll(listOf(EncryptionMethod.A128GCM, EncryptionMethod.A256GCM))) {
-                    ValidationError.EncryptionMethodsA128GCMAndA256GCMMustBeSupported
+                    ValidationError.HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported
                 }
             }
 
             ensure(config.verifierId is VerifierId.X509Hash) {
-                ValidationError.ClientIdPrefixX509HashMustBeUsed
+                ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed
             }
 
             ensure(presentation.responseMode is ResponseMode.DirectPostJwt) {
-                ValidationError.ResponseModeDirectPostJwtMustBeUsed
+                ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed
             }
 
             ensure(jarMode is EmbedOption.ByReference) {
-                ValidationError.AuthorizationRequestMustBeProvidedByReference
+                ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference
             }
         }
     }

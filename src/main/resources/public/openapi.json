@@ -903,13 +903,13 @@
           "ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme",
           "InvalidAuthorizationRequestUri",
           "InvalidAuthorizationRequestScheme",
-          "SdJwtVcOrMsoMdocMustBeSupported",
-          "JwsAlgorithmES256MustBeSupported",
-          "ClientIdPrefixX509HashMustBeUsed",
-          "EncryptionAlgorithmECDHESMustBeSupported",
-          "EncryptionMethodsA128GCMAndA256GCMMustBeSupported",
-          "ResponseModeDirectPostJwtMustBeUsed",
-          "AuthorizationRequestMustBeProvidedByReference"
+          "HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported",
+          "HaipNotSupported.JwsAlgorithmES256MustBeSupported",
+          "HaipNotSupported.ClientIdPrefixX509HashMustBeUsed",
+          "HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported",
+          "HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported",
+          "HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed",
+          "HaipNotSupported.AuthorizationRequestMustBeProvidedByReference"
         ]
       },
       "InitTransactionError": {
