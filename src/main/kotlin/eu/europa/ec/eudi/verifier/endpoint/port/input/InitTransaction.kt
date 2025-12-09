@@ -29,6 +29,7 @@ import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
@@ -142,6 +143,7 @@ sealed interface ValidationError {
         data object SdJwtVcOrMsoMdocMustBeSupported : HaipNotSupported
         data object JwsAlgorithmES256MustBeSupported : HaipNotSupported
         data object ClientIdPrefixX509HashMustBeUsed : HaipNotSupported
+        data object SelfSignedCertificateMustNotBeUsed : HaipNotSupported
         data object EncryptionAlgorithmECDHESMustBeSupported : HaipNotSupported
         data object EncryptionMethodsA128GCMAndA256GCMMustBeSupported : HaipNotSupported
         data object ResponseModeDirectPostJwtMustBeUsed : HaipNotSupported
@@ -568,6 +570,9 @@ private fun interface ProfileValidator {
 
             ensure(config.verifierId is VerifierId.X509Hash) {
                 ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed
+            }
+            ensure(!config.verifierId.jarSigning.certificate.isSelfSigned()) {
+                ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed
             }
 
             ensure(presentation.responseMode is ResponseMode.DirectPostJwt) {

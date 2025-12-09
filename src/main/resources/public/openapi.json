@@ -906,6 +906,7 @@
           "HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported",
           "HaipNotSupported.JwsAlgorithmES256MustBeSupported",
           "HaipNotSupported.ClientIdPrefixX509HashMustBeUsed",
+          "HaipNotSupported.SelfSignedCertificateMustNotBeUsed",
           "HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported",
           "HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported",
           "HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed",

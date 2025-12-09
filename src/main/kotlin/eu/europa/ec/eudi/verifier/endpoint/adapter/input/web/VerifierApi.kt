@@ -168,6 +168,8 @@ internal class VerifierApi(
                     "HaipNotSupported.JwsAlgorithmES256MustBeSupported"
                 ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed ->
                     "HaipNotSupported.ClientIdPrefixX509HashMustBeUsed"
+                ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed ->
+                    "HaipNotSupported.SelfSignedCertificateMustNotBeUsed"
                 ValidationError.HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported ->
                     "HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported"
                 ValidationError.HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported ->
