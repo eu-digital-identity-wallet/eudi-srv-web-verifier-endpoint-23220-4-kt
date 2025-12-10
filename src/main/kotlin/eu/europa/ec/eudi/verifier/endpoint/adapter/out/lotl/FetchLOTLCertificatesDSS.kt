@@ -128,7 +128,7 @@ class FetchLOTLCertificatesDSS(
                 KeyStoreCertificateSource(
                     resource.inputStream,
                     keystoreConfig.keystoreType,
-                    keystoreConfig.keystorePassword,
+                    keystoreConfig.keystorePassword?.toCharArray(),
                 )
             }
         }

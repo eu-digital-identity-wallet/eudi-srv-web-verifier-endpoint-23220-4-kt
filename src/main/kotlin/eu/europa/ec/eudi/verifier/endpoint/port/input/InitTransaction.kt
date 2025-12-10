@@ -127,7 +127,21 @@ sealed interface InitTransactionResponse {
         val qrCode: ByteArray,
         val transactionId: String,
         val authorizationRequestUri: String,
-    ) : InitTransactionResponse
+    ) : InitTransactionResponse {
+
+        override fun equals(other: Any?): Boolean =
+            other is QrCode &&
+                qrCode.contentEquals(other.qrCode) &&
+                transactionId == other.transactionId &&
+                authorizationRequestUri == other.authorizationRequestUri
+
+        override fun hashCode(): Int {
+            var result = qrCode.contentHashCode()
+            result = 31 * result + transactionId.hashCode()
+            result = 31 * result + authorizationRequestUri.hashCode()
+            return result
+        }
+    }
 
     /**
      * The return value of successfully [initializing][InitTransaction] a [Presentation] as a JSON
@@ -178,9 +192,6 @@ sealed interface InitTransactionResponse {
 
 /**
  * This is a use case that initializes the [Presentation] process.
- *
- * The caller may define via [InitTransactionTO] what kind of transaction wants to initiate
- * This is represented by [PresentationTypeTO].
  *
  * Use case will initialize a [Presentation] process
  */

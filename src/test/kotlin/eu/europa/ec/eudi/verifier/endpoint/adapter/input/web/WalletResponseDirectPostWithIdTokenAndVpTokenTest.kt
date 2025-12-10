@@ -104,7 +104,7 @@ internal class WalletResponseDirectPostWithIdTokenAndVpTokenTest {
     @Test
     @Order(value = 2)
     fun `get authorisation response - confirm returns 200`() = runTest {
-        suspend fun test(
+        fun test(
             dcqlQuery: String,
             vpToken: String,
             asserter: (WalletResponseTO) -> Unit,

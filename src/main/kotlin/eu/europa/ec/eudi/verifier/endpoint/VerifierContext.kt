@@ -20,8 +20,6 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.jwk.*
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jose.util.Base64
 import com.sksamuel.aedile.core.asCache
 import com.sksamuel.aedile.core.expireAfterWrite
@@ -40,6 +38,8 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.VerifyEncryptedResponseWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.keystore.loadJWK
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.keystore.loadKeyStore
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.lotl.FetchLOTLCertificatesDSS
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DocumentValidator
@@ -78,7 +78,6 @@ import org.springframework.context.support.beans
 import org.springframework.core.env.Environment
 import org.springframework.core.env.getProperty
 import org.springframework.core.io.DefaultResourceLoader
-import org.springframework.core.io.FileSystemResource
 import org.springframework.http.codec.json.KotlinSerializationJsonDecoder
 import org.springframework.http.codec.json.KotlinSerializationJsonEncoder
 import org.springframework.security.config.web.server.ServerHttpSecurity
@@ -87,8 +86,6 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import java.net.URI
 import java.security.KeyStore
-import java.security.cert.X509Certificate
-import java.util.*
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
@@ -356,7 +353,7 @@ internal fun beans(clock: Clock) = beans {
     //
     // Config
     //
-    bean { verifierConfig(env, ref()) }
+    bean { verifierConfig(env) }
 
     //
     // End points
@@ -466,85 +463,30 @@ private enum class EmbedOptionEnum {
     ByReference,
 }
 
-private enum class SigningKeyEnum {
-    GenerateRandom,
-    LoadFromKeystore,
-}
+private fun jarSigningConfig(environment: Environment): SigningConfig {
+    val keystoreLocation = environment.getRequiredProperty("verifier.jar.signing.key.keystore")
+    log.info("Will try to load Keystore from: '{}'", keystoreLocation)
 
-private const val keystoreDefaultLocation = "/keystore.jks"
+    val keystoreType =
+        environment.getProperty("verifier.jar.signing.key.keystore.type", KeyStore.getDefaultType())
+    val keystorePassword =
+        environment.getProperty("verifier.jar.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
+    val keyStore = loadKeyStore(keystoreLocation, keystoreType, keystorePassword)
 
-private fun jarSigningConfig(environment: Environment, clock: Clock): SigningConfig {
-    val key = run {
-        fun loadFromKeystore(): JWK {
-            val keystoreResource = run {
-                val keystoreLocation = environment.getRequiredProperty("verifier.jar.signing.key.keystore")
-                log.info("Will try to load Keystore from: '{}'", keystoreLocation)
-                val keystoreResource = DefaultResourceLoader().getResource(keystoreLocation)
-                    .some()
-                    .filter { it.exists() }
-                    .recover {
-                        log.warn(
-                            "Could not find Keystore at '{}'. Fallback to '{}'",
-                            keystoreLocation,
-                            keystoreDefaultLocation,
-                        )
-                        FileSystemResource(keystoreDefaultLocation)
-                            .some()
-                            .filter { it.exists() }
-                            .bind()
-                    }
-                    .getOrNull()
-                checkNotNull(keystoreResource) { "Could not load Keystore either from '$keystoreLocation' or '$keystoreDefaultLocation'" }
-            }
-
-            val keystoreType =
-                environment.getProperty("verifier.jar.signing.key.keystore.type", KeyStore.getDefaultType())
-            val keystorePassword =
-                environment.getProperty("verifier.jar.signing.key.keystore.password")?.takeIf { it.isNotBlank() }
-            val keyAlias =
-                environment.getRequiredProperty("verifier.jar.signing.key.alias")
-            val keyPassword =
-                environment.getProperty("verifier.jar.signing.key.password")?.takeIf { it.isNotBlank() }
-
-            return keystoreResource.inputStream.use { inputStream ->
-                val keystore = KeyStore.getInstance(keystoreType)
-                keystore.load(inputStream, keystorePassword?.toCharArray())
-
-                val jwk = JWK.load(keystore, keyAlias, keyPassword?.toCharArray())
-                val chain = keystore.getCertificateChain(keyAlias)
-                    .orEmpty()
-                    .map { certificate -> certificate as X509Certificate }
-                    .toList()
-
-                when {
-                    chain.isNotEmpty() -> jwk.withCertificateChain(chain)
-                    else -> jwk
-                }
-            }
-        }
-
-        fun generateRandom(): ECKey =
-            ECKeyGenerator(Curve.P_256)
-                .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key (optional)
-                .keyID(UUID.randomUUID().toString()) // give the key a unique ID (optional)
-                .issueTime(clock.now().toJavaDate()) // issued-at timestamp (optional)
-                .generate()
-
-        when (environment.getProperty("verifier.jar.signing.key", SigningKeyEnum::class.java)) {
-            SigningKeyEnum.LoadFromKeystore -> loadFromKeystore()
-            null, SigningKeyEnum.GenerateRandom -> generateRandom()
-        }
-    }
+    val keyAlias =
+        environment.getRequiredProperty("verifier.jar.signing.key.alias")
+    val keyPassword =
+        environment.getProperty("verifier.jar.signing.key.password")?.takeIf { it.isNotBlank() }
+    val key = keyStore.loadJWK(keyAlias, keyPassword)
 
     val algorithm = environment.getProperty("verifier.jar.signing.algorithm", "ES256").let(JWSAlgorithm::parse)
-
     return SigningConfig(key, algorithm)
 }
 
-private fun verifierConfig(environment: Environment, clock: Clock): VerifierConfig {
+private fun verifierConfig(environment: Environment): VerifierConfig {
     val verifierId = run {
         val originalClientId = environment.getProperty("verifier.originalClientId", "verifier")
-        val jarSigning = jarSigningConfig(environment, clock)
+        val jarSigning = jarSigningConfig(environment)
 
         val factory =
             when (val clientIdPrefix = environment.getProperty("verifier.clientIdPrefix", "pre-registered")) {
@@ -663,19 +605,19 @@ private fun Environment.parseKeyStoreConfig(propertyPrefix: String): KeyStoreCon
     "$propertyPrefix.path",
 )?.let { keystorePath ->
     val keystoreType = getPropertyOrEnvVariable("$propertyPrefix.type") ?: "JKS"
-    val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "").toCharArray()
+    val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "")
     loadKeystore(keystorePath, keystoreType, keystorePassword)
         .onLeft { log.warn("Failed to load keystore from '$keystorePath'", it) }
         .map { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
         .getOrNull()
 }
 
-private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: CharArray) = Either.catch {
+private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: String) = Either.catch {
     DefaultResourceLoader().getResource(keystorePath)
         .inputStream
         .use {
             KeyStore.getInstance(keystoreType).apply {
-                load(it, keystorePassword)
+                load(it, keystorePassword.toCharArray())
             }
         }
 }
@@ -724,29 +666,6 @@ private fun Environment.clientMetaData(): ClientMetaData {
  * Gets the public URL of the Verifier endpoint. Corresponds to `verifier.publicUrl` property.
  */
 private fun Environment.publicUrl(): String = getProperty("verifier.publicUrl", "http://localhost:8080")
-
-/**
- * Creates a copy of this [JWK] and sets the provided [X509Certificate] certificate chain.
- * For the operation to succeed, the following must hold true:
- * 1. [chain] cannot be empty
- * 2. The leaf certificate of the [chain] must match the leaf certificate of this [JWK]
- */
-private fun JWK.withCertificateChain(chain: List<X509Certificate>): JWK {
-    require(this.parsedX509CertChain.isNotEmpty()) { "jwk must has a leaf certificate" }
-    require(chain.isNotEmpty()) { "chain cannot be empty" }
-    require(this.parsedX509CertChain.first() == chain.first()) {
-        "leaf certificate of provided chain does not match leaf certificate of jwk"
-    }
-
-    val encodedChain = chain.map { Base64.encode(it.encoded) }
-    return when (this) {
-        is RSAKey -> RSAKey.Builder(this).x509CertChain(encodedChain).build()
-        is ECKey -> ECKey.Builder(this).x509CertChain(encodedChain).build()
-        is OctetKeyPair -> OctetKeyPair.Builder(this).x509CertChain(encodedChain).build()
-        is OctetSequenceKey -> OctetSequenceKey.Builder(this).x509CertChain(encodedChain).build()
-        else -> error("Unexpected JWK type '${this.keyType.value}'/'${this.javaClass}'")
-    }
-}
 
 /**
  * Gets the value of a property that contains a comma-separated list. A list is returned when it contains values.
