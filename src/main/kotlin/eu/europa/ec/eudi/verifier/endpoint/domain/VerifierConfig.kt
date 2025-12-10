@@ -362,7 +362,23 @@ data class KeyStoreConfig(
     val keystoreType: String? = "JKS",
     val keystorePassword: CharArray? = "".toCharArray(),
     val keystore: KeyStore,
-)
+) {
+
+    override fun equals(other: Any?): Boolean =
+        other is KeyStoreConfig &&
+            keystorePath == other.keystorePath &&
+            keystoreType == other.keystoreType &&
+            keystorePassword.contentEquals(other.keystorePassword) &&
+            keystore == other.keystore
+
+    override fun hashCode(): Int {
+        var result = keystorePath.hashCode()
+        result = 31 * result + (keystoreType?.hashCode() ?: 0)
+        result = 31 * result + (keystorePassword?.contentHashCode() ?: 0)
+        result = 31 * result + keystore.hashCode()
+        return result
+    }
+}
 
 internal fun VpFormatsSupported.supports(format: Format): Boolean =
     when (format) {
