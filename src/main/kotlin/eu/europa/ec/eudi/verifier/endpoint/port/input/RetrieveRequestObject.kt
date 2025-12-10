@@ -339,7 +339,7 @@ private fun <T> commonGround(
     walletSupported: Collection<T>?,
     verifierSupported: Collection<T>?,
 ): Boolean =
-    if (null != walletSupported && null != verifierSupported) walletSupported.intersect(verifierSupported).isNotEmpty()
+    if (null != walletSupported && null != verifierSupported) walletSupported.intersect(verifierSupported.toSet()).isNotEmpty()
     else true
 
 private fun commonGround(

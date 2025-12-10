@@ -20,10 +20,12 @@ import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSVerifier
-import com.nimbusds.jose.crypto.RSASSAVerifier
-import com.nimbusds.jose.jwk.RSAKey
+import com.nimbusds.jose.crypto.ECDSAVerifier
+import com.nimbusds.jose.jwk.ECKey
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.CreateJarNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.GenerateEphemeralEncryptionKeyPairNimbus
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.keystore.loadJWK
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.keystore.loadKeyStore
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.persistence.PresentationInMemoryRepo
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.qrcode.GenerateQrCodeFromData
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificateChainWithNimbus
@@ -42,9 +44,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.annotation.AliasFor
-import org.springframework.core.io.ClassPathResource
 import org.springframework.test.context.ContextConfiguration
-import java.security.KeyStore
 import kotlin.reflect.KClass
 
 object TestContext {
@@ -54,13 +54,10 @@ object TestContext {
     private val generatedTransactionId = GenerateTransactionId.fixed(testTransactionId)
     val testRequestId = RequestId("SampleRequestId")
     private val generateRequestId = GenerateRequestId.fixed(testRequestId)
-    private val rsaJwk = run {
-        ClassPathResource("test-cert.jks").inputStream.use {
-            val keystore = KeyStore.getInstance("JKS").apply {
-                load(it, "".toCharArray())
-            }
-            RSAKey.load(keystore, "client-id", "".toCharArray())
-        }
+    private val ecJwk: ECKey = run {
+        loadKeyStore(location = "classpath:keystore.jks", type = "jks", password = "keystore")
+            .loadJWK(alias = "verifier", password = "verifier")
+            .toECKey()
     }
     private val responseEncryptionOption =
         ResponseEncryptionOption(JWEAlgorithm.ECDH_ES, nonEmptyListOf(EncryptionMethod.A128GCM, EncryptionMethod.A256GCM))
@@ -77,10 +74,10 @@ object TestContext {
             ),
         ),
     )
-    private val jarSigningConfig: SigningConfig = SigningConfig(rsaJwk, JWSAlgorithm.RS256)
-    val verifierId = VerifierId.X509SanDns("client-id", jarSigningConfig)
+    private val jarSigningConfig: SigningConfig = SigningConfig(ecJwk, JWSAlgorithm.ES512)
+    val verifierId = VerifierId.X509SanDns("verifier", jarSigningConfig)
     val createJar: CreateJarNimbus = CreateJarNimbus()
-    val signedRequestObjectVerifier: JWSVerifier = RSASSAVerifier(rsaJwk)
+    val signedRequestObjectVerifier: JWSVerifier = ECDSAVerifier(ecJwk)
     private val repo = PresentationInMemoryRepo()
     val loadPresentationById = repo.loadPresentationById
     private val storePresentation = repo.storePresentation

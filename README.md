@@ -551,12 +551,25 @@ https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algori
 Note: The configured signing algorithm must be compatible with the configured signing key  
 Default value: `ES256`
 
-Variable: `VERIFIER_JAR_SIGNING_KEY`  
-Description: Key to use for Authorization Request signing  
-Possible values: `GenerateRandom`, `LoadFromKeystore`  
-Setting this value to `GenerateRandom` will result in the generation of a random `EC` key using the curve `P-256`   
-Note: The configured signing key must be compatible with the configured signing algorithm  
-Default value: `GenerateRandom`
+Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE`  
+Description: URL of the Keystore from which to load the Key to use for JAR signing  
+Examples: `classpath:keystore.jks`, `file:///keystore.jks`
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE_TYPE`  
+Description: Type of the Keystore from which to load the Key to use for JAR signing  
+Examples: `jks`, `pkcs12`
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE_PASSWORD`  
+Description: Password of the Keystore from which to load the Key to use for JAR signing
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_ALIAS`  
+Description: Alias of the Key to use for JAR signing, in the configured Keystore  
+
+> [!CAUTION]  
+> **The JAR signing key must be associated with a Certificate chain. The leaf Certificate cannot be self-signed.**
+
+Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
+Description: Password of the Key to use for JAR signing, in the configured Keystore
 
 Variable: `VERIFIER_PUBLICURL`  
 Description: Public URL of the Verifier Endpoint application  
@@ -662,25 +675,6 @@ Default value: `false`
 Variable: `CORS_MAXAGE`  
 Description: Time in seconds of how long pre-flight request responses can be cached by clients  
 Default value: `3600`
-
-### When `VERIFIER_JAR_SIGNING_KEY` is set to `LoadFromKeystore` the following environment variables must also be configured.
-
-Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE`  
-Description: URL of the Keystore from which to load the Key to use for JAR signing  
-Examples: `classpath:keystore.jks`, `file:///keystore.jks`
-
-Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE_TYPE`  
-Description: Type of the Keystore from which to load the Key to use for JAR signing  
-Examples: `jks`, `pkcs12`
-
-Variable: `VERIFIER_JAR_SIGNING_KEY_KEYSTORE_PASSWORD`  
-Description: Password of the Keystore from which to load the Key to use for JAR signing
-
-Variable: `VERIFIER_JAR_SIGNING_KEY_ALIAS`  
-Description: Alias of the Key to use for JAR signing, in the configured Keystore
-
-Variable: `VERIFIER_JAR_SIGNING_KEY_PASSWORD`  
-Description: Password of the Key to use for JAR signing, in the configured Keystore
 
 ### Configuring trust sources
 

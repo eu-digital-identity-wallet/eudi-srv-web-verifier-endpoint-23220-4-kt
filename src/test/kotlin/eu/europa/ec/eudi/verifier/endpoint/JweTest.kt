@@ -111,8 +111,8 @@ internal class JweTest {
         val jwtClaims: JWTClaimsSet = JWTClaimsSet.Builder()
             .issuer("Verifier")
             .subject("john doe")
-            .audience(Arrays.asList("https://eudi.com", "https://eudi.org"))
-            .expirationTime(Date(now.getTime() + 1000 * 60 * 10)) // expires in 10 minutes
+            .audience(listOf("https://eudi.com", "https://eudi.org"))
+            .expirationTime(Date(now.time + 1000 * 60 * 10)) // expires in 10 minutes
             .notBeforeTime(now)
             .issueTime(now)
             .jwtID(UUID.randomUUID().toString())
