@@ -734,9 +734,9 @@ private fun Environment.publicUrl(): String = getProperty("verifier.publicUrl", 
 private fun JWK.withCertificateChain(chain: List<X509Certificate>): JWK {
     require(this.parsedX509CertChain.isNotEmpty()) { "jwk must has a leaf certificate" }
     require(chain.isNotEmpty()) { "chain cannot be empty" }
-    require(
-        this.parsedX509CertChain.first() == chain.first(),
-    ) { "leaf certificate of provided chain does not match leaf certificate of jwk" }
+    require(this.parsedX509CertChain.first() == chain.first()) {
+        "leaf certificate of provided chain does not match leaf certificate of jwk"
+    }
 
     val encodedChain = chain.map { Base64.encode(it.encoded) }
     return when (this) {
