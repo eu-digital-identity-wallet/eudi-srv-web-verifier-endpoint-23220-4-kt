@@ -474,17 +474,6 @@ private enum class SigningKeyEnum {
 private const val keystoreDefaultLocation = "/keystore.jks"
 
 private fun jarSigningConfig(environment: Environment, clock: Clock): SigningConfig {
-    fun X509Certificate.isSelfSigned(): Boolean =
-        subjectX500Principal == issuerX500Principal &&
-            runCatching {
-                verify(publicKey)
-                true
-            }.getOrElse { false }
-
-    fun List<X509Certificate>.dropRootCA(): List<X509Certificate> =
-        if (size > 1 && last().isSelfSigned()) dropLast(1)
-        else this
-
     val key = run {
         fun loadFromKeystore(): JWK {
             val keystoreResource = run {
@@ -525,7 +514,6 @@ private fun jarSigningConfig(environment: Environment, clock: Clock): SigningCon
                 val chain = keystore.getCertificateChain(keyAlias)
                     .orEmpty()
                     .map { certificate -> certificate as X509Certificate }
-                    .dropRootCA()
                     .toList()
 
                 when {
