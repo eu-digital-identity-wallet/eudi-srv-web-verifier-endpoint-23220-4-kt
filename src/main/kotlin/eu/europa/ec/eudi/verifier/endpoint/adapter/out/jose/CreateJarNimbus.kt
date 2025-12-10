@@ -36,7 +36,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID
 import com.nimbusds.oauth2.sdk.id.State
 import com.nimbusds.openid.connect.sdk.rp.OIDCClientMetadata
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.toJackson
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.dropRootCA
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.dropRootCAIfPresent
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.jose.CreateJar
 import com.nimbusds.oauth2.sdk.ResponseMode as NimbusResponseMode
@@ -73,7 +73,7 @@ class CreateJarNimbus : CreateJar {
                 when (requestObject.verifierId) {
                     is VerifierId.PreRegistered -> keyID(key.keyID)
                     is VerifierId.X509SanDns, is VerifierId.X509Hash -> x509CertChain(
-                        key.parsedX509CertChain.dropRootCA().map { Base64.encode(it.encoded) },
+                        key.parsedX509CertChain.dropRootCAIfPresent().map { Base64.encode(it.encoded) },
                     )
                 }
             }
