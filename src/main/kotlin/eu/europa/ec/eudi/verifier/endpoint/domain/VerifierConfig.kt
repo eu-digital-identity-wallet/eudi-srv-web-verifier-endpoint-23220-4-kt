@@ -31,6 +31,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.jose.JWSAlgorithmStringSerializer
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -175,7 +176,9 @@ data class SigningConfig(
     val algorithm: JWSAlgorithm,
 ) {
     init {
-        // Verify only asymmetric signature algorithms are accepted
+        require(key.isPrivate) { "a private key is required for signing" }
+        require(!key.parsedX509CertChain.isNullOrEmpty()) { "signing key must contain a certificate chain" }
+        require(!certificate.isSelfSigned()) { "signing key must not use a self-signed certificate" }
         require(algorithm in JWSAlgorithm.Family.SIGNATURE) { "'${algorithm.name}' is not a valid signature algorithm" }
 
         // Verify a JWSSigner can be instantiated with the provided key/algorithm combo
