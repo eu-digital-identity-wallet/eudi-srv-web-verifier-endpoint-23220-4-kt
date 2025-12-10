@@ -604,19 +604,19 @@ private fun Environment.parseKeyStoreConfig(propertyPrefix: String): KeyStoreCon
     "$propertyPrefix.path",
 )?.let { keystorePath ->
     val keystoreType = getPropertyOrEnvVariable("$propertyPrefix.type") ?: "JKS"
-    val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "").toCharArray()
+    val keystorePassword = getPropertyOrEnvVariable("$propertyPrefix.password", "")
     loadKeystore(keystorePath, keystoreType, keystorePassword)
         .onLeft { log.warn("Failed to load keystore from '$keystorePath'", it) }
         .map { KeyStoreConfig(keystorePath, keystoreType, keystorePassword, it) }
         .getOrNull()
 }
 
-private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: CharArray) = Either.catch {
+private fun loadKeystore(keystorePath: String, keystoreType: String, keystorePassword: String) = Either.catch {
     DefaultResourceLoader().getResource(keystorePath)
         .inputStream
         .use {
             KeyStore.getInstance(keystoreType).apply {
-                load(it, keystorePassword)
+                load(it, keystorePassword.toCharArray())
             }
         }
 }
