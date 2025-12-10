@@ -18,11 +18,7 @@ package eu.europa.ec.eudi.verifier.endpoint.adapter.out.keystore
 import arrow.core.NonEmptyList
 import arrow.core.some
 import arrow.core.toNonEmptyListOrNull
-import com.nimbusds.jose.jwk.ECKey
-import com.nimbusds.jose.jwk.JWK
-import com.nimbusds.jose.jwk.OctetKeyPair
-import com.nimbusds.jose.jwk.OctetSequenceKey
-import com.nimbusds.jose.jwk.RSAKey
+import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.util.Base64
 import org.springframework.core.io.DefaultResourceLoader
 import java.security.KeyStore

@@ -25,7 +25,7 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
-import kotlin.test.*
+import kotlin.test.Test
 
 data class TrustedCA(val trustCert: X509Certificate, val caCert: X509Certificate)
 

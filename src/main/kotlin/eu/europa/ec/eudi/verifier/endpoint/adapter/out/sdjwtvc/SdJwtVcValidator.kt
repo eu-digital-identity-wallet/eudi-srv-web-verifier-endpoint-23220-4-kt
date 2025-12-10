@@ -16,8 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc
 
 import arrow.core.*
-import arrow.core.Either
-import arrow.core.flatMap
 import com.nimbusds.jose.JOSEObjectType
 import com.nimbusds.jose.proc.BadJOSEException
 import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier

@@ -20,11 +20,7 @@ import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtAndKbJwt
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationErrorCode
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.StatusCheckException
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.*
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
