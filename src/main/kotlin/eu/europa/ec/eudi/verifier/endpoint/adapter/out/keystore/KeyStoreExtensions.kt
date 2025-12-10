@@ -30,7 +30,7 @@ fun loadKeyStore(location: String, type: String = KeyStore.getDefaultType(), pas
             .some()
             .filter { it.exists() }
             .getOrNull()
-        checkNotNull(keystoreResource) { "Could not load Keystore from '$location'" }
+        checkNotNull(keystoreResource) { "Could not load Keystore from: '$location'" }
     }
 
     return keystoreResource.inputStream.use { inputStream ->
@@ -56,7 +56,7 @@ fun KeyStore.loadJWK(alias: String, password: String?): JWK {
     val chain = getCertificateChain(alias)
         ?.mapNotNull { certificate -> certificate as? X509Certificate }
         ?.toNonEmptyListOrNull()
-    requireNotNull(chain) { "Could not load Certificate chain for alias :$alias" }
+    requireNotNull(chain) { "Could not load Certificate chain for alias: $alias" }
 
     return jwk.withCertificateChain(chain)
 }
