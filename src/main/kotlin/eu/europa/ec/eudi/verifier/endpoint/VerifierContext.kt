@@ -439,7 +439,7 @@ private inline fun <reified T> SupplierContextDsl<T>.deviceResponseValidator(
         issuerSignedItemsShouldBe = IssuerSignedItemsShouldBe.Verified,
         validityInfoShouldBe = ValidityInfoShouldBe.NotExpired,
         provideTrustSource = provideTrustSource,
-        statusListTokenValidator = provider<StatusListTokenValidator>().ifAvailable,
+        statusListTokenValidator = beanProvider<StatusListTokenValidator>().ifAvailable,
     )
     log.info(
         "Created DocumentValidator using: \n\t" +
