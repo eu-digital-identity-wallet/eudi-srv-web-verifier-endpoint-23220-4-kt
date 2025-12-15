@@ -251,6 +251,14 @@ class WalletApi(
                     put("error", "HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc")
                     put("description", "DeviceResponse contains more than one MDocs")
                 }
+
+                is WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism -> {
+                    put("error", "HAIPValidationError.UnsupportedMsoRevocationMechanism")
+                    put(
+                        "description",
+                        "MSO uses unsupported revocation mechanisms. Used: '${used.joinToString()}', allowed: '${allowed.joinToString()}'",
+                    )
+                }
             }
         }
     }

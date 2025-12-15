@@ -25,12 +25,14 @@ import arrow.core.raise.ensureNotNull
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import eu.europa.ec.eudi.sdjwt.SdJwtVerificationException
+import eu.europa.ec.eudi.statium.TokenStatusListSpec
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.cert.X5CShouldBe
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.digest.hash
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPadding
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.status
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
@@ -38,6 +40,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusChe
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
+import id.walt.mdoc.dataelement.MapKeyType
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -161,8 +164,18 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         }
 
         documents.forEach { document ->
-            ensureNotNull(document.issuerSigned.issuerAuth) {
+            val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
+            }
+            val status = issuerAuth.status()
+            if (Profile.HAIP == profile && null != status) {
+                val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
+                ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
+                    WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(
+                        used = status.value.keys.map { it.toString() }.toSet(),
+                        allowed = msoRevocationMechanisms,
+                    )
+                }
             }
         }
         verifiablePresentation
