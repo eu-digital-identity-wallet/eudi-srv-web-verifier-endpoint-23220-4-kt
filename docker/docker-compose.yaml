@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
   verifier:
-    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt:latest
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-verifier-endpoint:latest
     container_name: verifier-backend
     ports:
       - "8080:8080"
