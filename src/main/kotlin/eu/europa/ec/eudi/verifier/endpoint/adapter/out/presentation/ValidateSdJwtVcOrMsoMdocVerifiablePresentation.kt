@@ -58,6 +58,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         issuerChain: X5CShouldBe.Trusted?,
+        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         when (verifiablePresentation.format) {
             Format.SdJwtVc -> {
@@ -78,6 +79,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 validator.validateMsoMdocVerifiablePresentation(
                     verifiablePresentation,
                     transactionId,
+                    profile,
                 ).bind()
             }
 
@@ -139,6 +141,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
     private suspend fun DeviceResponseValidator.validateMsoMdocVerifiablePresentation(
         verifiablePresentation: VerifiablePresentation,
         transactionId: TransactionId?,
+        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation.Str> = either {
         ensure(verifiablePresentation is VerifiablePresentation.Str) {
             WalletResponseValidationError.InvalidVpToken("Mso MDoc VC must be a string.")
@@ -150,6 +153,12 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 error.toWalletResponseValidationError()
             }
             .bind()
+
+        if (Profile.HAIP == profile) {
+            ensure(1 == documents.size) {
+                WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc
+            }
+        }
 
         documents.forEach { document ->
             ensureNotNull(document.issuerSigned.issuerAuth) {

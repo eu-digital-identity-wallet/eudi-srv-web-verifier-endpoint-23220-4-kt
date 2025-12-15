@@ -244,7 +244,12 @@ class WalletApi(
                 }
                 is WalletResponseValidationError.UnexpectedResponseMode -> {
                     put("error", "UnexpectedResponseMode")
-                    put("description", "Wallet expected to respond with ${this@toJson.expected} but responsed with ${this@toJson.actual}")
+                    put("description", "Wallet expected to respond with ${this@toJson.expected} but responded with ${this@toJson.actual}")
+                }
+
+                WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc -> {
+                    put("error", "HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc")
+                    put("description", "DeviceResponse contains more than one MDocs")
                 }
             }
         }

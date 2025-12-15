@@ -164,6 +164,9 @@ private fun WalletResponseValidationError.asText(): String =
             "vp_token does not satisfy all the required credential sets of the query"
         WalletResponseValidationError.InvalidPresentationSubmission -> "Presentation submission is not valid"
         is WalletResponseValidationError.InvalidEncryptedResponse -> "Encrypted response is not valid: '${error.message}'"
+        WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc -> {
+            "DeviceResponse contains more than one MDocs"
+        }
     }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)
