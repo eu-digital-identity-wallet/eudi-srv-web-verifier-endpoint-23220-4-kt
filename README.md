@@ -86,6 +86,7 @@ To start the docker compose environment
 cd docker
 docker-compose up -d
 ```
+
 To stop the docker compose environment
 ```bash
 # From project root directory 
@@ -96,10 +97,13 @@ docker-compose down
 The 'verifier' service can be configured by setting its configuration properties described [here](#configuration) by setting them as environment 
 variables of the service in [docker-compose.yaml](docker/docker-compose.yaml)  
 
+> [!IMPORTANT]  
+> Starting with v0.6.6, the Docker image for Verifier Endpoint is published as `ghcr.io/eu-digital-identity-wallet/eudi-srv-verifier-endpoint`.
+
 **Example:**
 ```yaml
   verifier:
-    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt:latest
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-verifier-endpoint:latest
     container_name: verifier-backend
     ports:
       - "8080:8080"
@@ -117,7 +121,7 @@ To provide an external keystore mount it to the path designated by the value of 
 **Example:**
 ```yaml
   verifier:
-    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt:latest
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-verifier-endpoint:latest
     container_name: verifier-backend
     ports:
       - "8080:8080"

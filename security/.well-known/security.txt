@@ -1,6 +1,6 @@
 Contact: mailto:EC-VULNERABILITY-DISCLOSURE@ec.europa.eu,
 Expires: 2025-12-31T23:59:59.000Z
-Encryption: https://github.com/eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt/blob/main/security/pgp-key.txt
+Encryption: https://github.com/eu-digital-identity-wallet/eudi-srv-verifier-endpoint/blob/main/security/pgp-key.txt
 Preferred-Languages: en
-Canonical: https://github.com/eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt/blob/main/security/.well-known/security.txt
-Policy: https://github.com/eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt/blob/main/SECURITY.md
+Canonical: https://github.com/eu-digital-identity-wallet/eudi-srv-verifier-endpoint/blob/main/security/.well-known/security.txt
+Policy: https://github.com/eu-digital-identity-wallet/eudi-srv-verifier-endpoint/blob/main/SECURITY.md
