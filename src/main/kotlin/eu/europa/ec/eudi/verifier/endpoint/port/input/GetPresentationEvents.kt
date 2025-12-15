@@ -171,6 +171,10 @@ private fun WalletResponseValidationError.asText(): String =
         is WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism -> {
             "MSO uses unsupported revocation mechanisms. Used: '${used.joinToString()}', allowed: '${allowed.joinToString()}'"
         }
+
+        WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList -> {
+            "SD-JWT VC must use Token Status List as revocation mechanism"
+        }
     }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)

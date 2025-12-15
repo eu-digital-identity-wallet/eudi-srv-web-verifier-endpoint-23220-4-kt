@@ -36,6 +36,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.status
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.status
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
@@ -73,6 +74,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                     nonce,
                     transactionData,
                     transactionId,
+                    profile,
                 ).bind()
             }
 
@@ -97,6 +99,7 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         transactionId: TransactionId?,
+        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = either {
         fun invalidVpToken(errors: NonEmptyList<SdJwtVcValidationError>): WalletResponseValidationError {
             val validationFailures = jsonSupport.encodeToString(errors.toJson())
@@ -117,6 +120,13 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
                 transactionId = transactionId,
             )
         }.mapLeft { errors -> invalidVpToken(errors) }.bind()
+
+        val status = sdJwt.status()
+        if (Profile.HAIP == profile && null != status) {
+            ensure(TokenStatusListSpec.STATUS_LIST in status) {
+                WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList
+            }
+        }
 
         // Validate that the signing algorithm of sd-jwt-vc matches the algorithm specified in the presentation query
         if (null != vpFormatSupported.sdJwtAlgorithms) {
