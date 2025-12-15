@@ -273,6 +273,8 @@ class InitTransactionLive(
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
         val issuerChain = issuerChain(initTransactionTO).bind()
 
+        val profile = initTransactionTO.profileOrDefault.toProfile()
+
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
             id = generateTransactionId(),
@@ -285,12 +287,13 @@ class InitTransactionLive(
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
             issuerChain = issuerChain,
+            profile = profile,
         )
 
         val jarMode = jarMode(initTransactionTO)
 
         // validate according to the selected profile
-        with(initTransactionTO.profileOrDefault.validator) {
+        with(profile.validator) {
             validate(verifierConfig, requestedPresentation, jarMode)
         }
 
@@ -313,7 +316,7 @@ class InitTransactionLive(
         }
 
         storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, request)
+        logTransactionInitialized(updatedPresentation, request, profile.toTO())
 
         response
     }
@@ -417,8 +420,12 @@ class InitTransactionLive(
             null -> verifierConfig.requestUriMethod
         }
 
-    private suspend fun logTransactionInitialized(p: Presentation, request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO) {
-        val event = PresentationEvent.TransactionInitialized(p.id, p.initiatedAt, request)
+    private suspend fun logTransactionInitialized(
+        presentation: Presentation,
+        request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
+        profile: ProfileTO,
+    ) {
+        val event = PresentationEvent.TransactionInitialized(presentation.id, presentation.initiatedAt, request, profile)
         publishPresentationEvent(event)
     }
 
@@ -586,8 +593,20 @@ private fun interface ProfileValidator {
     }
 }
 
-private val ProfileTO.validator: ProfileValidator
+private fun ProfileTO.toProfile(): Profile =
+    when (this) {
+        ProfileTO.OpenId4VP -> Profile.OpenId4VP
+        ProfileTO.HAIP -> Profile.HAIP
+    }
+
+private fun Profile.toTO(): ProfileTO =
+    when (this) {
+        Profile.OpenId4VP -> ProfileTO.OpenId4VP
+        Profile.HAIP -> ProfileTO.HAIP
+    }
+
+private val Profile.validator: ProfileValidator
     get() = when (this) {
-        ProfileTO.OpenId4VP -> ProfileValidator.OpenId4VP
-        ProfileTO.HAIP -> ProfileValidator.HAIP
+        Profile.OpenId4VP -> ProfileValidator.OpenId4VP
+        Profile.HAIP -> ProfileValidator.HAIP
     }

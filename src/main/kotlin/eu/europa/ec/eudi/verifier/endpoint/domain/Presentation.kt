@@ -104,6 +104,21 @@ sealed interface GetWalletResponseMethod {
 }
 
 /**
+ * Profile, i.e. rules, that govern a Transaction.
+ */
+sealed interface Profile {
+    /**
+     * [OpenId4VP](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
+     */
+    data object OpenId4VP : Profile
+
+    /**
+     * [High Assurance Interoperability Profile](https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html)
+     */
+    data object HAIP : Profile
+}
+
+/**
  * The entity that represents the presentation process
  */
 sealed interface Presentation {
@@ -124,6 +139,7 @@ sealed interface Presentation {
         val responseMode: ResponseMode,
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
+        val profile: Profile,
     ) : Presentation
 
     /**
@@ -143,6 +159,7 @@ sealed interface Presentation {
         val responseMode: ResponseMode,
         val getWalletResponseMethod: GetWalletResponseMethod,
         val issuerChain: NonEmptyList<X509Certificate>?,
+        val profile: Profile,
     ) : Presentation {
         init {
             require(initiatedAt <= requestObjectRetrievedAt)
@@ -162,6 +179,7 @@ sealed interface Presentation {
                         requested.responseMode,
                         requested.getWalletResponseMethod,
                         requested.issuerChain,
+                        requested.profile,
                     )
                 }
         }

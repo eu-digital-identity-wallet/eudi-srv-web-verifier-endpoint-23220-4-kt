@@ -82,6 +82,7 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
     when (event) {
         is PresentationEvent.TransactionInitialized -> {
             put("response", event.response.json())
+            put("profile", event.profile.json())
         }
 
         is PresentationEvent.RequestObjectRetrieved -> {
