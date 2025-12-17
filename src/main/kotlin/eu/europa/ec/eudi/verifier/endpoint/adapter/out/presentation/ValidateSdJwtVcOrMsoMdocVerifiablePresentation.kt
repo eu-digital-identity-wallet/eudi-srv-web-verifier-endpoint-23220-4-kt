@@ -32,7 +32,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.encoding.base64UrlNoPaddi
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.jsonSupport
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.DeviceResponseValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.status
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.decodePayload
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidationError
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
@@ -41,6 +41,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusChe
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
+import id.walt.mdoc.dataelement.MapElement
 import id.walt.mdoc.dataelement.MapKeyType
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -177,8 +178,8 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
-            val status = issuerAuth.status()
-            if (Profile.HAIP == profile && null != status) {
+            val status = checkNotNull(issuerAuth.decodePayload<MapElement>())
+            if (Profile.HAIP == profile) {
                 val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
                 ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
                     WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(

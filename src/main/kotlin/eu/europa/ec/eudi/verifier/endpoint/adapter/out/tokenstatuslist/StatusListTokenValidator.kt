@@ -22,7 +22,7 @@ import eu.europa.ec.eudi.statium.GetStatus
 import eu.europa.ec.eudi.statium.GetStatusListToken
 import eu.europa.ec.eudi.statium.Status
 import eu.europa.ec.eudi.statium.StatusReference
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.statusReference
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.mso.tokenStatusListReference
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.statusReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock
 import eu.europa.ec.eudi.verifier.endpoint.domain.Clock.Companion.asKotlinClock
@@ -44,7 +44,7 @@ class StatusListTokenValidator(
         sdJwtVc.statusReference()?.validate(transactionId)
 
     suspend fun validate(mdoc: MDoc, transactionId: TransactionId?) =
-        mdoc.issuerSigned.issuerAuth?.statusReference()?.validate(transactionId)
+        mdoc.issuerSigned.issuerAuth?.tokenStatusListReference()?.validate(transactionId)
 
     private suspend fun StatusReference.validate(transactionId: TransactionId?) {
         catch({
