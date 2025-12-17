@@ -42,6 +42,7 @@ import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
 import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifiablePresentation
 import id.walt.mdoc.dataelement.MapElement
+import id.walt.mdoc.dataelement.MapKey
 import id.walt.mdoc.dataelement.MapKeyType
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -178,8 +179,9 @@ internal class ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             val issuerAuth = ensureNotNull(document.issuerSigned.issuerAuth) {
                 WalletResponseValidationError.InvalidVpToken("DeviceResponse contains unsigned MSO MDoc documents")
             }
-            val status = checkNotNull(issuerAuth.decodePayload<MapElement>())
-            if (Profile.HAIP == profile) {
+            val issuerAuthPayload = checkNotNull(issuerAuth.decodePayload<MapElement>())
+            val status = issuerAuthPayload.value[MapKey(TokenStatusListSpec.STATUS)]
+            if (Profile.HAIP == profile && status is MapElement) {
                 val msoRevocationMechanisms = setOf("identifier_list", TokenStatusListSpec.STATUS_LIST)
                 ensure(status.value.keys.all { MapKeyType.string == it.type && it.str in msoRevocationMechanisms }) {
                     WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism(
