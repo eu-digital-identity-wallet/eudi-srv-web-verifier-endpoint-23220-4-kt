@@ -244,7 +244,25 @@ class WalletApi(
                 }
                 is WalletResponseValidationError.UnexpectedResponseMode -> {
                     put("error", "UnexpectedResponseMode")
-                    put("description", "Wallet expected to respond with ${this@toJson.expected} but responsed with ${this@toJson.actual}")
+                    put("description", "Wallet expected to respond with ${this@toJson.expected} but responded with ${this@toJson.actual}")
+                }
+
+                WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc -> {
+                    put("error", "HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc")
+                    put("description", "DeviceResponse contains more than one MDocs")
+                }
+
+                is WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism -> {
+                    put("error", "HAIPValidationError.UnsupportedMsoRevocationMechanism")
+                    put(
+                        "description",
+                        "MSO uses unsupported revocation mechanisms. Used: '${used.joinToString()}', allowed: '${allowed.joinToString()}'",
+                    )
+                }
+
+                WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList -> {
+                    put("error", "HAIPValidationError.SdJwtVcMustUseTokenStatusList")
+                    put("description", "SD-JWT VC must use Token Status List as revocation mechanism")
                 }
             }
         }

@@ -23,13 +23,15 @@ import id.walt.mdoc.dataelement.MapElement
 import id.walt.mdoc.dataelement.MapKey
 import kotlinx.serialization.decodeFromByteArray
 
-fun COSESign1.statusReference(): StatusReference? =
+inline fun <reified T : Any> COSESign1.decodePayload(): T? =
+    payload?.let {
+        val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(it)
+        cbor.decodeFromByteArray<T>(encoded.value)
+    }
+
+fun COSESign1.tokenStatusListReference(): StatusReference? =
     runCatching {
-        payload
-            ?.let { payload ->
-                val encoded = cbor.decodeFromByteArray<EncodedCBORElement>(payload)
-                cbor.decodeFromByteArray<MapElement>(encoded.value)
-            }
+        decodePayload<MapElement>()
             ?.value[MapKey(TokenStatusListSpec.STATUS)]
             ?.let { it as MapElement }
             ?.value[MapKey(TokenStatusListSpec.STATUS_LIST)]

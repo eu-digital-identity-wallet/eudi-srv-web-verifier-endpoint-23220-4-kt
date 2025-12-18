@@ -19,6 +19,7 @@ import eu.europa.ec.eudi.statium.StatusReference
 import eu.europa.ec.eudi.verifier.endpoint.domain.Jwt
 import eu.europa.ec.eudi.verifier.endpoint.domain.TransactionId
 import eu.europa.ec.eudi.verifier.endpoint.port.input.InitTransactionResponse
+import eu.europa.ec.eudi.verifier.endpoint.port.input.ProfileTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseAcceptedTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseTO
 import eu.europa.ec.eudi.verifier.endpoint.port.input.WalletResponseValidationError
@@ -32,6 +33,7 @@ sealed interface PresentationEvent {
         override val transactionId: TransactionId,
         override val timestamp: Instant,
         val response: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
+        val profile: ProfileTO,
     ) : PresentationEvent
 
     data class RequestObjectRetrieved(

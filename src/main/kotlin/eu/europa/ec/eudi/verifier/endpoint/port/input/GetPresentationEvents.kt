@@ -82,6 +82,7 @@ private fun toTransferObject(event: PresentationEvent) = buildJsonObject {
     when (event) {
         is PresentationEvent.TransactionInitialized -> {
             put("response", event.response.json())
+            put("profile", event.profile.json())
         }
 
         is PresentationEvent.RequestObjectRetrieved -> {
@@ -163,6 +164,17 @@ private fun WalletResponseValidationError.asText(): String =
             "vp_token does not satisfy all the required credential sets of the query"
         WalletResponseValidationError.InvalidPresentationSubmission -> "Presentation submission is not valid"
         is WalletResponseValidationError.InvalidEncryptedResponse -> "Encrypted response is not valid: '${error.message}'"
+        WalletResponseValidationError.HAIPValidationError.DeviceResponseContainsMoreThanOneMDoc -> {
+            "DeviceResponse contains more than one MDocs"
+        }
+
+        is WalletResponseValidationError.HAIPValidationError.UnsupportedMsoRevocationMechanism -> {
+            "MSO uses unsupported revocation mechanisms. Used: '${used.joinToString()}', allowed: '${allowed.joinToString()}'"
+        }
+
+        WalletResponseValidationError.HAIPValidationError.SdJwtVcMustUseTokenStatusList -> {
+            "SD-JWT VC must use Token Status List as revocation mechanism"
+        }
     }
 
 private inline fun <reified A> A.json() = Json.encodeToJsonElement(this)

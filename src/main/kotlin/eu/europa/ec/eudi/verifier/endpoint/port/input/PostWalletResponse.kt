@@ -16,7 +16,6 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.Either
-import arrow.core.NonEmptyList
 import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.ensure
@@ -38,7 +37,6 @@ import eu.europa.ec.eudi.verifier.endpoint.port.out.presentation.ValidateVerifia
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import java.security.cert.X509Certificate
 
 /**
  * Represent the Authorization Response placed by wallet
@@ -74,6 +72,12 @@ sealed interface WalletResponseValidationError {
     data object RequiredCredentialSetNotSatisfied : WalletResponseValidationError
     data object InvalidPresentationSubmission : WalletResponseValidationError
     data class InvalidEncryptedResponse(val error: BadJOSEException) : WalletResponseValidationError
+
+    sealed interface HAIPValidationError : WalletResponseValidationError {
+        data object DeviceResponseContainsMoreThanOneMDoc : HAIPValidationError
+        data class UnsupportedMsoRevocationMechanism(val used: Set<String>, val allowed: Set<String>) : HAIPValidationError
+        data object SdJwtVcMustUseTokenStatusList : HAIPValidationError
+    }
 }
 
 private suspend fun AuthorisationResponseTO.toDomain(
@@ -81,29 +85,21 @@ private suspend fun AuthorisationResponseTO.toDomain(
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormatsSupported: VpFormatsSupported,
 ): Either<WalletResponseValidationError, WalletResponse> = either {
-    suspend fun requiredVerifiablePresentations(query: DCQL): VerifiablePresentations =
+    suspend fun requiredVerifiablePresentations(): VerifiablePresentations =
         verifiablePresentations(
-            query,
-            presentation.id,
-            presentation.nonce,
-            presentation.transactionData,
+            presentation,
             validateVerifiablePresentation,
             vpFormatsSupported,
-            presentation.issuerChain,
         ).bind()
 
     val maybeError: WalletResponse.Error? = error?.let { WalletResponse.Error(it, errorDescription) }
-    maybeError ?: WalletResponse.VpToken(requiredVerifiablePresentations(presentation.query))
+    maybeError ?: WalletResponse.VpToken(requiredVerifiablePresentations())
 }
 
 private suspend fun AuthorisationResponseTO.verifiablePresentations(
-    query: DCQL,
-    transactionId: TransactionId,
-    nonce: Nonce,
-    transactionData: NonEmptyList<TransactionData>?,
+    presentation: RequestObjectRetrieved,
     validateVerifiablePresentation: ValidateVerifiablePresentation,
     vpFormatsSupported: VpFormatsSupported,
-    issuerChain: NonEmptyList<X509Certificate>?,
 ): Either<WalletResponseValidationError, VerifiablePresentations> =
     either {
         ensureNotNull(vpToken) { WalletResponseValidationError.MissingVpToken }
@@ -113,7 +109,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                 Json.decodeFromJsonElement<Map<QueryId, List<JsonElement>>>(this)
             }.getOrElse { raise(WalletResponseValidationError.InvalidVpToken("Failed to decode vp_token", it)) }
 
-            val credentialQueries = query.credentials.value.associateBy { it.id }
+            val credentialQueries = presentation.query.credentials.value.associateBy { it.id }
             return vpToken.mapValues { (queryId, value) ->
                 val format = credentialQueries[queryId]?.format
                     ?: raise(
@@ -123,7 +119,7 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                         ),
                     )
                 val unvalidatedVerifiablePresentations = value.map { it.toVerifiablePresentation(format).bind() }
-                val applicableTransactionData = transactionData?.filter {
+                val applicableTransactionData = presentation.transactionData?.filter {
                     queryId.value in it.credentialIds
                 }?.toNonEmptyListOrNull()
                 ensure(vpFormatsSupported.supports(format)) {
@@ -134,19 +130,20 @@ private suspend fun AuthorisationResponseTO.verifiablePresentations(
                 }
                 unvalidatedVerifiablePresentations.map {
                     validateVerifiablePresentation(
-                        transactionId,
+                        presentation.id,
                         it,
                         vpFormatsSupported,
-                        nonce,
+                        presentation.nonce,
                         applicableTransactionData,
-                        issuerChain,
+                        presentation.issuerChain,
+                        presentation.profile,
                     ).bind()
                 }
             }
         }
 
         val verifiablePresentations = vpToken.toVerifiablePresentations()
-        ensure(query.satisfiedBy(verifiablePresentations)) {
+        ensure(presentation.query.satisfiedBy(verifiablePresentations)) {
             WalletResponseValidationError.RequiredCredentialSetNotSatisfied
         }
 
@@ -342,14 +339,6 @@ class PostWalletResponseLive(
         val event = PresentationEvent.WalletFailedToPostResponse(p.id, clock.now(), cause)
         publishPresentationEvent(event)
     }
-}
-
-/**
- * Gets the [ResponseModeOption] that corresponds to the receiver [AuthorisationResponse].
- */
-private fun AuthorisationResponse.responseModeOption(): ResponseModeOption = when (this) {
-    is AuthorisationResponse.DirectPost -> ResponseModeOption.DirectPost
-    is AuthorisationResponse.DirectPostJwt -> ResponseModeOption.DirectPostJwt
 }
 
 private fun DCQL.satisfiedBy(response: Map<QueryId, List<VerifiablePresentation>>): Boolean =

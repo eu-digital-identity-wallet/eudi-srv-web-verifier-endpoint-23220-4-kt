@@ -141,8 +141,46 @@ internal class VerifierApi(
          * Extracts from the request the [RequestId]
          */
         private fun ServerRequest.transactionId() = TransactionId(pathVariable("transactionId"))
-        private suspend fun ValidationError.asBadRequest() =
-            badRequest().json().bodyValueAndAwait(mapOf("error" to this))
+
+        private suspend fun ValidationError.asBadRequest(): ServerResponse {
+            val error = when (this) {
+                ValidationError.MissingPresentationQuery ->
+                    "MissingPresentationQuery"
+                ValidationError.MissingNonce ->
+                    "MissingNonce"
+                ValidationError.InvalidWalletResponseTemplate ->
+                    "InvalidWalletResponseTemplate"
+                ValidationError.InvalidTransactionData ->
+                    "InvalidTransactionData"
+                ValidationError.UnsupportedFormat ->
+                    "UnsupportedFormat"
+                ValidationError.InvalidIssuerChain ->
+                    "InvalidIssuerChain"
+                ValidationError.ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme ->
+                    "ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme"
+                ValidationError.InvalidAuthorizationRequestUri ->
+                    "InvalidAuthorizationRequestUri"
+                ValidationError.InvalidAuthorizationRequestScheme ->
+                    "InvalidAuthorizationRequestScheme"
+                ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported ->
+                    "HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported"
+                ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported ->
+                    "HaipNotSupported.JwsAlgorithmES256MustBeSupported"
+                ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed ->
+                    "HaipNotSupported.ClientIdPrefixX509HashMustBeUsed"
+                ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed ->
+                    "HaipNotSupported.SelfSignedCertificateMustNotBeUsed"
+                ValidationError.HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported ->
+                    "HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported"
+                ValidationError.HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported ->
+                    "HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported"
+                ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed ->
+                    "HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed"
+                ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference ->
+                    "HaipNotSupported.AuthorizationRequestMustBeProvidedByReference"
+            }
+            return badRequest().json().bodyValueAndAwait(mapOf("error" to error))
+        }
     }
 }
 
