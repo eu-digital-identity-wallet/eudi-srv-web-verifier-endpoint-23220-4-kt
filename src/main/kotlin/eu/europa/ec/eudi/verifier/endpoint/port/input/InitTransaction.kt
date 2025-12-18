@@ -18,13 +18,18 @@
 package eu.europa.ec.eudi.verifier.endpoint.port.input
 
 import arrow.core.*
+import arrow.core.raise.Raise
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import com.eygraber.uri.Uri
 import com.eygraber.uri.toURI
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
+import com.nimbusds.jose.JWSAlgorithm
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.json.decodeAs
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.isSelfSigned
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.GenerateRequestId
@@ -83,6 +88,24 @@ enum class EmbedModeTO {
     ByReference,
 }
 
+/**
+ * The Profile to active for a Transaction.
+ */
+@Serializable
+enum class ProfileTO {
+    /**
+     * Initialize a Transaction per OpenId4VP. No constraints enforced.
+     */
+    @SerialName("openid4vp")
+    OpenId4VP,
+
+    /**
+     * Initialize a Transaction per HAIP. Extra constraints enforced.
+     */
+    @SerialName("haip")
+    HAIP,
+}
+
 @Serializable
 data class InitTransactionTO(
     @SerialName(OpenId4VPSpec.DCQL_QUERY) val dcqlQuery: DCQL? = null,
@@ -95,22 +118,37 @@ data class InitTransactionTO(
     @SerialName("issuer_chain") val issuerChain: String? = null,
     @SerialName("authorization_request_scheme") val authorizationRequestScheme: String? = null,
     @SerialName("authorization_request_uri") val authorizationRequestUri: String? = null,
+    @SerialName("profile") val profile: ProfileTO? = ProfileTO.OpenId4VP,
     @Transient val output: Output = Output.Json,
 )
+
+private val InitTransactionTO.profileOrDefault: ProfileTO
+    get() = profile ?: ProfileTO.OpenId4VP
 
 /**
  * Possible validation errors of caller's input
  */
-enum class ValidationError {
-    MissingPresentationQuery,
-    MissingNonce,
-    InvalidWalletResponseTemplate,
-    InvalidTransactionData,
-    UnsupportedFormat,
-    InvalidIssuerChain,
-    ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme,
-    InvalidAuthorizationRequestUri,
-    InvalidAuthorizationRequestScheme,
+sealed interface ValidationError {
+    data object MissingPresentationQuery : ValidationError
+    data object MissingNonce : ValidationError
+    data object InvalidWalletResponseTemplate : ValidationError
+    data object InvalidTransactionData : ValidationError
+    data object UnsupportedFormat : ValidationError
+    data object InvalidIssuerChain : ValidationError
+    data object ContainsBothAuthorizationRequestUriAndAuthorizationRequestScheme : ValidationError
+    data object InvalidAuthorizationRequestUri : ValidationError
+    data object InvalidAuthorizationRequestScheme : ValidationError
+
+    sealed interface HaipNotSupported : ValidationError {
+        data object SdJwtVcOrMsoMdocMustBeSupported : HaipNotSupported
+        data object JwsAlgorithmES256MustBeSupported : HaipNotSupported
+        data object ClientIdPrefixX509HashMustBeUsed : HaipNotSupported
+        data object SelfSignedCertificateMustNotBeUsed : HaipNotSupported
+        data object EncryptionAlgorithmECDHESMustBeSupported : HaipNotSupported
+        data object EncryptionMethodsA128GCMAndA256GCMMustBeSupported : HaipNotSupported
+        data object ResponseModeDirectPostJwtMustBeUsed : HaipNotSupported
+        data object AuthorizationRequestMustBeProvidedByReference : HaipNotSupported
+    }
 }
 
 enum class Output {
@@ -235,6 +273,8 @@ class InitTransactionLive(
         val getWalletResponseMethod = getWalletResponseMethod(initTransactionTO).bind()
         val issuerChain = issuerChain(initTransactionTO).bind()
 
+        val profile = initTransactionTO.profileOrDefault.toProfile()
+
         // Initialize presentation
         val requestedPresentation = Presentation.Requested(
             id = generateTransactionId(),
@@ -247,12 +287,20 @@ class InitTransactionLive(
             getWalletResponseMethod = getWalletResponseMethod,
             requestUriMethod = requestUriMethod(initTransactionTO),
             issuerChain = issuerChain,
+            profile = profile,
         )
+
+        val jarMode = jarMode(initTransactionTO)
+
+        // validate according to the selected profile
+        with(profile.validator) {
+            validate(verifierConfig, requestedPresentation, jarMode)
+        }
 
         // create the request, which may update the presentation
         val (updatedPresentation, request) = createRequest(
             requestedPresentation,
-            jarMode(initTransactionTO),
+            jarMode,
             authorizationRequestUri(initTransactionTO).bind(),
         )
 
@@ -268,7 +316,7 @@ class InitTransactionLive(
         }
 
         storePresentation(updatedPresentation)
-        logTransactionInitialized(updatedPresentation, request)
+        logTransactionInitialized(updatedPresentation, request, profile.toTO())
 
         response
     }
@@ -372,8 +420,12 @@ class InitTransactionLive(
             null -> verifierConfig.requestUriMethod
         }
 
-    private suspend fun logTransactionInitialized(p: Presentation, request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO) {
-        val event = PresentationEvent.TransactionInitialized(p.id, p.initiatedAt, request)
+    private suspend fun logTransactionInitialized(
+        presentation: Presentation,
+        request: InitTransactionResponse.JwtSecuredAuthorizationRequestTO,
+        profile: ProfileTO,
+    ) {
+        val event = PresentationEvent.TransactionInitialized(presentation.id, presentation.initiatedAt, request, profile)
         publishPresentationEvent(event)
     }
 
@@ -468,4 +520,93 @@ private fun RequestUriMethod.toTO(): RequestUriMethodTO =
     when (this) {
         RequestUriMethod.Get -> RequestUriMethodTO.Get
         RequestUriMethod.Post -> RequestUriMethodTO.Post
+    }
+
+private fun <T : Any, U : T> Collection<T>.containsAny(first: U, vararg rest: U): Boolean = first in this || rest.any { it in this }
+
+private fun interface ProfileValidator {
+    suspend fun Raise<ValidationError>.validate(
+        config: VerifierConfig,
+        presentation: Presentation.Requested,
+        jarMode: EmbedOption<RequestId>,
+    )
+
+    companion object {
+        val OpenId4VP = ProfileValidator { _, _, _ -> }
+        val HAIP = ProfileValidator { config, presentation, jarMode ->
+            with(config.clientMetaData.vpFormatsSupported) {
+                ensure(null != sdJwtVc || null != msoMdoc) {
+                    ValidationError.HaipNotSupported.SdJwtVcOrMsoMdocMustBeSupported
+                }
+
+                if (null != sdJwtVc) {
+                    ensure(null == sdJwtVc.sdJwtAlgorithms || JWSAlgorithm.ES256 in sdJwtVc.sdJwtAlgorithms) {
+                        ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported
+                    }
+                    ensure(null == sdJwtVc.kbJwtAlgorithms || JWSAlgorithm.ES256 in sdJwtVc.kbJwtAlgorithms) {
+                        ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported
+                    }
+                }
+
+                if (null != msoMdoc) {
+                    ensure(
+                        null == msoMdoc.issuerAuthAlgorithms ||
+                            msoMdoc.issuerAuthAlgorithms.containsAny(CoseAlgorithm(-7), CoseAlgorithm(-9)),
+                    ) {
+                        ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported
+                    }
+
+                    ensure(
+                        null == msoMdoc.deviceAuthAlgorithms ||
+                            msoMdoc.deviceAuthAlgorithms.containsAny(CoseAlgorithm(-7), CoseAlgorithm(-9)),
+                    ) {
+                        ValidationError.HaipNotSupported.JwsAlgorithmES256MustBeSupported
+                    }
+                }
+            }
+
+            with(config.clientMetaData.responseEncryptionOption) {
+                ensure(JWEAlgorithm.ECDH_ES == algorithm) {
+                    ValidationError.HaipNotSupported.EncryptionAlgorithmECDHESMustBeSupported
+                }
+
+                ensure(encryptionMethods.containsAll(listOf(EncryptionMethod.A128GCM, EncryptionMethod.A256GCM))) {
+                    ValidationError.HaipNotSupported.EncryptionMethodsA128GCMAndA256GCMMustBeSupported
+                }
+            }
+
+            ensure(config.verifierId is VerifierId.X509Hash) {
+                ValidationError.HaipNotSupported.ClientIdPrefixX509HashMustBeUsed
+            }
+            ensure(!config.verifierId.jarSigning.certificate.isSelfSigned()) {
+                ValidationError.HaipNotSupported.SelfSignedCertificateMustNotBeUsed
+            }
+
+            ensure(presentation.responseMode is ResponseMode.DirectPostJwt) {
+                ValidationError.HaipNotSupported.ResponseModeDirectPostJwtMustBeUsed
+            }
+
+            ensure(jarMode is EmbedOption.ByReference) {
+                ValidationError.HaipNotSupported.AuthorizationRequestMustBeProvidedByReference
+            }
+        }
+    }
+}
+
+private fun ProfileTO.toProfile(): Profile =
+    when (this) {
+        ProfileTO.OpenId4VP -> Profile.OpenId4VP
+        ProfileTO.HAIP -> Profile.HAIP
+    }
+
+private fun Profile.toTO(): ProfileTO =
+    when (this) {
+        Profile.OpenId4VP -> ProfileTO.OpenId4VP
+        Profile.HAIP -> ProfileTO.HAIP
+    }
+
+private val Profile.validator: ProfileValidator
+    get() = when (this) {
+        Profile.OpenId4VP -> ProfileValidator.OpenId4VP
+        Profile.HAIP -> ProfileValidator.HAIP
     }

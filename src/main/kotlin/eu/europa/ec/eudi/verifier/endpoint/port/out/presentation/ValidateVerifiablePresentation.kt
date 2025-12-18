@@ -41,6 +41,7 @@ fun interface ValidateVerifiablePresentation {
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         issuerChain: X5CShouldBe.Trusted?,
+        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation>
 
     suspend operator fun invoke(
@@ -50,6 +51,7 @@ fun interface ValidateVerifiablePresentation {
         nonce: Nonce,
         transactionData: NonEmptyList<TransactionData>?,
         issuerChain: NonEmptyList<X509Certificate>?,
+        profile: Profile,
     ): Either<WalletResponseValidationError, VerifiablePresentation> = invoke(
         transactionId,
         verifiablePresentation,
@@ -59,10 +61,11 @@ fun interface ValidateVerifiablePresentation {
         issuerChain?.let {
             X5CShouldBe.Trusted(it, customizePKIX = SkipRevocation)
         },
+        profile,
     )
 
     companion object {
         val NoOp: ValidateVerifiablePresentation =
-            ValidateVerifiablePresentation { _, verifiablePresentation, _, _, _, _ -> either { verifiablePresentation } }
+            ValidateVerifiablePresentation { _, verifiablePresentation, _, _, _, _, _ -> either { verifiablePresentation } }
     }
 }
