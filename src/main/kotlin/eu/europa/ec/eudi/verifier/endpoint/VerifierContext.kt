@@ -241,6 +241,7 @@ internal fun beans(clock: Clock) = beans {
             ref(),
         )
     }
+    bean { ProcessSdJwtVc() }
 
     bean {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
@@ -376,7 +377,7 @@ internal fun beans(clock: Clock) = beans {
             webJarResourcesBasePath = env.getRequiredProperty("spring.webflux.webjars-path-pattern")
                 .removeSuffix("/**"),
         )
-        val utilityApi = UtilityApi(ref(), ref())
+        val utilityApi = UtilityApi(ref(), ref(), ref())
         walletApi.route
             .and(verifierApi.route)
             .and(staticContent.route)
