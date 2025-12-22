@@ -238,9 +238,9 @@ internal fun beans(clock: Clock) = beans {
     }
     bean {
         ValidateSdJwtVc(
-            sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
+            sdJwtVcValidatorFactory = { userProvided ->
                 val appDefault = ref<SdJwtVcValidator>()
-                userProvidedRootCACertificates?.let {
+                userProvided?.let {
                     sdJwtVcValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
