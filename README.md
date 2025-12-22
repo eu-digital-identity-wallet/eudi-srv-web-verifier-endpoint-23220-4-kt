@@ -98,7 +98,7 @@ The 'verifier' service can be configured by setting its configuration properties
 variables of the service in [docker-compose.yaml](docker/docker-compose.yaml)  
 
 > [!IMPORTANT]  
-> Starting with v0.6.6, the Docker image for Verifier Endpoint is published as `ghcr.io/eu-digital-identity-wallet/eudi-srv-verifier-endpoint`.
+> Starting with v0.7.0, the Docker image for Verifier Endpoint is published as `ghcr.io/eu-digital-identity-wallet/eudi-srv-verifier-endpoint`.
 
 **Example:**
 ```yaml
