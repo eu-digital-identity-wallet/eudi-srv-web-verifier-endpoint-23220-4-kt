@@ -50,7 +50,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchem
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificatesWithNimbus
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ServiceType
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingRootCACertificates
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingIssuerChain
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingTrustService
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
@@ -228,10 +228,10 @@ internal fun beans(clock: Clock) = beans {
         ValidateMsoMdocDeviceResponse(
             ref(),
             ref(),
-            deviceResponseValidatorFactory = { userProvidedRootCACertificates ->
+            deviceResponseValidatorFactory = { userProvided ->
                 val appDefault = ref<DeviceResponseValidator>()
-                userProvidedRootCACertificates?.let {
-                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                userProvided?.let {
+                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
         )
@@ -241,7 +241,7 @@ internal fun beans(clock: Clock) = beans {
             sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
                 val appDefault = ref<SdJwtVcValidator>()
                 userProvidedRootCACertificates?.let {
-                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
             ref(),
@@ -252,16 +252,16 @@ internal fun beans(clock: Clock) = beans {
     bean {
         ValidateSdJwtVcOrMsoMdocVerifiablePresentation(
             config = ref(),
-            sdJwtVcValidatorFactory = { userProvidedRootCACertificates ->
+            sdJwtVcValidatorFactory = { userProvided ->
                 val appDefault = ref<SdJwtVcValidator>()
-                userProvidedRootCACertificates?.let {
-                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                userProvided?.let {
+                    sdJwtVcValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
-            deviceResponseValidatorFactory = { userProvidedRootCACertificates ->
+            deviceResponseValidatorFactory = { userProvided ->
                 val appDefault = ref<DeviceResponseValidator>()
-                userProvidedRootCACertificates?.let {
-                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingRootCACertificates(it))
+                userProvided?.let {
+                    deviceResponseValidator(ValidateAttestationIssuerTrust.usingIssuerChain(it))
                 } ?: appDefault
             },
         )
