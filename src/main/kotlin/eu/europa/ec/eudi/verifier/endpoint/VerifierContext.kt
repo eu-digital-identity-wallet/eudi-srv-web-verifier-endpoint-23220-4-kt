@@ -48,10 +48,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.LookupTypeMetadat
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.SdJwtVcValidator
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.ValidateJsonSchema
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusListTokenValidator
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ParsePemEncodedX509CertificatesWithNimbus
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.ServiceType
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingIssuerChain
-import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.usingTrustService
+import eu.europa.ec.eudi.verifier.endpoint.adapter.out.x509.*
 import eu.europa.ec.eudi.verifier.endpoint.domain.*
 import eu.europa.ec.eudi.verifier.endpoint.port.input.*
 import eu.europa.ec.eudi.verifier.endpoint.port.out.cfg.CreateQueryWalletResponseRedirectUri
@@ -208,14 +205,20 @@ internal fun beans(clock: Clock) = beans {
     }
 
     // Default ValidateAttestationIssuerTrust
-    bean(isLazyInit = true) {
+    bean {
         val config = ref<AttestationTrustProperties>()
-        ValidateAttestationIssuerTrust.usingTrustService(
-            ref(),
-            Url(config.serviceUrl),
-            config.attestations.associate { it.attestationType to it.serviceType },
-            config.defaultServiceType,
-        )
+        if (config.serviceUrl.isNullOrBlank()) {
+            log.warn("Trust Validator Service has not been configured. Trusting all Attestation Issuers.")
+            ValidateAttestationIssuerTrust.Ignored
+        } else {
+            log.info("Using Trust Validator Service '{}'", config.serviceUrl)
+            ValidateAttestationIssuerTrust.usingTrustValidatorService(
+                ref(),
+                Url(config.serviceUrl),
+                config.attestations.associate { it.attestationType to it.serviceType },
+                config.defaultServiceType,
+            )
+        }
     }
 
     // Default DeviceResponseValidator
@@ -690,7 +693,7 @@ internal data class TypeMetadataResolutionProperties(
 
 @ConfigurationProperties("verifier.trust")
 internal data class AttestationTrustProperties(
-    val serviceUrl: String,
+    val serviceUrl: String? = null,
     val attestations: List<AttestationProperties>,
     val defaultServiceType: ServiceType = ServiceType.EAAProvider,
 ) {
