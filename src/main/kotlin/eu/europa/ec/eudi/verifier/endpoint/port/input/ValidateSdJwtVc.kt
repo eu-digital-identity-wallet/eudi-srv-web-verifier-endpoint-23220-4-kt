@@ -27,7 +27,7 @@ import eu.europa.ec.eudi.verifier.endpoint.adapter.out.sdjwtvc.description
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.tokenstatuslist.StatusCheckException
 import eu.europa.ec.eudi.verifier.endpoint.adapter.out.utils.getOrThrow
 import eu.europa.ec.eudi.verifier.endpoint.domain.Nonce
-import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509CertificateChain
+import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.ParsePemEncodedX509Certificates
 import eu.europa.ec.eudi.verifier.endpoint.port.out.x509.x5cShouldBeTrustedOrNull
 import kotlinx.serialization.json.*
 
@@ -87,7 +87,7 @@ internal sealed interface SdJwtVcValidationResult {
  */
 internal class ValidateSdJwtVc(
     private val sdJwtVcValidatorFactory: (X5CShouldBe.Trusted?) -> SdJwtVcValidator,
-    private val parsePemEncodedX509CertificateChain: ParsePemEncodedX509CertificateChain,
+    private val parsePemEncodedX509Certificates: ParsePemEncodedX509Certificates,
 ) {
 
     suspend operator fun invoke(
@@ -125,7 +125,7 @@ internal class ValidateSdJwtVc(
 
     private fun sdJwtVcValidator(issuerChain: String?): Either<Throwable, SdJwtVcValidator> = Either.catch {
         val x5cShouldBe = issuerChain
-            ?.let { parsePemEncodedX509CertificateChain.x5cShouldBeTrustedOrNull(it).getOrThrow() }
+            ?.let { parsePemEncodedX509Certificates.x5cShouldBeTrustedOrNull(it).getOrThrow() }
         sdJwtVcValidatorFactory(x5cShouldBe)
     }
 }
