@@ -509,7 +509,8 @@
         "nullable": false,
         "enum": [
           "get",
-          "post"
+          "post",
+          "post_get"
         ]
       },
       "UriTemplate": {
