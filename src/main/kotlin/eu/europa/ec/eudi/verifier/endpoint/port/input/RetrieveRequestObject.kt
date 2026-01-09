@@ -126,8 +126,19 @@ class RetrieveRequestObjectLive(
                 publishPresentationEvent(event)
             }
 
-            ensure(method is RetrieveRequestObjectMethod.Get || RequestUriMethod.Post == presentation.requestUriMethod) {
-                RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
+            when (method) {
+                is RetrieveRequestObjectMethod.Get -> ensure(
+                    presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
+                        presentation.requestUriMethod == RequestUriMethod.Get,
+                ) {
+                    RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
+                }
+                is RetrieveRequestObjectMethod.Post -> ensure(
+                    presentation.requestUriMethod == RequestUriMethod.PostOrGet ||
+                        presentation.requestUriMethod == RequestUriMethod.Post,
+                ) {
+                    RetrieveRequestObjectError.InvalidRequestUriMethod(presentation.requestUriMethod)
+                }
             }
 
             val walletMetadata = method.walletMetadataOrNull?.let { parseWalletMetadata(it).bind() }

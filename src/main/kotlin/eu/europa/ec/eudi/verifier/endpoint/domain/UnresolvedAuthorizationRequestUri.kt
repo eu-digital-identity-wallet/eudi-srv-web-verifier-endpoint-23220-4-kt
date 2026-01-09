@@ -34,7 +34,7 @@ value class UnresolvedAuthorizationRequestUri private constructor(val value: Uri
             .apply {
                 val requestUriMethod = when (requestUriMethod) {
                     RequestUriMethod.Get -> OpenId4VPSpec.REQUEST_URI_METHOD_GET
-                    RequestUriMethod.Post -> OpenId4VPSpec.REQUEST_URI_METHOD_POST
+                    RequestUriMethod.Post, RequestUriMethod.PostOrGet -> OpenId4VPSpec.REQUEST_URI_METHOD_POST
                 }
                 appendQueryParameter(OpenId4VPSpec.REQUEST_URI_METHOD, requestUriMethod)
             }
