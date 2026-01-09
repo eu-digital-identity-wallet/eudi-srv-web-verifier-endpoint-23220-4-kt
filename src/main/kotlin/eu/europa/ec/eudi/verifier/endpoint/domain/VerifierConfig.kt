@@ -62,6 +62,7 @@ sealed interface EmbedOption<in ID> {
 enum class RequestUriMethod {
     Get,
     Post,
+    PostOrGet,
 }
 
 /**
